@@ -1,12 +1,19 @@
 import { useState, useRef } from 'react';
-import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardPortal,
+  HoverCardTrigger,
+  MCPIcon,
+} from '@librechat/client';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
 import { useMCPServerManager, useLocalize } from '~/hooks';
 import { getStatusDotColor } from './MCPStatusBadge';
 import CustomIcon from '~/components/ui/CustomIcon';
 import MCPServerDialog from './MCPServerDialog';
+import MCPServerDetail from './MCPServerDetail';
 import MCPCardActions from './MCPCardActions';
 import { cn } from '~/utils';
 
@@ -23,6 +30,8 @@ function linkifyDescription(text: string) {
         rel="noopener noreferrer"
         className="underline hover:text-text-primary"
         onClick={(e) => e.stopPropagation()}
+        onFocus={(e) => e.stopPropagation()}
+        onPointerEnter={(e) => e.stopPropagation()}
       >
         {part}
       </a>
@@ -55,6 +64,7 @@ export default function MCPServerCard({
   const triggerRef = useRef<HTMLDivElement>(null);
   const { initializeServer, revokeOAuthForServer } = useMCPServerManager();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
   const {
@@ -71,6 +81,14 @@ export default function MCPServerCard({
   const description = server.config?.description;
   const statusDotColor = getStatusDotColor(serverStatus, isInitializing);
   const canEdit = canCreateEditMCPs && canEditThisServer;
+
+  const handleCardClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('a, button, [role="button"]')) {
+      return;
+    }
+    setDetailsOpen(true);
+  };
 
   const handleInitialize = () => {
     /** If server has custom user vars and is not already connected, show config dialog first
@@ -112,66 +130,88 @@ export default function MCPServerCard({
 
   return (
     <>
-      <div
-        className={cn(
-          'group flex items-center gap-3 rounded-lg px-3 py-2.5',
-          'border border-border-light bg-transparent',
-        )}
-        aria-label={`${displayName} - ${getStatusText()}`}
-      >
-        {/* Server Icon with Status Dot */}
-        <div className="relative flex-shrink-0">
-          {server.config?.iconPath ? (
-            <CustomIcon
-              src={server.config.iconPath}
-              className="size-8 rounded-lg object-cover text-text-primary"
-              alt=""
-            />
-          ) : (
-            <div className="flex size-8 items-center justify-center rounded-lg bg-surface-tertiary">
-              <MCPIcon className="size-5 text-text-secondary" aria-hidden="true" />
+      <HoverCard open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <div
+          className={cn(
+            'group flex items-center gap-3 rounded-lg px-3 py-2.5',
+            'border border-border-light bg-transparent',
+          )}
+          aria-label={`${displayName} - ${getStatusText()}`}
+          onClick={handleCardClick}
+        >
+          <HoverCardTrigger asChild>
+            <div className="min-w-0 flex-1">
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
+                aria-expanded={detailsOpen}
+                onClick={() => setDetailsOpen(true)}
+              >
+                <div className="relative flex-shrink-0">
+                  {server.config?.iconPath ? (
+                    <CustomIcon
+                      src={server.config.iconPath}
+                      className="size-8 rounded-lg object-cover text-text-primary"
+                      alt=""
+                    />
+                  ) : (
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-surface-tertiary">
+                      <MCPIcon className="size-5 text-text-secondary" aria-hidden="true" />
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      'absolute -bottom-0.5 -right-0.5 size-3 rounded-full',
+                      'border-2 border-surface-primary',
+                      statusDotColor,
+                      (isInitializing || serverStatus?.connectionState === 'connecting') &&
+                        'animate-pulse',
+                    )}
+                    aria-hidden="true"
+                  />
+                </div>
+                <span className="truncate text-sm font-medium text-text-primary">
+                  {displayName}
+                </span>
+              </button>
+              {description && (
+                <p className="line-clamp-2 break-words pl-11 text-xs text-text-secondary">
+                  {linkifyDescription(description)}
+                </p>
+              )}
             </div>
-          )}
-          {/* Status dot - color indicates connection state */}
-          <div
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 size-3 rounded-full',
-              'border-2 border-surface-primary',
-              statusDotColor,
-              (isInitializing || serverStatus?.connectionState === 'connecting') && 'animate-pulse',
-            )}
-            aria-hidden="true"
-          />
-        </div>
+          </HoverCardTrigger>
 
-        {/* Server Info */}
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-text-primary">{displayName}</div>
-          {description && (
-            <p className="line-clamp-2 break-words text-xs text-text-secondary">
-              {linkifyDescription(description)}
-            </p>
-          )}
+          <div className="flex-shrink-0">
+            <MCPCardActions
+              serverName={server.serverName}
+              serverStatus={serverStatus}
+              isInitializing={isInitializing}
+              canCancel={canCancel}
+              hasCustomUserVars={hasCustomUserVars}
+              canEdit={canEdit}
+              editButtonRef={triggerRef}
+              onEditClick={handleEditClick}
+              onConfigClick={onConfigClick}
+              onInitialize={handleInitialize}
+              onCancel={onCancel}
+              onRevoke={handleRevoke}
+            />
+          </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex-shrink-0">
-          <MCPCardActions
-            serverName={server.serverName}
-            serverStatus={serverStatus}
-            isInitializing={isInitializing}
-            canCancel={canCancel}
-            hasCustomUserVars={hasCustomUserVars}
-            canEdit={canEdit}
-            editButtonRef={triggerRef}
-            onEditClick={handleEditClick}
-            onConfigClick={onConfigClick}
-            onInitialize={handleInitialize}
-            onCancel={onCancel}
-            onRevoke={handleRevoke}
-          />
-        </div>
-      </div>
+        <HoverCardPortal>
+          <HoverCardContent side="bottom" align="start" className="w-80">
+            <MCPServerDetail
+              serverName={server.serverName}
+              displayName={displayName}
+              description={description}
+              serverStatus={serverStatus}
+              isInitializing={isInitializing}
+              isOpen={detailsOpen}
+            />
+          </HoverCardContent>
+        </HoverCardPortal>
+      </HoverCard>
 
       {/* Edit Dialog - separate from card */}
       {canEdit && (
