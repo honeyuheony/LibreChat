@@ -64,6 +64,8 @@ export interface ISkill {
    * the model picks a skill should add it to `agent.tools` directly.
    */
   allowedTools?: string[];
+  /** 마켓 상세 창의 예문 버튼(머리말 `examples`, 최대 5개). */
+  examples?: string[];
   category?: string;
   author: Types.ObjectId;
   authorName: string;
@@ -90,6 +92,12 @@ export interface ISkill {
    */
   alwaysApply: boolean;
   tenantId?: string;
+  /** Timestamp of the last admin review approval. `undefined` means never reviewed. */
+  reviewedAt?: Date;
+  /** Admin user who approved the review at `reviewedAt`. */
+  reviewedBy?: Types.ObjectId;
+  /** Count of manual (`$` popover) invocations resolved against this doc. */
+  useCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */

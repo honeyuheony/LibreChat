@@ -218,6 +218,21 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       type: String,
       index: true,
     },
+    /** Timestamp of the last admin review approval. `undefined` means never reviewed. */
+    reviewedAt: {
+      type: Date,
+    },
+    /** Admin user who approved the review at `reviewedAt`. */
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    /** Count of manual (`$` popover) invocations resolved against this doc. */
+    useCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

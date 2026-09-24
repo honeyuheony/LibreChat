@@ -444,6 +444,8 @@ export const importSkill = () => `${skills()}/import`;
 
 export const getSkill = (id: string) => `${skills()}/${encodeURIComponent(id)}`;
 
+export const skillCategories = () => `${skills()}/categories`;
+
 export const listSkillsWithFilters = (
   filter: Record<string, string | number | undefined | null>,
 ) => {

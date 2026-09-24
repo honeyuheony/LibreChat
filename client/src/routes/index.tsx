@@ -10,6 +10,7 @@ import {
 } from '~/components/Auth';
 import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
 import AgentMarketplace from '~/components/Agents/Marketplace';
+import SkillMarketplace from '~/components/Skills/Marketplace/SkillMarketplace';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
 import { AuthContextProvider } from '~/hooks/AuthContext';
 import RouteErrorBoundary from './RouteErrorBoundary';
@@ -193,6 +194,22 @@ export const router = createBrowserRouter(
               element: (
                 <MarketplaceProvider>
                   <AgentMarketplace />
+                </MarketplaceProvider>
+              ),
+            },
+            {
+              path: 'skills-market',
+              element: (
+                <MarketplaceProvider>
+                  <SkillMarketplace />
+                </MarketplaceProvider>
+              ),
+            },
+            {
+              path: 'skills-market/:category',
+              element: (
+                <MarketplaceProvider>
+                  <SkillMarketplace />
                 </MarketplaceProvider>
               ),
             },

@@ -1,4 +1,5 @@
 export * from './binary';
+export * from './categories';
 export * from './handlers';
 export * from './import';
 export * from './path';
@@ -9,3 +10,4 @@ export * from './skillStates';
 export * from './deployment';
 export * from './sync';
 export * from './management';
+export * from './review';

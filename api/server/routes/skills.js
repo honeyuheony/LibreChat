@@ -9,6 +9,9 @@ const {
   getStorageMetadata,
   resolveRequestTenantId,
   restoreTenantContextFromReq,
+  createSkillCategoriesHandler,
+  markSkillReviewed,
+  clearSkillReview,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
 const {
@@ -25,9 +28,16 @@ const {
   upsertSkillFile,
   getSkillFileByPath,
   getRoleByName,
+  listSkillsByAccess,
+  updateSkillReview,
 } = require('~/models');
+const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
-const { grantPermission } = require('~/server/services/PermissionService');
+const {
+  grantPermission,
+  findAccessibleResources,
+  findPubliclyAccessibleResources,
+} = require('~/server/services/PermissionService');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const { maybeRunGitHubSkillSyncForRequest } = require('~/server/services/Skills/sync');
@@ -276,6 +286,36 @@ router.post(
   restoreTenantContextFromReq,
   importHandler,
 );
+
+// Category counts for the marketplace tabs — registered before `/:id` so it is not
+// swallowed as a skill id.
+const categoriesHandler = createSkillCategoriesHandler({
+  findAccessibleResources,
+  findPubliclyAccessibleResources,
+  listSkillsByAccess,
+});
+router.get('/categories', categoriesHandler);
+
+// 검수 표시(마켓 카드의 "검수됨" 배지). 관리자만 켜고 끌 수 있으며 배포 폴더 스킬은 DB 문서가
+// 없어 대상이 아니다(docs/agent-market-plan.md 4.2절의 검수 항목을 통과한 뒤 누른다).
+router.post('/:id/review', checkAdmin, async (req, res) => {
+  try {
+    await markSkillReviewed({ skillId: req.params.id, reviewerId: req.user.id }, { updateSkillReview });
+    res.status(200).json({ reviewed: true });
+  } catch (error) {
+    logger.error('[skills] review failed', error);
+    res.status(500).json({ error: 'Failed to mark skill as reviewed' });
+  }
+});
+router.delete('/:id/review', checkAdmin, async (req, res) => {
+  try {
+    await clearSkillReview({ skillId: req.params.id }, { updateSkillReview });
+    res.status(200).json({ reviewed: false });
+  } catch (error) {
+    logger.error('[skills] clear review failed', error);
+    res.status(500).json({ error: 'Failed to clear skill review' });
+  }
+});
 
 router.get('/', maybeStartRequestSkillSync, handlers.list);
 router.post('/', checkSkillCreate, handlers.create);

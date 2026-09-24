@@ -997,6 +997,8 @@ export interface InitializeAgentDbMethods extends EndpointDbMethods {
   listSkillsByAccess?: TListSkillsByAccess;
   /** Load a single skill by name, constrained to an ACL-accessible ID set. */
   getSkillByName?: TGetSkillByName;
+  /** Bump the marketplace use counter of a DB skill after a manual `$skill` invocation. */
+  incrementSkillUseCount?: (skillId: import('mongoose').Types.ObjectId) => Promise<unknown>;
   /**
    * Load accessible skills with `alwaysApply: true`, eagerly including
    * `body` so the priming pipeline can splice at turn start without a
@@ -1214,6 +1216,7 @@ export async function initializeAgent(
         ? resolveManualSkills({
             names: params.manualSkills,
             getSkillByName: db.getSkillByName,
+            incrementSkillUseCount: db.incrementSkillUseCount,
             accessibleSkillIds: params.accessibleSkillIds!,
             userId: user?.id,
             skillStates: params.skillStates,

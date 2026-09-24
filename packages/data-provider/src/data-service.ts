@@ -1206,6 +1206,10 @@ export function listSkills(params?: sk.TSkillListRequest): Promise<sk.TSkillList
   return request.get(endpoints.listSkillsWithFilters(params ?? {}));
 }
 
+export function getSkillCategories(): Promise<sk.TSkillCategoriesResponse> {
+  return request.get(endpoints.skillCategories());
+}
+
 export function getSchedules(): Promise<sch.TSchedulesResponse> {
   return request.get(endpoints.schedules());
 }

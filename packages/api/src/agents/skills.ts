@@ -937,6 +937,14 @@ export interface ResolveManualSkillsParams {
   skillStates?: Record<string, boolean>;
   /** Admin-configured default for shared skills. */
   defaultActiveOnShare?: boolean;
+  /**
+   * Fire-and-forget usage counter, called once per resolved DB-backed skill
+   * right after the name lookup succeeds. Omitted for deployment-sourced
+   * skills (`skill.deployment === true`), which have no Skill document to
+   * increment. Optional — callers that haven't wired an update method yet
+   * (route wiring is a follow-up task) simply skip counting.
+   */
+  incrementSkillUseCount?: (skillId: Types.ObjectId) => Promise<unknown>;
 }
 
 /**
@@ -1010,8 +1018,15 @@ export type ResolvedAlwaysApplySkill = ResolvedSkillPrime;
 export async function resolveManualSkills(
   params: ResolveManualSkillsParams,
 ): Promise<ResolvedManualSkill[]> {
-  const { names, getSkillByName, accessibleSkillIds, userId, skillStates, defaultActiveOnShare } =
-    params;
+  const {
+    names,
+    getSkillByName,
+    accessibleSkillIds,
+    userId,
+    skillStates,
+    defaultActiveOnShare,
+    incrementSkillUseCount,
+  } = params;
 
   if (!names.length || accessibleSkillIds.length === 0) {
     return [];
@@ -1058,6 +1073,14 @@ export async function resolveManualSkills(
         if (!skill) {
           logger.warn('[resolveManualSkills] Requested skill not found or not accessible');
           return null;
+        }
+        /**
+         * Deployment-sourced skills have no backing Skill document to
+         * increment, so only DB-backed skills are counted. Fire-and-forget:
+         * a lost count must never delay or fail the user's actual message.
+         */
+        if (!skill.deployment && incrementSkillUseCount) {
+          incrementSkillUseCount(skill._id).catch(() => {});
         }
         /**
          * `user-invocable: false` skills are model-only by author intent;

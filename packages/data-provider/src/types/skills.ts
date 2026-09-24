@@ -160,6 +160,11 @@ export type TSkill = {
    * referencing yet-to-be-implemented tools import without breaking.
    */
   allowedTools?: string[];
+  /**
+   * Mirrors the `examples` frontmatter field — sample prompts shown on the
+   * skill marketplace card. Optional; falls back to nothing when absent.
+   */
+  examples?: string[];
   author: string;
   authorName: string;
   version: number;
@@ -182,6 +187,12 @@ export type TSkill = {
    * responses.
    */
   warnings?: TSkillWarning[];
+  /** ISO timestamp of the last admin review approval. Absent means never reviewed. */
+  reviewedAt?: string;
+  /** Admin user id who approved the review at `reviewedAt`. */
+  reviewedBy?: string;
+  /** Count of manual (`$` popover) invocations resolved against this skill. */
+  useCount?: number;
 };
 
 /**
@@ -346,6 +357,18 @@ export type TSkillListResponse = {
   skills: TSkillSummary[];
   has_more: boolean;
   after: string | null;
+};
+
+/** One tab's worth of category data for GET `/api/skills/categories`. */
+export type TSkillCategoryCount = {
+  value: string;
+  count: number;
+};
+
+/** Response from GET `/api/skills/categories`. */
+export type TSkillCategoriesResponse = {
+  categories: TSkillCategoryCount[];
+  total: number;
 };
 
 /** Response from DELETE `/api/skills/:id`. */

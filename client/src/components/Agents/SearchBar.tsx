@@ -13,6 +13,8 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   /** Additional CSS classes */
   className?: string;
+  /** Input placeholder override; defaults to the agent-search copy. */
+  placeholder?: string;
 }
 
 /**
@@ -22,7 +24,7 @@ interface SearchBarProps {
  * Includes proper ARIA attributes for accessibility and visual indicators.
  * Uses 300ms debounce delay to prevent excessive API calls during typing.
  */
-const SearchBar: React.FC<SearchBarProps> = ({ value, onSearch, className = '' }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ value, onSearch, className = '', placeholder }) => {
   const localize = useLocalize();
   const [searchTerm, setSearchTerm] = useState(value);
 
@@ -72,7 +74,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onSearch, className = '' }
         type="text"
         value={searchTerm}
         onChange={handleChange}
-        placeholder={localize('com_agents_search_placeholder')}
+        placeholder={placeholder ?? localize('com_agents_search_placeholder')}
         className="h-12 rounded-xl border-border-medium bg-transparent pl-12 pr-12 text-lg text-text-primary shadow-md transition-[border-color,box-shadow] duration-200 placeholder:text-text-secondary focus:border-border-heavy focus:shadow-lg focus:ring-0"
         aria-label={localize('com_agents_search_aria')}
         aria-describedby="search-instructions search-results-count"

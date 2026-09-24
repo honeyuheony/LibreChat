@@ -12,6 +12,7 @@ import type {
   TSkillStatesResponse,
   TListSkillFilesResponse,
   TSkillFileContentResponse,
+  TSkillCategoriesResponse,
 } from 'librechat-data-provider';
 
 /**
@@ -69,6 +70,24 @@ export const useSkillsInfiniteQuery = (
     {
       getNextPageParam: (lastPage) =>
         lastPage.has_more && lastPage.after ? lastPage.after : undefined,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
+/**
+ * Category counts for the marketplace tabs (`GET /api/skills/categories`).
+ */
+export const useSkillCategoriesQuery = (
+  config?: UseQueryOptions<TSkillCategoriesResponse>,
+): QueryObserverResult<TSkillCategoriesResponse> => {
+  return useQuery<TSkillCategoriesResponse>(
+    [QueryKeys.skills, 'categories'],
+    () => dataService.getSkillCategories(),
+    {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,

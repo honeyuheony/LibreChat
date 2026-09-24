@@ -267,6 +267,11 @@ const ALLOWED_FRONTMATTER_KEYS = new Set<string>([
   'compatibility',
   'metadata',
   'references',
+  /* This deployment surfaces title/category/examples from frontmatter on the
+     skill marketplace card, so they are recognized keys rather than warned-on. */
+  'title',
+  'category',
+  'examples',
 ]);
 
 const CANONICAL_FRONTMATTER_KEYS = new Map(
@@ -325,6 +330,9 @@ const FRONTMATTER_KIND: Record<string, FrontmatterKind | FrontmatterKind[]> = {
   version: 'string',
   license: 'string',
   compatibility: 'string',
+  title: 'string',
+  category: 'string',
+  examples: 'stringArray',
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -1945,11 +1953,37 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount };
   }
 
+  /**
+   * 마켓 카드에 보여 줄 사용 횟수를 올린다. 수동 호출(`$스킬`)이 스킬 문서로 해석된 직후
+   * 응답을 기다리지 않고 부르므로, 실패해도 대화에는 영향을 주지 않는다.
+   */
+  async function incrementSkillUseCount(skillId: Types.ObjectId | string): Promise<unknown> {
+    const Skill = mongoose.models.Skill as Model<ISkill>;
+    return Skill.updateOne({ _id: skillId }, { $inc: { useCount: 1 } });
+  }
+
+  /** 검수 통과 표시를 켜거나(날짜·검수자) 끈다(null). 마켓 카드의 "검수됨" 배지가 이 값을 본다. */
+  async function updateSkillReview(params: {
+    skillId: Types.ObjectId | string;
+    reviewedAt: Date | null;
+    reviewedBy: Types.ObjectId | string | null;
+  }): Promise<{ matchedCount: number }> {
+    const Skill = mongoose.models.Skill as Model<ISkill>;
+    const update =
+      params.reviewedAt === null
+        ? { $unset: { reviewedAt: 1, reviewedBy: 1 } }
+        : { $set: { reviewedAt: params.reviewedAt, reviewedBy: params.reviewedBy } };
+    const result = await Skill.updateOne({ _id: params.skillId }, update);
+    return { matchedCount: result.matchedCount };
+  }
+
   return {
     createSkill,
     getSkillById,
     getSkillByName,
     getAuthorSkillByName,
+    incrementSkillUseCount,
+    updateSkillReview,
     listSkillsByAccess,
     listAlwaysApplySkills,
     updateSkill,

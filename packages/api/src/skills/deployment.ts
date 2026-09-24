@@ -69,6 +69,7 @@ export type DeploymentSkill = {
   disableModelInvocation?: boolean;
   userInvocable?: boolean;
   allowedTools?: string[];
+  examples?: string[];
   author: Types.ObjectId;
   authorName: string;
   version: number;
@@ -97,6 +98,7 @@ type SkillSummaryRow = {
   disableModelInvocation?: boolean;
   userInvocable?: boolean;
   allowedTools?: string[];
+  examples?: string[];
   author: Types.ObjectId;
   authorName?: string;
   version?: number;
@@ -737,7 +739,13 @@ export async function loadSkillFromDirectory(
     description,
     body: content,
     frontmatter,
-    category: '',
+    /* Deployment skills carry category/title/examples in their frontmatter so the
+       skill marketplace can group and preview them; read them here. */
+    category: typeof frontmatter.category === 'string' ? frontmatter.category : '',
+    ...(typeof frontmatter.title === 'string' && { displayTitle: frontmatter.title }),
+    ...(Array.isArray(frontmatter.examples) && {
+      examples: frontmatter.examples.filter((entry): entry is string => typeof entry === 'string').slice(0, 5),
+    }),
     author: getDeploymentAuthorId(),
     authorName: 'Deployment',
     version: 1,
