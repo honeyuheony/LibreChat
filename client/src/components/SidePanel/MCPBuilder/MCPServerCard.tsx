@@ -10,6 +10,28 @@ import MCPServerDialog from './MCPServerDialog';
 import MCPCardActions from './MCPCardActions';
 import { cn } from '~/utils';
 
+const URL_PATTERN = /(https?:\/\/[^\s<>"']+)/g;
+
+/** 설명 문자열 안의 http(s) 주소를 새 탭으로 여는 링크로 바꾼다(설치 파일 안내용). */
+function linkifyDescription(text: string) {
+  return text.split(URL_PATTERN).map((part, index) =>
+    index % 2 === 1 ? (
+      <a
+        key={index}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline hover:text-text-primary"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 interface MCPServerCardProps {
   server: MCPServerDefinition;
   getServerStatusIconProps: (serverName: string) => MCPServerStatusIconProps;
@@ -125,7 +147,11 @@ export default function MCPServerCard({
         {/* Server Info */}
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-text-primary">{displayName}</div>
-          {description && <p className="truncate text-xs text-text-secondary">{description}</p>}
+          {description && (
+            <p className="line-clamp-2 break-words text-xs text-text-secondary">
+              {linkifyDescription(description)}
+            </p>
+          )}
         </div>
 
         {/* Actions */}
