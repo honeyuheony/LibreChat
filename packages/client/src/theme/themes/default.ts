@@ -17,14 +17,16 @@ export const defaultTheme: IThemeRGB = {
   'rgb-shimmer-dip': '129 130 134', // #818286
 
   // Link and accent colors
-  'rgb-link': '37 99 235', // #2563eb (blue-600)
-  'rgb-link-hover': '29 78 216', // #1d4ed8 (blue-700)
+  /** 브랜드 네이비(#06377b) 계열. 흰 배경 대비 11.4:1(수동 계산, 자동 회귀 검증은
+   *  하지 못함)로 기존 blue-600(4.5:1대)보다 대비가 높아지므로 접근성은 낮아지지 않는다. */
+  'rgb-link': '6 55 123', // #06377b (brand navy)
+  'rgb-link-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
   'rgb-link-visited': '147 51 234', // #9333ea (purple-600)
-  'rgb-accent-primary': '18 110 107', // #126e6b
-  'rgb-accent-primary-hover': '10 79 83', // #0a4f53
+  'rgb-accent-primary': '6 55 123', // #06377b (brand navy)
+  'rgb-accent-primary-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
 
   // Ring colors
-  'rgb-ring-primary': '89 89 89', // #595959 (gray-500)
+  'rgb-ring-primary': '80 118 175', // #5076af (ndesign 초점 표시 지정 색)
 
   // Header colors
   'rgb-header-primary': '255 255 255', // #fff (white)
@@ -48,8 +50,10 @@ export const defaultTheme: IThemeRGB = {
   'rgb-surface-tertiary-alt': '255 255 255', // #fff (white)
   'rgb-surface-dialog': '255 255 255', // #fff (white)
   'rgb-surface-overlay': '89 89 89', // #595959 (gray-500)
-  'rgb-surface-submit': '4 120 87', // #047857 (green-700)
-  'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
+  /** 흰 글자 위 대비 11.4:1(수동 계산)로 버튼 자체 배경-글자 관계라 페이지 배경(라이트·
+   *  다크)과 무관하게 성립하므로 두 테마에서 같은 값을 쓴다. */
+  'rgb-surface-submit': '6 55 123', // #06377b (brand navy)
+  'rgb-surface-submit-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
   'rgb-surface-destructive': '185 28 28', // #b91c1c (red-700)
   'rgb-surface-destructive-hover': '153 27 27', // #991b1b (red-800)
   'rgb-surface-chat': '255 255 255', // #fff (white)

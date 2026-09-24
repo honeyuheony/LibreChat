@@ -17,14 +17,16 @@ export const darkTheme: IThemeRGB = {
   'rgb-shimmer-dip': '179 179 179', // #b3b3b3
 
   // Link and accent colors
-  'rgb-link': '96 165 250', // #60a5fa (blue-400)
-  'rgb-link-hover': '147 197 253', // #93c5fd (blue-300)
+  /** 브랜드 네이비(#06377b)를 어두운 배경에서도 읽히도록 밝힌 톤. 기존 blue-400/300과
+   *  밝기(L)를 맞췄으나 정밀 대비 재계산은 하지 못함. */
+  'rgb-link': '109 150 220', // #6d96dc (brand navy, lightened for dark bg)
+  'rgb-link-hover': '147 178 230', // #93b2e6 (brand navy, lightened further)
   'rgb-link-visited': '192 132 252', // #c084fc (purple-400)
-  'rgb-accent-primary': '65 167 157', // #41a79d
-  'rgb-accent-primary-hover': '109 200 185', // #6dc8b9
+  'rgb-accent-primary': '109 150 220', // #6d96dc (brand navy, lightened for dark bg)
+  'rgb-accent-primary-hover': '147 178 230', // #93b2e6 (brand navy, lightened further)
 
-  // Ring colors (not defined in dark mode, using default)
-  'rgb-ring-primary': '89 89 89', // #595959 (gray-500)
+  // Ring colors
+  'rgb-ring-primary': '80 118 175', // #5076af (ndesign 초점 표시 지정 색)
 
   // Header colors
   'rgb-header-primary': '47 47 47', // #2f2f2f (gray-700)
@@ -48,8 +50,9 @@ export const darkTheme: IThemeRGB = {
   'rgb-surface-tertiary-alt': '47 47 47', // #2f2f2f (gray-700)
   'rgb-surface-dialog': '18 18 18', // #121212 (legacy dark dialog)
   'rgb-surface-overlay': '0 0 0', // #000 (black)
-  'rgb-surface-submit': '4 120 87', // #047857 (green-700)
-  'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
+  /** 버튼 자체 배경-글자 관계라 라이트 테마와 같은 값을 쓴다 (default.ts 참고). */
+  'rgb-surface-submit': '6 55 123', // #06377b (brand navy)
+  'rgb-surface-submit-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
   'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)
   'rgb-surface-destructive-hover': '127 29 29', // #7f1d1d (red-900)
   'rgb-surface-chat': '47 47 47', // #2f2f2f (gray-700)

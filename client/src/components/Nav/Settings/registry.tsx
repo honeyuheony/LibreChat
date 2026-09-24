@@ -18,7 +18,6 @@ import {
 import DisplayUsernameMessages from '../SettingsTabs/Account/DisplayUsernameMessages';
 import ConversationModeSwitch from '../SettingsTabs/Speech/ConversationModeSwitch';
 import EnableTwoFactorItem from '../SettingsTabs/Account/TwoFactorAuthentication';
-import LangfuseConnection from '../SettingsTabs/Integrations/LangfuseConnection';
 import ClockFormatSelector from '../SettingsTabs/General/ClockFormatSelector';
 import ImportConversations from '../SettingsTabs/Data/ImportConversations';
 import WeekStartSelector from '../SettingsTabs/General/WeekStartSelector';
@@ -39,17 +38,14 @@ import { ManageFiles } from '../SettingsTabs/Data/ManageFiles';
 import { smoothStreamingAtom } from '~/store/smoothStreaming';
 import { RevokeKeys } from '../SettingsTabs/Data/RevokeKeys';
 import { ClearChats } from '../SettingsTabs/Data/ClearChats';
-import { TokenCredits, AutoRefill } from './BillingControls';
 import AdminPanel from '../SettingsTabs/General/AdminPanel';
 import SharedLinks from '../SettingsTabs/Data/SharedLinks';
 import ImageResize from '../SettingsTabs/Chat/ImageResize';
 import { showThinkingAtom } from '~/store/showThinking';
-import ProviderKeys from '../SettingsTabs/ProviderKeys';
 import { autoScrollAtom } from '~/store/autoScroll';
 import Avatar from '../SettingsTabs/Account/Avatar';
 import CodeEnvironments from './CodeEnvironments';
 import About from '../SettingsTabs/About/About';
-import ApiKeys from '../SettingsTabs/ApiKeys';
 import MemoryToggle from './MemoryToggle';
 import { TTSEndpoints } from '~/common';
 import store from '~/store';
@@ -652,38 +648,11 @@ export const registry: SettingEntry[] = [
   },
   // Data controls · API keys
   {
-    id: 'providerApiKeys',
-    tab: DATA,
-    section: 'apiKeys',
-    labelKey: 'com_ui_settings_label_provider_api_keys',
-    keywords: ['api', 'key', 'keys', 'provider', 'endpoint', 'credentials'],
-    show: (ctx) => ctx.hasUserProvidedEndpoints,
-    Component: ProviderKeys,
-  },
-  {
-    id: 'agentApiKeys',
-    tab: DATA,
-    section: 'apiKeys',
-    labelKey: 'com_ui_settings_label_agent_api_keys',
-    show: (ctx) => ctx.hasRemoteAgents,
-    Component: ApiKeys,
-  },
-  {
     id: 'revokeKeys',
     tab: DATA,
     section: 'apiKeys',
     labelKey: 'com_ui_settings_label_revoke_keys',
     Component: RevokeKeys,
-  },
-  // Langfuse
-  {
-    id: 'langfuseConnection',
-    tab: SettingsTabValues.LANGFUSE,
-    section: 'langfuse',
-    labelKey: 'com_ui_langfuse_title',
-    keywords: ['langfuse', 'observability', 'tracing', 'telemetry', 'traces'],
-    show: (ctx) => ctx.langfuseConnectionAccess,
-    Component: LangfuseConnection,
   },
   // Data controls · Danger zone
   {
@@ -725,23 +694,6 @@ export const registry: SettingEntry[] = [
     labelKey: 'com_ui_settings_label_backup_codes',
     show: (ctx) => ctx.isLocalProvider && ctx.twoFactorEnabled,
     Component: BackupCodesItem,
-  },
-  // Account · Billing
-  {
-    id: 'tokenCredits',
-    tab: ACCOUNT,
-    section: 'billing',
-    labelKey: 'com_ui_settings_label_credits',
-    show: (ctx) => ctx.balanceEnabled,
-    Component: TokenCredits,
-  },
-  {
-    id: 'autoRefill',
-    tab: ACCOUNT,
-    section: 'billing',
-    labelKey: 'com_ui_settings_label_auto_refill',
-    show: (ctx) => ctx.balanceEnabled,
-    Component: AutoRefill,
   },
   // Account · Danger zone
   {

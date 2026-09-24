@@ -9,7 +9,6 @@ export type SettingsTab =
   | SettingsTabValues.GENERAL
   | SettingsTabValues.CHAT
   | SettingsTabValues.SPEECH
-  | SettingsTabValues.LANGFUSE
   | SettingsTabValues.DATA
   | SettingsTabValues.ACCOUNT
   | SettingsTabValues.ABOUT;
@@ -80,17 +79,6 @@ export interface TabMeta {
   show?: (ctx: SettingsContextValue) => boolean;
 }
 
-function createLangfuseIcon(className: string): ReactNode {
-  return createElement('span', {
-    className: `${className} inline-block shrink-0 bg-current`,
-    'aria-hidden': true,
-    style: {
-      WebkitMask: 'url(/assets/langfuse-icon-monochrome.svg) center / contain no-repeat',
-      mask: 'url(/assets/langfuse-icon-monochrome.svg) center / contain no-repeat',
-    },
-  });
-}
-
 export const TABS: TabMeta[] = [
   {
     id: SettingsTabValues.GENERAL,
@@ -125,19 +113,6 @@ export const TABS: TabMeta[] = [
     ],
   },
   {
-    id: SettingsTabValues.LANGFUSE,
-    labelKey: 'com_ui_settings_tab_langfuse',
-    icon: createLangfuseIcon('h-4 w-4'),
-    sections: [
-      {
-        id: 'langfuse',
-        labelKey: 'com_ui_settings_section_langfuse',
-        icon: createLangfuseIcon('h-3.5 w-3.5'),
-      },
-    ],
-    show: (ctx) => ctx.langfuseConnectionAccess,
-  },
-  {
     id: SettingsTabValues.DATA,
     labelKey: 'com_ui_settings_tab_data',
     icon: createElement(DataIcon),
@@ -156,7 +131,6 @@ export const TABS: TabMeta[] = [
     sections: [
       { id: 'profile', labelKey: 'com_ui_settings_section_profile' },
       { id: 'security', labelKey: 'com_ui_settings_section_security' },
-      { id: 'billing', labelKey: 'com_ui_settings_section_billing' },
       { id: 'danger', labelKey: 'com_ui_settings_section_danger_zone', danger: true },
     ],
   },
