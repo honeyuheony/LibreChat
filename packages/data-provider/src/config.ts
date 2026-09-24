@@ -2880,6 +2880,8 @@ export const configSchema = z.object({
     .object({
       allowedDomains: z.array(z.string()).optional(),
       allowedAddresses: allowedAddressesSchema,
+      /** Drop MCP servers awaiting OAuth sign-in from a chat turn instead of prompting and waiting. */
+      skipOAuthInChat: z.boolean().optional(),
       catalogRecovery: z
         .object({
           discoveryBackoffMs: z

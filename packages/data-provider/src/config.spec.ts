@@ -1044,6 +1044,11 @@ describe('allowedAddressesSchema', () => {
       expect(result.success).toBe(true);
     });
 
+    it('keeps mcpSettings.skipOAuthInChat after parsing', () => {
+      const parsed = configSchema.parse({ version: '1.0', mcpSettings: { skipOAuthInChat: true } });
+      expect(parsed.mcpSettings?.skipOAuthInChat).toBe(true);
+    });
+
     it('defaults and validates MCP catalog recovery controls', () => {
       const defaults = configSchema.parse({ version: '1.0', mcpSettings: {} });
       expect(defaults.mcpSettings?.catalogRecovery).toEqual({

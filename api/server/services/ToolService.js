@@ -1356,6 +1356,51 @@ async function loadToolDefinitionsWrapper({
     }
   }
 
+  /** `mcpSettings.skipOAuthInChat`: servers the user has not signed in to are dropped for this
+   *  turn instead of prompting and waiting; sign-in happens from the MCP panel. */
+  if (pendingOAuthServers.size > 0 && appConfig?.mcpSettings?.skipOAuthInChat === true) {
+    const skippedServers = new Set(pendingOAuthServers);
+    pendingOAuthServers.clear();
+    logger.warn(
+      `[Tool Definitions] Skipping ${skippedServers.size} MCP server(s) that need OAuth sign-in (mcpSettings.skipOAuthInChat)`,
+    );
+    defsFilteredTools = defsFilteredTools.filter((tool) => {
+      const [, serverName] = splitMCPToolKey(tool, mcpServerNames);
+      return serverName == null || !skippedServers.has(serverName);
+    });
+    ({
+      toolDefinitions,
+      toolRegistry,
+      hasDeferredTools,
+      mcpToolAliases,
+      mcpResolution,
+      oauthActionToolNames,
+    } = await loadToolDefinitions(
+      {
+        userId: req.user.id,
+        agentId: agent.id,
+        tools: defsFilteredTools,
+        toolOptions: agent.tool_options,
+        deferredToolsEnabled,
+        programmaticToolsEnabled,
+        codeExecutionEnabled,
+        codeExecutionContext: resolvedCodeExecutionContext,
+        codeEnvironments: appConfig?.endpoints?.agents?.statefulCodeSessions?.environments,
+        getAppConfig,
+        provider: agent.provider,
+        mcpServerNames,
+        rawServerNames: mcpRawServerNames,
+        accessibleServerNames: defsAccessibleServerNames,
+      },
+      {
+        isBuiltInTool,
+        getOrFetchMCPServerTools,
+        refreshMCPServerTools,
+        getActionToolDefinitions,
+      },
+    ));
+  }
+
   if (pendingOAuthServers.size > 0 && (res || streamId)) {
     const serverNames = Array.from(pendingOAuthServers);
     logger.info(

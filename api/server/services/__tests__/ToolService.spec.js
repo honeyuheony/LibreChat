@@ -1672,6 +1672,66 @@ describe('ToolService - Action Capability Gating', () => {
       expect(mockLoadToolDefinitions).toHaveBeenCalledTimes(1);
     });
 
+    it('drops MCP servers awaiting OAuth instead of prompting when mcpSettings.skipOAuthInChat is set', async () => {
+      const req = createMockReq([AgentCapabilities.tools]);
+      req.config.mcpSettings = { skipOAuthInChat: true };
+      const res = { writableEnded: false };
+      const oauthServer = 'Needs-Login';
+      const connectedServer = 'Connected';
+      const oauthTool = `search${Constants.mcp_delimiter}${oauthServer}`;
+      const connectedTool = `list${Constants.mcp_delimiter}${connectedServer}`;
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
+      mockResolveConfigServers.mockResolvedValue({
+        [oauthServer]: {
+          type: 'streamable-http',
+          url: 'https://mcp.example.com/login',
+          requiresOAuth: true,
+        },
+        [connectedServer]: { type: 'streamable-http', url: 'https://mcp.example.com/open' },
+      });
+      mockGetMCPServerTools.mockResolvedValue(null);
+      mockFlowManager.getFlowState.mockResolvedValue(null);
+      mockLoadToolDefinitions
+        .mockImplementationOnce(async (params, deps) => {
+          await deps.getOrFetchMCPServerTools(params.userId, oauthServer);
+          await deps.getOrFetchMCPServerTools(params.userId, connectedServer);
+          return {
+            toolDefinitions: [{ name: oauthTool }, { name: connectedTool }],
+            toolRegistry: new Map(),
+            hasDeferredTools: false,
+            mcpResolution: { resolvedToolCount: 2 },
+          };
+        })
+        .mockResolvedValueOnce({
+          toolDefinitions: [{ name: connectedTool }],
+          toolRegistry: new Map(),
+          hasDeferredTools: false,
+          mcpResolution: { resolvedToolCount: 1 },
+        });
+      reinitMCPServer.mockImplementation(async ({ serverName, oauthStart }) => {
+        if (serverName === oauthServer) {
+          await oauthStart(`https://auth.example.com/${serverName}`);
+          return { availableTools: null };
+        }
+        return { availableTools: { [connectedTool]: {} } };
+      });
+
+      const result = await loadAgentTools({
+        req,
+        res,
+        agent: { id: 'agent_123', tools: [oauthTool, connectedTool] },
+        definitionsOnly: true,
+      });
+
+      expect(result.toolDefinitions).toEqual([{ name: connectedTool }]);
+      expect(mockLoadToolDefinitions).toHaveBeenCalledTimes(2);
+      expect(mockLoadToolDefinitions.mock.calls[1][0].tools).toEqual([connectedTool]);
+      expect(reinitMCPServer).not.toHaveBeenCalledWith(
+        expect.objectContaining({ returnOnOAuth: false }),
+      );
+      expect(mockSendEvent).not.toHaveBeenCalled();
+    });
+
     it('fences resumable MCP OAuth definition events to the owning job epoch', async () => {
       const req = createMockReq([AgentCapabilities.tools]);
       const res = { writableEnded: false };
