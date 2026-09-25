@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { TooltipAnchor } from '@librechat/client';
 import { getConfigDefaults } from 'librechat-data-provider';
 import type { ModelSelectorProps } from '~/common';
@@ -11,9 +12,9 @@ import {
 import { ModelSelectorProvider, useModelSelectorContext } from './ModelSelectorContext';
 import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcuts';
 import { ModelSelectorChatProvider } from './ModelSelectorChatContext';
-import { getSelectedIcon, getDisplayValue } from './utils';
 import { CustomMenu as Menu } from './CustomMenu';
 import DialogManager from './DialogManager';
+import { getDisplayValue } from './utils';
 import { useLocalize } from '~/hooks';
 
 const defaultInterface = getConfigDefaults().interface;
@@ -42,17 +43,6 @@ function ModelSelectorContent() {
     keyDialogEndpoint,
   } = useModelSelectorContext();
 
-  const selectedIcon = useMemo(
-    () =>
-      getSelectedIcon({
-        mappedEndpoints: mappedEndpoints ?? [],
-        selectedValues,
-        modelSpecs,
-        endpointsConfig,
-        agentsMap,
-      }),
-    [mappedEndpoints, selectedValues, modelSpecs, endpointsConfig, agentsMap],
-  );
   const selectedDisplayValue = useMemo(
     () =>
       getDisplayValue({
@@ -65,31 +55,31 @@ function ModelSelectorContent() {
     [localize, agentsMap, modelSpecs, selectedValues, mappedEndpoints],
   );
 
+  /* Sits in the composer's action row beside Send, naming the agent in plain text. */
   const trigger = (
     <TooltipAnchor
       aria-label={localize('com_ui_select_model')}
       description={modelSelectorHint}
       render={
         <button
+          type="button"
           data-testid="model-selector-button"
           aria-keyshortcuts={modelSelectorAriaKey}
-          className="my-1 flex h-9 max-w-full items-center gap-2 rounded-xl border border-border-light bg-presentation px-3 py-2 text-sm text-text-primary hover:bg-surface-active-alt"
-          aria-label={localize('com_ui_select_model')}
+          className="flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-theme-control px-2.5 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+          aria-label={`${localize('com_ui_select_model')}: ${selectedDisplayValue}`}
         >
-          {selectedIcon && React.isValidElement(selectedIcon) && (
-            <div className="flex flex-shrink-0 items-center justify-center overflow-hidden">
-              {selectedIcon}
-            </div>
-          )}
           <span className="truncate text-left">{selectedDisplayValue}</span>
+          <ChevronDown className="size-4 flex-shrink-0" aria-hidden="true" />
         </button>
       }
     />
   );
 
   return (
-    <div className="relative flex min-w-0 max-w-[60vw] flex-col items-center gap-2 sm:max-w-xs">
+    <div className="relative flex min-w-0 max-w-[40%] items-center sm:max-w-[240px]">
       <Menu
+        placement="top-end"
+        className="h-9 w-auto border-0 bg-transparent px-0 py-0 hover:bg-transparent"
         values={selectedValues}
         onValuesChange={(values: Record<string, any>) => {
           setSelectedValues({

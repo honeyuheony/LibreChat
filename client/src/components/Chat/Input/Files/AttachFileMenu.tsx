@@ -2,20 +2,20 @@ import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { useRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
 import {
+  IconButton,
+  FileUpload,
+  TooltipAnchor,
+  DropdownPopup,
+  SharePointIcon,
+} from '@librechat/client';
+import {
+  Plus,
   FileSearch,
   ImageUpIcon,
   FileType2Icon,
   FileImageIcon,
   TerminalSquareIcon,
 } from 'lucide-react';
-import {
-  IconButton,
-  FileUpload,
-  TooltipAnchor,
-  DropdownPopup,
-  AttachmentIcon,
-  SharePointIcon,
-} from '@librechat/client';
 import {
   Providers,
   EToolResources,
@@ -90,7 +90,22 @@ interface AttachFileMenuProps {
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
+  /** Non-upload actions the composer's `+` menu carries after the upload items, such as attaching a skill. */
+  extraItems?: MenuItemProps[];
 }
+
+/** Bordered square shared by every face of the composer's `+` control. */
+const plusTriggerClassName =
+  'flex size-theme-control items-center justify-center rounded-theme-control border border-border-light p-1 text-text-secondary transition-colors duration-theme-fast hover:bg-surface-composer-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-opacity-50';
+
+function withExtraItems(items: MenuItemProps[], extraItems: MenuItemProps[]): MenuItemProps[] {
+  if (extraItems.length === 0) {
+    return items;
+  }
+  return [...items, { separate: true }, ...extraItems];
+}
+
+const noExtraItems: MenuItemProps[] = [];
 
 const AttachFileMenu = ({
   agentId,
@@ -105,12 +120,16 @@ const AttachFileMenu = ({
   setFiles,
   setFilesLoading,
   conversation,
+  extraItems = noExtraItems,
 }: AttachFileMenuProps) => {
   const localize = useLocalize();
   const isUploadDisabled = disabled ?? false;
   const inputRef = useRef<HTMLInputElement>(null);
   const [isPopoverActive, setIsPopoverActive] = useState(false);
-  const uploadFileTooltip = useShortcutHint('uploadFile', localize('com_sidepanel_attach_files'));
+  const uploadFileTooltip = useShortcutHint(
+    'uploadFile',
+    localize(extraItems.length > 0 ? 'com_ui_add_files_or_skills' : 'com_sidepanel_attach_files'),
+  );
   const uploadFileAriaKey = useShortcutAriaKey('uploadFile');
   const [ephemeralAgent, setEphemeralAgent] = useRecoilState(
     ephemeralAgentByConvoId(conversationId),
@@ -191,24 +210,26 @@ const AttachFileMenu = ({
   /** Unified mode removed the destination chooser, not the source chooser. SharePoint has
    *  no trigger of its own, so without this the picker becomes unreachable whenever the
    *  composer is in unified mode. Destination stays implicit on both sources. */
-  const unifiedSourceItems = useMemo<MenuItemProps[]>(
-    () => [
+  const unifiedSourceItems = useMemo<MenuItemProps[]>(() => {
+    const items: MenuItemProps[] = [
       {
         label: localize('com_files_upload_local_machine'),
         onClick: handleUnifiedUpload,
         icon: <FileImageIcon className="icon-md" />,
       },
-      {
+    ];
+    if (sharePointEnabled === true) {
+      items.push({
         label: localize('com_files_upload_sharepoint'),
         onClick: () => {
           toolResourceRef.current = undefined;
           setIsSharePointDialogOpen(true);
         },
         icon: <SharePointIcon className="icon-md" />,
-      },
-    ],
-    [localize, handleUnifiedUpload, setIsSharePointDialogOpen],
-  );
+      });
+    }
+    return withExtraItems(items, extraItems);
+  }, [localize, handleUnifiedUpload, setIsSharePointDialogOpen, sharePointEnabled, extraItems]);
 
   const dropdownItems = useMemo(() => {
     const setToolResource = (value: EToolResources | undefined) => {
@@ -325,10 +346,9 @@ const AttachFileMenu = ({
         icon: <SharePointIcon className="icon-md" />,
         subItems: sharePointItems,
       });
-      return localItems;
     }
 
-    return localItems;
+    return withExtraItems(localItems, extraItems);
   }, [
     localize,
     endpoint,
@@ -343,6 +363,7 @@ const AttachFileMenu = ({
     codeAllowedByAgent,
     fileSearchAllowedByAgent,
     setIsSharePointDialogOpen,
+    extraItems,
   ]);
 
   const menuTrigger = (
@@ -353,14 +374,9 @@ const AttachFileMenu = ({
           id="attach-file-menu-button"
           aria-label="Attach File Options"
           aria-keyshortcuts={uploadFileAriaKey}
-          className={cn(
-            'flex size-theme-control items-center justify-center rounded-theme-control-round p-1 transition-colors duration-theme-fast hover:bg-surface-composer-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-opacity-50',
-            isPopoverActive && 'bg-surface-composer-hover',
-          )}
+          className={cn(plusTriggerClassName, isPopoverActive && 'bg-surface-composer-hover')}
         >
-          <div className="flex w-full items-center justify-center gap-2">
-            <AttachmentIcon />
-          </div>
+          <Plus className="size-5" aria-hidden="true" />
         </Ariakit.MenuButton>
       }
       id="attach-file-menu-button"
@@ -386,7 +402,7 @@ const AttachFileMenu = ({
             handleFileChange(e, toolResourceRef.current);
           }}
         >
-          {sharePointEnabled === true ? (
+          {unifiedSourceItems.length > 1 ? (
             <DropdownPopup
               menuId="attach-file-menu"
               className="overflow-visible"
@@ -411,9 +427,9 @@ const AttachFileMenu = ({
                   label={localize('com_sidepanel_attach_files')}
                   onClick={handleUnifiedUpload}
                   aria-keyshortcuts={uploadFileAriaKey}
-                  className="p-1 hover:bg-surface-composer-hover"
+                  className={plusTriggerClassName}
                 >
-                  <AttachmentIcon />
+                  <Plus className="size-5" aria-hidden="true" />
                 </IconButton>
               }
               id="attach-file-button"
@@ -467,5 +483,38 @@ const AttachFileMenu = ({
     </>
   );
 };
+
+/** The `+` control when uploads are unavailable here but other composer actions remain. */
+export function ComposerActionsMenu({ items }: { items: MenuItemProps[] }) {
+  const localize = useLocalize();
+  const [isOpen, setIsOpen] = useState(false);
+  const label = localize('com_ui_add_files_or_skills');
+  return (
+    <DropdownPopup
+      menuId="composer-actions-menu"
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      modal={false}
+      portal={true}
+      unmountOnHide={true}
+      items={items}
+      iconClassName="mr-0"
+      trigger={
+        <TooltipAnchor
+          description={label}
+          render={
+            <Ariakit.MenuButton
+              id="composer-actions-menu-button"
+              aria-label={label}
+              className={cn(plusTriggerClassName, isOpen && 'bg-surface-composer-hover')}
+            >
+              <Plus className="size-5" aria-hidden="true" />
+            </Ariakit.MenuButton>
+          }
+        />
+      }
+    />
+  );
+}
 
 export default React.memo(AttachFileMenu);
