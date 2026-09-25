@@ -342,6 +342,8 @@ export const mcp = {
   servers: `${BASE_URL}/api/mcp/servers`,
 };
 
+export const deskStatus = () => `${BASE_URL}/api/connectors/desk-status`;
+
 export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${serverName}`;
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;
