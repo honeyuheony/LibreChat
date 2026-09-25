@@ -1,5 +1,4 @@
 import { useState, useId } from 'react';
-import { Share2 } from 'lucide-react';
 import * as Ariakit from '@ariakit/react';
 import { DropdownPopup, TooltipAnchor, useMediaQuery } from '@librechat/client';
 import useExportShare from '~/hooks/Chat/useExportShare';
@@ -40,13 +39,9 @@ export default function ExportAndShareMenu({
               <Ariakit.MenuButton
                 id="export-menu-button"
                 aria-label={description}
-                className="relative inline-flex size-9 flex-shrink-0 items-center justify-center rounded-xl border border-border-light bg-presentation text-text-primary transition-all ease-in-out hover:bg-surface-tertiary disabled:pointer-events-none disabled:opacity-50 radix-state-open:bg-surface-tertiary"
+                className="relative inline-flex h-9 flex-shrink-0 items-center justify-center rounded-theme-control border border-border-light bg-surface-primary px-3.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:pointer-events-none disabled:opacity-50 radix-state-open:bg-surface-hover"
               >
-                <Share2
-                  className="icon-md text-text-primary"
-                  aria-hidden="true"
-                  focusable="false"
-                />
+                {localize('com_ui_share')}
                 {hasSharedLink && (
                   <span
                     className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-status-info ring-2 ring-presentation"

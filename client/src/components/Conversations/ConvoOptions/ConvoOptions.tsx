@@ -11,6 +11,7 @@ import {
   useMediaQuery,
 } from '@librechat/client';
 import {
+  ChevronDown,
   Ellipsis,
   Share2,
   CopyPlus,
@@ -63,6 +64,7 @@ function ConvoOptions({
   setIsPopoverActive,
   isActiveConvo,
   isShiftHeld = false,
+  triggerLabel,
 }: {
   conversationId: string | null;
   chatProjectId?: string | null;
@@ -76,6 +78,8 @@ function ConvoOptions({
   setIsPopoverActive: (open: boolean) => void;
   isActiveConvo: boolean;
   isShiftHeld?: boolean;
+  /** Draws the trigger as this text with a chevron, for the conversation header's title. */
+  triggerLabel?: string;
 }) {
   const localize = useLocalize();
   const queryClient = useQueryClient();
@@ -411,7 +415,20 @@ function ConvoOptions({
       : 'opacity-0 focus:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100',
   );
 
-  if (isShiftHeld && isActiveConvo && !isPopoverActive && !showShareDialog && !showDeleteDialog) {
+  const titleTriggerClassName = cn(
+    'flex min-w-0 max-w-full items-center gap-1.5 rounded-theme-control px-2 py-1.5',
+    'text-[15px] font-semibold text-text-primary hover:bg-surface-hover',
+    isPopoverActive && 'bg-surface-hover',
+  );
+
+  if (
+    triggerLabel == null &&
+    isShiftHeld &&
+    isActiveConvo &&
+    !isPopoverActive &&
+    !showShareDialog &&
+    !showDeleteDialog
+  ) {
     return (
       <div className="flex items-center gap-0.5">
         <button
@@ -459,17 +476,29 @@ function ConvoOptions({
         trigger={
           <Ariakit.MenuButton
             ref={menuButtonRef}
-            id={`conversation-menu-${conversationId}`}
-            aria-label={localize('com_nav_convo_menu_options')}
+            id={
+              triggerLabel != null
+                ? `conversation-title-menu-${conversationId}`
+                : `conversation-menu-${conversationId}`
+            }
+            aria-label={
+              triggerLabel != null
+                ? `${triggerLabel}, ${localize('com_nav_convo_menu_options')}`
+                : localize('com_nav_convo_menu_options')
+            }
             aria-expanded={isPopoverActive}
             /** Shared with the shift-held variant so both obey the same reveal rules. */
-            className={cn(
-              buttonClassName,
-              'gap-2',
-              /** The hover fill persists while the menu is open, even once the
-               *  pointer moves into the dropdown. */
-              isPopoverActive && 'bg-surface-active text-text-primary',
-            )}
+            className={
+              triggerLabel != null
+                ? titleTriggerClassName
+                : cn(
+                    buttonClassName,
+                    'gap-2',
+                    /** The hover fill persists while the menu is open, even once the
+                     *  pointer moves into the dropdown. */
+                    isPopoverActive && 'bg-surface-active text-text-primary',
+                  )
+            }
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
             }}
@@ -479,7 +508,14 @@ function ConvoOptions({
               }
             }}
           >
-            <Ellipsis className="icon-md" aria-hidden={true} />
+            {triggerLabel != null ? (
+              <>
+                <span className="truncate">{triggerLabel}</span>
+                <ChevronDown className="size-4 flex-shrink-0" aria-hidden={true} />
+              </>
+            ) : (
+              <Ellipsis className="icon-md" aria-hidden={true} />
+            )}
           </Ariakit.MenuButton>
         }
         items={dropdownItems}
@@ -526,6 +562,7 @@ export default memo(ConvoOptions, (prevProps, nextProps) => {
     prevProps.isArchived === nextProps.isArchived &&
     prevProps.isPopoverActive === nextProps.isPopoverActive &&
     prevProps.isActiveConvo === nextProps.isActiveConvo &&
-    prevProps.isShiftHeld === nextProps.isShiftHeld
+    prevProps.isShiftHeld === nextProps.isShiftHeld &&
+    prevProps.triggerLabel === nextProps.triggerLabel
   );
 });

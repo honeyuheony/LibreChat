@@ -7,15 +7,13 @@ import {
   PermissionTypes,
   Permissions,
 } from 'librechat-data-provider';
-import { OpenSidebar, PresetsMenu, NewChat, HeaderMenu } from './Menus';
-import { TemporaryChat, TemporaryChatIndicator } from './TemporaryChat';
-import ModelSelector from './Menus/Endpoints/ModelSelector';
-import { TraceButton, useTraceControl } from './Trace';
+import ConversationTitleMenu from './Menus/ConversationTitleMenu';
+import { OpenSidebar, NewChat, HeaderMenu } from './Menus';
+import { TemporaryChatIndicator } from './TemporaryChat';
 import { useGetStartupConfig } from '~/data-provider';
 import ExportAndShareMenu from './ExportAndShareMenu';
 import SubagentThreadLink from './SubagentThreadLink';
-import BookmarkMenu from './Menus/BookmarkMenu';
-import AddMultiConvo from './AddMultiConvo';
+import { useTraceControl } from './Trace';
 import { useHasAccess } from '~/hooks';
 import { cn } from '~/utils';
 import store from '~/store';
@@ -23,10 +21,11 @@ import store from '~/store';
 const defaultInterface = getConfigDefaults().interface;
 
 /**
- * Three zones in a single DOM order that serves both layouts: hidden items
- * generate no flex gap, so each breakpoint collapses to the right row without
- * reordering. Branching is CSS-only — `useMediaQuery` resolves after paint and
- * would pop the row a frame late on every mount.
+ * The conversation's title on the left and sharing on the right. The model
+ * picker lives in the composer; the remaining conversation actions (trace,
+ * temporary chat, bookmarks, compare) stay in the mobile overflow menu.
+ * Branching is CSS-only — `useMediaQuery` resolves after paint and would pop
+ * the row a frame late on every mount.
  */
 function Header({
   parentConversationId,
@@ -50,16 +49,6 @@ function Header({
     () => startupConfig?.interface ?? defaultInterface,
     [startupConfig],
   );
-
-  const hasAccessToBookmarks = useHasAccess({
-    permissionType: PermissionTypes.BOOKMARKS,
-    permission: Permissions.USE,
-  });
-
-  const hasAccessToMultiConvo = useHasAccess({
-    permissionType: PermissionTypes.MULTI_CONVO,
-    permission: Permissions.USE,
-  });
 
   const hasAccessToTemporaryChat = useHasAccess({
     permissionType: PermissionTypes.TEMPORARY_CHAT,
@@ -92,20 +81,7 @@ function Header({
         {parentConversationId != null && (
           <SubagentThreadLink threadId={parentConversationId} labelClassName="hidden lg:inline" />
         )}
-        {!readOnly && <ModelSelector startupConfig={startupConfig} />}
-        {!readOnly && interfaceConfig.presets === true && interfaceConfig.modelSelect === true && (
-          <PresetsMenu />
-        )}
-        {hasAccessToBookmarks === true && (
-          <div className="hidden items-center md:flex">
-            <BookmarkMenu />
-          </div>
-        )}
-        {hasAccessToMultiConvo === true && (
-          <div className="hidden items-center md:flex">
-            <AddMultiConvo />
-          </div>
-        )}
+        {!isNewChat && !readOnly && <ConversationTitleMenu />}
       </div>
 
       <div className={cn('flex flex-shrink-0 items-center gap-2', hiddenBehindNav)}>
@@ -113,9 +89,7 @@ function Header({
         {!isNewChat && <NewChat className="md:hidden" />}
         <HeaderMenu startupConfig={startupConfig} trace={trace} className="md:hidden" />
         <div className="hidden items-center gap-2 md:flex">
-          {trace.show && <TraceButton onClick={trace.open} />}
           <ExportAndShareMenu isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false} />
-          {hasAccessToTemporaryChat === true && <TemporaryChat />}
         </div>
       </div>
     </div>
