@@ -7,7 +7,11 @@ import {
   greetingSlotsByDay,
   defaultGreetingSlots,
   getMsUntilNextGreeting,
+  getDaypart,
+  getDaypartGreetingKey,
+  getMsUntilNextDaypart,
 } from '../greeting';
+import translationKo from '~/locales/ko/translation.json';
 import translationEn from '~/locales/en/translation.json';
 
 /** 2024-01-07 is a Sunday, so index 0..6 maps directly onto sun..sat. */
@@ -163,5 +167,54 @@ describe('getMsUntilNextGreeting', () => {
 
   it('rolls over to local midnight for the final slot', () => {
     expect(getMsUntilNextGreeting(dateForDay(2, 23, 0, 0))).toBe(60 * 60 * 1000);
+  });
+});
+
+describe('daypart greeting', () => {
+  const at = (hours: number, minutes = 0) => new Date(2024, 0, 9, hours, minutes, 0, 0);
+
+  it.each([
+    [5, 'morning'],
+    [11, 'morning'],
+    [12, 'afternoon'],
+    [17, 'afternoon'],
+    [18, 'evening'],
+    [23, 'evening'],
+    [0, 'evening'],
+    [4, 'evening'],
+  ])('treats %i:00 as %s', (hours, daypart) => {
+    expect(getDaypart(at(hours))).toBe(daypart);
+  });
+
+  it('says good afternoon to the named user in Korean', () => {
+    const key = getDaypartGreetingKey(at(14), true);
+    expect(translationKo[key as keyof typeof translationKo]).toBe('좋은 오후예요, {{name}}님');
+  });
+
+  it('uses the unnamed greeting when the user has no name', () => {
+    const key = getDaypartGreetingKey(at(8), false);
+    expect(translationKo[key as keyof typeof translationKo]).toBe('좋은 아침이에요');
+  });
+
+  it('has an English and Korean string for every daypart key', () => {
+    for (const hours of [8, 14, 20]) {
+      for (const named of [true, false]) {
+        const key = getDaypartGreetingKey(at(hours), named);
+        expect(translationEn).toHaveProperty(key);
+        expect(translationKo).toHaveProperty(key);
+      }
+    }
+  });
+
+  it('waits until noon during the morning', () => {
+    expect(getMsUntilNextDaypart(at(11, 30))).toBe(30 * 60 * 1000);
+  });
+
+  it('waits until the next morning after the evening starts', () => {
+    expect(getMsUntilNextDaypart(at(23))).toBe(6 * 60 * 60 * 1000);
+  });
+
+  it('waits until 05:00 in the small hours', () => {
+    expect(getMsUntilNextDaypart(at(3))).toBe(2 * 60 * 60 * 1000);
   });
 });

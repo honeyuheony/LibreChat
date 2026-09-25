@@ -199,3 +199,70 @@ export const getMsUntilNextGreeting = (date: Date = new Date()): number => {
   );
   return boundary.getTime() - date.getTime();
 };
+
+/** Local hour each part of the day starts at; evening runs through the night until morning. */
+const daypartStarts = { morning: 5, afternoon: 12, evening: 18 } as const;
+
+export type Daypart = keyof typeof daypartStarts;
+
+const daypartOptions: Record<Daypart, GreetingOption> = {
+  morning: {
+    key: 'com_ui_landing_greeting_morning',
+    namedKey: 'com_ui_landing_greeting_morning_named',
+  },
+  afternoon: {
+    key: 'com_ui_landing_greeting_afternoon',
+    namedKey: 'com_ui_landing_greeting_afternoon_named',
+  },
+  evening: {
+    key: 'com_ui_landing_greeting_evening',
+    namedKey: 'com_ui_landing_greeting_evening_named',
+  },
+};
+
+export const getDaypart = (date: Date = new Date()): Daypart => {
+  const hours = date.getHours();
+  if (hours >= daypartStarts.morning && hours < daypartStarts.afternoon) {
+    return 'morning';
+  }
+  if (hours >= daypartStarts.afternoon && hours < daypartStarts.evening) {
+    return 'afternoon';
+  }
+  return 'evening';
+};
+
+export const getDaypartGreetingKey = (
+  date: Date = new Date(),
+  hasName = false,
+): TranslationKeys => {
+  const option = daypartOptions[getDaypart(date)];
+  return hasName ? option.namedKey : option.key;
+};
+
+/** Milliseconds from `date` until the next part of the day starts (local time). */
+export const getMsUntilNextDaypart = (date: Date = new Date()): number => {
+  const hours = date.getHours();
+  const nextStart = Object.values(daypartStarts).find((start) => start > hours);
+  const boundary =
+    nextStart == null
+      ? new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, daypartStarts.morning)
+      : new Date(date.getFullYear(), date.getMonth(), date.getDate(), nextStart);
+  return boundary.getTime() - date.getTime();
+};
+
+export type GreetingSchedule = {
+  getKey: (date: Date, hasName: boolean) => TranslationKeys;
+  getMsUntilNext: (date: Date) => number;
+};
+
+/** Varied greetings that rotate by weekday and calendar day. */
+export const rotatingGreetingSchedule: GreetingSchedule = {
+  getKey: getGreetingKey,
+  getMsUntilNext: getMsUntilNextGreeting,
+};
+
+/** One fixed greeting per morning, afternoon and evening. */
+export const daypartGreetingSchedule: GreetingSchedule = {
+  getKey: getDaypartGreetingKey,
+  getMsUntilNext: getMsUntilNextDaypart,
+};

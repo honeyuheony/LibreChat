@@ -26,6 +26,10 @@ export function useSettingsContext(): SettingsContextValue {
     permissionType: PermissionTypes.PROMPTS,
     permission: Permissions.USE,
   });
+  const hasMemories = useHasAccess({
+    permissionType: PermissionTypes.MEMORIES,
+    permission: Permissions.USE,
+  });
 
   const balanceEnabled = startupConfig?.balance?.enabled === true;
   const langfuseConnectionAccess = startupConfig?.langfuseConnectionAccess === true;
@@ -46,7 +50,8 @@ export function useSettingsContext(): SettingsContextValue {
     () => ({
       balanceEnabled,
       hasAnyPersonalizationFeature,
-      hasMemoryOptOut,
+      /** Opting out of memory means nothing where the deployment turned memory off. */
+      hasMemoryOptOut: hasMemoryOptOut && hasMemories === true,
       hasStatefulCodeSessions,
       hasRemoteAgents: hasRemoteAgentsBool,
       hasUserProvidedEndpoints,
@@ -64,6 +69,7 @@ export function useSettingsContext(): SettingsContextValue {
       balanceEnabled,
       hasAnyPersonalizationFeature,
       hasMemoryOptOut,
+      hasMemories,
       hasStatefulCodeSessions,
       hasRemoteAgentsBool,
       hasUserProvidedEndpoints,

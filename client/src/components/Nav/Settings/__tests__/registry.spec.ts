@@ -1,6 +1,7 @@
 import { isValidElementType } from 'react-is';
 import { SettingsTabValues } from 'librechat-data-provider';
 import type { SettingsContextValue } from '../types';
+import ConnectorsSettings from '~/components/Connectors/ConnectorsSettings';
 import en from '~/locales/en/translation.json';
 import { registry } from '../registry';
 import { TABS } from '../types';
@@ -51,41 +52,61 @@ describe('settings registry', () => {
     }
   });
 
-  describe('Langfuse connection visibility', () => {
-    const langfuseEntry = registry.find((entry) => entry.id === 'langfuseConnection');
+  describe('tab placement', () => {
+    const tabOf = (id: string) => registry.find((entry) => entry.id === id)?.tab;
 
-    it('places the connection in the Langfuse tab', () => {
-      expect(langfuseEntry).toMatchObject({
-        tab: SettingsTabValues.LANGFUSE,
-        section: 'langfuse',
+    it('keeps appearance and build info under General', () => {
+      expect(tabOf('theme')).toBe(SettingsTabValues.GENERAL);
+      expect(tabOf('about')).toBe(SettingsTabValues.GENERAL);
+    });
+
+    it('gathers profile, chat behaviour, speech and security under Personal', () => {
+      for (const id of ['avatar', 'enterToSend', 'speechToText', 'textToSpeech', 'twoFactor']) {
+        expect(tabOf(id)).toBe(SettingsTabValues.PERSONALIZATION);
+      }
+    });
+
+    it('moves account deletion to the Data danger zone', () => {
+      expect(registry.find((entry) => entry.id === 'deleteAccount')).toMatchObject({
+        tab: SettingsTabValues.DATA,
+        section: 'danger',
       });
     });
 
-    it('shows the connection when the user can manage it', () => {
-      expect(
-        langfuseEntry?.show?.({
-          ...settingsContext,
-          langfuseConnectionAccess: true,
-        }),
-      ).toBe(true);
+    it('drops right-to-left chat direction and mid-chat endpoint switching', () => {
+      expect(tabOf('chatDirection')).toBeUndefined();
+      expect(tabOf('modularChat')).toBeUndefined();
     });
 
-    it('hides the connection without Langfuse config access', () => {
-      expect(
-        langfuseEntry?.show?.({
-          ...settingsContext,
-          langfuseConnectionAccess: false,
-        }),
-      ).toBe(false);
+    it('lists no entries under the Connectors tab, which renders its own panel', () => {
+      expect(registry.filter((entry) => entry.tab === SettingsTabValues.CONNECTORS)).toEqual([]);
+      expect(TABS.find((tab) => tab.id === SettingsTabValues.CONNECTORS)?.Panel).toBe(
+        ConnectorsSettings,
+      );
+    });
+  });
+
+  describe('prompt settings visibility', () => {
+    const promptEntries = registry.filter((entry) => entry.section === 'prompts');
+
+    it('covers the three prompt settings', () => {
+      expect(promptEntries.map((entry) => entry.id).sort()).toEqual([
+        'advancedPrompts',
+        'alwaysMakeProd',
+        'autoSendPrompts',
+      ]);
     });
 
-    it('shows the connection in single-tenant mode without fanout', () => {
-      expect(
-        langfuseEntry?.show?.({
-          ...settingsContext,
-          langfuseConnectionAccess: true,
-        }),
-      ).toBe(true);
+    it('hides them where the prompt library is off', () => {
+      for (const entry of promptEntries) {
+        expect(entry.show?.({ ...settingsContext, hasPrompts: false })).toBe(false);
+      }
+    });
+
+    it('shows them where the prompt library is on', () => {
+      for (const entry of promptEntries) {
+        expect(entry.show?.({ ...settingsContext, hasPrompts: true })).toBe(true);
+      }
     });
   });
 

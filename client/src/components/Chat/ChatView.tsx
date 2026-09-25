@@ -25,6 +25,7 @@ import { useGetMessagesByConvoId } from '~/data-provider';
 import Footer, { useConfiguredFooter } from './Footer';
 import { AskAnswerHostProvider } from './ask/state';
 import MessagesView from './Messages/MessagesView';
+import LandingSkills from './LandingSkills';
 import Presentation from './Presentation';
 import ChatForm from './Input/ChatForm';
 import { TraceSurface } from './Trace';
@@ -214,6 +215,17 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                             isLandingPage={isLandingPage}
                             footerBelow={footerBelow}
                             centerFormOnLanding={centerFormOnLanding}
+                          />
+                        )}
+                        {isLandingPage && !isSubagentThreadReadOnly && (
+                          <LandingSkills
+                            conversationId={
+                              chatHelpers.conversation?.conversationId ?? Constants.NEW_CONVO
+                            }
+                            agentId={chatHelpers.conversation?.agent_id}
+                            /* ChatForm keeps a clearance band under the landing composer
+                               (sm:mb-28 centred, sm:mb-10 otherwise); the chips sit inside it. */
+                            className={cn('pt-4', centerFormOnLanding ? 'sm:-mt-24' : 'sm:-mt-6')}
                           />
                         )}
                         {/* The generic disclaimer is the welcome screen's; a

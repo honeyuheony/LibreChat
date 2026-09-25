@@ -1,18 +1,26 @@
 import { useMemo } from 'react';
+import { useSetAtom } from 'jotai';
 import { useRecoilValue } from 'recoil';
-import { BarChart3, MessagesSquare } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { BarChart3, MessagesSquare, Plug } from 'lucide-react';
 import { useUserKeyQuery } from 'librechat-data-provider/react-query';
-import { getConfigDefaults, getEndpointField } from 'librechat-data-provider';
+import { getConfigDefaults, getEndpointField, SettingsTabValues } from 'librechat-data-provider';
 import type { TEndpointsConfig } from 'librechat-data-provider';
 import type { NavLink } from '~/common';
 import { useGetEndpointsQuery, useGetStartupConfig, useInsightsAccessQuery } from '~/data-provider';
 import ConversationsSection from '~/components/UnifiedSidebar/ConversationsSection';
+import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import useSideNavLinks from '~/hooks/Nav/useSideNavLinks';
 import { useAuthContext } from '~/hooks';
 import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
+
+/**
+ * Panels the sidebar no longer lists: MCP servers are managed from the settings
+ * "Connectors" tab, and attached files from settings "Data" (manage files).
+ */
+const panelsReplacedElsewhere = new Set(['mcp-builder', 'files']);
 
 export default function useUnifiedSidebarLinks() {
   const navigate = useNavigate();
@@ -23,6 +31,7 @@ export default function useUnifiedSidebarLinks() {
   const endpoint = useRecoilValue(store.conversationEndpointByIndex(0)) ?? undefined;
   const { data: startupConfig } = useGetStartupConfig();
   const { data: endpointsConfig = {} as TEndpointsConfig } = useGetEndpointsQuery();
+  const setSettingsTab = useSetAtom(settingsDialogTabAtom);
 
   const interfaceConfig = useMemo(
     () => startupConfig?.interface ?? defaultInterface,
@@ -65,18 +74,36 @@ export default function useUnifiedSidebarLinks() {
 
   const links = useMemo(() => {
     const conversationLink: NavLink = {
-      title: 'com_ui_chat_history',
+      title: 'com_ui_sidebar_chats',
       label: '',
       icon: MessagesSquare,
       id: 'conversations',
       Component: ConversationsSection,
     };
+    const connectorsLink: NavLink = {
+      title: 'com_ui_sidebar_connectors',
+      label: '',
+      icon: Plug,
+      id: 'connectors',
+      onClick: () => setSettingsTab(SettingsTabValues.CONNECTORS),
+    };
+
+    const skillsLinks: NavLink[] = [];
+    const otherLinks: NavLink[] = [];
+    for (const link of sideNavLinks) {
+      if (link.id === 'skills') {
+        skillsLinks.push({ ...link, title: 'com_ui_sidebar_skills' });
+      } else if (!panelsReplacedElsewhere.has(link.id)) {
+        otherLinks.push(link);
+      }
+    }
+    const leadingLinks = [conversationLink, ...skillsLinks, connectorsLink];
 
     if (
       !insightsFeatureEnabled ||
       (!isInsightsRoute && !isInsightsAccessLoading && insightsAccess?.access !== true)
     ) {
-      return [conversationLink, ...sideNavLinks];
+      return [...leadingLinks, ...otherLinks];
     }
 
     const insightsLink: NavLink = {
@@ -91,11 +118,8 @@ export default function useUnifiedSidebarLinks() {
         }
       },
     };
-    const mcpIndex = sideNavLinks.findIndex((link) => link.id === 'mcp-builder');
-    const nextLinks = [...sideNavLinks];
-    nextLinks.splice(mcpIndex >= 0 ? mcpIndex + 1 : nextLinks.length, 0, insightsLink);
 
-    return [conversationLink, ...nextLinks];
+    return [...leadingLinks, ...otherLinks, insightsLink];
   }, [
     insightsAccess?.access,
     insightsFeatureEnabled,
@@ -103,6 +127,7 @@ export default function useUnifiedSidebarLinks() {
     isInsightsRoute,
     location.pathname,
     navigate,
+    setSettingsTab,
     sideNavLinks,
   ]);
 

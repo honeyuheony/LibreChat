@@ -3834,6 +3834,10 @@ export enum SettingsTabValues {
    */
   PERSONALIZATION = 'personalization',
   /**
+   * Tab for Connectors (MCP servers shown to users as connectors)
+   */
+  CONNECTORS = 'connectors',
+  /**
    * Tab for About / Build Info
    */
   ABOUT = 'about',
@@ -4271,6 +4275,8 @@ export enum LocalStorageKeys {
   AUTO_EXPAND_TOOLS = 'autoExpandTools',
   /** Last selected MCP values per conversation ID */
   LAST_MCP_ = 'LAST_MCP_',
+  /** Last MCP servers switched off for a saved agent in a conversation */
+  LAST_MCP_DISABLED_ = 'LAST_MCP_DISABLED_',
   /** Last checked toggle for Code Interpreter API per conversation ID */
   LAST_CODE_TOGGLE_ = 'LAST_CODE_TOGGLE_',
   /** Last checked toggle for Web Search per conversation ID */

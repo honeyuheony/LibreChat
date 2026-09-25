@@ -32,7 +32,6 @@ import DuringRunAction from '../SettingsTabs/Chat/DuringRunAction';
 import DeleteAccount from '../SettingsTabs/Account/DeleteAccount';
 import StatefulWorkspaceDefault from './StatefulWorkspaceDefault';
 import { ForkSettings } from '../SettingsTabs/Chat/ForkSettings';
-import ChatDirection from '../SettingsTabs/Chat/ChatDirection';
 import { DeleteCache } from '../SettingsTabs/Data/DeleteCache';
 import { ManageFiles } from '../SettingsTabs/Data/ManageFiles';
 import { smoothStreamingAtom } from '~/store/smoothStreaming';
@@ -50,7 +49,7 @@ import MemoryToggle from './MemoryToggle';
 import { TTSEndpoints } from '~/common';
 import store from '~/store';
 
-const { GENERAL, CHAT, SPEECH, DATA, ACCOUNT, ABOUT } = SettingsTabValues;
+const { GENERAL, PERSONALIZATION, DATA } = SettingsTabValues;
 
 export const registry: SettingEntry[] = [
   // General · Appearance
@@ -85,14 +84,6 @@ export const registry: SettingEntry[] = [
     labelKey: 'com_nav_font_size',
     keywords: ['text', 'zoom'],
     Component: FontSizeSelector,
-  },
-  {
-    id: 'chatDirection',
-    tab: GENERAL,
-    section: 'appearance',
-    labelKey: 'com_nav_chat_direction',
-    keywords: ['rtl', 'ltr'],
-    Component: ChatDirection,
   },
   {
     id: 'clockFormat',
@@ -188,10 +179,10 @@ export const registry: SettingEntry[] = [
     show: (ctx) => ctx.adminPanelURL !== '',
   },
 
-  // Chat · Sending
+  // Personal · Sending
   {
     id: 'enterToSend',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_nav_enter_to_send',
     keywords: ['return', 'newline'],
@@ -204,7 +195,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'duringRunDefaultAction',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_nav_during_run_action',
     keywords: ['steer', 'queue', 'interrupt', 'generating'],
@@ -212,7 +203,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'steerInterruptsByDefault',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_ui_steer_interrupts_default',
     keywords: ['steer', 'interrupt', 'preempt', 'generating', 'stop'],
@@ -225,7 +216,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'saveDrafts',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_nav_save_drafts',
     Component: toggleControl({
@@ -237,7 +228,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'clientImageResize',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_nav_client_image_resize',
     keywords: ['image', 'resize', 'compress', 'upload', 'attachment', 'photo'],
@@ -245,7 +236,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'pasteLongTextAsFile',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_nav_paste_long_text_as_file',
     keywords: ['paste', 'clipboard', 'attachment', 'file', 'text'],
@@ -258,7 +249,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'saveBadgesState',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'sending',
     labelKey: 'com_nav_save_badges_state',
     Component: toggleControl({
@@ -268,10 +259,10 @@ export const registry: SettingEntry[] = [
       hoverCardText: 'com_nav_info_save_badges_state',
     }),
   },
-  // Chat · Commands
+  // Personal · Commands
   {
     id: 'atCommand',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'commands',
     labelKey: 'com_nav_at_command_description',
     Component: toggleControl({
@@ -282,7 +273,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'plusCommand',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'commands',
     labelKey: 'com_nav_plus_command_description',
     show: (ctx) => ctx.hasMultiConvo,
@@ -294,7 +285,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'slashCommand',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'commands',
     labelKey: 'com_nav_slash_command_description',
     show: (ctx) => ctx.hasPrompts,
@@ -304,10 +295,10 @@ export const registry: SettingEntry[] = [
       switchId: 'slashCommand',
     }),
   },
-  // Chat · Messages
+  // Personal · Messages
   {
     id: 'enableUserMsgMarkdown',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_user_msg_markdown',
     Component: toggleControl({
@@ -318,7 +309,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'collapseLongUserMessages',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_collapse_user_messages',
     keywords: ['collapse', 'expand', 'long', 'user', 'message', 'truncate', 'show', 'more'],
@@ -331,7 +322,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'usernameDisplay',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_user_name_display',
     keywords: ['username', 'name'],
@@ -339,7 +330,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'latexParsing',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_latex_parsing',
     Component: toggleControl({
@@ -351,7 +342,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'showThinking',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_show_thinking',
     Component: toggleControl({
@@ -362,7 +353,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'smoothStreaming',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_smooth_streaming',
     keywords: ['smooth', 'streaming', 'fade', 'animation', 'animate'],
@@ -375,7 +366,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'copyRichText',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_copy_rich_text',
     keywords: ['copy', 'clipboard', 'rich', 'html', 'format', 'markdown', 'paste'],
@@ -388,7 +379,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'autoExpandTools',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'messages',
     labelKey: 'com_nav_auto_expand_tools',
     Component: toggleControl({
@@ -397,10 +388,10 @@ export const registry: SettingEntry[] = [
       switchId: 'autoExpandTools',
     }),
   },
-  // Chat · Conversations
+  // Personal · Conversations
   {
     id: 'newChatSwitchToHistory',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'conversations',
     labelKey: 'com_nav_new_chat_switch_to_history',
     Component: toggleControl({
@@ -411,7 +402,7 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'autoScroll',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'conversations',
     labelKey: 'com_nav_auto_scroll',
     Component: toggleControl({
@@ -421,19 +412,8 @@ export const registry: SettingEntry[] = [
     }),
   },
   {
-    id: 'modularChat',
-    tab: CHAT,
-    section: 'conversations',
-    labelKey: 'com_nav_modular_chat',
-    Component: toggleControl({
-      stateAtom: store.modularChat,
-      localizationKey: 'com_nav_modular_chat',
-      switchId: 'modularChat',
-    }),
-  },
-  {
     id: 'defaultTemporaryChat',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'conversations',
     labelKey: 'com_nav_default_temporary_chat',
     Component: toggleControl({
@@ -445,25 +425,27 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'forkSettings',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'conversations',
     labelKey: 'com_ui_fork_default',
     keywords: ['fork', 'branch', 'split'],
     Component: ForkSettings,
   },
-  // Chat · Prompts
+  // Personal · Prompts
   {
     id: 'advancedPrompts',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'prompts',
+    show: (ctx) => ctx.hasPrompts,
     labelKey: 'com_nav_advanced_prompts',
     keywords: ['prompt'],
     Component: AdvancedPrompts,
   },
   {
     id: 'alwaysMakeProd',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'prompts',
+    show: (ctx) => ctx.hasPrompts,
     labelKey: 'com_nav_always_make_prod',
     Component: toggleControl({
       stateAtom: store.alwaysMakeProd,
@@ -473,8 +455,9 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'autoSendPrompts',
-    tab: CHAT,
+    tab: PERSONALIZATION,
     section: 'prompts',
+    show: (ctx) => ctx.hasPrompts,
     labelKey: 'com_nav_auto_send_prompts',
     Component: toggleControl({
       stateAtom: store.autoSendPrompts,
@@ -484,88 +467,88 @@ export const registry: SettingEntry[] = [
     }),
   },
 
-  // Speech · Speech-to-text
+  // Personal · Speech-to-text
   {
     id: 'speechToText',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'stt',
     labelKey: 'com_nav_speech_to_text',
     Component: SpeechToTextSwitch,
   },
   {
     id: 'engineSTT',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'stt',
     labelKey: 'com_ui_settings_label_engine_stt',
     Component: EngineSTTSetting,
   },
   {
     id: 'languageSTT',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'stt',
     labelKey: 'com_ui_settings_label_language_stt',
     Component: LanguageSTTDropdown,
   },
   {
     id: 'autoTranscribeAudio',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'stt',
     labelKey: 'com_nav_auto_transcribe_audio',
     Component: AutoTranscribeAudioSwitch,
   },
   {
     id: 'decibelValue',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'stt',
     labelKey: 'com_ui_settings_label_decibel',
     Component: DecibelSelector,
   },
   {
     id: 'autoSendText',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'stt',
     labelKey: 'com_nav_auto_send_text',
     Component: AutoSendTextSelector,
   },
-  // Speech · Text-to-speech
+  // Personal · Text-to-speech
   {
     id: 'textToSpeech',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_nav_text_to_speech',
     Component: TextToSpeechSwitch,
   },
   {
     id: 'engineTTS',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_ui_settings_label_engine_tts',
     Component: EngineTTSSetting,
   },
   {
     id: 'voice',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_ui_settings_label_voice',
     Component: VoiceDropdown,
   },
   {
     id: 'conversationMode',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_ui_settings_label_conversation_mode',
     Component: ConversationModeSwitch,
   },
   {
     id: 'automaticPlayback',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_nav_automatic_playback',
     Component: AutomaticPlaybackSwitch,
   },
   {
     id: 'cloudBrowserVoices',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_nav_enable_cloud_browser_voice',
     show: (ctx) => ctx.engineTTS === TTSEndpoints.browser,
@@ -573,14 +556,14 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'playbackRate',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_ui_settings_label_playback_rate',
     Component: PlaybackRate,
   },
   {
     id: 'cacheTTS',
-    tab: SPEECH,
+    tab: PERSONALIZATION,
     section: 'tts',
     labelKey: 'com_nav_enable_cache_tts',
     Component: CacheTTSSwitch,
@@ -670,18 +653,18 @@ export const registry: SettingEntry[] = [
     Component: ClearChats,
   },
 
-  // Account · Profile
+  // Personal · Profile
   {
     id: 'avatar',
-    tab: ACCOUNT,
+    tab: PERSONALIZATION,
     section: 'profile',
     labelKey: 'com_ui_settings_label_avatar',
     Component: Avatar,
   },
-  // Account · Security
+  // Personal · Security
   {
     id: 'twoFactor',
-    tab: ACCOUNT,
+    tab: PERSONALIZATION,
     section: 'security',
     labelKey: 'com_ui_settings_label_2fa',
     show: (ctx) => ctx.isLocalProvider,
@@ -689,26 +672,26 @@ export const registry: SettingEntry[] = [
   },
   {
     id: 'backupCodes',
-    tab: ACCOUNT,
+    tab: PERSONALIZATION,
     section: 'security',
     labelKey: 'com_ui_settings_label_backup_codes',
     show: (ctx) => ctx.isLocalProvider && ctx.twoFactorEnabled,
     Component: BackupCodesItem,
   },
-  // Account · Danger zone
+  // Data controls · Danger zone (account)
   {
     id: 'deleteAccount',
-    tab: ACCOUNT,
+    tab: DATA,
     section: 'danger',
     labelKey: 'com_ui_settings_label_delete_account',
     show: (ctx) => ctx.allowAccountDeletion,
     Component: DeleteAccount,
   },
 
-  // About
+  // General · About
   {
     id: 'about',
-    tab: ABOUT,
+    tab: GENERAL,
     section: 'about',
     labelKey: 'com_nav_setting_about',
     keywords: ['version', 'build', 'diagnostics'],

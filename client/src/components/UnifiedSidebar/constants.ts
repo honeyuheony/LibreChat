@@ -1,5 +1,6 @@
 export const COLLAPSED_WIDTH = 52;
-export const EXPANDED_MIN = 360;
+/** The design's sidebar width (docs/design-web-claude-style.md mock); users can drag it wider. */
+export const EXPANDED_MIN = 272;
 
 /**
  * How much of the viewport the mobile drawer covers.

@@ -119,6 +119,12 @@ export type TEndpointOption = Pick<
 
 export type TEphemeralAgent = {
   mcp?: string[];
+  /**
+   * MCP servers the user switched off for this conversation. Applies to a saved
+   * agent: its tools from these servers are left out of the run. It only ever
+   * removes tools, never attaches a server the agent does not already carry.
+   */
+  disabled_mcp?: string[];
   web_search?: boolean;
   file_search?: boolean;
   execute_code?: boolean;

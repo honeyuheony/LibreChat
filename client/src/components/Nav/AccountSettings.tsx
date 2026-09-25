@@ -1,11 +1,14 @@
 import { useState, memo, useRef } from 'react';
+import { useSetAtom } from 'jotai';
 import { useSetRecoilState } from 'recoil';
 import * as Menu from '@ariakit/react/menu';
+import { SettingsTabValues } from 'librechat-data-provider';
 import { GearIcon, DropdownMenuSeparator, Avatar } from '@librechat/client';
 import {
   Archive,
   ChevronRight,
   CircleHelp,
+  ChevronsUpDown,
   Keyboard,
   LifeBuoy,
   LogOut,
@@ -14,9 +17,9 @@ import {
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
+import { settingsDialogTabAtom } from './Settings/state';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useLocalize } from '~/hooks';
-import Settings from './Settings';
 import store from '~/store';
 
 function HelpSubmenu({
@@ -97,13 +100,13 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const balanceQuery = useGetUserBalance({
     enabled: !!isAuthenticated && startupConfig?.balance?.enabled,
   });
-  const [showSettings, setShowSettings] = useState(false);
+  const setSettingsTab = useSetAtom(settingsDialogTabAtom);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   const [showArchived, setShowArchived] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <Menu.MenuProvider placement={collapsed ? 'right-end' : undefined}>
+    <Menu.MenuProvider placement={collapsed ? 'right-end' : 'top-start'}>
       <Menu.MenuButton
         ref={accountSettingsButtonRef}
         aria-label={localize('com_nav_account_settings')}
@@ -111,23 +114,29 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         className={
           collapsed
             ? 'flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
-            : 'mt-text-sm flex h-auto w-full items-center gap-2 rounded-xl p-2 text-sm transition-all duration-200 ease-in-out hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
+            : 'flex h-auto w-full items-center gap-2.5 rounded-theme-surface border border-border-light bg-surface-primary p-2.5 text-left transition-colors duration-200 hover:bg-surface-hover aria-[expanded=true]:bg-surface-hover'
         }
       >
-        <div
-          className={collapsed ? 'size-7 flex-shrink-0' : '-ml-0.9 -mt-0.8 h-8 w-8 flex-shrink-0'}
-        >
+        <div className={collapsed ? 'size-7 flex-shrink-0' : 'size-8 flex-shrink-0'}>
           <div className="relative flex">
             <Avatar user={user} size={collapsed ? 28 : 32} />
           </div>
         </div>
         {!collapsed && (
-          <div
-            className="mt-2 grow overflow-hidden text-ellipsis whitespace-nowrap text-left text-text-primary"
-            style={{ marginTop: '0', marginLeft: '0' }}
-          >
-            {user?.name ?? user?.username ?? localize('com_nav_user')}
-          </div>
+          <>
+            <div className="flex min-w-0 grow flex-col">
+              <span className="truncate text-sm font-semibold text-text-primary">
+                {user?.name ?? user?.username ?? localize('com_nav_user')}
+              </span>
+              {user?.email != null && user.email !== '' && (
+                <span className="truncate text-sm text-text-tertiary">{user.email}</span>
+              )}
+            </div>
+            <ChevronsUpDown
+              className="size-4 flex-shrink-0 text-text-tertiary"
+              aria-hidden="true"
+            />
+          </>
         )}
       </Menu.MenuButton>
       <Menu.Menu
@@ -162,7 +171,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           {localize('com_nav_archived_chats')}
         </Menu.MenuItem>
         <Menu.MenuItem
-          onClick={() => setShowSettings(true)}
+          onClick={() => setSettingsTab(SettingsTabValues.GENERAL)}
           className="select-item text-sm"
           data-testid="nav-settings"
         >
@@ -182,7 +191,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           triggerRef={accountSettingsButtonRef}
         />
       )}
-      {showSettings && <Settings open={showSettings} onOpenChange={setShowSettings} />}
     </Menu.MenuProvider>
   );
 }
