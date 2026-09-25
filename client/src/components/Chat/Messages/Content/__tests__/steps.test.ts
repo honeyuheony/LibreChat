@@ -4,6 +4,7 @@ import {
   getToolErrorMessage,
   objectParticle,
   subjectParticle,
+  summarizeToolArgs,
   summarizeToolOutput,
 } from '../steps';
 import ko from '~/locales/ko/translation.json';
@@ -112,5 +113,19 @@ describe('getToolErrorMessage', () => {
 
   it('returns null for a successful output', () => {
     expect(getToolErrorMessage('3분기 예산 메모\n')).toBeNull();
+  });
+});
+
+describe('summarizeToolArgs', () => {
+  it('joins the leading non-empty arguments on one line', () => {
+    expect(
+      summarizeToolArgs(
+        '{"title":"3분기 예산안 요약","start_iso":"","days":7,"extra":"x","more":"y"}',
+      ),
+    ).toBe('title: 3분기 예산안 요약 · days: 7 · extra: x');
+  });
+
+  it('cuts a long value with an ellipsis', () => {
+    expect(summarizeToolArgs({ query: 'a'.repeat(50) })).toBe(`query: ${'a'.repeat(40)}…`);
   });
 });

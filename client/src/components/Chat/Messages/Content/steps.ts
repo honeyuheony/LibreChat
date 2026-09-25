@@ -267,3 +267,18 @@ export function getToolErrorMessage(output: string | null | undefined): string |
   const trimmed = output.trim();
   return isError(trimmed) ? cleanToolError(trimmed) : null;
 }
+
+const ARG_SUMMARY_LIMIT = 3;
+const ARG_VALUE_LIMIT = 40;
+
+/** One line of the leading arguments ("path: memo.txt · pattern: 예산") for an approval card. */
+export function summarizeToolArgs(args: unknown): string {
+  return Object.entries(parseToolArgs(args))
+    .filter(([, value]) => value != null && value !== '')
+    .slice(0, ARG_SUMMARY_LIMIT)
+    .map(([key, value]) => {
+      const text = typeof value === 'string' ? value : JSON.stringify(value);
+      return `${key}: ${text.length > ARG_VALUE_LIMIT ? `${text.slice(0, ARG_VALUE_LIMIT)}…` : text}`;
+    })
+    .join(' · ');
+}

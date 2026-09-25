@@ -33,13 +33,22 @@ jest.mock('~/hooks', () => ({
       com_ui_proposed_replacements: 'Proposed replacements',
       com_ui_proposed_arguments: 'Proposed arguments',
       com_ui_decisions_selected: `${values?.[0]} of ${values?.[1]} decisions selected`,
-      com_ui_approve: 'Approve',
+      com_ui_approve_once: 'Allow once',
       com_ui_reject: 'Reject',
       com_ui_continue: 'Continue',
       com_ui_collapse: 'Collapse',
     };
     return labels[key] ?? key;
   },
+}));
+
+jest.mock('~/hooks/MCP', () => ({
+  useMCPServerNames: () => [],
+}));
+
+jest.mock('~/components/Chat/Messages/Content/connectors', () => ({
+  useConnectorTitles: () => new Map(),
+  getConnectorTitle: (_titles: Map<string, string>, server: string) => server,
 }));
 
 jest.mock('~/data-provider', () => ({
@@ -109,7 +118,7 @@ describe('PendingToolApproval', () => {
     expect(screen.getByText('0 of 2 decisions selected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
 
-    const approvals = screen.getAllByRole('button', { name: 'Approve' });
+    const approvals = screen.getAllByRole('button', { name: 'Allow once' });
     fireEvent.click(approvals[0]);
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     fireEvent.click(approvals[1]);
