@@ -16,11 +16,8 @@ import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
 
-/**
- * Panels the sidebar no longer lists: MCP servers are managed from the settings
- * "Connectors" tab, and attached files from settings "Data" (manage files).
- */
-const panelsReplacedElsewhere = new Set(['mcp-builder', 'files']);
+/** The files panel is managed from settings under Data. */
+const panelsReplacedElsewhere = new Set(['files']);
 
 export default function useUnifiedSidebarLinks() {
   const navigate = useNavigate();
