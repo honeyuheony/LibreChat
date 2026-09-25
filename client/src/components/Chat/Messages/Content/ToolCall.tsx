@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useContext } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Button } from '@librechat/client';
 import {
@@ -10,17 +10,20 @@ import {
 } from 'librechat-data-provider';
 import type { TAttachment, PartMetadata } from 'librechat-data-provider';
 import { useLocalize, useProgress, useExpandCollapse, useLazyCollapseBody } from '~/hooks';
+import { describeToolStep, getToolErrorMessage, summarizeToolOutput } from './steps';
+import { getConnectorTitle, useConnectorTitles } from './connectors';
 import { ToolIcon, getToolIconType, isError } from './ToolOutput';
 import { useMCPIconMap, useMCPServerNames } from '~/hooks/MCP';
 import { resolveToolCallPhase } from '~/utils/toolCallPhase';
+import { GroupedRowContext, TOOL_ROW_CLASSES } from './rows';
 import { cn, getToolDisplayLabel, logger } from '~/utils';
 import { toolPanelSpacingClassName } from './disclosure';
 import { useToolCallIntent } from './Parts/intent';
 import { AttachmentGroup } from './Parts';
 import ToolCallInfo from './ToolCallInfo';
 import ProgressText from './ProgressText';
-import { TOOL_ROW_CLASSES } from './rows';
 import { ToolAuthWarning } from './auth';
+import StepIcon from './StepIcon';
 import store from '~/store';
 
 export default function ToolCall({
@@ -129,6 +132,12 @@ export default function ToolCall({
   );
   const mcpIconMap = useMCPIconMap();
   const mcpIconUrl = isMCPToolCall ? mcpIconMap.get(mcpServerName) : undefined;
+  const connectorTitles = useConnectorTitles();
+  const isGroupedRow = useContext(GroupedRowContext);
+  const stepLabel = useMemo(
+    () => describeToolStep(function_name, _args, localize, displayFunctionName),
+    [function_name, _args, localize, displayFunctionName],
+  );
 
   const actionId = useMemo(() => {
     if (isMCPToolCall || !parsedAuthUrl) {
@@ -226,14 +235,19 @@ export default function ToolCall({
   }, [mountBody, onExpand, showInfo]);
 
   const subtitle = useMemo(() => {
+    if (isGroupedRow) {
+      return undefined;
+    }
     if (isMCPToolCall && mcpServerName) {
-      return localize('com_ui_via_server', { 0: mcpServerName });
+      return localize('com_ui_via_server', {
+        0: getConnectorTitle(connectorTitles, mcpServerName),
+      });
     }
     if (domain && domain.length !== Constants.ENCODED_DOMAIN_LENGTH) {
       return localize('com_ui_via_server', { 0: domain });
     }
     return undefined;
-  }, [isMCPToolCall, mcpServerName, domain, localize]);
+  }, [isGroupedRow, isMCPToolCall, mcpServerName, connectorTitles, domain, localize]);
 
   /** Model-authored live label, streamed as the first args key (injected by
    *  the `tool_intents` capability); persists as the settled label —
@@ -250,21 +264,27 @@ export default function ToolCall({
      * a screen-reader user the opposite of what the card shows.
      */
     if (phase === 'failed') {
-      return function_name
-        ? `${localize('com_ui_failed')}: ${function_name}`
-        : localize('com_ui_failed');
+      return function_name ? stepLabel : localize('com_ui_failed');
     }
     if (intent != null) {
       return intent;
     }
-    if (isMCPToolCall === true) {
-      return localize('com_assistants_completed_function', { 0: displayFunctionName });
-    }
-    if (domain != null && domain && domain.length !== Constants.ENCODED_DOMAIN_LENGTH) {
+    if (
+      !isMCPToolCall &&
+      domain != null &&
+      domain &&
+      domain.length !== Constants.ENCODED_DOMAIN_LENGTH
+    ) {
       return localize('com_assistants_completed_action', { 0: domain });
     }
-    return localize('com_assistants_completed_function', { 0: displayFunctionName });
+    return stepLabel;
   };
+
+  const errorMessage = phase === 'failed' ? getToolErrorMessage(output) : null;
+  const resultSummary =
+    phase === 'completed'
+      ? (summarizeToolOutput(function_name, output, localize) ?? undefined)
+      : undefined;
 
   if (!isLast && (!function_name || function_name.length === 0) && !output) {
     return null;
@@ -291,10 +311,7 @@ export default function ToolCall({
           phase={phase}
           onClick={handleToggleInfo}
           inProgressText={
-            intent ??
-            (displayFunctionName
-              ? localize('com_assistants_running_var', { 0: displayFunctionName })
-              : localize('com_assistants_running_action'))
+            intent ?? (function_name ? stepLabel : localize('com_assistants_running_action'))
           }
           authText={
             phase === 'running' && authDomain.length > 0
@@ -303,14 +320,28 @@ export default function ToolCall({
           }
           finishedText={getFinishedText()}
           subtitle={subtitle}
-          durationMs={runStepDurationMs}
+          trailing={resultSummary}
+          durationMs={isGroupedRow ? undefined : runStepDurationMs}
           icon={
-            <ToolIcon type={toolIconType} iconUrl={mcpIconUrl} isAnimating={phase === 'running'} />
+            isGroupedRow ? (
+              <StepIcon phase={phase} />
+            ) : (
+              <ToolIcon
+                type={toolIconType}
+                iconUrl={mcpIconUrl}
+                isAnimating={phase === 'running'}
+              />
+            )
           }
           hasInput={hasInfo}
           isExpanded={showInfo}
         />
       </div>
+      {errorMessage && (
+        <p className="mb-1.5 ml-8 whitespace-pre-wrap break-words text-sm text-status-error">
+          {errorMessage}
+        </p>
+      )}
       <div
         style={expandStyle}
         onTransitionEnd={handleTransitionEnd}
@@ -321,7 +352,7 @@ export default function ToolCall({
             <div
               className={cn(
                 toolPanelSpacingClassName,
-                'overflow-hidden rounded-lg border border-border-light bg-surface-secondary',
+                'overflow-hidden rounded-theme-control border border-border-light bg-surface-code',
               )}
             >
               <ToolCallInfo input={args ?? ''} output={output} attachments={attachments} />

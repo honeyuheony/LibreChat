@@ -32,6 +32,11 @@ jest.mock('~/hooks/MCP', () => {
   };
 });
 
+jest.mock('../connectors', () => ({
+  useConnectorTitles: () => new Map([['my-pc', '내 PC 폴더']]),
+  getConnectorTitle: (titles: Map<string, string>, server: string) => titles.get(server) ?? server,
+}));
+
 jest.mock('../ToolOutput', () => ({
   StackedToolIcons: () => <span data-testid="stacked-icons" />,
   getMCPServerName: () => '',

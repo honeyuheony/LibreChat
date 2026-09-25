@@ -1,3 +1,5 @@
+import { createContext } from 'react';
+
 /**
  * The vertical box of a live tool row: a 20px line with 6px margins above and
  * below, shared by every call card header and by the streaming cursor a
@@ -18,3 +20,7 @@ export const TOOL_ROW_CLASSES = 'relative my-1.5 flex h-5 shrink-0 items-center 
  * and would carry a taller slot 2px below the row's center.
  */
 export const ROW_GLYPH_SLOT = 'flex h-5 min-w-6 shrink-0 items-center justify-center';
+
+/** True for rows rendered inside a `ToolCallGroup`, whose header already names the connector
+ *  and the total time, so each row shows a status glyph and its result summary instead. */
+export const GroupedRowContext = createContext(false);

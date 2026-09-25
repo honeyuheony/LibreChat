@@ -136,7 +136,7 @@ export default function OutputRenderer({ text }: OutputRendererProps) {
               'max-h-[300px] overflow-auto whitespace-pre-wrap break-words text-xs',
               error && 'font-mono text-status-error',
               !error && structured && 'font-mono text-text-secondary',
-              !error && !structured && 'font-sans text-sm text-text-primary',
+              !error && !structured && 'font-mono text-text-primary',
             )}
           >
             {visibleText}

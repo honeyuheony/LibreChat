@@ -68,6 +68,15 @@ jest.mock('~/hooks', () => ({
     if (key === 'com_ui_subagent_running') {
       return 'Running agent';
     }
+    if (key === 'com_ui_tool_group_connector_done') {
+      return `${values?.[0]}에서 ${values?.[1]}단계 작업함`;
+    }
+    if (key === 'com_ui_tool_group_connector_running') {
+      return `${values?.[0]}에서 작업하는 중`;
+    }
+    if (key === 'com_ui_duration_seconds') {
+      return `${values?.[0]}s`;
+    }
     if (key === 'com_ui_via_server') {
       return `via ${values?.[0]}`;
     }
@@ -93,11 +102,22 @@ jest.mock('~/hooks/MCP', () => {
   };
 });
 
+jest.mock('../connectors', () => ({
+  useConnectorTitles: () => new Map([['my-pc', '내 PC 폴더']]),
+  getConnectorTitle: (titles: Map<string, string>, server: string) => titles.get(server) ?? server,
+}));
+
 jest.mock('../ToolOutput', () => ({
   StackedToolIcons: ({ toolNames }: { toolNames: string[] }) => (
     <span data-testid="stacked-icons" data-tool-names={toolNames.join(',')} />
   ),
-  getMCPServerName: () => '',
+  getMCPServerName: (name: string, knownServerNames?: readonly string[]) => {
+    const configuredServer = knownServerNames?.find((server) => name.endsWith(`_mcp_${server}`));
+    if (configuredServer) {
+      return configuredServer;
+    }
+    return name.includes('_mcp_') ? name.slice(name.lastIndexOf('_mcp_') + '_mcp_'.length) : '';
+  },
   isError: (output: string) => output.startsWith('Error processing tool'),
 }));
 
@@ -108,6 +128,7 @@ jest.mock('lucide-react', () => ({
     </span>
   ),
   Users: () => <span>{'users'}</span>,
+  Loader2: () => <span data-testid="group-spinner">{'spinner'}</span>,
   MessageCircleQuestion: () => <span data-testid="question-icon">{'question'}</span>,
   TriangleAlert: () => <span>{'warning'}</span>,
 }));
@@ -150,6 +171,7 @@ jest.mock('~/utils', () => ({
   getBatchActivityLabelPart: jest.requireActual('~/utils/activityLabels').getBatchActivityLabelPart,
   getActivityLabelText: jest.requireActual('~/utils/activityLabels').getActivityLabelText,
   hasPendingApprovalInPart: jest.requireActual('~/utils/groupToolCalls').hasPendingApprovalInPart,
+  getRunStepDurationLabels: jest.requireActual('~/utils/runStepDuration').getRunStepDurationLabels,
 }));
 
 jest.mock('../Parts', () => ({
@@ -779,7 +801,78 @@ describe('ToolCallGroup image hoisting', () => {
       lastContentIdx: 0,
     });
 
-    expect(screen.getByRole('button', { name: /^Google_mcp_Workspace$/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^Google_mcp_Workspace에서 1단계 작업함$/ }),
+    ).toBeInTheDocument();
+  });
+
+  describe('connector header', () => {
+    const makeTimedPart = (id: string, name: string, durationMs?: number, output = 'ok') =>
+      ({
+        type: ContentTypes.TOOL_CALL,
+        [ContentTypes.TOOL_CALL]: {
+          id,
+          name,
+          args: '{}',
+          output,
+          progress: output ? 1 : 0.5,
+          ...(durationMs != null
+            ? { runStepStatus: 'completed', runStepDurationMs: durationMs }
+            : {}),
+        },
+      }) as unknown as TMessageContentParts;
+
+    /** Step durations recorded on the demo stack for "파일 목록 및 메모 읽기". */
+    const myPcParts = [
+      { part: makeTimedPart('p1', 'list_folder_mcp_my-pc', 404), idx: 0 },
+      { part: makeTimedPart('p2', 'search_files_mcp_my-pc', 346), idx: 1 },
+      { part: makeTimedPart('p3', 'read_file_mcp_my-pc', 323), idx: 2 },
+    ];
+
+    it('names the connector title and the step count once every call finished', () => {
+      mockMCPServerNames.push('my-pc');
+      renderGroup({ ...baseProps, parts: myPcParts, lastContentIdx: 2 });
+
+      expect(screen.getByText('내 PC 폴더에서 3단계 작업함')).toBeInTheDocument();
+      expect(screen.queryByText(/my-pc ×3/)).not.toBeInTheDocument();
+    });
+
+    it('shows the summed step time beside the header', () => {
+      mockMCPServerNames.push('my-pc');
+      renderGroup({ ...baseProps, parts: myPcParts, lastContentIdx: 2 });
+
+      expect(screen.getByText('· 1.1s')).toBeInTheDocument();
+    });
+
+    it('reads as work in progress with a spinner while a call is running', () => {
+      mockMCPServerNames.push('my-pc');
+      renderGroup({
+        ...baseProps,
+        isSubmitting: true,
+        parts: [
+          { part: makeTimedPart('p1', 'list_folder_mcp_my-pc', 404), idx: 0 },
+          { part: makeTimedPart('p2', 'read_file_mcp_my-pc', undefined, ''), idx: 1 },
+        ],
+        lastContentIdx: 1,
+      });
+
+      expect(screen.getByText('내 PC 폴더에서 작업하는 중')).toBeInTheDocument();
+      expect(screen.getByTestId('group-spinner')).toBeInTheDocument();
+    });
+
+    it('keeps the generic action count when calls go to different connectors', () => {
+      mockMCPServerNames.push('my-pc', 'web-search');
+      renderGroup({
+        ...baseProps,
+        parts: [
+          { part: makeTimedPart('p1', 'list_folder_mcp_my-pc', 404), idx: 0 },
+          { part: makeTimedPart('p2', 'tavily_search_mcp_web-search', 900), idx: 1 },
+        ],
+        lastContentIdx: 1,
+      });
+
+      expect(screen.getByText('Ran 2 actions')).toBeInTheDocument();
+    });
   });
 
   it('summarizes repeated completed web searches as an outcome and count', () => {

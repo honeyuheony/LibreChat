@@ -1,8 +1,15 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Button } from '@librechat/client';
-import { ChevronDown, MessageCircleQuestion, Users } from 'lucide-react';
-import { Tools, Constants, ContentTypes, ToolCallTypes } from 'librechat-data-provider';
+import { useTranslation } from 'react-i18next';
+import { ChevronDown, Loader2, MessageCircleQuestion, Users } from 'lucide-react';
+import {
+  Tools,
+  Constants,
+  ContentTypes,
+  ToolCallTypes,
+  isReportableRunStepDuration,
+} from 'librechat-data-provider';
 import type {
   TAttachment,
   TMessageContentParts,
@@ -17,25 +24,28 @@ import {
   hasPendingApprovalInPart,
   getBatchActivityLabelPart,
   getActivityLabelText,
+  getRunStepDurationLabels,
 } from '~/utils';
 import { useLocalize, useExpandCollapse, scheduleMessageContentLayoutReconcile } from '~/hooks';
 import { parseBackgroundHandle, splitBackgroundAttachments } from './Parts/handle';
 import { ASK_USER_QUESTION, getSubmittedAskAnswer } from '~/utils/approval';
+import { getMCPServerName, isError, StackedToolIcons } from './ToolOutput';
 import { mapAttachments, filterAttachmentsForPart } from '~/utils/map';
+import { getConnectorTitle, useConnectorTitles } from './connectors';
 import { ToolAuthWarning, ToolAuthWarningContext } from './auth';
 import { useMCPIconMap, useMCPServerNames } from '~/hooks/MCP';
 import { resolveToolCallPhase } from '~/utils/toolCallPhase';
 import { AttachmentGroup, ReasoningCompact } from './Parts';
 import { isMemoryFailureOutput } from './Parts/MemoryCall';
-import { isError, StackedToolIcons } from './ToolOutput';
+import { GroupedRowContext, ROW_GLYPH_SLOT } from './rows';
 import { isBashProgrammaticToolCall } from './routing';
 import SearchVerticals from './verticals';
-import { ROW_GLYPH_SLOT } from './rows';
 import store from '~/store';
 
 interface ToolMeta {
   name: string;
   iconName: string;
+  durationMs?: number;
   hasOutput: boolean;
   failed: boolean;
   cancelled: boolean;
@@ -160,6 +170,7 @@ function getToolMeta(
     return {
       name,
       iconName,
+      durationMs: toolCall.runStepDurationMs,
       ...resolveOutcome(
         backgroundCancelled ? 'cancelled' : runStepStatus,
         completed,
@@ -245,8 +256,10 @@ export default function ToolCallGroup({
   withinActivityPhase = false,
 }: ToolCallGroupProps) {
   const localize = useLocalize();
+  const { i18n } = useTranslation();
   const mcpIconMap = useMCPIconMap();
   const mcpServerNames = useMCPServerNames();
+  const connectorTitles = useConnectorTitles();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const cancelLayoutReconcileRef = useRef<(() => void) | null>(null);
   const retainedForPendingApprovalRef = useRef(false);
@@ -268,6 +281,14 @@ export default function ToolCallGroup({
     [parts, attachmentsByToolCallId],
   );
   const count = toolMetadata.length;
+  /** Every call in the group went to the same MCP server: the header names that connector. */
+  const connectorServer = useMemo(() => {
+    const servers = new Set(
+      toolMetadata.map((m) => (m.name ? getMCPServerName(m.name, mcpServerNames) : '')),
+    );
+    const [only] = Array.from(servers);
+    return servers.size === 1 && only ? only : '';
+  }, [toolMetadata, mcpServerNames]);
   /** Approval state is read from the RAW parts, not `toolMetadata`: a pending
    *  call can be nested inside a subagent's content, which never surfaces as
    *  a tool entry here. */
@@ -559,6 +580,12 @@ export default function ToolCallGroup({
         groupDone ? 'com_ui_searched_web_and_files' : 'com_ui_searching_web_and_files',
       );
     }
+    if (connectorServer) {
+      const title = getConnectorTitle(connectorTitles, connectorServer);
+      return groupDone
+        ? localize('com_ui_tool_group_connector_done', { 0: title, 1: String(count) })
+        : localize('com_ui_tool_group_connector_running', { 0: title });
+    }
     if (count === 1) {
       return singleToolLabel || localize('com_ui_used_one_tool');
     }
@@ -573,8 +600,20 @@ export default function ToolCallGroup({
   const groupDetailParts: string[] = [];
   if (searchesOnly && count > 1) {
     groupDetailParts.push(localize('com_ui_n_searches', { 0: String(count) }));
-  } else if (!allSubagents && !allAskQuestions && count > 1) {
+  } else if (!allSubagents && !allAskQuestions && !connectorServer && count > 1) {
     groupDetailParts.push(activitySummary.toolNameSummary);
+  }
+  /** Sum of the steps' own durations; shown only when every step reported one. */
+  const totalDurationMs = toolMetadata.every((m) => typeof m.durationMs === 'number')
+    ? toolMetadata.reduce((sum, m) => sum + (m.durationMs ?? 0), 0)
+    : undefined;
+  if (
+    groupDone &&
+    isReportableRunStepDuration(totalDurationMs) &&
+    activitySummary.failedCount === 0
+  ) {
+    const duration = getRunStepDurationLabels(totalDurationMs, i18n.language);
+    groupDetailParts.push(localize(duration.key, duration.values));
   }
   if (activitySummary.failedCount > 0) {
     groupDetailParts.push(
@@ -620,123 +659,139 @@ export default function ToolCallGroup({
     }
   }, [hasActiveToolCall, userOverride, suppressAutoExpand]);
 
+  const showConnectorSpinner = connectorServer !== '' && isGroupLive;
+
   return (
-    <div className="mb-2 mt-1" ref={rootRef}>
-      <Button
-        variant="ghost"
-        type="button"
-        className="inline-flex h-auto w-full items-center justify-start gap-2 rounded-none bg-transparent p-0 py-1 text-text-secondary hover:bg-transparent hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-heavy focus-visible:ring-offset-0"
-        onClick={handleToggle}
-        aria-expanded={isExpanded}
-        aria-label={groupAriaLabel}
-      >
-        {allSubagents || allAskQuestions ? (
-          /** Homogeneous category groups get a single category glyph instead
-           *  of StackedToolIcons' generic wrenches: a Users glyph for
-           *  subagents, a question glyph for ask_user_question — matching
-           *  their individual card headers and reading as the category
-           *  rather than "tools". */
-          <div
+    <div className="mb-3 mt-1" ref={rootRef}>
+      <div className="overflow-hidden rounded-theme-surface border border-border-light bg-surface-primary">
+        <Button
+          variant="ghost"
+          type="button"
+          className="inline-flex h-auto w-full items-center justify-start gap-2.5 rounded-none bg-transparent px-3.5 py-3 text-text-secondary hover:bg-surface-hover hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-heavy focus-visible:ring-offset-0"
+          onClick={handleToggle}
+          aria-expanded={isExpanded}
+          aria-label={groupAriaLabel}
+        >
+          {allSubagents || allAskQuestions ? (
+            /** Homogeneous category groups get a single category glyph instead
+             *  of StackedToolIcons' generic wrenches: a Users glyph for
+             *  subagents, a question glyph for ask_user_question — matching
+             *  their individual card headers and reading as the category
+             *  rather than "tools". */
+            <div
+              className={cn(
+                ROW_GLYPH_SLOT,
+                'text-text-secondary',
+                isGroupLive && 'animate-pulse text-text-primary',
+              )}
+              aria-hidden="true"
+            >
+              <CategoryIcon size={14} />
+            </div>
+          ) : (
+            <div className={ROW_GLYPH_SLOT} aria-hidden="true">
+              {showConnectorSpinner ? (
+                <Loader2 className="size-4 animate-spin text-text-secondary motion-reduce:animate-none" />
+              ) : (
+                <StackedToolIcons
+                  toolNames={iconToolNames}
+                  mcpIconMap={mcpIconMap}
+                  maxIcons={4}
+                  isAnimating={isGroupLive}
+                />
+              )}
+            </div>
+          )}
+          <span
             className={cn(
-              ROW_GLYPH_SLOT,
-              'text-text-secondary',
-              isGroupLive && 'animate-pulse text-text-primary',
+              'tool-status-text min-w-0 truncate text-[0.9375rem] font-semibold text-text-primary',
+              activityFailed && 'text-text-warning',
+            )}
+            role="status"
+            title={groupLabel}
+          >
+            {groupLabel}
+          </span>
+          {groupDetail && (
+            <span
+              className="min-w-0 max-w-[40%] truncate text-sm font-normal text-text-tertiary"
+              title={groupDetail}
+            >
+              · {groupDetail}
+            </span>
+          )}
+          <ChevronDown
+            className={cn(
+              'ml-auto size-4 shrink-0 text-text-secondary transition-transform duration-200 ease-out',
+              isExpanded && 'rotate-180',
             )}
             aria-hidden="true"
-          >
-            <CategoryIcon size={14} />
-          </div>
-        ) : (
-          <div className={ROW_GLYPH_SLOT} aria-hidden="true">
-            <StackedToolIcons
-              toolNames={iconToolNames}
-              mcpIconMap={mcpIconMap}
-              maxIcons={4}
-              isAnimating={isGroupLive}
-            />
-          </div>
-        )}
-        <span
-          className={cn(
-            'tool-status-text min-w-0 truncate font-medium',
-            activityFailed && 'text-text-warning',
-          )}
-          role="status"
-          title={groupLabel}
+          />
+        </Button>
+        <div
+          style={expandStyle}
+          onTransitionEnd={handleTransitionEnd}
+          aria-hidden={!isExpanded}
+          data-testid="tool-call-group-panel"
         >
-          {groupLabel}
-        </span>
-        {groupDetail && (
-          <span
-            className="min-w-0 max-w-[40%] truncate text-xs font-normal text-text-secondary"
-            title={groupDetail}
-          >
-            · {groupDetail}
-          </span>
-        )}
-        <ChevronDown
-          className={cn(
-            'size-4 shrink-0 text-text-secondary transition-transform duration-200 ease-out',
-            isExpanded && 'rotate-180',
-          )}
-          aria-hidden="true"
-        />
-      </Button>
-      <div
-        style={expandStyle}
-        onTransitionEnd={handleTransitionEnd}
-        aria-hidden={!isExpanded}
-        data-testid="tool-call-group-panel"
-      >
-        {shouldRenderBody && (
-          <div className="overflow-hidden" ref={expandRef}>
-            <ToolAuthWarningContext.Provider value>
-              <div className="flex flex-col py-0.5">
-                {parts.map(({ part, idx }, partIndex) => {
-                  if (part.type === ContentTypes.THINK) {
-                    const think = part.think;
-                    const reasoning = typeof think === 'string' ? think : (think?.value ?? '');
-                    /** A detached-subagent projection carries an empty THINK
-                     *  part flagged `reasoning_unavailable`, which `Part`
-                     *  renders as a `ReasoningMarker`. `ReasoningCompact` has
-                     *  no text to show and returns null, so the marker has to
-                     *  keep going through the standalone path or it vanishes
-                     *  the moment its call joins a group. */
-                    if (reasoning.trim() === '' && part.reasoning_unavailable === true) {
+          {shouldRenderBody && (
+            <div className="overflow-hidden" ref={expandRef}>
+              <ToolAuthWarningContext.Provider value>
+                <GroupedRowContext.Provider value>
+                  <div className="flex flex-col border-t border-border-light px-3.5 py-1.5">
+                    {parts.map(({ part, idx }, partIndex) => {
+                      if (part.type === ContentTypes.THINK) {
+                        const think = part.think;
+                        const reasoning = typeof think === 'string' ? think : (think?.value ?? '');
+                        /** A detached-subagent projection carries an empty THINK
+                         *  part flagged `reasoning_unavailable`, which `Part`
+                         *  renders as a `ReasoningMarker`. `ReasoningCompact` has
+                         *  no text to show and returns null, so the marker has to
+                         *  keep going through the standalone path or it vanishes
+                         *  the moment its call joins a group. */
+                        if (reasoning.trim() === '' && part.reasoning_unavailable === true) {
+                          return renderPart(
+                            part,
+                            idx,
+                            isLast && idx === lastContentIdx,
+                            handleToolExpand,
+                          );
+                        }
+                        const streaming = isSubmitting && idx === lastContentIdx;
+                        const isAfterTool =
+                          partIndex > 0 &&
+                          parts[partIndex - 1]?.part.type === ContentTypes.TOOL_CALL;
+                        /** Mirrors the standalone `Reasoning` path: the authored
+                         *  label wins, generic text is only a fallback. */
+                        const generatedLabel = part.reasoning_label?.trim();
+                        const label =
+                          generatedLabel ||
+                          (streaming ? localize('com_ui_thinking') : localize('com_ui_thoughts'));
+                        return (
+                          <ReasoningCompact
+                            key={`reasoning-${idx}`}
+                            reasoning={reasoning}
+                            label={label}
+                            showThinking={showThinking}
+                            isAfterTool={isAfterTool}
+                            isStreaming={streaming}
+                          />
+                        );
+                      }
                       return renderPart(
                         part,
                         idx,
                         isLast && idx === lastContentIdx,
                         handleToolExpand,
                       );
-                    }
-                    const streaming = isSubmitting && idx === lastContentIdx;
-                    const isAfterTool =
-                      partIndex > 0 && parts[partIndex - 1]?.part.type === ContentTypes.TOOL_CALL;
-                    /** Mirrors the standalone `Reasoning` path: the authored
-                     *  label wins, generic text is only a fallback. */
-                    const generatedLabel = part.reasoning_label?.trim();
-                    const label =
-                      generatedLabel ||
-                      (streaming ? localize('com_ui_thinking') : localize('com_ui_thoughts'));
-                    return (
-                      <ReasoningCompact
-                        key={`reasoning-${idx}`}
-                        reasoning={reasoning}
-                        label={label}
-                        showThinking={showThinking}
-                        isAfterTool={isAfterTool}
-                        isStreaming={streaming}
-                      />
-                    );
-                  }
-                  return renderPart(part, idx, isLast && idx === lastContentIdx, handleToolExpand);
-                })}
-              </div>
-            </ToolAuthWarningContext.Provider>
-            {hasPendingAuthRequest && <ToolAuthWarning className="mb-1 mt-2.5" />}
-          </div>
-        )}
+                    })}
+                  </div>
+                </GroupedRowContext.Provider>
+              </ToolAuthWarningContext.Provider>
+              {hasPendingAuthRequest && <ToolAuthWarning className="mx-3.5 mb-2.5 mt-1" />}
+            </div>
+          )}
+        </div>
       </div>
       {groupAttachments && groupAttachments.length > 0 && (
         <>
