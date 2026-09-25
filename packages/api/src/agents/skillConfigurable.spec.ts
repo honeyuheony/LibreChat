@@ -45,6 +45,21 @@ describe('enrichWithSkillConfigurable', () => {
     expect(result.configurable.skillPrimedIdsByName).toBe(primed);
   });
 
+  it('threads freshSkillPrimeNames through unchanged', () => {
+    const fresh = new Set(['brand-guidelines']);
+    const result = enrichWithSkillConfigurable({
+      result: { loadedTools: [], configurable: {} },
+      context: {
+        req,
+        accessibleSkillIds,
+        codeEnvAvailable: true,
+        freshSkillPrimeNames: fresh,
+      },
+    });
+
+    expect(result.configurable.freshSkillPrimeNames).toBe(fresh);
+  });
+
   it('supports the legacy positional shape', () => {
     const primed = { 'brand-guidelines': 'abc123' };
     const result = enrichWithSkillConfigurable(

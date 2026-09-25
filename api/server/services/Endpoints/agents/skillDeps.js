@@ -21,6 +21,7 @@ const {
   resolveRequestTenantId,
   enrichWithSkillConfigurable,
   mergeDeploymentSkillIds,
+  collectFreshSkillPrimeNames,
   createDeploymentSkillMethods,
   isDeploymentSkillFileSource,
   getDeploymentSkillDownloadStream,
@@ -319,6 +320,10 @@ function buildAgentToolContext({ agent, config }) {
     fileAuthoringToolNames: config.fileAuthoringToolNames,
     skillPrimedIdsByName:
       buildSkillPrimedIdsByName(config.manualSkillPrimes, config.alwaysApplySkillPrimes) ?? {},
+    freshSkillPrimeNames: collectFreshSkillPrimeNames({
+      manualSkillPrimes: config.manualSkillPrimes,
+      alwaysApplySkillPrimes: config.alwaysApplySkillPrimes,
+    }),
     provisionState: config.provisionState,
   };
 }
@@ -369,6 +374,7 @@ function enrichLoadedToolsWithAgentContext({ result, req, ctx = {}, fallback = {
       codeEnvAvailable,
       accessibleSkillIds: ctx.accessibleSkillIds ?? fallback.accessibleSkillIds,
       skillPrimedIdsByName: ctx.skillPrimedIdsByName ?? fallback.skillPrimedIdsByName,
+      freshSkillPrimeNames: ctx.freshSkillPrimeNames ?? fallback.freshSkillPrimeNames,
       activeSkillNames: ctx.activeSkillNames ?? fallback.activeSkillNames,
       skillAuthoringAvailable,
       fileAuthoringToolNames: ctx.fileAuthoringToolNames ?? fallback.fileAuthoringToolNames,

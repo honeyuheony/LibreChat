@@ -2199,6 +2199,82 @@ describe('createToolExecuteHandler', () => {
       }
     });
 
+    describe('skill already primed this turn', () => {
+      function createPrimedSkillHandler(configurable: Record<string, unknown>) {
+        const loadTools: ToolExecuteOptions['loadTools'] = jest.fn(async () => ({
+          loadedTools: [],
+          configurable: { accessibleSkillIds: skillsInScope(), ...configurable },
+        }));
+        const getSkillByName: ToolExecuteOptions['getSkillByName'] = jest.fn(async (name) => ({
+          _id: { toString: () => `${name}-id` } as never,
+          name: name ?? 'unknown',
+          body: 'Turn the meeting notes into a todo notice.',
+          fileCount: 0,
+          version: 1,
+        }));
+        return createToolExecuteHandler({ loadTools, getSkillByName });
+      }
+
+      it('does not re-inject the body of a skill the user primed this turn', async () => {
+        const handler = createPrimedSkillHandler({
+          freshSkillPrimeNames: new Set(['meeting-to-todo-notice']),
+          skillPrimedIdsByName: { 'meeting-to-todo-notice': 'meeting-to-todo-notice-id' },
+        });
+
+        const [result] = await invokeHandler(handler, [
+          {
+            id: 'call_repeat_prime',
+            name: Constants.SKILL_TOOL,
+            args: { skillName: 'meeting-to-todo-notice', args: 'weekly sync notes' },
+          },
+        ]);
+
+        expect(result.status).toBe('success');
+        expect(result.injectedMessages).toBeUndefined();
+        expect(result.content).toContain('already loaded');
+        expect(result.content).toContain('meeting-to-todo-notice');
+      });
+
+      it('still injects the body for a skill that was not primed this turn', async () => {
+        const handler = createPrimedSkillHandler({
+          freshSkillPrimeNames: new Set(['other-skill']),
+        });
+
+        const [result] = await invokeHandler(handler, [
+          {
+            id: 'call_unprimed',
+            name: Constants.SKILL_TOOL,
+            args: { skillName: 'meeting-to-todo-notice' },
+          },
+        ]);
+
+        expect(result.status).toBe('success');
+        expect(result.injectedMessages).toHaveLength(1);
+        expect(result.injectedMessages?.[0]?.content).toBe(
+          'Turn the meeting notes into a todo notice.',
+        );
+      });
+
+      it('still injects the body when the name is only pinned by skillPrimedIdsByName', async () => {
+        /* Skills authored mid-turn are pinned in `skillPrimedIdsByName` for
+           read_file, but their body was never primed into the transcript. */
+        const handler = createPrimedSkillHandler({
+          skillPrimedIdsByName: { 'meeting-to-todo-notice': 'meeting-to-todo-notice-id' },
+        });
+
+        const [result] = await invokeHandler(handler, [
+          {
+            id: 'call_authored',
+            name: Constants.SKILL_TOOL,
+            args: { skillName: 'meeting-to-todo-notice' },
+          },
+        ]);
+
+        expect(result.status).toBe('success');
+        expect(result.injectedMessages).toHaveLength(1);
+      });
+    });
+
     it('lets through skills without disableModelInvocation set (default behavior)', async () => {
       const getSkillByName = jest.fn(async () => ({
         _id: 'skill-id' as unknown as never,

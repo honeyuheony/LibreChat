@@ -3051,6 +3051,15 @@ function isSkillPrimedForAuthoring(
   return typeof skillPrimedIdsByName[skillName] === 'string';
 }
 
+/** True when this turn's manual or always-apply prime already carries the skill body. */
+function isSkillBodyPrimedThisTurn(
+  skillName: string,
+  mergedConfigurable: Record<string, unknown>,
+): boolean {
+  const freshSkillPrimeNames = mergedConfigurable.freshSkillPrimeNames;
+  return freshSkillPrimeNames instanceof Set && freshSkillPrimeNames.has(skillName);
+}
+
 function isSkillKnownToCurrentRun(
   skillName: string,
   mergedConfigurable: Record<string, unknown>,
@@ -4993,9 +5002,17 @@ async function handleSkillToolCall(
     return filtered;
   }
 
-  const injectedMessages: InjectedMessage[] = [buildSkillPrimeMessage({ name: skill.name, body })];
+  /* A manual or always-apply prime already spliced this body into the
+     transcript; injecting it again would only duplicate tokens. Files below
+     are still primed because a first-turn prime does not mount them. */
+  const primedThisTurn = isSkillBodyPrimedThisTurn(skill.name, mergedConfigurable);
+  const injectedMessages: InjectedMessage[] | undefined = primedThisTurn
+    ? undefined
+    : [buildSkillPrimeMessage({ name: skill.name, body })];
 
-  let contentText = `Skill "${args.skillName}" loaded. Follow the instructions below.`;
+  let contentText = primedThisTurn
+    ? `Skill "${args.skillName}" is already loaded for this turn. Follow its instructions above; do not call the skill tool for it again.`
+    : `Skill "${args.skillName}" loaded. Follow the instructions below.`;
   let artifact:
     | {
         session_id: string;

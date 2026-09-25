@@ -35,6 +35,13 @@ export interface SkillConfigurableContext {
    */
   skillPrimedIdsByName?: Record<string, string>;
   /**
+   * Names whose SKILL.md body a manual or always-apply prime already put in
+   * this turn's transcript. Unlike `skillPrimedIdsByName`, mid-turn skill
+   * authoring never adds to it, so the skill tool can skip re-injecting a
+   * body only when the model can actually see it.
+   */
+  freshSkillPrimeNames?: Set<string>;
+  /**
    * Names of skills the runtime can resolve, captured at agent init by
    * `injectSkillCatalog`. Lets `read_file` decide whether a
    * `{firstSegment}/...` path is a real skill reference vs. a code-env path
@@ -109,6 +116,7 @@ export function enrichWithSkillConfigurable(
       codeEnvAvailable: context.codeEnvAvailable,
       accessibleSkillIds: context.accessibleSkillIds,
       skillPrimedIdsByName: context.skillPrimedIdsByName,
+      freshSkillPrimeNames: context.freshSkillPrimeNames,
       activeSkillNames: context.activeSkillNames,
       skillAuthoringAvailable: context.skillAuthoringAvailable,
       fileAuthoringToolNames: context.fileAuthoringToolNames,
