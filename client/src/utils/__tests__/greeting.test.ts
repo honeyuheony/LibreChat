@@ -188,12 +188,12 @@ describe('daypart greeting', () => {
 
   it('says good afternoon to the named user in Korean', () => {
     const key = getDaypartGreetingKey(at(14), true);
-    expect(translationKo[key as keyof typeof translationKo]).toBe('좋은 오후예요, {{name}}님');
+    expect(translationKo[key as keyof typeof translationKo]).toBe('{{name}} 님, 좋은 오후입니다');
   });
 
   it('uses the unnamed greeting when the user has no name', () => {
     const key = getDaypartGreetingKey(at(8), false);
-    expect(translationKo[key as keyof typeof translationKo]).toBe('좋은 아침이에요');
+    expect(translationKo[key as keyof typeof translationKo]).toBe('좋은 아침입니다');
   });
 
   it('has an English and Korean string for every daypart key', () => {
