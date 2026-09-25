@@ -208,6 +208,48 @@ describe('AttachFileMenu', () => {
     });
   });
 
+  describe('composer actions in the + menu', () => {
+    const attachSkill = jest.fn();
+    const skillItems = [
+      { id: 'composer-attach-skill', label: 'Attach a skill', onClick: attachSkill },
+    ];
+
+    it('lists the composer actions after the upload items', () => {
+      setupMocks();
+      renderMenu({ extraItems: skillItems });
+
+      openMenu();
+
+      const labels = screen
+        .getAllByTestId(/^menu-item-/)
+        .map((item) => item.textContent)
+        .filter((label) => label !== '');
+      expect(labels).toEqual(['Upload Image', 'Attach a skill']);
+    });
+
+    it('runs the composer action when it is chosen', () => {
+      setupMocks();
+      attachSkill.mockClear();
+      renderMenu({ extraItems: skillItems });
+
+      openMenu();
+      fireEvent.click(screen.getByText('Attach a skill'));
+
+      expect(attachSkill).toHaveBeenCalledTimes(1);
+    });
+
+    it('turns the unified single upload button into a menu once there is a composer action', () => {
+      setupMocks();
+      renderMenu({ isUnifiedMode: true, extraItems: skillItems });
+
+      expect(screen.queryByRole('button', { name: /attach files/i })).not.toBeInTheDocument();
+      openMenu();
+      expect(screen.getByText('From Local Computer')).toBeInTheDocument();
+      expect(screen.getByText('Attach a skill')).toBeInTheDocument();
+      expect(screen.queryByText('Upload from SharePoint')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Upload to Provider picker filter', () => {
     /** `accept` is reset right after `click()`, so capture it at click time. */
     const captureAcceptOnClick = () => {

@@ -12,20 +12,16 @@ import { Badge } from '@librechat/client';
 import { useRecoilValue, useRecoilCallback } from 'recoil';
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeItem } from '~/common';
-import CodeInterpreter from './CodeInterpreter';
 import { BadgeRowProvider } from '~/Providers';
-import ToolsDropdown from './ToolsDropdown';
 import { useChatBadges } from '~/hooks';
 import ToolDialogs from './ToolDialogs';
-import FileSearch from './FileSearch';
-import Artifacts from './Artifacts';
-import MCPSelect from './MCPSelect';
-import WebSearch from './WebSearch';
-import Memory from './Memory';
-import Skills from './Skills';
+import ToolsMenu from './ToolsMenu';
 import store from '~/store';
 
 interface BadgeRowProps {
+  /** Renders the tools menu: connectors on every endpoint that runs tools. */
+  showToolsMenu?: boolean;
+  /** Adds the built-in tool toggles, which only reach ephemeral agents. */
   showEphemeralBadges?: boolean;
   onChange: (badges: Pick<BadgeItem, 'id'>[]) => void;
   onToggle?: (badgeId: string, currentActive: boolean) => void;
@@ -143,6 +139,7 @@ const dragReducer = (state: DragState, action: DragAction): DragState => {
 };
 
 function BadgeRow({
+  showToolsMenu,
   showEphemeralBadges,
   conversationId,
   specName,
@@ -328,10 +325,10 @@ function BadgeRow({
       conversationId={conversationId}
       specName={specName}
       isSubmitting={isSubmitting}
-      observeToolAuthorization={showEphemeralBadges === true}
+      observeToolAuthorization={showToolsMenu === true}
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
-        {showEphemeralBadges === true && <ToolsDropdown />}
+        {showToolsMenu === true && <ToolsMenu showBuiltinTools={showEphemeralBadges === true} />}
         {tempBadges.map((badge, index) => (
           <React.Fragment key={badge.id}>
             {dragState.draggedBadge && dragState.insertIndex === index && ghostBadge && (
@@ -370,17 +367,6 @@ function BadgeRow({
               isInChat={isInChat}
             />
           </div>
-        )}
-        {showEphemeralBadges === true && (
-          <>
-            <WebSearch />
-            <CodeInterpreter />
-            <FileSearch />
-            <Skills />
-            <Memory />
-            <Artifacts />
-            <MCPSelect />
-          </>
         )}
         {ghostBadge && (
           <div
