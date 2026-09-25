@@ -40,7 +40,7 @@ export default function MCPServerDetail({
         {localize('com_ui_mcp_detail_error_tools')}
       </p>
     );
-  } else if (tools === undefined && !isConnected) {
+  } else if (!isConnected && !tools?.length) {
     toolsContent = (
       <p role="status" className="text-sm text-text-secondary">
         {localize('com_ui_mcp_detail_connect_to_view_tools')}

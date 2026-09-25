@@ -136,6 +136,15 @@ describe('MCPServerDetail', () => {
     expect(await screen.findByText('com_ui_mcp_detail_no_tools')).toBeInTheDocument();
   });
 
+  test('asks users to connect when a disconnected server has an empty tools list', async () => {
+    jest.spyOn(dataService, 'getMCPTools').mockResolvedValue(createToolsResponse([]));
+
+    renderDetail(disconnectedStatus);
+
+    expect(await screen.findByText('com_ui_mcp_detail_connect_to_view_tools')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_mcp_detail_no_tools')).not.toBeInTheDocument();
+  });
+
   test('shows the loading message while tools are being fetched', async () => {
     let resolveTools!: (response: MCPServersResponse) => void;
     const pendingTools = new Promise<MCPServersResponse>((resolve) => {
