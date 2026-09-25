@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import type { GreetingSchedule } from '~/utils/greeting';
 import type { TranslationKeys } from './useLocalize';
-import { getGreetingKey, getMsUntilNextGreeting } from '~/utils/greeting';
+import { rotatingGreetingSchedule } from '~/utils/greeting';
 import useLocalize from './useLocalize';
 
 /**
@@ -9,7 +10,11 @@ import useLocalize from './useLocalize';
  * A single timer is armed for the next slot boundary, and the key is recalculated when
  * the tab becomes visible again in case the clock or timezone moved while it was hidden.
  */
-export default function useGreeting(name?: string, fallback = ''): string {
+export default function useGreeting(
+  name?: string,
+  fallback = '',
+  schedule: GreetingSchedule = rotatingGreetingSchedule,
+): string {
   const localize = useLocalize();
   const [greetingKey, setGreetingKey] = useState<TranslationKeys | null>(null);
 
@@ -21,8 +26,8 @@ export default function useGreeting(name?: string, fallback = ''): string {
     const update = () => {
       clearTimeout(timeoutId);
       const now = new Date();
-      setGreetingKey(getGreetingKey(now, hasName));
-      timeoutId = setTimeout(update, Math.max(getMsUntilNextGreeting(now), 1000));
+      setGreetingKey(schedule.getKey(now, hasName));
+      timeoutId = setTimeout(update, Math.max(schedule.getMsUntilNext(now), 1000));
     };
 
     const handleVisibilityChange = () => {
@@ -40,7 +45,7 @@ export default function useGreeting(name?: string, fallback = ''): string {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', update);
     };
-  }, [hasName]);
+  }, [hasName, schedule]);
 
   if (greetingKey == null) {
     return fallback;

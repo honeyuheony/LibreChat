@@ -39,24 +39,16 @@ function setup(extra: Partial<SettingsContextValue> = {}, query = '') {
 }
 
 describe('Sidebar', () => {
-  it('hides the About tab when build info is disabled', () => {
+  it('lists exactly the general, personal, connectors and data tabs in that order', () => {
     setup();
-    expect(screen.queryByText('About')).not.toBeInTheDocument();
+    const names = screen.getAllByRole('tab').map((tab) => tab.textContent);
+    expect(names).toEqual(['General', 'Personal', 'Connectors', 'Data & Privacy']);
   });
 
-  it('shows the About tab when build info is enabled', () => {
-    setup({ aboutEnabled: true });
-    expect(screen.getByText('About')).toBeInTheDocument();
-  });
-
-  it('shows the Langfuse tab when Langfuse is available to the user', () => {
-    setup({ langfuseConnectionAccess: true });
-    expect(screen.getByText('Langfuse')).toBeInTheDocument();
-  });
-
-  it('hides the Langfuse tab without Langfuse connection access', () => {
-    setup({ langfuseConnectionAccess: false });
-    expect(screen.queryByText('Langfuse')).not.toBeInTheDocument();
+  it('keeps the same tabs whatever features the deployment enables', () => {
+    setup({ aboutEnabled: true, langfuseConnectionAccess: true, hasPrompts: true });
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.queryByRole('tab', { name: 'About' })).not.toBeInTheDocument();
   });
 
   it('forwards typing to onQueryChange', async () => {

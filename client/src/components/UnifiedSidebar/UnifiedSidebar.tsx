@@ -19,6 +19,7 @@ import { MobileHeader, MobileBottomBar, MobileShortcutTargets } from './mobile';
 import useUnifiedSidebarLinks from '~/hooks/Nav/useUnifiedSidebarLinks';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
+import SettingsHost from '~/components/Nav/Settings/Host';
 import { useChatHelpers, useLocalize } from '~/hooks';
 import SidePanelNav from '~/components/SidePanel/Nav';
 import Sidebar from './Sidebar';
@@ -185,49 +186,52 @@ function UnifiedSidebar() {
 
   if (isSmallScreen) {
     return (
-      <div
-        id={MOBILE_DRAWER_ID}
-        className={cn(
-          /** The close swipe reads horizontal touches here (the drawer holds no
-           * horizontal scrollers), while pinch-zoom stays with the browser —
-           * this full-viewport surface must not disable zooming entirely. */
-          'fixed inset-y-0 left-0 flex touch-pan-y touch-pinch-zoom flex-col bg-surface-primary-alt',
-          expanded ? 'translate-x-0' : '-translate-x-full',
-        )}
-        style={{
-          width: MOBILE_DRAWER_WIDTH,
-          /** The strip setting changes the width without passing through the
-           *  snap path, so the preference has to reach the declarative style
-           *  too or that one change still animates. */
-          transition: prefersReducedMotion ? undefined : MOBILE_DRAWER_TRANSITION,
-          zIndex: DRAWER_Z_INDEX,
-        }}
-        inert={!expanded ? '' : undefined}
-      >
-        <SidebarChatProvider>
-          <ActivePanelProvider>
-            <MobileHeader
-              links={links}
-              expanded={expanded}
-              onClose={handleCollapse}
-              onLeaveInsights={handleLeaveInsights}
-              routeActiveId={isInsightsRoute ? 'insights' : undefined}
-            />
-            <nav
-              id="chat-history-nav"
-              className="min-h-0 flex-1 overflow-hidden bg-surface-primary-alt"
-            >
-              <SidePanelNav links={links} />
-            </nav>
-            <MobileShortcutTargets
-              links={links}
-              onLeaveInsights={handleLeaveInsights}
-              routeActiveId={isInsightsRoute ? 'insights' : undefined}
-            />
-            <MobileBottomBar links={links} onNewChat={handleCollapse} />
-          </ActivePanelProvider>
-        </SidebarChatProvider>
-      </div>
+      <>
+        <div
+          id={MOBILE_DRAWER_ID}
+          className={cn(
+            /** The close swipe reads horizontal touches here (the drawer holds no
+             * horizontal scrollers), while pinch-zoom stays with the browser —
+             * this full-viewport surface must not disable zooming entirely. */
+            'fixed inset-y-0 left-0 flex touch-pan-y touch-pinch-zoom flex-col bg-surface-primary-alt',
+            expanded ? 'translate-x-0' : '-translate-x-full',
+          )}
+          style={{
+            width: MOBILE_DRAWER_WIDTH,
+            /** The strip setting changes the width without passing through the
+             *  snap path, so the preference has to reach the declarative style
+             *  too or that one change still animates. */
+            transition: prefersReducedMotion ? undefined : MOBILE_DRAWER_TRANSITION,
+            zIndex: DRAWER_Z_INDEX,
+          }}
+          inert={!expanded ? '' : undefined}
+        >
+          <SidebarChatProvider>
+            <ActivePanelProvider>
+              <MobileHeader
+                links={links}
+                expanded={expanded}
+                onClose={handleCollapse}
+                onLeaveInsights={handleLeaveInsights}
+                routeActiveId={isInsightsRoute ? 'insights' : undefined}
+              />
+              <nav
+                id="chat-history-nav"
+                className="min-h-0 flex-1 overflow-hidden bg-surface-primary-alt"
+              >
+                <SidePanelNav links={links} />
+              </nav>
+              <MobileShortcutTargets
+                links={links}
+                onLeaveInsights={handleLeaveInsights}
+                routeActiveId={isInsightsRoute ? 'insights' : undefined}
+              />
+              <MobileBottomBar links={links} onNewChat={handleCollapse} />
+            </ActivePanelProvider>
+          </SidebarChatProvider>
+        </div>
+        <SettingsHost />
+      </>
     );
   }
 
@@ -260,6 +264,7 @@ function UnifiedSidebar() {
           />
         </aside>
       </ActivePanelProvider>
+      <SettingsHost />
     </SidebarChatProvider>
   );
 }

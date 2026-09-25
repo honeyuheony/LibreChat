@@ -125,11 +125,6 @@ jest.mock('~/components/Conversations/PinnedSection', () => {
   return { __esModule: true, default: PinnedSectionStub };
 });
 
-jest.mock('~/components/Nav/SearchBar', () => ({
-  __esModule: true,
-  default: () => <div data-testid="searchbar-stub" />,
-}));
-
 jest.mock('~/components/Nav/Favorites/FavoriteItem', () => ({
   __esModule: true,
   default: () => <div data-testid="favorite-item-stub" />,

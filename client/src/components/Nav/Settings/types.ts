@@ -1,17 +1,16 @@
 import { createElement } from 'react';
-import { MessageSquare, Info } from 'lucide-react';
+import { Plug } from 'lucide-react';
 import { SettingsTabValues } from 'librechat-data-provider';
-import { GearIcon, DataIcon, UserIcon, SpeechIcon } from '@librechat/client';
+import { GearIcon, DataIcon, UserIcon } from '@librechat/client';
 import type { ComponentType, ReactNode } from 'react';
 import type { TranslationKeys } from '~/hooks';
+import ConnectorsSettings from '~/components/Connectors/ConnectorsSettings';
 
 export type SettingsTab =
   | SettingsTabValues.GENERAL
-  | SettingsTabValues.CHAT
-  | SettingsTabValues.SPEECH
-  | SettingsTabValues.DATA
-  | SettingsTabValues.ACCOUNT
-  | SettingsTabValues.ABOUT;
+  | SettingsTabValues.PERSONALIZATION
+  | SettingsTabValues.CONNECTORS
+  | SettingsTabValues.DATA;
 
 export type SectionId =
   | 'appearance'
@@ -76,6 +75,8 @@ export interface TabMeta {
   labelKey: TranslationKeys;
   icon: ReactNode;
   sections: SectionMeta[];
+  /** Renders the whole tab instead of registry sections; such a tab has no searchable entries. */
+  Panel?: ComponentType;
   show?: (ctx: SettingsContextValue) => boolean;
 }
 
@@ -89,28 +90,31 @@ export const TABS: TabMeta[] = [
       { id: 'layout', labelKey: 'com_ui_settings_section_layout' },
       { id: 'accessibility', labelKey: 'com_ui_settings_section_accessibility' },
       { id: 'admin', labelKey: 'com_ui_settings_section_admin' },
+      { id: 'about', labelKey: 'com_nav_setting_about' },
     ],
   },
   {
-    id: SettingsTabValues.CHAT,
-    labelKey: 'com_nav_setting_chat',
-    icon: createElement(MessageSquare, { className: 'icon-sm', 'aria-hidden': true }),
+    id: SettingsTabValues.PERSONALIZATION,
+    labelKey: 'com_ui_settings_tab_personal',
+    icon: createElement(UserIcon),
     sections: [
+      { id: 'profile', labelKey: 'com_ui_settings_section_profile' },
       { id: 'sending', labelKey: 'com_ui_settings_section_sending' },
-      { id: 'commands', labelKey: 'com_ui_settings_section_commands' },
       { id: 'messages', labelKey: 'com_ui_settings_section_messages' },
       { id: 'conversations', labelKey: 'com_ui_settings_section_conversations' },
+      { id: 'commands', labelKey: 'com_ui_settings_section_commands' },
       { id: 'prompts', labelKey: 'com_ui_settings_section_prompts' },
+      { id: 'stt', labelKey: 'com_ui_settings_section_stt' },
+      { id: 'tts', labelKey: 'com_ui_settings_section_tts' },
+      { id: 'security', labelKey: 'com_ui_settings_section_security' },
     ],
   },
   {
-    id: SettingsTabValues.SPEECH,
-    labelKey: 'com_nav_setting_speech',
-    icon: createElement(SpeechIcon, { className: 'icon-sm' }),
-    sections: [
-      { id: 'stt', labelKey: 'com_ui_settings_section_stt' },
-      { id: 'tts', labelKey: 'com_ui_settings_section_tts' },
-    ],
+    id: SettingsTabValues.CONNECTORS,
+    labelKey: 'com_ui_settings_tab_connectors',
+    icon: createElement(Plug, { className: 'icon-sm', 'aria-hidden': true }),
+    sections: [],
+    Panel: ConnectorsSettings,
   },
   {
     id: SettingsTabValues.DATA,
@@ -123,22 +127,5 @@ export const TABS: TabMeta[] = [
       { id: 'apiKeys', labelKey: 'com_ui_settings_section_api_keys' },
       { id: 'danger', labelKey: 'com_ui_settings_section_danger_zone', danger: true },
     ],
-  },
-  {
-    id: SettingsTabValues.ACCOUNT,
-    labelKey: 'com_nav_setting_account',
-    icon: createElement(UserIcon),
-    sections: [
-      { id: 'profile', labelKey: 'com_ui_settings_section_profile' },
-      { id: 'security', labelKey: 'com_ui_settings_section_security' },
-      { id: 'danger', labelKey: 'com_ui_settings_section_danger_zone', danger: true },
-    ],
-  },
-  {
-    id: SettingsTabValues.ABOUT,
-    labelKey: 'com_nav_setting_about',
-    icon: createElement(Info, { className: 'icon-sm', 'aria-hidden': true }),
-    sections: [{ id: 'about', labelKey: 'com_nav_setting_about' }],
-    show: (ctx) => ctx.aboutEnabled,
   },
 ];

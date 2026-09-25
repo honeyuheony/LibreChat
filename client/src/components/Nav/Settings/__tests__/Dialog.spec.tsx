@@ -1,5 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import userEvent from '@testing-library/user-event';
+import { SettingsTabValues } from 'librechat-data-provider';
 import { render, screen } from 'test/layout-test-utils';
 import { SettingsDialog } from '../index';
 
@@ -34,5 +35,12 @@ describe('SettingsDialog', () => {
     render(<SettingsDialog open onOpenChange={jest.fn()} />);
     await userEvent.type(screen.getByRole('textbox'), 'language');
     expect(await screen.findByLabelText('Search results')).toBeInTheDocument();
+  });
+
+  it('opens on the tab it was asked for', () => {
+    render(
+      <SettingsDialog open onOpenChange={jest.fn()} initialTab={SettingsTabValues.CONNECTORS} />,
+    );
+    expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('Connectors');
   });
 });
