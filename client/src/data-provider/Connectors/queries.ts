@@ -15,3 +15,19 @@ export const useDeskStatusQuery = (
     ...config,
   });
 };
+
+/** The installer the relay currently serves; public, so the download page works before sign-in. */
+export const useDeskAppReleaseQuery = (
+  config?: UseQueryOptions<t.DeskAppReleaseResponse>,
+): QueryObserverResult<t.DeskAppReleaseResponse> => {
+  return useQuery<t.DeskAppReleaseResponse>(
+    [QueryKeys.deskAppRelease],
+    () => dataService.getDeskAppRelease(),
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+      retry: false,
+      ...config,
+    },
+  );
+};

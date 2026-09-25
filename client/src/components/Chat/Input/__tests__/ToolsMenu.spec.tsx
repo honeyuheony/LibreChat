@@ -1,9 +1,10 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import userEvent from '@testing-library/user-event';
-import { SettingsTabValues } from 'librechat-data-provider';
 import { Provider as JotaiProvider, useAtomValue } from 'jotai';
-import { render as rtlRender, screen, within } from '@testing-library/react';
+import { SettingsTabValues, dataService } from 'librechat-data-provider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import { getAgentServerNames } from '../useAgentConnectorSelection';
 import ToolsMenu from '../ToolsMenu';
@@ -15,9 +16,13 @@ function SettingsTabReader() {
 
 const render = (ui: React.ReactElement) =>
   rtlRender(
-    <RecoilRoot>
-      <JotaiProvider>{ui}</JotaiProvider>
-    </RecoilRoot>,
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } })}
+    >
+      <RecoilRoot>
+        <JotaiProvider>{ui}</JotaiProvider>
+      </RecoilRoot>
+    </QueryClientProvider>,
   );
 
 const mockToggleServerSelection = jest.fn();
@@ -61,6 +66,12 @@ jest.mock('~/hooks/Agents/useAgentToolPermissions', () => ({
   default: () => ({ tools: mockAgentTools }),
 }));
 let mockContextTools: Record<string, unknown> = {};
+
+jest.mock('librechat-data-provider', () => {
+  const actual =
+    jest.requireActual<typeof import('librechat-data-provider')>('librechat-data-provider');
+  return { ...actual, dataService: { ...actual.dataService } };
+});
 
 jest.mock('~/hooks/MCP/useMCPRefresh', () => ({
   useMCPRefresh: () => undefined,
@@ -184,6 +195,66 @@ describe('ToolsMenu', () => {
     expect(screen.getByTestId('tools-menu-button')).toHaveAttribute('aria-expanded', 'false');
     expect(mockOnConfigClick).not.toHaveBeenCalled();
     expect(mockToggleServerSelection).not.toHaveBeenCalled();
+  });
+
+  describe('with the 「내 PC 폴더」 connector', () => {
+    const deskStatus = (state: 'online' | 'offline') => ({
+      state,
+      deviceName: null,
+      folderName: null,
+      connectedAt: null,
+      installerUrl: 'https://relay.example/app/desk-app-setup-0.1.2.exe',
+    });
+
+    beforeEach(() => {
+      mockManager = {
+        ...defaultManager,
+        selectableServers: [
+          { serverName: 'my-pc', config: { title: 'My PC folder', description: 'Reads a folder' } },
+        ],
+        connectionStatus: { 'my-pc': connectedStatus },
+      };
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('says the PC app is off and opens the download page from the row', async () => {
+      jest.spyOn(dataService, 'getDeskStatus').mockResolvedValue(deskStatus('offline'));
+      const openWindow = jest.spyOn(window, 'open').mockReturnValue(null);
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      const row = screen.getByRole('menuitemcheckbox', { name: 'My PC folder' });
+      expect(await within(row).findByText('com_ui_tools_desk_app_off')).toBeInTheDocument();
+      expect(within(row).queryByText('Reads a folder')).not.toBeInTheDocument();
+
+      await user.click(within(row).getByTestId('tools-menu-desk-download'));
+
+      expect(openWindow).toHaveBeenCalledTimes(1);
+      expect(openWindow).toHaveBeenCalledWith('/download', '_blank', 'noopener,noreferrer');
+      expect(mockToggleServerSelection).not.toHaveBeenCalled();
+    });
+
+    it('keeps the plain description while the PC app is on', async () => {
+      const getDeskStatus = jest
+        .spyOn(dataService, 'getDeskStatus')
+        .mockResolvedValue(deskStatus('online'));
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      const row = screen.getByRole('menuitemcheckbox', { name: 'My PC folder' });
+
+      await waitFor(() => expect(getDeskStatus).toHaveBeenCalledTimes(1));
+      await act(async () => {
+        await getDeskStatus.mock.results[0].value;
+      });
+      expect(within(row).getByText('Reads a folder')).toBeInTheDocument();
+      expect(within(row).queryByTestId('tools-menu-desk-download')).not.toBeInTheDocument();
+    });
   });
 
   it('flips a built-in tool through its toggle', async () => {

@@ -12,11 +12,14 @@ import {
   Keyboard,
   LifeBuoy,
   LogOut,
+  Monitor,
   Scale,
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
+import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
+import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
 import { settingsDialogTabAtom } from './Settings/state';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useLocalize } from '~/hooks';
@@ -100,6 +103,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const balanceQuery = useGetUserBalance({
     enabled: !!isAuthenticated && startupConfig?.balance?.enabled,
   });
+  const { data: deskStatus } = useDeskStatusQuery({ enabled: !!isAuthenticated });
   const setSettingsTab = useSetAtom(settingsDialogTabAtom);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   const [showArchived, setShowArchived] = useState(false);
@@ -177,6 +181,18 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         >
           <GearIcon className="icon-md" aria-hidden="true" />
           {localize('com_nav_settings')}
+        </Menu.MenuItem>
+        <Menu.MenuItem
+          onClick={() => window.open(DESK_DOWNLOAD_PATH, '_blank', 'noopener,noreferrer')}
+          className="select-item text-sm"
+        >
+          <Monitor className="icon-md" aria-hidden="true" />
+          <span className="flex-1 text-left">{localize('com_nav_desk_app')}</span>
+          {deskStatus?.state === 'online' && (
+            <span className="text-xs text-text-secondary">
+              {localize('com_nav_desk_app_connected')}
+            </span>
+          )}
         </Menu.MenuItem>
         <DropdownMenuSeparator />
         <Menu.MenuItem onClick={() => logout()} className="select-item text-sm">

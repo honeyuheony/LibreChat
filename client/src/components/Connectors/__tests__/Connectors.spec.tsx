@@ -191,7 +191,7 @@ describe('DeskConnectorCard', () => {
     expect(await screen.findByText('PC app off')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Get the PC app' })).toHaveAttribute(
       'href',
-      'https://relay.example/app/desk-app-setup-0.1.0.exe',
+      '/download',
     );
   });
 

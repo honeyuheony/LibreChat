@@ -29,6 +29,8 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import { DESK_SERVER_NAME, DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
+import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import useAgentConnectorSelection from './useAgentConnectorSelection';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
@@ -87,6 +89,7 @@ function ConnectorRow({
   statusIconProps,
   onToggle,
   onOpenConnectorsSettings,
+  deskAppOff = false,
 }: {
   server: MCPServerDefinition;
   isSelected: boolean;
@@ -94,6 +97,8 @@ function ConnectorRow({
   statusIconProps?: MCPServerStatusIconProps | null;
   onToggle: (serverName: string) => void;
   onOpenConnectorsSettings: () => void;
+  /** 「내 PC 폴더」 only: the relay sees no running desktop app for this user. */
+  deskAppOff?: boolean;
 }) {
   const localize = useLocalize();
   const displayName = server.config?.title || server.serverName;
@@ -127,12 +132,31 @@ function ConnectorRow({
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
-        {server.config?.description && (
+        {deskAppOff ? (
           <span className="block truncate text-xs text-text-secondary">
-            {server.config.description}
+            {localize('com_ui_tools_desk_app_off')}
           </span>
+        ) : (
+          server.config?.description && (
+            <span className="block truncate text-xs text-text-secondary">
+              {server.config.description}
+            </span>
+          )
         )}
       </span>
+      {deskAppOff && (
+        <button
+          type="button"
+          data-testid="tools-menu-desk-download"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(DESK_DOWNLOAD_PATH, '_blank', 'noopener,noreferrer');
+          }}
+          className="flex-shrink-0 rounded-theme-control border border-border-light px-2 py-1 text-xs font-medium text-accent-primary hover:bg-surface-brand-subtle"
+        >
+          {localize('com_ui_tools_desk_app_get')}
+        </button>
+      )}
       {needsConnection && statusIconProps ? (
         <span className="flex flex-shrink-0 items-center gap-2">
           <span className="text-xs text-text-tertiary">
@@ -269,6 +293,8 @@ function ToolsMenu({
     () => (canUseMcp ? (manager?.selectableServers ?? []) : []),
     [canUseMcp, manager?.selectableServers],
   );
+  const hasDeskConnector = servers.some((server) => server.serverName === DESK_SERVER_NAME);
+  const { data: deskStatus } = useDeskStatusQuery({ enabled: hasDeskConnector && isOpen });
   const catalogServerNames = useMemo(() => servers.map((server) => server.serverName), [servers]);
   const agentConnectors = useAgentConnectorSelection({
     conversationId: context?.conversationId,
@@ -479,6 +505,9 @@ function ToolsMenu({
                     statusIconProps={manager.getServerStatusIconProps(server.serverName)}
                     onToggle={toggleConnector}
                     onOpenConnectorsSettings={openConnectorsSettings}
+                    deskAppOff={
+                      server.serverName === DESK_SERVER_NAME && deskStatus?.state === 'offline'
+                    }
                   />
                 ))}
                 {unavailableServers.map((server) => (

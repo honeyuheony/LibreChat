@@ -4,6 +4,7 @@ import { ErrorTypes, registerPage } from 'librechat-data-provider';
 import { useOutletContext, useSearchParams, useLocation } from 'react-router-dom';
 import type { TLoginLayoutContext } from '~/common';
 import type { TranslationKeys } from '~/hooks';
+import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
 import { getLoginError, persistRedirectToSession } from '~/utils';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import SocialButton from '~/components/Auth/SocialButton';
@@ -134,6 +135,14 @@ function Login() {
           </a>
         </p>
       )}
+      <p className="text-center text-sm">
+        <a
+          href={DESK_DOWNLOAD_PATH}
+          className="inline-flex p-1 font-medium text-text-secondary underline decoration-transparent transition-all duration-200 hover:text-text-primary hover:decoration-text-primary focus:text-text-primary"
+        >
+          {localize('com_auth_desk_app')}
+        </a>
+      </p>
     </>
   );
 }

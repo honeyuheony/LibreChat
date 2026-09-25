@@ -5,6 +5,7 @@ import type { DeskStatusResponse } from 'librechat-data-provider';
 import type { MCPServerDefinition, TranslationKeys } from '~/hooks';
 import type { PillTone } from './status';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
+import { DESK_DOWNLOAD_PATH } from './status';
 import { useLocalize } from '~/hooks';
 import ConnectorFrame from './Frame';
 import ConnectorTools from './Tools';
@@ -91,7 +92,7 @@ export default function DeskConnectorCard({ server }: { server: MCPServerDefinit
   const { data: status, isError } = useDeskStatusQuery();
   const view = describeDesk(status, isError, localize);
   const displayName = server.config.title || server.serverName;
-  const installerUrl = status?.state === 'online' ? null : status?.installerUrl;
+  const offerDownload = status?.state !== 'online' && !!status?.installerUrl;
 
   return (
     <ConnectorFrame
@@ -109,9 +110,9 @@ export default function DeskConnectorCard({ server }: { server: MCPServerDefinit
       expanded={expanded}
       onToggle={() => setExpanded((open) => !open)}
       action={
-        installerUrl ? (
+        offerDownload ? (
           <Button asChild size="sm" shape="theme" variant="submit">
-            <a href={installerUrl} download>
+            <a href={DESK_DOWNLOAD_PATH} target="_blank" rel="noopener noreferrer">
               {localize('com_ui_connectors_desk_download')}
             </a>
           </Button>

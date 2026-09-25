@@ -8,9 +8,10 @@ import {
   TwoFactorScreen,
   RequestPasswordReset,
 } from '~/components/Auth';
-import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
-import AgentMarketplace from '~/components/Agents/Marketplace';
 import SkillMarketplace from '~/components/Skills/Marketplace/SkillMarketplace';
+import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
+import DeskDownload from '~/components/Connectors/DeskDownload';
+import AgentMarketplace from '~/components/Agents/Marketplace';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
 import { AuthContextProvider } from '~/hooks/AuthContext';
 import RouteErrorBoundary from './RouteErrorBoundary';
@@ -65,6 +66,11 @@ export const router = createBrowserRouter(
     {
       path: 'share/:shareId',
       element: <ShareRoute />,
+      errorElement: <RouteErrorBoundary />,
+    },
+    {
+      path: 'download',
+      element: <DeskDownload />,
       errorElement: <RouteErrorBoundary />,
     },
     {

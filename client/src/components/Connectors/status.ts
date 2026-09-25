@@ -26,6 +26,9 @@ interface ConnectorStateInput {
 /** The server name the desk relay MCP server is configured under (`librechat.yaml` `mcpServers.my-pc`). */
 export const DESK_SERVER_NAME = 'my-pc';
 
+/** Public page every "get the desktop app" entry opens (`routes/index.tsx`). */
+export const DESK_DOWNLOAD_PATH = '/download';
+
 export function getConnectorState({
   serverStatus,
   isInitializing,
