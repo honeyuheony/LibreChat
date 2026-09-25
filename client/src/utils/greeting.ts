@@ -199,3 +199,14 @@ export const getMsUntilNextGreeting = (date: Date = new Date()): number => {
   );
   return boundary.getTime() - date.getTime();
 };
+
+export type GreetingSchedule = {
+  getKey: (date: Date, hasName: boolean) => TranslationKeys;
+  getMsUntilNext: (date: Date) => number;
+};
+
+/** Varied greetings that rotate by weekday and calendar day. */
+export const rotatingGreetingSchedule: GreetingSchedule = {
+  getKey: getGreetingKey,
+  getMsUntilNext: getMsUntilNextGreeting,
+};
