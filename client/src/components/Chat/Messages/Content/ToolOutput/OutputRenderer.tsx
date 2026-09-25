@@ -12,9 +12,13 @@ interface ContentBlock {
 }
 
 const ERROR_INNER = /^Error\s+\w+ing to endpoint\s*\(HTTP \d+\):\s*/i;
+/** The MCP Python SDK (FastMCP) wraps an exception raised by a tool this way and
+ *  returns it as ordinary text, so the run step still closes as `completed`. */
+const MCP_EXECUTION_ERROR_PREFIX = /^Error executing tool [^\s:]+:\s*/;
 
-function cleanError(text: string): string {
+export function cleanToolError(text: string): string {
   let cleaned = stripToolCallErrorPrefix(text).trim();
+  cleaned = cleaned.replace(MCP_EXECUTION_ERROR_PREFIX, '');
   cleaned = cleaned.replace(ERROR_INNER, '').trim();
   if (cleaned.endsWith('Please fix your mistakes.')) {
     cleaned = cleaned.slice(0, -'Please fix your mistakes.'.length).trim();
@@ -23,7 +27,11 @@ function cleanError(text: string): string {
 }
 
 export function isError(text: string): boolean {
-  return hasToolCallErrorPrefix(text) || text.startsWith('Error processing tool');
+  return (
+    hasToolCallErrorPrefix(text) ||
+    text.startsWith('Error processing tool') ||
+    MCP_EXECUTION_ERROR_PREFIX.test(text)
+  );
 }
 
 function isStructuredText(text: string): boolean {
@@ -45,7 +53,7 @@ function extractText(raw: string): ExtractedText {
   }
 
   if (isError(trimmed)) {
-    return { text: cleanError(trimmed), rawError: trimmed, error: true, isJson: false };
+    return { text: cleanToolError(trimmed), rawError: trimmed, error: true, isJson: false };
   }
 
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
@@ -62,7 +70,7 @@ function extractText(raw: string): ExtractedText {
             .join('\n')
             .trim();
           if (isError(joined)) {
-            return { text: cleanError(joined), rawError: joined, error: true, isJson: false };
+            return { text: cleanToolError(joined), rawError: joined, error: true, isJson: false };
           }
           return { text: joined, rawError: '', error: false, isJson: false };
         }
