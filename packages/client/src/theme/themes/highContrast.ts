@@ -86,6 +86,8 @@ export const highContrastLightTheme: IThemeRGB = {
   'rgb-surface-overlay': '0 0 0', // #000000
   'rgb-surface-submit': '0 92 46', // #005c2e
   'rgb-surface-submit-hover': '0 61 30', // #003d1e
+  'rgb-surface-brand-subtle': '255 255 255', // #ffffff
+  'rgb-surface-message-user': '255 255 255', // #ffffff
   'rgb-surface-destructive': '161 0 0', // #a10000
   'rgb-surface-destructive-hover': '122 0 0', // #7a0000
   'rgb-surface-chat': '255 255 255', // #ffffff
@@ -102,6 +104,7 @@ export const highContrastLightTheme: IThemeRGB = {
   'rgb-border-medium': '0 0 0', // #000000
   'rgb-border-medium-alt': '0 0 0', // #000000
   'rgb-border-heavy': '0 0 0', // #000000
+  'rgb-border-brand': '0 0 0', // #000000
   'rgb-border-xheavy': '0 0 0', // #000000
   'rgb-border-destructive': '161 0 0', // #a10000
 
@@ -226,6 +229,8 @@ export const highContrastDarkTheme: IThemeRGB = {
   'rgb-surface-overlay': '0 0 0', // #000000
   'rgb-surface-submit': '127 240 179', // #7ff0b3
   'rgb-surface-submit-hover': '163 245 204', // #a3f5cc
+  'rgb-surface-brand-subtle': '0 0 0', // #000000
+  'rgb-surface-message-user': '0 0 0', // #000000
   'rgb-surface-destructive': '255 143 143', // #ff8f8f
   'rgb-surface-destructive-hover': '255 179 179', // #ffb3b3
   'rgb-surface-chat': '0 0 0', // #000000
@@ -242,6 +247,7 @@ export const highContrastDarkTheme: IThemeRGB = {
   'rgb-border-medium': '255 255 255', // #ffffff
   'rgb-border-medium-alt': '255 255 255', // #ffffff
   'rgb-border-heavy': '255 255 255', // #ffffff
+  'rgb-border-brand': '255 255 255', // #ffffff
   'rgb-border-xheavy': '255 255 255', // #ffffff
   'rgb-border-destructive': '255 143 143', // #ff8f8f
 

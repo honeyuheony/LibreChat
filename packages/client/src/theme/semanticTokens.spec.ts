@@ -65,9 +65,14 @@ describe('shared component color guardrail', () => {
 });
 
 /** style.css is what renders when no theme definition is applied, so it must restate the themes. */
-describe.each(['rgb-surface-dialog', 'rgb-surface-hover', 'rgb-surface-composer-hover'] as Array<
-  keyof IThemeRGB
->)('%s', (token) => {
+describe.each([
+  'rgb-surface-dialog',
+  'rgb-surface-hover',
+  'rgb-surface-composer-hover',
+  'rgb-surface-brand-subtle',
+  'rgb-surface-message-user',
+  'rgb-border-brand',
+] as Array<keyof IThemeRGB>)('%s', (token) => {
   it('declares the same light and dark value in the app CSS and the runtime themes', () => {
     const appStyles = readFileSync(
       join(__dirname, '..', '..', '..', '..', 'client', 'src', 'style.css'),
@@ -234,6 +239,24 @@ describe.each([
       ),
     );
     expect(failures).toEqual([]);
+  });
+});
+
+/** User messages carry body copy, and the brand-subtle fill carries brand-coloured labels. */
+describe.each([
+  ['default', defaultTheme],
+  ['dark', darkTheme],
+  ['high contrast light', highContrastLightTheme],
+  ['high contrast dark', highContrastDarkTheme],
+])('%s brand and message surfaces', (_name, theme: IThemeRGB) => {
+  it('keeps neutral text at WCAG AA on the user message surface', () => {
+    expect(belowAA(theme, neutralTextTokens, ['rgb-surface-message-user'])).toEqual([]);
+  });
+
+  it('keeps primary and accent text at WCAG AA on the brand-subtle surface', () => {
+    expect(
+      belowAA(theme, ['rgb-text-primary', 'rgb-accent-primary'], ['rgb-surface-brand-subtle']),
+    ).toEqual([]);
   });
 });
 

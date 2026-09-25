@@ -51,6 +51,8 @@ export interface IThemeRGB {
   'rgb-surface-overlay'?: string;
   'rgb-surface-submit'?: string;
   'rgb-surface-submit-hover'?: string;
+  'rgb-surface-brand-subtle'?: string;
+  'rgb-surface-message-user'?: string;
   'rgb-surface-destructive'?: string;
   'rgb-surface-destructive-hover'?: string;
   'rgb-surface-chat'?: string;
@@ -66,6 +68,7 @@ export interface IThemeRGB {
   'rgb-border-light'?: string;
   'rgb-border-medium'?: string;
   'rgb-border-medium-alt'?: string;
+  'rgb-border-brand'?: string;
   'rgb-border-heavy'?: string;
   'rgb-border-xheavy'?: string;
   'rgb-border-destructive'?: string;
@@ -188,6 +191,8 @@ export interface IThemeVariables {
   '--surface-overlay': string;
   '--surface-submit': string;
   '--surface-submit-hover': string;
+  '--surface-brand-subtle': string;
+  '--surface-message-user': string;
   '--surface-destructive': string;
   '--surface-destructive-hover': string;
   '--surface-chat': string;
@@ -203,6 +208,7 @@ export interface IThemeVariables {
   '--border-medium': string;
   '--border-medium-alpha': string;
   '--border-medium-alt': string;
+  '--border-brand': string;
   '--border-heavy': string;
   '--border-heavy-alpha': string;
   '--border-xheavy': string;
@@ -292,6 +298,8 @@ export interface IThemeColors {
   'surface-overlay'?: string;
   'surface-submit'?: string;
   'surface-submit-hover'?: string;
+  'surface-brand-subtle'?: string;
+  'surface-message-user'?: string;
   'surface-destructive'?: string;
   'surface-destructive-hover'?: string;
   'surface-chat'?: string;
@@ -305,6 +313,7 @@ export interface IThemeColors {
   'border-light'?: string;
   'border-medium'?: string;
   'border-medium-alt'?: string;
+  'border-brand'?: string;
   'border-heavy'?: string;
   'border-xheavy'?: string;
   'border-destructive'?: string;

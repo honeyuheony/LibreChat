@@ -53,6 +53,8 @@ export const darkTheme: IThemeRGB = {
   /** #06377b 는 어두운 바탕에서 묻히므로 시안의 밝은 네이비를 쓴다. 흰 글자 위 6.2:1. */
   'rgb-surface-submit': '47 95 174', // #2f5fae (mock brand)
   'rgb-surface-submit-hover': '38 79 146', // #264f92 (mock brand, darkened)
+  'rgb-surface-message-user': '34 42 53', // #222a35 (mock userBubble)
+  'rgb-surface-brand-subtle': '23 35 56', // #172338 (mock brandSoft)
   'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)
   'rgb-surface-destructive-hover': '127 29 29', // #7f1d1d (red-900)
   'rgb-surface-chat': '34 42 53', // #222a35 (mock tile)
@@ -68,6 +70,7 @@ export const darkTheme: IThemeRGB = {
   'rgb-border-light': '42 49 60', // #2a313c (mock border)
   'rgb-border-medium': '58 66 79', // #3a424f (cool gray, derived)
   'rgb-border-medium-alt': '58 66 79', // #3a424f (cool gray, derived)
+  'rgb-border-brand': '44 68 112', // #2c4470 (mock brandLine)
   'rgb-border-heavy': '83 92 106', // #535c6a (cool gray, derived)
   'rgb-border-xheavy': '152 160 173', // #98a0ad (mock text3)
   'rgb-border-destructive': '239 68 68', // #ef4444 (red-500)

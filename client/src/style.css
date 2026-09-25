@@ -190,6 +190,8 @@ html {
   --surface-overlay: var(--gray-500);
   --surface-submit: 6 55 123; /* #06377b brand navy */
   --surface-submit-hover: 5 44 98; /* #052c62 brand navy, darkened ~20% */
+  --surface-message-user: 233 237 243; /* #e9edf3 mock userBubble */
+  --surface-brand-subtle: 233 239 248; /* #e9eff8 mock brandSoft */
   --surface-destructive: var(--red-700);
   --surface-destructive-hover: var(--red-800);
   --surface-chat: 255 255 255; /* #ffffff mock surface */
@@ -200,6 +202,7 @@ html {
   --border-medium-alt: 200 207 217; /* #c8cfd9 cool gray, derived */
   --border-medium: 200 207 217; /* #c8cfd9 cool gray, derived */
   --border-medium-alpha: 1;
+  --border-brand: 185 201 226; /* #b9c9e2 mock brandLine */
   --border-heavy: 152 160 173; /* #98a0ad cool gray, derived */
   --border-heavy-alpha: 1;
   --border-xheavy: 93 100 112; /* #5d6470 mock text3 */
@@ -315,6 +318,8 @@ html {
   --surface-overlay: 0 0 0;
   --surface-submit: 47 95 174; /* #2f5fae mock brand */
   --surface-submit-hover: 38 79 146; /* #264f92 mock brand, darkened */
+  --surface-message-user: 34 42 53; /* #222a35 mock userBubble */
+  --surface-brand-subtle: 23 35 56; /* #172338 mock brandSoft */
   --surface-destructive: var(--red-800);
   --surface-destructive-hover: var(--red-900);
   --surface-chat: 34 42 53; /* #222a35 mock tile */
@@ -323,6 +328,7 @@ html {
   --border-light: 42 49 60; /* #2a313c mock border */
   --border-medium-alt: 58 66 79; /* #3a424f cool gray, derived */
   --border-medium: 58 66 79; /* #3a424f cool gray, derived */
+  --border-brand: 44 68 112; /* #2c4470 mock brandLine */
   --border-heavy: 83 92 106; /* #535c6a cool gray, derived */
   --border-xheavy: 152 160 173; /* #98a0ad mock text3 */
   --border-destructive: var(--red-500);
