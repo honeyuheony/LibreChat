@@ -1,4 +1,5 @@
 {
+  "com_ui_more_actions": "More actions",
   "com_ui_repository_instructions": "Repository instructions",
   "com_ui_repository_instructions_prefer": "Prefer repository conventions",
   "com_ui_repository_instructions_defer": "Prefer agent conventions",
