@@ -220,7 +220,7 @@ describe('ToolsMenu', () => {
       jest.restoreAllMocks();
     });
 
-    it('says the PC app is off and opens the download page from the row', async () => {
+    it('says the desktop app is off and opens the download page from the row', async () => {
       jest.spyOn(dataService, 'getDeskStatus').mockResolvedValue(deskStatus('offline'));
       const openWindow = jest.spyOn(window, 'open').mockReturnValue(null);
       const user = userEvent.setup();
@@ -238,7 +238,7 @@ describe('ToolsMenu', () => {
       expect(mockToggleServerSelection).not.toHaveBeenCalled();
     });
 
-    it('keeps the plain description while the PC app is on', async () => {
+    it('keeps the plain description while the desktop app is on', async () => {
       const getDeskStatus = jest
         .spyOn(dataService, 'getDeskStatus')
         .mockResolvedValue(deskStatus('online'));

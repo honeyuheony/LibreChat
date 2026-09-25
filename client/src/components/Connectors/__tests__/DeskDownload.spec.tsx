@@ -55,7 +55,7 @@ describe('DeskDownload', () => {
 
     renderPage();
 
-    const download = await screen.findByRole('link', { name: 'Download for Windows' });
+    const download = await screen.findByRole('link', { name: 'Get the app for Windows' });
     expect(download).toHaveAttribute('href', 'https://relay.example/app/desk-app-setup-0.1.2.exe');
     expect(
       screen.getByText(/^Version 0\.1\.2 · 106MB · Released .+ · Windows 10 and 11$/),
@@ -80,7 +80,7 @@ describe('DeskDownload', () => {
     renderPage();
 
     expect(await screen.findByRole('status')).toHaveTextContent('No installer is available');
-    expect(screen.queryByRole('link', { name: 'Download for Windows' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Get the app for Windows' })).not.toBeInTheDocument();
   });
 
   it('says no installer is available when the release cannot be read', async () => {

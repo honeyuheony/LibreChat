@@ -165,11 +165,11 @@ describe('DeskConnectorCard', () => {
       </div>,
     );
 
-    expect(await screen.findByText('PC app on')).toBeInTheDocument();
+    expect(await screen.findByText('Desktop app connected')).toBeInTheDocument();
     expect(
       screen.getByText('Allowed folder “Work files” · KIM-MINJI-PC · Connected just now'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Get the PC app' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
   });
 
   it('offers the installer while the app is off', async () => {
@@ -188,8 +188,8 @@ describe('DeskConnectorCard', () => {
       </div>,
     );
 
-    expect(await screen.findByText('PC app off')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Get the PC app' })).toHaveAttribute(
+    expect(await screen.findByText('Desktop app not connected')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get the desktop app' })).toHaveAttribute(
       'href',
       '/download',
     );
