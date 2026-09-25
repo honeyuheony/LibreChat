@@ -84,3 +84,19 @@ export const hoverButtonClasses = ({
     isActive && 'hover-button-active active text-text-primary bg-surface-hover',
     className,
   );
+
+/**
+ * Reply body typography: 17px / 1.7 from the redesign, with headings, lists, quotes and
+ * tables on theme tokens. `!` because the `.markdown` rules in style.css come after
+ * Tailwind's utilities and would otherwise win at equal specificity.
+ */
+export const agentReplyClasses = cn(
+  '[--markdown-font-size:var(--font-size-chat)] !leading-[var(--line-height-chat)]',
+  '[&_h1]:!mb-3 [&_h1]:!mt-6 [&_h1]:!text-[1.375rem] [&_h1]:!font-semibold [&_h1]:!leading-snug',
+  '[&_h2]:!mb-2 [&_h2]:!mt-5 [&_h2]:!text-[1.25rem] [&_h2]:!font-semibold [&_h2]:!leading-snug',
+  '[&_h3]:!mb-2 [&_h3]:!mt-4 [&_h3]:!text-[1.125rem] [&_h3]:!font-semibold [&_h3]:!leading-snug',
+  '[&_li]:!my-1',
+  '[&_blockquote]:!border-border-medium [&_blockquote]:!leading-[var(--line-height-chat)] [&_blockquote]:text-text-secondary',
+  '[&_table]:!my-4 [&_td]:!border-border-light [&_td]:!px-3 [&_td]:!py-2',
+  '[&_th]:!border-border-light [&_th]:!bg-surface-secondary [&_th]:!px-3 [&_th]:!py-2',
+);

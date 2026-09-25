@@ -9,6 +9,7 @@ import {
   getMessageAriaLabel,
 } from '~/utils';
 import { revealOnRowHoverClasses, messageFooterClasses } from '~/components/Chat/Messages/styles';
+import MessageRow, { shouldShowAuthor } from '~/components/Chat/Messages/ui/MessageRow';
 import { parseWakeupText } from '~/components/Chat/Messages/Content/Parts/wakeup';
 import Elapsed, { shouldShowElapsed } from '~/components/Chat/Messages/Elapsed';
 import { getHeaderHoverLabel } from '~/components/Chat/Messages/ui/HeaderLabel';
@@ -16,7 +17,6 @@ import MessageContent from '~/components/Chat/Messages/Content/MessageContent';
 import { useLocalize, useMessageActions, useContentMetadata } from '~/hooks';
 import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
-import MessageRow from '~/components/Chat/Messages/ui/MessageRow';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import Wakeup from '~/components/Chat/Messages/Content/Wakeup';
 import SubRow from '~/components/Chat/Messages/SubRow';
@@ -169,6 +169,7 @@ const MessageRender = memo(function MessageRender({
       ariaLabel={getMessageAriaLabel(msg, localize)}
       headerPrefix={getHeaderPrefixForScreenReader(msg, localize)}
       isCreatedByUser={msg.isCreatedByUser === true}
+      showAuthor={shouldShowAuthor(msg, conversation)}
       hasParallelContent={hasParallelContent}
       fullWidth={maximizeChatSpace}
       isEditing={edit}

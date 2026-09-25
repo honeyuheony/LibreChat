@@ -1,3 +1,4 @@
+import type { TConversation, TMessage } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import MessageTimestamp from './MessageTimestamp';
 import HeaderLabel from './HeaderLabel';
@@ -20,8 +21,23 @@ type MessageRowProps = {
   /** Full-width block without the author header or user bubble — for rows
    *  whose body carries its own header (e.g. wake-up task cards). */
   plain?: boolean;
+  /** Shows the assistant's name in small type above the reply; hidden (screen-reader only) otherwise. */
+  showAuthor?: boolean;
   className?: string;
 };
+
+/** A reply names its author only when someone other than the conversation's current
+ *  agent (or model) wrote it; a single-agent conversation shows no names. */
+export function shouldShowAuthor(
+  message: Pick<TMessage, 'isCreatedByUser' | 'model'> | undefined,
+  conversation: Pick<TConversation, 'agent_id' | 'model'> | null | undefined,
+): boolean {
+  if (message == null || message.isCreatedByUser === true || !message.model) {
+    return false;
+  }
+  const current = conversation?.agent_id ?? conversation?.model;
+  return current != null && current !== '' && message.model !== current;
+}
 
 export function getMessageRowWidthClass({
   fullWidth = false,
@@ -32,7 +48,8 @@ export function getMessageRowWidthClass({
 } = {}) {
   if (fullWidth) return 'w-full max-w-full sm:px-2';
   if (hasParallelContent) return 'w-full sm:px-2 md:max-w-[58rem] xl:max-w-[70rem]';
-  return 'w-full sm:px-2 md:max-w-3xl xl:max-w-4xl';
+  /** 48.5rem minus the `sm:px-2` gutters leaves the 760px reading column of the design. */
+  return 'w-full sm:px-2 md:max-w-[48.5rem]';
 }
 
 export default function MessageRow({
@@ -51,9 +68,10 @@ export default function MessageRow({
   fullWidth = false,
   isEditing = false,
   plain = false,
+  showAuthor = false,
 }: MessageRowProps) {
-  // Same column as ChatForm: max-width plus `sm:px-2`, so the body lines
-  // up with the composer surface rather than the form's outer box.
+  // `sm:px-2` mirrors ChatForm, so the body lines up with the composer surface
+  // rather than the form's outer box once both use the same max-width.
   const widthClass = getMessageRowWidthClass({ fullWidth, hasParallelContent });
 
   return (
@@ -77,30 +95,29 @@ export default function MessageRow({
           !hasParallelContent &&
             !plain &&
             isCreatedByUser &&
-            cn('ml-auto items-end', !isEditing && 'w-fit max-w-[90%] sm:max-w-[85%]'),
+            cn('ml-auto items-end', !isEditing && 'w-fit max-w-[90%] sm:max-w-[75%]'),
           !hasParallelContent && !isCreatedByUser && !isEditing && 'flex-1',
         )}
       >
         {!hasParallelContent &&
           !plain &&
-          (isCreatedByUser ? (
+          (isCreatedByUser || !showAuthor ? (
             <h2 className="sr-only">
               {headerPrefix}
               {label}
               <MessageTimestamp value={timestamp} />
             </h2>
           ) : (
-            /** `mb-1` keeps the name off its own first line of body text. */
-            <h2 className="mb-1 flex min-h-7 w-full select-none items-center gap-2 text-sm font-semibold text-text-primary">
+            <h2 className="mb-1 flex w-full select-none items-center gap-1.5 text-xs font-medium text-text-tertiary">
               <span
                 aria-hidden="true"
-                className="flex size-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-full"
+                className="flex size-4 flex-shrink-0 items-center justify-center overflow-hidden rounded-full [&_img]:size-4 [&_svg]:size-4"
               >
                 {icon}
               </span>
               <span className="sr-only">{headerPrefix}</span>
               <HeaderLabel label={label} hoverLabel={hoverLabel} />
-              <MessageTimestamp value={timestamp} className="ml-auto shrink-0 font-normal" />
+              <MessageTimestamp value={timestamp} className="sr-only" />
             </h2>
           ))}
 
@@ -109,7 +126,7 @@ export default function MessageRow({
             className={cn(
               'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
               isCreatedByUser && !isEditing && !plain
-                ? 'w-fit rounded-theme-surface rounded-br-theme-control bg-surface-tertiary px-theme-normal py-2.5'
+                ? 'w-fit rounded-theme-surface bg-surface-message-user px-4 py-3 text-base leading-[var(--line-height-body)]'
                 : 'w-full',
             )}
             data-testid="message-body"
