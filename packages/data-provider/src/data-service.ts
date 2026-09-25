@@ -355,6 +355,10 @@ export const bindActionOAuth = (actionId: string): Promise<{ success: boolean }>
   return request.post(endpoints.actionOAuthBind(actionId));
 };
 
+export const getDeskStatus = (): Promise<q.DeskStatusResponse> => {
+  return request.get(endpoints.deskStatus());
+};
+
 export const getMCPConnectionStatus = (): Promise<q.MCPConnectionStatusResponse> => {
   return request.get(endpoints.mcpConnectionStatus());
 };

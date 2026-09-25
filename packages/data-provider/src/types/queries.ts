@@ -251,6 +251,16 @@ export interface MCPServerStatus {
   authorizationGeneration?: string;
 }
 
+/** The user's desktop app as the desk relay last saw it; `unknown` when the relay could not be asked. */
+export interface DeskStatusResponse {
+  state: 'online' | 'offline' | 'unknown';
+  deviceName: string | null;
+  folderName: string | null;
+  connectedAt: string | null;
+  /** Public installer link, or `null` when no public relay address or release is known. */
+  installerUrl: string | null;
+}
+
 export interface MCPConnectionStatusResponse {
   success: boolean;
   connectionStatus: Record<string, MCPServerStatus>;
