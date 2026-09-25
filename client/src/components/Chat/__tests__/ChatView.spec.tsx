@@ -50,10 +50,6 @@ jest.mock('../Footer', () => ({
 jest.mock('../Landing', () => ({ __esModule: true, default: () => <div /> }));
 jest.mock('../Messages/MessagesView', () => ({ __esModule: true, default: () => <div /> }));
 jest.mock('../Input/ChatForm', () => ({ __esModule: true, default: () => <div /> }));
-jest.mock('../Input/ConversationStarters', () => ({
-  __esModule: true,
-  default: () => <div data-testid="conversation-starters" />,
-}));
 jest.mock('../LandingSkills', () => ({
   __esModule: true,
   default: () => <div data-testid="landing-skills" />,
