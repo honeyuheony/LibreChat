@@ -82,6 +82,34 @@ function SwitchIndicator({ checked }: { checked: boolean }) {
   );
 }
 
+function ConnectorTile({
+  server,
+  muted = false,
+}: {
+  server: MCPServerDefinition;
+  muted?: boolean;
+}) {
+  const glyphClassName = cn('size-4', muted ? 'text-text-tertiary' : 'text-accent-primary');
+  return (
+    <span
+      className={cn(
+        'flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control',
+        muted ? 'bg-surface-hover' : 'bg-surface-brand-subtle',
+      )}
+    >
+      {server.config?.iconPath ? (
+        <CustomIcon
+          src={server.config.iconPath}
+          className={cn(glyphClassName, 'object-contain')}
+          alt=""
+        />
+      ) : (
+        <MCPIcon className={glyphClassName} />
+      )}
+    </span>
+  );
+}
+
 function ConnectorRow({
   server,
   isSelected,
@@ -119,17 +147,7 @@ function ConnectorRow({
       }
       className={rowClassName}
     >
-      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-brand-subtle">
-        {server.config?.iconPath ? (
-          <CustomIcon
-            src={server.config.iconPath}
-            className="size-4 object-contain text-accent-primary"
-            alt=""
-          />
-        ) : (
-          <MCPIcon className="size-4 text-accent-primary" />
-        )}
-      </span>
+      <ConnectorTile server={server} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
         {deskAppOff ? (
@@ -194,9 +212,7 @@ function UnavailableConnectorRow({ server }: { server: MCPServerDefinition }) {
       data-testid="tools-menu-unavailable"
       className={cn(rowClassName, 'cursor-default opacity-50 hover:bg-transparent')}
     >
-      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-hover">
-        <MCPIcon className="size-4 text-text-tertiary" />
-      </span>
+      <ConnectorTile server={server} muted />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
         <span className="block truncate text-xs text-text-secondary">{reason}</span>
