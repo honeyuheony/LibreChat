@@ -19,6 +19,8 @@ module.exports = {
     fontFamily: {
       sans: ['var(--theme-font-family)'],
       mono: ['var(--font-mono)'],
+      /** Defined in serif.css; only the empty conversation's greeting uses it. */
+      serif: ['var(--font-serif)'],
     },
     // fontFamily: {
     //   sans: ['Söhne', 'sans-serif'],
