@@ -11,11 +11,12 @@ describe('composerSurfaceClasses', () => {
 });
 
 describe('composerSubmitClasses', () => {
-  it('owns the send/stop geometry from the shared tokens', () => {
-    const classes = composerSubmitClasses();
+  it('owns the send/stop geometry from the shared tokens, as a rounded square', () => {
+    const classes = composerSubmitClasses().split(' ');
 
     expect(classes).toContain('size-theme-control');
-    expect(classes).toContain('rounded-theme-control-round');
+    expect(classes).toContain('rounded-theme-control');
+    expect(classes).not.toContain('rounded-theme-control-round');
     expect(classes).toContain('p-theme-compact');
   });
 
@@ -30,8 +31,10 @@ describe('composerSubmitClasses', () => {
   it('draws its fill and disabled state from semantic roles', () => {
     const classes = composerSubmitClasses();
 
-    expect(classes).toContain('bg-text-primary');
-    expect(classes).toContain('disabled:text-text-secondary');
+    expect(classes).toContain('bg-surface-submit');
+    expect(classes).toContain('hover:bg-surface-submit-hover');
+    expect(classes).toContain('text-white');
+    expect(classes).toContain('disabled:opacity-40');
     expect(classes).not.toMatch(/#[0-9a-f]{3,6}|rgb\(|hsl\(/i);
   });
 });

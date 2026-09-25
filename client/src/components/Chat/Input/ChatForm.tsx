@@ -1,8 +1,8 @@
 import { memo, useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useRecoilState, useRecoilValue, useRecoilCallback } from 'recoil';
+import { composerSurfaceClasses, TextareaAutosize } from '@librechat/client';
 import { Constants, isAssistantsEndpoint, isAgentsEndpoint } from 'librechat-data-provider';
-import { composerSurfaceClasses, composerSurfaceShadow, TextareaAutosize } from '@librechat/client';
 import type { TChatProject, TMessage, TConversation } from 'librechat-data-provider';
 import type { SetterOrUpdater } from 'recoil';
 import type { ExtendedFile, FileSetter, ConvoGenerator } from '~/common';
@@ -41,9 +41,11 @@ import PendingManualSkillsChips from './PendingManualSkillsChips';
 import usePastedTextEdit from '~/hooks/Files/usePastedTextEdit';
 import useAskAnswerMode from '~/hooks/Input/useAskAnswerMode';
 import AskUserQuestionPopover from './AskUserQuestionPopover';
+import ModelSelector from '../Menus/Endpoints/ModelSelector';
 import InterruptSteerButton from './InterruptSteerButton';
 import PastedTextDialog from './Files/PastedTextDialog';
 import DuringRunSendButton from './DuringRunSendButton';
+import useSkillAttachItems from './useSkillAttachItems';
 import ProjectLandingChip from '../ProjectLandingChip';
 import { useGetStartupConfig } from '~/data-provider';
 import { mainTextareaId, BadgeItem } from '~/common';
@@ -196,6 +198,7 @@ const ChatForm = memo(function ChatForm({
     [conversation?.spec, startupConfig],
   );
   const hideBadgeRow = modelSpec?.hideBadgeRow === true;
+  const skillAttachItems = useSkillAttachItems(index, endpoint);
   const filesLoading = useMemo(() => hasIncompleteFiles(files), [files]);
   const conversationId = useMemo(
     () => conversation?.conversationId ?? Constants.NEW_CONVO,
@@ -591,11 +594,13 @@ const ChatForm = memo(function ChatForm({
   const baseClasses = useMemo(
     () =>
       cn(
-        'md:py-3.5 m-0 w-full resize-none py-[13px] placeholder:text-text-tertiary bg-transparent [&:has(textarea:focus)]:shadow-[0_2px_6px_rgba(0,0,0,.05)]',
+        'm-0 w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
+        /* The empty conversation's composer is the page's one control, so it reads larger. */
+        isLandingPage ? 'text-[17px]' : 'text-base',
         isCollapsed ? 'max-h-[52px]' : 'max-h-[45vh] md:max-h-[55vh]',
-        isMoreThanThreeRows ? 'pl-5' : 'px-5',
+        isMoreThanThreeRows ? 'pl-1' : 'px-1',
       ),
-    [isCollapsed, isMoreThanThreeRows],
+    [isCollapsed, isMoreThanThreeRows, isLandingPage],
   );
 
   /* From `sm` up the band leaves room under itself for the disclaimer, which only
@@ -646,7 +651,8 @@ const ChatForm = memo(function ChatForm({
            asked for less motion gets the new position outright — this one is a
            slide across the page rather than decoration. */
         'mx-auto flex w-full flex-row gap-3 transition-[max-width,margin-bottom] duration-300 motion-reduce:transition-none sm:px-2',
-        maximizeChatSpace ? 'max-w-full' : 'md:max-w-3xl xl:max-w-4xl',
+        /* 760px is the conversation column's width, so the composer lines up with the messages. */
+        maximizeChatSpace ? 'max-w-full' : 'md:max-w-[760px]',
         bottomClearance,
       )}
     >
@@ -724,9 +730,10 @@ const ChatForm = memo(function ChatForm({
                    squared off at the bottom (`rounded-t-3xl`) and no disclaimer
                    follows it — so the action row is the last thing in it, with no
                    band of padding under the buttons. */
-                'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl',
+                'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
-                isTextAreaFocused ? composerSurfaceShadow.focused : composerSurfaceShadow.blurred,
+                isTextAreaFocused ? 'shadow-md' : 'shadow-sm',
+                isLandingPage ? 'gap-4 px-4 pb-3 pt-4' : 'gap-3 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
                    same categorical slot the purple tool badge uses, so the accent
@@ -815,11 +822,12 @@ const ChatForm = memo(function ChatForm({
                       tabIndex={0}
                       data-testid="text-input"
                       rows={1}
+                      minRows={isLandingPage ? 2 : 1}
                       onFocus={handleTextareaFocus}
                       onBlur={handleTextareaBlur}
                       aria-label={localize('com_ui_message_input')}
                       onClick={handleFocusOrClick}
-                      style={{ height: 44, overflowY: 'auto' }}
+                      style={{ overflowY: 'auto' }}
                       className={cn(
                         baseClasses,
                         removeFocusRings,
@@ -827,7 +835,7 @@ const ChatForm = memo(function ChatForm({
                       )}
                     />
                   </div>
-                  <div className="flex flex-col items-start justify-start pr-2.5 pt-1.5">
+                  <div className="flex flex-col items-start justify-start">
                     <CollapseChat
                       isCollapsed={isCollapsed}
                       isScrollable={isMoreThanThreeRows}
@@ -838,7 +846,7 @@ const ChatForm = memo(function ChatForm({
               )}
               <div
                 className={cn(
-                  '@container flex flex-wrap items-center gap-2 px-2 pb-2',
+                  '@container flex flex-wrap items-center gap-2',
                   isRTL ? 'flex-row-reverse' : 'flex-row',
                 )}
               >
@@ -849,9 +857,11 @@ const ChatForm = memo(function ChatForm({
                     files={files}
                     setFiles={setFiles}
                     setFilesLoading={setFilesLoading}
+                    extraItems={skillAttachItems}
                   />
                 </div>
                 <BadgeRow
+                  showToolsMenu={!!endpoint && !hideBadgeRow && !isAssistantsEndpoint(endpoint)}
                   showEphemeralBadges={
                     !!endpoint &&
                     !hideBadgeRow &&
@@ -897,6 +907,7 @@ const ChatForm = memo(function ChatForm({
                       />
                     </div>
                   )}
+                {index === 0 && <ModelSelector startupConfig={startupConfig} />}
                 <div className={cn('shrink-0', isRTL ? 'mr-auto' : 'ml-auto')}>
                   {isSubmitting &&
                   (showStopButton || steering.duringRunActive) &&

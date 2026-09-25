@@ -24,6 +24,9 @@ export const composerSurfaceShadow = {
  * into the same position and must be indistinguishable in everything but the
  * icon they carry.
  *
+ * The fill is the brand's submit colour and the icon inherits the button's text
+ * colour, so every face draws the same white glyph on the same square.
+ *
  * Wherever touch is reachable it is the row's one 44px target. `size-theme-control` is
  * 36px, which a thumb aimed at the bottom corner of a phone clips or misses
  * outright, and below `sm` the composer surface runs to the viewport floor by
@@ -35,9 +38,9 @@ export const composerSubmitClasses = (): string =>
   cn(
     'flex items-center justify-center',
     'size-theme-control touch:size-theme-control-touch',
-    'rounded-theme-control-round bg-text-primary p-theme-compact text-text-primary',
+    'rounded-theme-control bg-surface-submit p-theme-compact text-white hover:bg-surface-submit-hover',
     'outline-offset-4 transition-all duration-theme-normal',
-    'disabled:cursor-not-allowed disabled:text-text-secondary disabled:opacity-10',
+    'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface-submit',
   );
 
 /**
