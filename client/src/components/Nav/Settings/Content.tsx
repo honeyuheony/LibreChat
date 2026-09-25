@@ -54,6 +54,10 @@ export default function Content({ activeTab, query, ctx }: ContentProps) {
     );
   }
 
+  if (tab.Panel) {
+    return <tab.Panel />;
+  }
+
   return (
     <div>
       {tab.sections.map((section) => {

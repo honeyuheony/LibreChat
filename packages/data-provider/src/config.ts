@@ -3834,6 +3834,10 @@ export enum SettingsTabValues {
    */
   PERSONALIZATION = 'personalization',
   /**
+   * Tab for Connectors (MCP servers shown to users as connectors)
+   */
+  CONNECTORS = 'connectors',
+  /**
    * Tab for About / Build Info
    */
   ABOUT = 'about',
