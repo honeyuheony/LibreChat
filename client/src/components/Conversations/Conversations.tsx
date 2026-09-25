@@ -137,7 +137,7 @@ const ChatsHeader: FC<ChatsHeaderProps> = memo(({ isExpanded, onToggle, trailing
         type="button"
         aria-expanded={isExpanded}
       >
-        <span className="select-none truncate">{localize('com_ui_chats')}</span>
+        <span className="select-none truncate">{localize('com_ui_sidebar_recents')}</span>
         <ChevronDown
           className={cn(
             'h-3 w-3 shrink-0 transition-transform duration-200',

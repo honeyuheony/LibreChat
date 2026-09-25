@@ -22,7 +22,6 @@ import PinnedSection from '~/components/Conversations/PinnedSection';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { Conversations } from '~/components/Conversations';
 import { collectPinnedConversations } from '~/utils';
-import SearchBar from '~/components/Nav/SearchBar';
 import store from '~/store';
 
 const chatsHeaderTrailing = <ChatFilterMenu />;
@@ -176,18 +175,12 @@ const ConversationsSection = memo(() => {
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col overflow-hidden pb-3 pt-2"
+      className="flex h-full min-h-0 flex-col overflow-hidden pb-3"
       role="region"
       aria-label={localize('com_ui_chat_history')}
     >
-      {/* The search field owns this row alone; filtering and ordering moved beside the
-          Chats heading, where the list they act on is labelled. On mobile the field
-          itself lives in the drawer's bottom bar, within thumb reach. */}
-      {!isSmallScreen && search.enabled && (
-        <div className="flex items-center px-3">
-          <SearchBar isSmallScreen={isSmallScreen} />
-        </div>
-      )}
+      {/* The search field is not here: on desktop it is a row of the sidebar list above
+          this panel, and on mobile it lives in the drawer's bottom bar, within thumb reach. */}
       <div
         ref={setScrollViewport}
         className="scrollbar-gutter-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
