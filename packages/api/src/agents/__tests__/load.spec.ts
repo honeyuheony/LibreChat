@@ -11,8 +11,8 @@ import type {
 } from 'librechat-data-provider';
 import type { AppConfig } from '@librechat/data-schemas';
 import type { LoadAgentParams, LoadAgentDeps } from '../load';
+import { loadAgent, removeDisabledMCPTools } from '../load';
 import { loadAddedAgent } from '../added';
-import { loadAgent } from '../load';
 
 let Agent: mongoose.Model<unknown>;
 let createAgent: ReturnType<typeof createMethods>['createAgent'];
@@ -336,6 +336,82 @@ describe('loadAgent', () => {
 
     expect(mockGetMCPServerTools).toHaveBeenCalledWith('user123', 'overlay', overlayConfig);
     expect(result?.tools).toContain('overlay_tool_mcp_overlay');
+  });
+
+  describe('chat connector switches on a saved agent', () => {
+    const savedTools = [
+      'web_search',
+      'read_file_mcp_filesystem',
+      'list_dir_mcp_filesystem',
+      'search_mcp_web-search',
+      `${Constants.mcp_all}${Constants.mcp_delimiter}hangul-docs`,
+    ];
+
+    async function loadSaved(ephemeralAgent: TEphemeralAgent | undefined, apply = true) {
+      const agentId = `agent_${uuidv4()}`;
+      await createAgent({
+        id: agentId,
+        name: 'Saved Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: new mongoose.Types.ObjectId(),
+        tools: savedTools,
+      });
+      return loadAgent(
+        {
+          req: { user: { id: 'user123' }, body: { ephemeralAgent } },
+          agent_id: agentId,
+          endpoint: 'agents',
+          applyChatMCPSelection: apply,
+        },
+        deps,
+      );
+    }
+
+    test('drops the tools of the servers switched off in the chat', async () => {
+      const result = await loadSaved({ mcp: [], disabled_mcp: ['filesystem', 'hangul-docs'] });
+
+      expect(result?.tools).toEqual(['web_search', 'search_mcp_web-search']);
+    });
+
+    test('keeps every tool when nothing is switched off', async () => {
+      expect((await loadSaved({ mcp: [] }))?.tools).toEqual(savedTools);
+      expect((await loadSaved({ mcp: [], disabled_mcp: [] }))?.tools).toEqual(savedTools);
+      expect((await loadSaved(undefined))?.tools).toEqual(savedTools);
+    });
+
+    test('never attaches a server the agent does not carry', async () => {
+      const result = await loadSaved({ mcp: ['slack'], disabled_mcp: ['filesystem'] });
+
+      expect(result?.tools).toEqual([
+        'web_search',
+        'search_mcp_web-search',
+        `${Constants.mcp_all}${Constants.mcp_delimiter}hangul-docs`,
+      ]);
+      expect(result?.tools?.some((tool) => tool.endsWith('_mcp_slack'))).toBe(false);
+    });
+
+    test('leaves agents loaded for another purpose untouched', async () => {
+      const result = await loadSaved({ disabled_mcp: ['filesystem'] }, false);
+
+      expect(result?.tools).toEqual(savedTools);
+    });
+  });
+
+  describe('removeDisabledMCPTools', () => {
+    test('resolves a server name that itself contains the MCP delimiter', () => {
+      const tools = ['run_mcp_foo_mcp_bar', 'run_mcp_bar'];
+
+      expect(removeDisabledMCPTools(tools, ['bar'], ['bar', 'foo_mcp_bar'])).toEqual([
+        'run_mcp_foo_mcp_bar',
+      ]);
+    });
+
+    test('ignores entries that are not server names', () => {
+      const tools = ['read_mcp_filesystem'];
+
+      expect(removeDisabledMCPTools(tools, [42, null, ''])).toEqual(tools);
+    });
   });
 
   test('should return null for non-existent agent', async () => {

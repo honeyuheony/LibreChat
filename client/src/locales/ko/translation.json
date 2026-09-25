@@ -794,6 +794,7 @@
   "com_ui_connect": "연결",
   "com_ui_connecting": "연결 중",
   "com_ui_connection_required": "연결 필요",
+  "com_ui_connector_unavailable_for_agent": "이 에이전트에서 쓸 수 없음",
   "com_ui_connectors": "커넥터",
   "com_ui_contact_admin_if_issue_persists": "문제가 지속될 경우 관리자에게 연락하십시오",
   "com_ui_context": "맥락",

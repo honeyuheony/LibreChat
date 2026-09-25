@@ -4,6 +4,7 @@
   "com_ui_builtin_tools": "Built-in tools",
   "com_ui_connect": "Connect",
   "com_ui_connection_required": "Needs connection",
+  "com_ui_connector_unavailable_for_agent": "Not available for this agent",
   "com_ui_connectors": "Connectors",
   "com_ui_repository_instructions": "Repository instructions",
   "com_ui_repository_instructions_prefer": "Prefer repository conventions",

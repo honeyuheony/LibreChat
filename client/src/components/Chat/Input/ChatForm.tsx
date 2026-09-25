@@ -862,6 +862,7 @@ const ChatForm = memo(function ChatForm({
                 </div>
                 <BadgeRow
                   showToolsMenu={!!endpoint && !hideBadgeRow && !isAssistantsEndpoint(endpoint)}
+                  agentId={isAgentsEndpoint(endpoint) ? conversation?.agent_id : undefined}
                   showEphemeralBadges={
                     !!endpoint &&
                     !hideBadgeRow &&
