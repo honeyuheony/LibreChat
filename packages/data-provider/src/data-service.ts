@@ -359,6 +359,10 @@ export const getDeskStatus = (): Promise<q.DeskStatusResponse> => {
   return request.get(endpoints.deskStatus());
 };
 
+export const getDeskAppRelease = (): Promise<q.DeskAppReleaseResponse> => {
+  return request.get(endpoints.deskAppRelease());
+};
+
 export const getMCPConnectionStatus = (): Promise<q.MCPConnectionStatusResponse> => {
   return request.get(endpoints.mcpConnectionStatus());
 };

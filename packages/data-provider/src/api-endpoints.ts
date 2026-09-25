@@ -344,6 +344,8 @@ export const mcp = {
 
 export const deskStatus = () => `${BASE_URL}/api/connectors/desk-status`;
 
+export const deskAppRelease = () => `${BASE_URL}/api/connectors/desk-app`;
+
 export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${serverName}`;
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;

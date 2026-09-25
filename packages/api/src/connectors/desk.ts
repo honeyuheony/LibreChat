@@ -1,5 +1,5 @@
 import { logger } from '@librechat/data-schemas';
-import type { DeskStatusResponse } from 'librechat-data-provider';
+import type { DeskAppReleaseResponse, DeskStatusResponse } from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 
 const DEFAULT_INTERNAL_URL = 'http://desk-relay:8766';
@@ -70,27 +70,62 @@ export function parseInstallerPath(latestYml: string): string | null {
   return fileName && INSTALLER_FILE_PATTERN.test(fileName) ? fileName : null;
 }
 
-async function fetchInstallerUrl(config: DeskRelayConfig): Promise<string | null> {
+const noRelease: DeskAppReleaseResponse = {
+  installerUrl: null,
+  version: null,
+  sizeBytes: null,
+  releaseDate: null,
+};
+
+const topLevelField = (latestYml: string, name: string): string | null =>
+  latestYml.match(new RegExp(`^${name}:\\s*['"]?([^'"\\s]+)['"]?\\s*$`, 'm'))?.[1] ?? null;
+
+/**
+ * Reads the release shown on the download page from electron-builder's `latest.yml`.
+ * The size comes from the `files:` entry whose `url` is the top-level `path`.
+ */
+export function parseRelease(latestYml: string): Omit<DeskAppReleaseResponse, 'installerUrl'> {
+  const fileName = parseInstallerPath(latestYml);
+  let sizeBytes: number | null = null;
+  if (fileName) {
+    const entry = latestYml.split(/^\s*- /m).find((block) => block.startsWith(`url: ${fileName}`));
+    const size = Number(entry?.match(/^\s*size:\s*(\d+)\s*$/m)?.[1]);
+    sizeBytes = Number.isSafeInteger(size) && size > 0 ? size : null;
+  }
+  const releaseDate = topLevelField(latestYml, 'releaseDate');
+  return {
+    version: topLevelField(latestYml, 'version'),
+    sizeBytes,
+    releaseDate: releaseDate && !Number.isNaN(Date.parse(releaseDate)) ? releaseDate : null,
+  };
+}
+
+/** Without a public relay address users could not download anything, so no release is offered. */
+async function fetchRelease(config: DeskRelayConfig): Promise<DeskAppReleaseResponse> {
   if (!config.publicUrl) {
-    return null;
+    return noRelease;
   }
   try {
     const response = await fetch(`${config.internalUrl}/app/latest.yml`, {
       signal: AbortSignal.timeout(config.timeoutMs ?? RELAY_TIMEOUT_MS),
     });
     if (!response.ok) {
-      logger.warn(`[deskStatus] latest.yml answered ${response.status}; hiding the app link`);
-      return null;
+      logger.warn(`[deskApp] latest.yml answered ${response.status}; hiding the app link`);
+      return noRelease;
     }
-    const fileName = parseInstallerPath(await response.text());
+    const latestYml = await response.text();
+    const fileName = parseInstallerPath(latestYml);
     if (!fileName) {
-      logger.warn('[deskStatus] latest.yml has no usable installer path; hiding the app link');
-      return null;
+      logger.warn('[deskApp] latest.yml has no usable installer path; hiding the app link');
+      return noRelease;
     }
-    return `${config.publicUrl}/app/${encodeURIComponent(fileName)}`;
+    return {
+      ...parseRelease(latestYml),
+      installerUrl: `${config.publicUrl}/app/${encodeURIComponent(fileName)}`,
+    };
   } catch (error) {
-    logger.warn('[deskStatus] Could not read latest.yml from the relay', error);
-    return null;
+    logger.warn('[deskApp] Could not read latest.yml from the relay', error);
+    return noRelease;
   }
 }
 
@@ -130,9 +165,9 @@ export async function getDeskStatus(
   config: DeskRelayConfig,
   userId: string,
 ): Promise<DeskStatusResponse> {
-  const [relayStatus, installerUrl] = await Promise.all([
+  const [relayStatus, { installerUrl }] = await Promise.all([
     fetchRelayStatus(config, userId),
-    fetchInstallerUrl(config),
+    fetchRelease(config),
   ]);
   if (!relayStatus) {
     return unknownStatus(installerUrl);
@@ -163,4 +198,11 @@ export function createDeskStatusHandler(
     }
     return res.json(await getDeskStatus(config, userId));
   };
+}
+
+/** Public: the download page is also reachable from the sign-in screen, before any session exists. */
+export function createDeskAppReleaseHandler(
+  config: DeskRelayConfig,
+): (req: Request, res: Response) => Promise<Response> {
+  return async (_req, res) => res.json(await fetchRelease(config));
 }

@@ -5,8 +5,10 @@ import type { AddressInfo } from 'net';
 import {
   getDeskStatus,
   getDeskRelayConfig,
+  parseRelease,
   parseInstallerPath,
   createDeskStatusHandler,
+  createDeskAppReleaseHandler,
 } from './desk';
 
 const SERVICE_KEY = 'relay-service-key';
@@ -203,6 +205,79 @@ describe('parseInstallerPath', () => {
   it('rejects a path that is not a plain installer file name', () => {
     expect(parseInstallerPath('path: sub/dir/setup.exe')).toBeNull();
     expect(parseInstallerPath('path: setup.zip')).toBeNull();
+  });
+});
+
+describe('parseRelease', () => {
+  it('reads version, installer size and release date', () => {
+    expect(parseRelease(LATEST_YML)).toEqual({
+      version: '0.1.0',
+      sizeBytes: 111650684,
+      releaseDate: '2026-09-25T06:26:27.705Z',
+    });
+  });
+
+  it('takes the size of the file named by path, not of another listed file', () => {
+    const latestYml = [
+      'version: 0.2.0',
+      'files:',
+      '  - url: desk-app-setup-0.2.0.zip',
+      '    size: 5',
+      '  - url: desk-app-setup-0.2.0.exe',
+      '    size: 120000000',
+      'path: desk-app-setup-0.2.0.exe',
+    ].join('\n');
+    expect(parseRelease(latestYml).sizeBytes).toBe(120000000);
+  });
+
+  it('leaves unreadable fields null', () => {
+    expect(parseRelease("path: desk-app-setup-0.1.0.exe\nreleaseDate: 'yesterday'")).toEqual({
+      version: null,
+      sizeBytes: null,
+      releaseDate: null,
+    });
+  });
+});
+
+describe('createDeskAppReleaseHandler', () => {
+  it('answers without a signed-in user and links the installer through the public address', async () => {
+    const relay = await startRelay({ code: 500, body: '' });
+    const res = { json: jest.fn() };
+    try {
+      await createDeskAppReleaseHandler({
+        internalUrl: relay.url,
+        publicUrl: 'https://relay.example.ts.net',
+      })({} as Request, res as unknown as Response);
+    } finally {
+      await relay.close();
+    }
+
+    expect(res.json).toHaveBeenCalledWith({
+      installerUrl: 'https://relay.example.ts.net/app/desk-app-setup-0.1.0.exe',
+      version: '0.1.0',
+      sizeBytes: 111650684,
+      releaseDate: '2026-09-25T06:26:27.705Z',
+    });
+  });
+
+  it('offers no release when latest.yml is missing', async () => {
+    const relay = await startRelay({ code: 500, body: '' }, { code: 404, body: '' });
+    const res = { json: jest.fn() };
+    try {
+      await createDeskAppReleaseHandler({
+        internalUrl: relay.url,
+        publicUrl: 'https://relay.example.ts.net',
+      })({} as Request, res as unknown as Response);
+    } finally {
+      await relay.close();
+    }
+
+    expect(res.json).toHaveBeenCalledWith({
+      installerUrl: null,
+      version: null,
+      sizeBytes: null,
+      releaseDate: null,
+    });
   });
 });
 

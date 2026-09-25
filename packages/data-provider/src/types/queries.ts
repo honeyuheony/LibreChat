@@ -261,6 +261,15 @@ export interface DeskStatusResponse {
   installerUrl: string | null;
 }
 
+/** The desktop app installer the relay serves; every field is `null` when no release is known. */
+export interface DeskAppReleaseResponse {
+  installerUrl: string | null;
+  version: string | null;
+  sizeBytes: number | null;
+  /** ISO 8601 */
+  releaseDate: string | null;
+}
+
 export interface MCPConnectionStatusResponse {
   success: boolean;
   connectionStatus: Record<string, MCPServerStatus>;
