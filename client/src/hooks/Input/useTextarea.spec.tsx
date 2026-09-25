@@ -18,7 +18,9 @@ const mockGetUploadOptions = jest.fn(() => [EToolResources.context]);
 const mockSetFilesLoading = jest.fn();
 const mockShowToast = jest.fn();
 const mockOpenModal = jest.fn();
-const mockLocalize = jest.fn((key: string) => key);
+const mockLocalize = jest.fn((key: string, values?: { 0?: string }) =>
+  key === 'com_endpoint_message_placeholder' ? `Message ${values?.[0] ?? ''}` : key,
+);
 const mockSetActivePrompt = jest.fn();
 const mockSetPendingComposerText = jest.fn();
 const mockSetValue = jest.fn();
@@ -171,6 +173,28 @@ const renderTextareaHook = (initialAnswerModeActive = false) => {
 
   return { ...hook, rerender, textArea };
 };
+
+describe('useTextarea composer placeholder', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockActivePrompt = undefined;
+    mockPendingComposerText = undefined;
+    mockIndex = 0;
+    mockIsSubmitting = false;
+    mockIsUploadConfigPending = false;
+    mockIsUnifiedMode = false;
+    mockConversation = { endpoint: 'openAI', conversationId: 'convo-1' };
+  });
+
+  it('uses the dedicated localized message template', async () => {
+    const { textArea } = renderTextareaHook();
+
+    await waitFor(() => expect(textArea).toHaveAttribute('placeholder', 'Message Assistant'));
+    expect(mockLocalize).toHaveBeenCalledWith('com_endpoint_message_placeholder', {
+      0: 'Assistant',
+    });
+  });
+});
 
 describe('useTextarea long-paste fallback', () => {
   beforeEach(() => {

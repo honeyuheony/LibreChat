@@ -304,6 +304,7 @@
   "com_endpoint_max_output_tokens": "최대 출력 토큰 수",
   "com_endpoint_message": "메시지",
   "com_endpoint_message_new": "메시지 {{0}}",
+  "com_endpoint_message_placeholder": "{{0}}에게 메시지 보내기",
   "com_endpoint_message_not_appendable": "메시지를 수정하거나 다시 생성하세요.",
   "com_endpoint_my_preset": "내 프리셋",
   "com_endpoint_no_presets": "아직 프리셋이 없습니다",

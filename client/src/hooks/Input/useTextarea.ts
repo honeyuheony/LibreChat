@@ -196,7 +196,7 @@ export default function useTextarea({
           ? getEntityName({ name: entityName, isAgent, localize })
           : getSender(conversation as TEndpointOption);
 
-      return `${localize('com_endpoint_message_new', {
+      return `${localize('com_endpoint_message_placeholder', {
         0: sender ? sender : localize('com_endpoint_ai'),
       })}`;
     };
