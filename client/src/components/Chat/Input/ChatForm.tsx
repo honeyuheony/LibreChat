@@ -651,8 +651,8 @@ const ChatForm = memo(function ChatForm({
            asked for less motion gets the new position outright — this one is a
            slide across the page rather than decoration. */
         'mx-auto flex w-full flex-row gap-3 transition-[max-width,margin-bottom] duration-300 motion-reduce:transition-none sm:px-2',
-        /* 760px is the conversation column's width, so the composer lines up with the messages. */
-        maximizeChatSpace ? 'max-w-full' : 'md:max-w-[760px]',
+        /* Same box as MessageRow: 48.5rem less the `sm:px-2` gutters is the 760px column. */
+        maximizeChatSpace ? 'max-w-full' : 'md:max-w-[48.5rem]',
         bottomClearance,
       )}
     >

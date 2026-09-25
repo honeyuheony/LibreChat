@@ -42,7 +42,7 @@ const ScrollToBottom = forwardRef<HTMLDivElement, Props>(
         <div
           className={cn(
             'mx-auto flex justify-end sm:px-2',
-            maximizeChatSpace ? 'max-w-full' : 'md:max-w-3xl xl:max-w-4xl',
+            maximizeChatSpace ? 'max-w-full' : 'md:max-w-[48.5rem]',
           )}
         >
           <Button

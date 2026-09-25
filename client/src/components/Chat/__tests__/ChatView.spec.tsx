@@ -50,8 +50,14 @@ jest.mock('../Footer', () => ({
 jest.mock('../Landing', () => ({ __esModule: true, default: () => <div /> }));
 jest.mock('../Messages/MessagesView', () => ({ __esModule: true, default: () => <div /> }));
 jest.mock('../Input/ChatForm', () => ({ __esModule: true, default: () => <div /> }));
-jest.mock('../Input/ConversationStarters', () => ({ __esModule: true, default: () => <div /> }));
-jest.mock('../LandingSkills', () => ({ __esModule: true, default: () => <div /> }));
+jest.mock('../Input/ConversationStarters', () => ({
+  __esModule: true,
+  default: () => <div data-testid="conversation-starters" />,
+}));
+jest.mock('../LandingSkills', () => ({
+  __esModule: true,
+  default: () => <div data-testid="landing-skills" />,
+}));
 
 describe('ChatView page heading', () => {
   beforeEach(() => {
@@ -114,6 +120,20 @@ describe('ChatView page heading', () => {
     expect(
       screen.queryByRole('heading', { level: 1, name: 'Previous chat' }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('ChatView landing suggestions', () => {
+  beforeEach(() => {
+    mockParams.mockReturnValue({});
+    mockConversation.mockReturnValue(null);
+  });
+
+  test('offers the suggested skill row as the only suggestion row on the landing page', () => {
+    render(<ChatView />);
+
+    expect(screen.getByTestId('landing-skills')).toBeInTheDocument();
+    expect(screen.queryByTestId('conversation-starters')).not.toBeInTheDocument();
   });
 });
 
