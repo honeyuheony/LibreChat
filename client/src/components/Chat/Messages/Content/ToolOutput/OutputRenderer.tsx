@@ -15,10 +15,13 @@ const ERROR_INNER = /^Error\s+\w+ing to endpoint\s*\(HTTP \d+\):\s*/i;
 /** The MCP Python SDK (FastMCP) wraps an exception raised by a tool this way and
  *  returns it as ordinary text, so the run step still closes as `completed`. */
 const MCP_EXECUTION_ERROR_PREFIX = /^Error executing tool [^\s:]+:\s*/;
+/** LibreChat's own MCP failures without "tool call failed:", e.g. an OAuth 401 from the server. */
+const MCP_TAGGED_ERROR_PREFIX = /^Error:\s*\[MCP\](?:\[[^\]]*\])+\s*/;
 
 export function cleanToolError(text: string): string {
   let cleaned = stripToolCallErrorPrefix(text).trim();
   cleaned = cleaned.replace(MCP_EXECUTION_ERROR_PREFIX, '');
+  cleaned = cleaned.replace(MCP_TAGGED_ERROR_PREFIX, '');
   cleaned = cleaned.replace(ERROR_INNER, '').trim();
   if (cleaned.endsWith('Please fix your mistakes.')) {
     cleaned = cleaned.slice(0, -'Please fix your mistakes.'.length).trim();
@@ -30,7 +33,8 @@ export function isError(text: string): boolean {
   return (
     hasToolCallErrorPrefix(text) ||
     text.startsWith('Error processing tool') ||
-    MCP_EXECUTION_ERROR_PREFIX.test(text)
+    MCP_EXECUTION_ERROR_PREFIX.test(text) ||
+    MCP_TAGGED_ERROR_PREFIX.test(text)
   );
 }
 
