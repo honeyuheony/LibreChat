@@ -11,7 +11,7 @@
   "com_ui_desk_download_step_sign_in": "Sign in in the app and choose the folder the agent may read. The app updates itself when a new version is out.",
   "com_ui_desk_download_step_smartscreen": "If \"Windows protected your PC\" appears, select \"More info\" and then \"Run anyway\". It appears once on first install because this internal build is not signed.",
   "com_ui_desk_download_steps": "How to install",
-  "com_ui_desk_download_tagline": "Connect a folder on your PC to the agent and chat without opening a browser.",
+  "com_ui_desk_download_tagline": "Connect a folder on your PC to the agent and chat without a browser.",
   "com_ui_desk_download_title": "Work Agent desktop app",
   "com_ui_desk_download_unavailable": "No installer is available right now. Please contact your administrator.",
   "com_ui_desk_download_version": "Version {{0}}",
