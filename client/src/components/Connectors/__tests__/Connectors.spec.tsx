@@ -132,7 +132,7 @@ describe('ConnectorCard', () => {
     expect(onConnect).not.toHaveBeenCalled();
   });
 
-  it('lists tools with their read or write access when the card is opened', async () => {
+  it('lists tools by their user-facing name with read or write access when the card is opened', async () => {
     mockTools('google-workspace', googleTools);
     renderGoogleCard({ requiresOAuth: true, connectionState: 'connected' });
 
@@ -141,10 +141,26 @@ describe('ConnectorCard', () => {
     const toolList = await screen.findByRole('list', { name: 'Tools' });
     const rows = within(toolList).getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([
-      'calendar_list_eventsLists upcoming events.Read',
-      'calendar_create_eventAdds an event.Write',
+      'List eventsShows upcoming calendar events.Read',
+      'Add eventAdds a new calendar event.Write',
     ]);
     expect(screen.getByText('2 tools · includes write')).toBeInTheDocument();
+  });
+
+  it('falls back to the raw tool name and server description for a tool without a label', async () => {
+    mockTools('google-workspace', [
+      {
+        name: 'drive_export',
+        pluginKey: 'drive_export_mcp_google-workspace',
+        description: 'Exports a file.',
+      },
+    ]);
+    renderGoogleCard({ requiresOAuth: true, connectionState: 'connected' });
+
+    await userEvent.click(screen.getByRole('button', { expanded: false }));
+
+    const toolList = await screen.findByRole('list', { name: 'Tools' });
+    expect(within(toolList).getByRole('listitem')).toHaveTextContent('drive_exportExports a file.');
   });
 });
 

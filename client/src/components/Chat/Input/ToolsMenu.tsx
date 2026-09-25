@@ -119,17 +119,17 @@ function ConnectorRow({
       }
       className={rowClassName}
     >
-      {server.config?.iconPath ? (
-        <CustomIcon
-          src={server.config.iconPath}
-          className="size-8 flex-shrink-0 rounded-theme-control object-cover text-text-primary"
-          alt=""
-        />
-      ) : (
-        <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-brand-subtle">
+      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-brand-subtle">
+        {server.config?.iconPath ? (
+          <CustomIcon
+            src={server.config.iconPath}
+            className="size-4 object-contain text-accent-primary"
+            alt=""
+          />
+        ) : (
           <MCPIcon className="size-4 text-accent-primary" />
-        </span>
-      )}
+        )}
+      </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
         {deskAppOff ? (

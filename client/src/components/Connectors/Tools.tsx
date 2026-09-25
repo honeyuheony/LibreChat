@@ -1,6 +1,7 @@
 import type { MCPTool } from 'librechat-data-provider';
 import { useMCPToolsQuery } from '~/data-provider/MCP/queries';
 import { isWriteTool, summarizeToolAccess } from './status';
+import { getToolLabel } from './labels';
 import { useLocalize } from '~/hooks';
 import StatusPill from './Pill';
 
@@ -9,18 +10,25 @@ interface ConnectorToolsProps {
   isConnected: boolean;
 }
 
-function ToolRow({ tool }: { tool: MCPTool }) {
+function ToolRow({ serverName, tool }: { serverName: string; tool: MCPTool }) {
   const localize = useLocalize();
   const writes = isWriteTool(tool.name);
+  const label = getToolLabel(serverName, tool.name);
+  const description = label
+    ? localize(label.description)
+    : tool.description || localize('com_ui_mcp_detail_no_description');
   return (
     <li className="flex min-w-0 items-start gap-3 py-1.5">
       <div className="min-w-0 flex-1">
-        <div className="truncate font-mono text-sm text-text-primary">{tool.name}</div>
-        <p
-          className="line-clamp-2 text-sm text-text-secondary"
-          title={tool.description || undefined}
-        >
-          {tool.description || localize('com_ui_mcp_detail_no_description')}
+        {label ? (
+          <div className="truncate text-sm font-medium text-text-primary" title={tool.name}>
+            {localize(label.title)}
+          </div>
+        ) : (
+          <div className="truncate font-mono text-sm text-text-primary">{tool.name}</div>
+        )}
+        <p className="line-clamp-2 text-sm text-text-secondary" title={description}>
+          {description}
         </p>
       </div>
       <StatusPill
@@ -74,7 +82,7 @@ export default function ConnectorTools({ serverName, isConnected }: ConnectorToo
       </p>
       <ul aria-label={localize('com_ui_tools')} className="divide-y divide-border-light">
         {tools.map((tool) => (
-          <ToolRow key={tool.pluginKey} tool={tool} />
+          <ToolRow key={tool.pluginKey} serverName={serverName} tool={tool} />
         ))}
       </ul>
     </div>
