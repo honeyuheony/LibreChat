@@ -3,7 +3,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'theme-ui': ['var(--theme-font-family, Inter, sans-serif)'],
+        'theme-ui': [
+          "var(--theme-font-family, 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif)",
+        ],
       },
       height: {
         'theme-control': 'var(--theme-control-height, 2.25rem)',
@@ -20,10 +22,10 @@ module.exports = {
         'theme-control-touch': 'max(var(--theme-control-height, 2.25rem), 2.75rem)',
       },
       borderRadius: {
-        'theme-control': 'var(--theme-control-radius, 0.75rem)',
+        'theme-control': 'var(--theme-control-radius, 0.5rem)',
         'theme-control-round': 'var(--theme-round-control-radius, 9999px)',
-        'theme-surface': 'var(--theme-surface-radius, 1rem)',
-        'theme-surface-lg': 'var(--theme-large-surface-radius, 1.5rem)',
+        'theme-surface': 'var(--theme-surface-radius, 0.75rem)',
+        'theme-surface-lg': 'var(--theme-large-surface-radius, 1rem)',
       },
       boxShadow: {
         'theme-surface':

@@ -63,14 +63,15 @@ export const themeAppearanceProperties: Readonly<
 });
 
 export const defaultAppearance: IThemeAppearance = Object.freeze({
-  controlRadius: '0.75rem',
+  controlRadius: '0.5rem',
   roundControlRadius: '9999px',
-  surfaceRadius: '1rem',
-  largeSurfaceRadius: '1.5rem',
+  surfaceRadius: '0.75rem',
+  largeSurfaceRadius: '1rem',
   controlHeight: '2.25rem',
   spaceCompact: '0.375rem',
   spaceNormal: '0.75rem',
-  fontFamily: 'Inter, sans-serif',
+  fontFamily:
+    "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif",
   elevationSurface: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
   motionFast: '150ms',
   motionNormal: '200ms',

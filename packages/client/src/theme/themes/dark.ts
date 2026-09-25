@@ -1,15 +1,15 @@
 import { IThemeRGB } from '../types';
 
 /**
- * Dark theme
- * RGB values extracted from the existing dark mode CSS variables
+ * Dark theme: brand navy on cool grays. "mock" labels name the palette key in the
+ * platform repo's docs/design-web-claude-style.md mockups; "derived" values are interpolated.
  */
 export const darkTheme: IThemeRGB = {
   // Text colors
-  'rgb-text-primary': '236 236 236', // #ececec (gray-100)
-  'rgb-text-secondary': '205 205 205', // #cdcdcd (gray-300)
-  'rgb-text-secondary-alt': '153 150 150', // #999696 (gray-400)
-  'rgb-text-tertiary': '153 150 150', // #999696 (gray-400)
+  'rgb-text-primary': '238 241 245', // #eef1f5 (mock text)
+  'rgb-text-secondary': '195 201 211', // #c3c9d3 (mock text2)
+  'rgb-text-secondary-alt': '152 160 173', // #98a0ad (mock text3)
+  'rgb-text-tertiary': '152 160 173', // #98a0ad (mock text3)
   'rgb-text-muted': '179 182 189', // #b3b6bd (Click UI text.muted)
   'rgb-text-warning': '245 158 11', // #f59e0b (amber-500)
   'rgb-text-destructive': '248 113 113', // #f87171 (red-400)
@@ -17,75 +17,75 @@ export const darkTheme: IThemeRGB = {
   'rgb-shimmer-dip': '179 179 179', // #b3b3b3
 
   // Link and accent colors
-  /** 브랜드 네이비(#06377b)를 어두운 배경에서도 읽히도록 밝힌 톤. 기존 blue-400/300과
-   *  밝기(L)를 맞췄으나 정밀 대비 재계산은 하지 못함. */
-  'rgb-link': '109 150 220', // #6d96dc (brand navy, lightened for dark bg)
-  'rgb-link-hover': '147 178 230', // #93b2e6 (brand navy, lightened further)
+  /** 브랜드 네이비(#06377b)를 어두운 배경에서도 읽히도록 밝힌 시안 톤. 사이드바(#141920)
+   *  위 9.0:1, 본문 바탕(#0f1217) 위 9.6:1(스크립트로 계산). */
+  'rgb-link': '157 187 232', // #9dbbe8 (mock brandText)
+  'rgb-link-hover': '193 212 240', // #c1d4f0 (mock brandText, lightened)
   'rgb-link-visited': '192 132 252', // #c084fc (purple-400)
-  'rgb-accent-primary': '109 150 220', // #6d96dc (brand navy, lightened for dark bg)
-  'rgb-accent-primary-hover': '147 178 230', // #93b2e6 (brand navy, lightened further)
+  'rgb-accent-primary': '157 187 232', // #9dbbe8 (mock brandText)
+  'rgb-accent-primary-hover': '193 212 240', // #c1d4f0 (mock brandText, lightened)
 
   // Ring colors
-  'rgb-ring-primary': '80 118 175', // #5076af (ndesign 초점 표시 지정 색)
+  'rgb-ring-primary': '123 159 214', // #7b9fd6 (cool navy, derived: 4.25:1 on the #313a47 hover)
 
   // Header colors
-  'rgb-header-primary': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-header-hover': '66 66 66', // #424242 (gray-600)
-  'rgb-header-button-hover': '47 47 47', // #2f2f2f (gray-700)
+  'rgb-header-primary': '15 18 23', // #0f1217 (mock bg)
+  'rgb-header-hover': '34 42 53', // #222a35 (mock tile)
+  'rgb-header-button-hover': '34 42 53', // #222a35 (mock tile)
 
   // Surface colors
-  'rgb-surface-active': '89 89 89', // #595959 (gray-500)
-  'rgb-surface-active-alt': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-hover': '57 57 57', // #393939 (gray-650)
-  'rgb-surface-hover-alt': '66 66 66', // #424242 (gray-600)
-  'rgb-surface-composer-hover': '66 66 66', // #424242 (gray-600)
-  'rgb-surface-primary': '13 13 13', // #0d0d0d (gray-900)
+  'rgb-surface-active': '35 43 55', // #232b37 (mock active)
+  'rgb-surface-active-alt': '42 49 60', // #2a313c (mock border)
+  'rgb-surface-hover': '38 46 58', // #262e3a (cool gray, derived)
+  'rgb-surface-hover-alt': '49 58 71', // #313a47 (cool gray, derived)
+  'rgb-surface-composer-hover': '49 58 71', // #313a47 (cool gray, derived)
+  'rgb-surface-primary': '26 32 41', // #1a2029 (mock surface)
   'rgb-chart-widget-surface': '40 40 40', // #282828 (Click UI chart widget)
   'rgb-chart-widget-stroke': '50 50 50', // #323232 (Click UI chart widget)
-  'rgb-surface-primary-alt': '23 23 23', // #171717 (gray-850)
-  'rgb-surface-primary-contrast': '23 23 23', // #171717 (gray-850)
-  'rgb-surface-secondary': '33 33 33', // #212121 (gray-800)
-  'rgb-surface-secondary-alt': '33 33 33', // #212121 (gray-800)
-  'rgb-surface-tertiary': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-tertiary-alt': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-dialog': '18 18 18', // #121212 (legacy dark dialog)
+  'rgb-surface-primary-alt': '20 25 32', // #141920 (mock side)
+  'rgb-surface-primary-contrast': '22 28 36', // #161c24 (mock sub)
+  'rgb-surface-secondary': '22 28 36', // #161c24 (mock sub)
+  'rgb-surface-secondary-alt': '34 42 53', // #222a35 (mock tile)
+  'rgb-surface-tertiary': '34 42 53', // #222a35 (mock tile)
+  'rgb-surface-tertiary-alt': '34 42 53', // #222a35 (mock tile)
+  'rgb-surface-dialog': '26 32 41', // #1a2029 (mock surface)
   'rgb-surface-overlay': '0 0 0', // #000 (black)
-  /** 버튼 자체 배경-글자 관계라 라이트 테마와 같은 값을 쓴다 (default.ts 참고). */
-  'rgb-surface-submit': '6 55 123', // #06377b (brand navy)
-  'rgb-surface-submit-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
+  /** #06377b 는 어두운 바탕에서 묻히므로 시안의 밝은 네이비를 쓴다. 흰 글자 위 6.2:1. */
+  'rgb-surface-submit': '47 95 174', // #2f5fae (mock brand)
+  'rgb-surface-submit-hover': '38 79 146', // #264f92 (mock brand, darkened)
   'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)
   'rgb-surface-destructive-hover': '127 29 29', // #7f1d1d (red-900)
-  'rgb-surface-chat': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-code': '33 33 33', // #212121 (gray-800)
+  'rgb-surface-chat': '34 42 53', // #222a35 (mock tile)
+  'rgb-surface-code': '20 26 34', // #141a22 (mock code)
   'rgb-surface-inverted': '255 255 255', // #fff (white)
-  'rgb-surface-inverted-hover': '236 236 236', // #ececec (gray-100)
-  'rgb-text-inverted': '23 23 23', // #171717 (gray-850)
+  'rgb-surface-inverted-hover': '238 241 245', // #eef1f5 (mock text)
+  'rgb-text-inverted': '21 24 30', // #15181e (light mock text)
   'rgb-surface-fixed': '255 255 255', // #fff (white) — same in light + dark
-  'rgb-surface-fixed-hover': '236 236 236', // #ececec (gray-100) — same in light + dark
-  'rgb-text-fixed': '33 33 33', // #212121 (gray-800) — same in light + dark
+  'rgb-surface-fixed-hover': '238 241 245', // #eef1f5 (mock tile, same in light + dark)
+  'rgb-text-fixed': '21 24 30', // #15181e (mock text, same in light + dark)
 
   // Border colors
-  'rgb-border-light': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-border-medium': '66 66 66', // #424242 (gray-600)
-  'rgb-border-medium-alt': '66 66 66', // #424242 (gray-600)
-  'rgb-border-heavy': '89 89 89', // #595959 (gray-500)
-  'rgb-border-xheavy': '153 150 150', // #999696 (gray-400)
+  'rgb-border-light': '42 49 60', // #2a313c (mock border)
+  'rgb-border-medium': '58 66 79', // #3a424f (cool gray, derived)
+  'rgb-border-medium-alt': '58 66 79', // #3a424f (cool gray, derived)
+  'rgb-border-heavy': '83 92 106', // #535c6a (cool gray, derived)
+  'rgb-border-xheavy': '152 160 173', // #98a0ad (mock text3)
   'rgb-border-destructive': '239 68 68', // #ef4444 (red-500)
 
   // Status colors
-  'rgb-status-success': '110 231 183', // #6ee7b7 (green-300)
-  'rgb-status-success-subtle': '2 44 34', // #022c22 (green-950)
+  'rgb-status-success': '111 207 154', // #6fcf9a (mock ok)
+  'rgb-status-success-subtle': '22 48 31', // #16301f (mock okSoft)
   'rgb-status-success-border': '6 95 70', // #065f46 (green-800)
   /** Not `green-800` like its border twin: this fill also paints bare marks
    *  (selection checks, the version timeline rail, prompt chips) that have to
-   *  clear 3:1 against the #212121 panel, and green-800 reached only 2.10:1
-   *  there. Balanced instead, the same way light's `#02855e` is: 4.55:1 under
-   *  the white `text-on-status` label and 3.54:1 against the panel. */
+   *  clear 3:1 against the `surface-secondary` panel, where green-800 falls
+   *  short. Balanced instead, the same way light's `#02855e` is: 4.55:1 under
+   *  the white `text-on-status` label and 3.77:1 against the #161c24 panel. */
   'rgb-status-success-strong': '8 135 89', // #088759
   'rgb-status-info': '147 197 253', // #93c5fd (blue-300)
   'rgb-status-info-subtle': '23 37 84', // #172554 (blue-950)
   'rgb-status-info-border': '30 64 175', // #1e40af (blue-800)
-  'rgb-status-info-strong': '66 66 66', // #424242 (gray-600)
+  'rgb-status-info-strong': '58 66 79', // #3a424f (cool gray, derived)
   'rgb-status-warning': '252 211 77', // #fcd34d (amber-300)
   'rgb-status-warning-subtle': '69 26 3', // #451a03 (amber-950)
   'rgb-status-warning-border': '146 64 14', // #92400e (amber-800)
@@ -94,17 +94,15 @@ export const darkTheme: IThemeRGB = {
   'rgb-status-error-subtle': '69 10 10', // #450a0a (red-950)
   'rgb-status-error-border': '153 27 27', // #991b1b (red-800)
   'rgb-status-error-strong': '153 27 27', // #991b1b (red-800)
-  'rgb-status-neutral': '205 205 205', // #cdcdcd (gray-300)
-  'rgb-status-neutral-subtle': '33 33 33', // #212121 (gray-800)
-  'rgb-status-neutral-border': '47 47 47', // #2f2f2f (gray-700)
+  'rgb-status-neutral': '195 201 211', // #c3c9d3 (mock mute)
+  'rgb-status-neutral-subtle': '38 45 56', // #262d38 (mock muteSoft)
+  'rgb-status-neutral-border': '42 49 60', // #2a313c (mock border)
   /** Verified mark. Not `status-info`'s `blue-300`, which is a text hue and
    *  leaves a white check at 1.35:1. The card it sits on is `surface-dialog`
-   *  at rest and `surface-tertiary` (#2f2f2f) on hover, and that hover is the
-   *  binding constraint: `#0b74d4` held the panel at 3.42:1 but fell to 2.85:1
-   *  there. Both relationships are graphical (WCAG 1.4.11): 3.23:1 against the
-   *  hover surface, 4.52:1 against the resting dialog, and 4.14:1 under the
-   *  white `text-on-status` check. No hue clears 3:1 on #2f2f2f and 4.5:1
-   *  under a white check at once — the check would have to stop being white. */
+   *  at rest and `surface-tertiary` (#222a35) on hover, and that hover is the
+   *  binding constraint. Both relationships are graphical (WCAG 1.4.11): 3.50:1
+   *  against the hover surface, 3.95:1 against the resting dialog, and 4.14:1
+   *  under the white `text-on-status` check. */
   'rgb-status-verified': '26 127 216', // #1a7fd8
   'rgb-text-on-status': '255 255 255', // #fff (white)
 
@@ -139,10 +137,10 @@ export const darkTheme: IThemeRGB = {
   'rgb-series-7': '80 167 49', // #50a731 (green)
   'rgb-series-8': '120 130 190', // #8082be (indigo)
 
-  /** Unchecked switch track. 3.38:1 against the page and the `surface-primary`
-   *  thumb, 5.74:1 against the checked `surface-inverted` track. */
-  'rgb-switch-unchecked': '102 102 102', // #666666
+  /** Unchecked switch track. 3.47:1 against the `surface-primary` thumb,
+   *  4.72:1 against the checked `surface-inverted` track. */
+  'rgb-switch-unchecked': '107 116 130', // #6b7482 (cool gray, derived)
 
   // Presentation
-  'rgb-presentation': '33 33 33', // #212121 (gray-800)
+  'rgb-presentation': '15 18 23', // #0f1217 (mock bg)
 };

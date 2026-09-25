@@ -15,9 +15,10 @@ module.exports = {
   darkMode: ['class'],
   presets: [libreChatTailwindPreset],
   theme: {
+    /** Both stacks live in style.css: `--theme-font-family` is the appearance registry's UI font. */
     fontFamily: {
-      sans: ['Inter', 'sans-serif'],
-      mono: ['Roboto Mono', 'monospace'],
+      sans: ['var(--theme-font-family)'],
+      mono: ['var(--font-mono)'],
     },
     // fontFamily: {
     //   sans: ['Söhne', 'sans-serif'],
