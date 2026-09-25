@@ -1,6 +1,8 @@
 import copy from 'copy-to-clipboard';
 import { MemoryRouter } from 'react-router-dom';
 import { RecoilRoot, useRecoilValue } from 'recoil';
+import { SettingsTabValues } from 'librechat-data-provider';
+import { Provider as JotaiProvider, useAtomValue } from 'jotai';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, act, cleanup, renderHook } from '@testing-library/react';
 import type { TConversation } from 'librechat-data-provider';
@@ -15,6 +17,7 @@ import useKeyboardShortcuts, {
   useShortcutDisplay,
   useShortcutAriaKey,
 } from './useKeyboardShortcuts';
+import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import store from '~/store';
 
 jest.mock('copy-to-clipboard', () => ({
@@ -47,10 +50,12 @@ function Harness() {
   useKeyboardShortcuts();
   const deleteTarget = useRecoilValue(store.keyboardDeleteTarget);
   const sidebarExpanded = useRecoilValue(store.sidebarExpanded);
+  const settingsTab = useAtomValue(settingsDialogTabAtom);
   return (
     <>
       <span data-testid="delete-target">{deleteTarget?.conversationId ?? 'none'}</span>
       <span data-testid="sidebar">{String(sidebarExpanded)}</span>
+      <span data-testid="settings-tab">{settingsTab ?? 'none'}</span>
     </>
   );
 }
@@ -69,9 +74,11 @@ function renderHarness(
   return render(<Harness />, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
-        <RecoilRoot initializeState={initializeState}>
-          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
-        </RecoilRoot>
+        <JotaiProvider>
+          <RecoilRoot initializeState={initializeState}>
+            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+          </RecoilRoot>
+        </JotaiProvider>
       </QueryClientProvider>
     ),
   });
@@ -194,6 +201,22 @@ describe('global shortcut dispatch', () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(getByTestId('sidebar').textContent).not.toBe(before);
+  });
+
+  it('opens connector settings from the MCP shortcut', () => {
+    const { getByTestId } = renderHarness(undefined, '/c/test-convo', (snapshot) => {
+      snapshot.set(store.customShortcuts, {
+        openMCP: {
+          mac: 'Meta+Alt+Shift+M',
+          other: 'Control+Alt+Shift+M',
+        },
+      });
+    });
+
+    const event = dispatchKey({ key: 'm', ctrlKey: true, altKey: true, shiftKey: true });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(getByTestId('settings-tab')).toHaveTextContent(SettingsTabValues.CONNECTORS);
   });
 
   it('yields when a closer handler already claimed the keypress', () => {

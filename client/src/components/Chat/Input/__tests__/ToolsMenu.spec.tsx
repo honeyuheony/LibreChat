@@ -1,11 +1,24 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import userEvent from '@testing-library/user-event';
+import { SettingsTabValues } from 'librechat-data-provider';
+import { Provider as JotaiProvider, useAtomValue } from 'jotai';
 import { render as rtlRender, screen, within } from '@testing-library/react';
+import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import { getAgentServerNames } from '../useAgentConnectorSelection';
 import ToolsMenu from '../ToolsMenu';
 
-const render = (ui: React.ReactElement) => rtlRender(<RecoilRoot>{ui}</RecoilRoot>);
+function SettingsTabReader() {
+  const settingsTab = useAtomValue(settingsDialogTabAtom);
+  return <span data-testid="settings-tab">{settingsTab ?? 'none'}</span>;
+}
+
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <RecoilRoot>
+      <JotaiProvider>{ui}</JotaiProvider>
+    </RecoilRoot>,
+  );
 
 const mockToggleServerSelection = jest.fn();
 const mockOnConfigClick = jest.fn();
@@ -150,9 +163,14 @@ describe('ToolsMenu', () => {
     expect(screen.getByRole('menu', { name: 'com_ui_tools' })).toBeVisible();
   });
 
-  it('marks a connector that is not connected and opens its connect flow instead of toggling', async () => {
+  it('opens connector settings for a connector that needs a connection', async () => {
     const user = userEvent.setup();
-    render(<ToolsMenu showBuiltinTools={true} />);
+    render(
+      <>
+        <ToolsMenu showBuiltinTools={true} />
+        <SettingsTabReader />
+      </>,
+    );
 
     await user.click(screen.getByTestId('tools-menu-button'));
     const calendar = screen.getByRole('menuitemcheckbox', {
@@ -162,7 +180,9 @@ describe('ToolsMenu', () => {
 
     await user.click(within(calendar).getByTestId('tools-menu-connect'));
 
-    expect(mockOnConfigClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('settings-tab')).toHaveTextContent(SettingsTabValues.CONNECTORS);
+    expect(screen.getByTestId('tools-menu-button')).toHaveAttribute('aria-expanded', 'false');
+    expect(mockOnConfigClick).not.toHaveBeenCalled();
     expect(mockToggleServerSelection).not.toHaveBeenCalled();
   });
 

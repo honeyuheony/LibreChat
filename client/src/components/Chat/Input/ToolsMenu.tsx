@@ -1,4 +1,5 @@
 import React, { memo, useRef, useMemo, useEffect } from 'react';
+import { useSetAtom } from 'jotai';
 import * as Ariakit from '@ariakit/react';
 import { MCPIcon, VectorIcon, TooltipAnchor } from '@librechat/client';
 import {
@@ -15,6 +16,7 @@ import {
   Permissions,
   ArtifactModes,
   PermissionTypes,
+  SettingsTabValues,
   defaultAgentCapabilities,
 } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
@@ -27,6 +29,7 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import useAgentConnectorSelection from './useAgentConnectorSelection';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
@@ -83,12 +86,14 @@ function ConnectorRow({
   connectionStatus,
   statusIconProps,
   onToggle,
+  onOpenConnectorsSettings,
 }: {
   server: MCPServerDefinition;
   isSelected: boolean;
   connectionStatus?: ConnectionStatusMap;
   statusIconProps?: MCPServerStatusIconProps | null;
   onToggle: (serverName: string) => void;
+  onOpenConnectorsSettings: () => void;
 }) {
   const localize = useLocalize();
   const displayName = server.config?.title || server.serverName;
@@ -133,14 +138,12 @@ function ConnectorRow({
           <span className="text-xs text-text-tertiary">
             {localize('com_ui_connection_required')}
           </span>
-          {/* The connect flow is the chat's own config/OAuth dialog, so a row
-              reached from the composer connects without leaving the conversation. */}
           <button
             type="button"
             data-testid="tools-menu-connect"
             onClick={(e) => {
               e.stopPropagation();
-              statusIconProps.onConfigClick(e);
+              onOpenConnectorsSettings();
             }}
             className="rounded-theme-control border border-border-light px-2 py-1 text-xs font-medium text-accent-primary hover:bg-surface-brand-subtle"
           >
@@ -254,8 +257,13 @@ function ToolsMenu({
   });
   const canUseMemory = useHasMemoryAccess();
 
+  const setSettingsTab = useSetAtom(settingsDialogTabAtom);
   const menuStore = Ariakit.useMenuStore({ focusLoop: true, placement: 'top-start' });
   const isOpen = menuStore.useState('open');
+  const openConnectorsSettings = () => {
+    setSettingsTab(SettingsTabValues.CONNECTORS);
+    menuStore.hide();
+  };
 
   const servers = useMemo(
     () => (canUseMcp ? (manager?.selectableServers ?? []) : []),
@@ -470,6 +478,7 @@ function ToolsMenu({
                     connectionStatus={manager.connectionStatus}
                     statusIconProps={manager.getServerStatusIconProps(server.serverName)}
                     onToggle={toggleConnector}
+                    onOpenConnectorsSettings={openConnectorsSettings}
                   />
                 ))}
                 {unavailableServers.map((server) => (
