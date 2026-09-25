@@ -28,7 +28,7 @@ describe('ScrollToBottom', () => {
     const { container } = renderButton();
     const column = container.querySelector('.sm\\:px-2');
 
-    expect(column).toHaveClass('md:max-w-3xl', 'xl:max-w-4xl');
+    expect(column).toHaveClass('md:max-w-[48.5rem]');
     expect(column).not.toHaveClass('px-4');
     expect(container.firstChild).toHaveClass('scrollbar-gutter-spacer');
   });
@@ -119,6 +119,6 @@ describe('ScrollToBottom', () => {
     const column = container.querySelector('.sm\\:px-2');
 
     expect(column).toHaveClass('max-w-full');
-    expect(column).not.toHaveClass('md:max-w-3xl');
+    expect(column).not.toHaveClass('md:max-w-[48.5rem]');
   });
 });

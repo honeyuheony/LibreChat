@@ -708,7 +708,7 @@ const InFlightSteers = memo(function InFlightSteers({
        * capped: a steer runs to 16k chars and a run takes up to 10 of them;
        * unbounded it would cover the whole thread. Width is not — `inset-x-0`
        * takes the width of the composer the steer was typed into, so the stack
-       * ends where that composer ends at every desktop width (`xl:max-w-4xl`,
+       * ends where that composer ends at every desktop width (`md:max-w-[48.5rem]`,
        * maximized chat space) instead of drifting inboard against a second,
        * narrower cap of its own; `p-2` then lands the send-now arrow in the
        * same column as the composer's own send button (`mr-2` + border).

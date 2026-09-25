@@ -19,7 +19,6 @@ import {
 } from '~/hooks';
 import { ChatContext, AddedChatContext, ChatFormProvider, useFileMapContext } from '~/Providers';
 import ApprovalProvider from './Messages/Content/ApprovalContext';
-import ConversationStarters from './Input/ConversationStarters';
 import { pendingApprovalActionFamily } from './approval/state';
 import { useGetMessagesByConvoId } from '~/data-provider';
 import Footer, { useConfiguredFooter } from './Footer';
@@ -196,13 +195,12 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                         className={cn(
                           'w-full bg-presentation [view-transition-name:chat-form]',
                           !isLandingPage && 'scrollbar-gutter-spacer',
-                          isLandingPage && 'max-w-3xl transition-all duration-200 xl:max-w-4xl',
+                          isLandingPage && 'max-w-[48.5rem] transition-all duration-200',
                         )}
                       >
-                        {isLandingPage && <ConversationStarters />}
                         {isSubagentThreadReadOnly ? (
                           <div
-                            className="mx-auto w-full max-w-3xl px-4 py-3 text-center text-sm text-text-secondary xl:max-w-4xl"
+                            className="mx-auto w-full max-w-[48.5rem] px-4 py-3 text-center text-sm text-text-secondary"
                             role="note"
                           >
                             {localize('com_ui_subagent_thread_read_only')}
