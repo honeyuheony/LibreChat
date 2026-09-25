@@ -23,6 +23,8 @@ interface BadgeRowProps {
   showToolsMenu?: boolean;
   /** Adds the built-in tool toggles, which only reach ephemeral agents. */
   showEphemeralBadges?: boolean;
+  /** The conversation's agent, whose own connectors the tools menu switches. */
+  agentId?: string | null;
   onChange: (badges: Pick<BadgeItem, 'id'>[]) => void;
   onToggle?: (badgeId: string, currentActive: boolean) => void;
   conversationId?: string | null;
@@ -141,6 +143,7 @@ const dragReducer = (state: DragState, action: DragAction): DragState => {
 function BadgeRow({
   showToolsMenu,
   showEphemeralBadges,
+  agentId,
   conversationId,
   specName,
   isSubmitting,
@@ -328,7 +331,9 @@ function BadgeRow({
       observeToolAuthorization={showToolsMenu === true}
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
-        {showToolsMenu === true && <ToolsMenu showBuiltinTools={showEphemeralBadges === true} />}
+        {showToolsMenu === true && (
+          <ToolsMenu showBuiltinTools={showEphemeralBadges === true} agentId={agentId} />
+        )}
         {tempBadges.map((badge, index) => (
           <React.Fragment key={badge.id}>
             {dragState.draggedBadge && dragState.insertIndex === index && ghostBadge && (

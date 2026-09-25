@@ -3,10 +3,13 @@ import { Button, TextareaAutosize } from '@librechat/client';
 import { Check, X, Pencil, MessageSquare, TriangleAlert } from 'lucide-react';
 import type { Agents } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
+import { cn, getToolDisplayLabel, logger, parseToolName } from '~/utils';
 import { boundApprovalLabel } from '~/components/Chat/approval/preview';
 import { useApprovalContext, useResumeSubmit } from './ApprovalContext';
+import { getConnectorTitle, useConnectorTitles } from './connectors';
+import { directionParticle, summarizeToolArgs } from './steps';
+import { useMCPServerNames } from '~/hooks/MCP';
 import { useLocalize } from '~/hooks';
-import { cn, logger } from '~/utils';
 
 /**
  * The resume route rejects an `edit` whose `editedArguments` isn't a plain object
@@ -27,7 +30,7 @@ const DECISION_ICON: Record<DecisionType, React.ComponentType<{ className?: stri
 };
 
 const DECISION_LABEL: Record<DecisionType, TranslationKeys> = {
-  approve: 'com_ui_approve',
+  approve: 'com_ui_approve_once',
   reject: 'com_ui_reject',
   edit: 'com_ui_edit',
   respond: 'com_ui_respond',
@@ -44,6 +47,9 @@ const DECISION_LABEL: Record<DecisionType, TranslationKeys> = {
  */
 const fieldClasses =
   'w-full resize-none rounded-md border border-border-xheavy bg-surface-primary p-2 text-text-primary placeholder:text-text-secondary';
+
+/** Reject first and the one-time allow last, so the primary action sits at the right edge. */
+const DECISION_ORDER: DecisionType[] = ['reject', 'edit', 'respond', 'approve'];
 
 /** Pretty-print tool args as JSON for the `edit` textarea seed. */
 function seedArgs(args: string | Record<string, unknown> | undefined): string {
@@ -75,16 +81,31 @@ export default function ToolApproval({
   approval,
   toolCallId,
   args,
+  toolName,
   showSubmit = true,
 }: {
   approval: NonNullable<Agents.ToolCall['approval']>;
   toolCallId: string;
   args: string | Record<string, unknown> | undefined;
+  /** Raw tool key (`read_file_mcp_my-pc`); names the connector in the card title. */
+  toolName?: string;
   /** The composer owns one batch submit; timeline cards keep the historical lead button. */
   showSubmit?: boolean;
 }) {
   const localize = useLocalize();
+  const mcpServerNames = useMCPServerNames();
+  const connectorTitles = useConnectorTitles();
   const { actionId, allowed_decisions: allowedDecisions, description } = approval;
+  const parsedTool = toolName ? parseToolName(toolName, mcpServerNames) : null;
+  let target = '';
+  if (parsedTool?.mcpServer) {
+    target = getConnectorTitle(connectorTitles, parsedTool.mcpServer);
+  } else if (toolName) {
+    target = getToolDisplayLabel(toolName, localize, mcpServerNames);
+  }
+  const argsSummary = parsedTool
+    ? [parsedTool.toolName, summarizeToolArgs(args)].filter(Boolean).join(' · ')
+    : '';
   const {
     registerToolCall,
     unregisterToolCall,
@@ -211,31 +232,57 @@ export default function ToolApproval({
 
   return (
     <div
-      className="my-2 flex w-full flex-col gap-2 rounded-lg border border-border-light bg-surface-secondary p-3"
+      className="my-2 flex w-full flex-col gap-3 rounded-theme-surface border border-border-brand bg-surface-brand-subtle px-4 py-3.5"
       data-testid="tool-approval"
       data-tool-call-id={toolCallId}
     >
-      {safeDescription != null && safeDescription.length > 0 && (
-        <p className="text-sm text-text-secondary">{safeDescription}</p>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {allowedDecisions.map((decision) => {
-          const Icon = DECISION_ICON[decision];
-          return (
-            <Button
-              key={decision}
-              size="sm"
-              variant={active === decision ? 'default' : 'outline'}
-              disabled={locked}
-              aria-pressed={active === decision}
-              onClick={() => updateDecisionDraft({ active: active === decision ? null : decision })}
-              className="inline-flex items-center gap-1.5"
-            >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              {localize(DECISION_LABEL[decision])}
-            </Button>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          {target && (
+            <p className="text-[0.9375rem] font-semibold text-text-primary">
+              {localize('com_ui_tool_approval_title', {
+                0: target,
+                1: directionParticle(target),
+              })}
+            </p>
+          )}
+          {argsSummary && (
+            <p className="truncate text-sm text-text-secondary" title={argsSummary}>
+              {argsSummary}
+            </p>
+          )}
+          {safeDescription != null && safeDescription.length > 0 && (
+            <p className="text-sm text-text-secondary">{safeDescription}</p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {DECISION_ORDER.filter((decision) => allowedDecisions.includes(decision)).map(
+            (decision) => {
+              const Icon = DECISION_ICON[decision];
+              const pressed = active === decision;
+              return (
+                <Button
+                  key={decision}
+                  size="sm"
+                  variant={pressed ? 'default' : 'outline'}
+                  disabled={locked}
+                  aria-pressed={pressed}
+                  onClick={() => updateDecisionDraft({ active: pressed ? null : decision })}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-theme-control',
+                    !pressed && 'bg-surface-primary',
+                    pressed &&
+                      decision === 'approve' &&
+                      'bg-surface-submit text-white hover:bg-surface-submit-hover',
+                  )}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {localize(DECISION_LABEL[decision])}
+                </Button>
+              );
+            },
+          )}
+        </div>
       </div>
 
       {active === 'edit' && (

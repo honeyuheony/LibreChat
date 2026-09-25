@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Copy, Check } from 'lucide';
 import { useAtomValue } from 'jotai';
 import { useRecoilState } from 'recoil';
+import { Copy, Check, Ellipsis } from 'lucide';
 import { findMessageById, isUserInitiatedCompaction } from 'librechat-data-provider';
 import {
   Button,
@@ -50,6 +50,8 @@ type HoverButtonProps = {
   buttonStyle?: string;
   dataTestId?: string;
   disabled?: boolean;
+  ariaExpanded?: boolean;
+  ariaControls?: string;
 };
 
 const extractMessageContent = (message: TMessage): string => {
@@ -95,6 +97,8 @@ const HoverButton = memo(
     className = '',
     dataTestId,
     disabled = false,
+    ariaExpanded,
+    ariaControls,
   }: HoverButtonProps) => {
     const buttonStyle = hoverButtonClasses({ isActive, isLast, className });
 
@@ -108,6 +112,8 @@ const HoverButton = memo(
             id={id}
             data-testid={dataTestId}
             aria-label={title}
+            aria-expanded={ariaExpanded}
+            aria-controls={ariaControls}
             className={buttonStyle}
             onClick={onClick}
             disabled={disabled}
@@ -139,6 +145,7 @@ const HoverButtons = ({
 }: THoverButtons) => {
   const localize = useLocalize();
   const [isCopied, setIsCopied] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
   const [TextToSpeech] = useRecoilState<boolean>(store.textToSpeech);
   const { getMessages } = useOptionalMessagesOperations();
   const pendingReveal = useAtomValue(revealedQueuedTurnFamily(conversation?.conversationId ?? ''));
@@ -221,28 +228,30 @@ const HoverButtons = ({
 
   const handleCopy = () => copyToClipboard(setIsCopied);
 
+  const showReadAloud = TextToSpeech && !error && !isActiveStreamingMessage;
+  const showEdit = !isSubagentThreadReadOnly && isEditableEndpoint && !hideEditButton;
+  const showFork =
+    !error && !isActiveStreamingMessage && forkingSupported && conversation.conversationId != null;
+  /** A model reply keeps copy, rerun and rating in view; editing, forking and reading
+   *  aloud move behind "more". A user turn keeps its edit button in view. */
+  const editInMore = showEdit && isCreatedByUser !== true;
+  const hasMoreActions = showReadAloud || showFork || editInMore;
+  const moreActionsId = `more-actions-${message.messageId}`;
+
+  const editButton = (
+    <HoverButton
+      id={`edit-${message.messageId}`}
+      onClick={onEdit}
+      title={localize('com_ui_edit')}
+      icon={<EditIcon size="19" />}
+      isActive={isEditing}
+      isLast={isLast}
+      className={isCreatedByUser ? '' : 'active'}
+    />
+  );
+
   return (
     <div className="group visible flex justify-center gap-0.5 self-end focus-within:outline-none lg:justify-start">
-      {/* Text to Speech */}
-      {TextToSpeech && !error && !isActiveStreamingMessage && (
-        <MessageAudio
-          index={index}
-          isLast={isLast}
-          messageId={message.messageId}
-          content={extractMessageContent(message)}
-          renderButton={(props) => (
-            <HoverButton
-              onClick={props.onClick}
-              title={props.title}
-              icon={props.icon}
-              isActive={props.isActive}
-              isLast={isLast}
-              dataTestId={isLast && !isCreatedByUser ? 'read-aloud-button' : undefined}
-            />
-          )}
-        />
-      )}
-
       {/* Copy Button */}
       {!isActiveStreamingMessage && (
         <HoverButton
@@ -263,34 +272,7 @@ const HoverButtons = ({
         />
       )}
 
-      {/* Edit Button */}
-      {!isSubagentThreadReadOnly && isEditableEndpoint && !hideEditButton && (
-        <HoverButton
-          id={`edit-${message.messageId}`}
-          onClick={onEdit}
-          title={localize('com_ui_edit')}
-          icon={<EditIcon size="19" />}
-          isActive={isEditing}
-          isLast={isLast}
-          className={isCreatedByUser ? '' : 'active'}
-        />
-      )}
-
-      {/* Fork Button */}
-      {!error && !isActiveStreamingMessage && (
-        <Fork
-          messageId={message.messageId}
-          conversationId={conversation.conversationId}
-          forkingSupported={forkingSupported}
-          latestMessageId={latestMessageId}
-          isLast={isLast}
-        />
-      )}
-
-      {/* Feedback Buttons */}
-      {!error && !isActiveStreamingMessage && !isCreatedByUser && handleFeedback != null && (
-        <Feedback handleFeedback={handleFeedback} feedback={message.feedback} isLast={isLast} />
-      )}
+      {showEdit && !editInMore && editButton}
 
       {/* Regenerate Button */}
       {!isSubagentThreadReadOnly && regenerateEnabled && (
@@ -304,6 +286,11 @@ const HoverButtons = ({
         />
       )}
 
+      {/* Feedback Buttons */}
+      {!error && !isActiveStreamingMessage && !isCreatedByUser && handleFeedback != null && (
+        <Feedback handleFeedback={handleFeedback} feedback={message.feedback} isLast={isLast} />
+      )}
+
       {/* Continue Button */}
       {!isSubagentThreadReadOnly && continueSupported && (
         <HoverButton
@@ -315,6 +302,52 @@ const HoverButtons = ({
           className="active"
         />
       )}
+
+      {hasMoreActions && (
+        <HoverButton
+          onClick={() => setShowMoreActions((open) => !open)}
+          title={localize('com_ui_more_actions')}
+          icon={<MorphIcon icon={Ellipsis} size={19} />}
+          isActive={showMoreActions}
+          isLast={isLast}
+          ariaExpanded={showMoreActions}
+          ariaControls={moreActionsId}
+          dataTestId="more-actions-button"
+        />
+      )}
+
+      {/* Kept mounted while collapsed, so read-aloud playback and an open fork
+          popover survive closing the group. */}
+      <div id={moreActionsId} className={cn('flex gap-0.5', !showMoreActions && 'hidden')}>
+        {showReadAloud && (
+          <MessageAudio
+            index={index}
+            isLast={isLast}
+            messageId={message.messageId}
+            content={extractMessageContent(message)}
+            renderButton={(props) => (
+              <HoverButton
+                onClick={props.onClick}
+                title={props.title}
+                icon={props.icon}
+                isActive={props.isActive}
+                isLast={isLast}
+                dataTestId={isLast && !isCreatedByUser ? 'read-aloud-button' : undefined}
+              />
+            )}
+          />
+        )}
+        {editInMore && editButton}
+        {showFork && (
+          <Fork
+            messageId={message.messageId}
+            conversationId={conversation.conversationId}
+            forkingSupported={forkingSupported}
+            latestMessageId={latestMessageId}
+            isLast={isLast}
+          />
+        )}
+      </div>
     </div>
   );
 };

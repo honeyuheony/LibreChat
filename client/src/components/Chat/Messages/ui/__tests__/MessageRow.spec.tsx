@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import MessageRow from '../MessageRow';
+import MessageRow, { shouldShowAuthor } from '../MessageRow';
 
 jest.mock('../MessageTimestamp', () => ({
   __esModule: true,
@@ -16,12 +16,14 @@ const renderRow = ({
   fullWidth = false,
   isEditing = false,
   plain = false,
+  showAuthor = false,
 }: {
   isCreatedByUser: boolean;
   hasParallelContent?: boolean;
   fullWidth?: boolean;
   isEditing?: boolean;
   plain?: boolean;
+  showAuthor?: boolean;
 }) =>
   render(
     <MessageRow
@@ -37,6 +39,7 @@ const renderRow = ({
       fullWidth={fullWidth}
       isEditing={isEditing}
       plain={plain}
+      showAuthor={showAuthor}
     >
       <p>{MESSAGE_BODY}</p>
     </MessageRow>,
@@ -50,7 +53,7 @@ describe('MessageRow', () => {
     const messageSurface = screen.getByText(MESSAGE_BODY).parentElement;
 
     expect(row).not.toHaveClass('justify-end');
-    expect(messageSurface).not.toHaveClass('bg-surface-tertiary');
+    expect(messageSurface).not.toHaveClass('bg-surface-message-user');
     expect(messageSurface).toHaveClass('w-full');
     expect(screen.queryByRole('heading', { hidden: true })).not.toBeInTheDocument();
     expect(screen.getByTestId('message-actions')).toBeInTheDocument();
@@ -66,13 +69,20 @@ describe('MessageRow', () => {
     expect(row).toHaveAttribute('role', 'group');
     expect(row).toHaveClass('justify-end');
     expect(userTurn).toHaveClass('items-end');
-    expect(messageSurface).toHaveClass('bg-surface-tertiary', 'rounded-theme-surface');
+    expect(messageSurface).toHaveClass('bg-surface-message-user', 'rounded-theme-surface');
     expect(screen.queryByTestId('message-icon')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { hidden: true })).toHaveClass('sr-only');
   });
 
-  it('keeps assistant identity visible beside an open reading column', () => {
+  it('names a single-agent reply only for assistive technology', () => {
     renderRow({ isCreatedByUser: false });
+
+    expect(screen.getByRole('heading', { name: /Assistant/ })).toHaveClass('sr-only');
+    expect(screen.queryByTestId('message-icon')).not.toBeInTheDocument();
+  });
+
+  it('keeps assistant identity visible beside an open reading column', () => {
+    renderRow({ isCreatedByUser: false, showAuthor: true });
 
     const row = screen.getByLabelText('Assistant message');
 
@@ -82,7 +92,7 @@ describe('MessageRow', () => {
   });
 
   it('carries the assistant avatar inside the heading without naming it', () => {
-    renderRow({ isCreatedByUser: false });
+    renderRow({ isCreatedByUser: false, showAuthor: true });
 
     const avatar = screen.getByTestId('message-icon').parentElement;
 
@@ -91,12 +101,12 @@ describe('MessageRow', () => {
       screen.getByRole('heading', { name: 'Message from Assistant Model: gpt-5.6' }),
     ).toContainElement(screen.getByTestId('message-icon'));
     expect(avatar).toHaveAttribute('aria-hidden', 'true');
-    expect(avatar).toHaveClass('size-6');
+    expect(avatar).toHaveClass('size-4');
     expect(avatar).not.toHaveClass('md:absolute', 'md:left-0');
   });
 
   it('keeps the icon and provider name on the message content edge', () => {
-    renderRow({ isCreatedByUser: false });
+    renderRow({ isCreatedByUser: false, showAuthor: true });
 
     const row = screen.getByLabelText('Assistant message');
     const agentTurn = row.querySelector('.agent-turn');
@@ -107,17 +117,17 @@ describe('MessageRow', () => {
     expect(screen.getAllByTestId('message-icon')).toHaveLength(1);
   });
 
-  it('puts icon, name, and datetime on one bar across the message column', () => {
-    renderRow({ isCreatedByUser: false });
+  it('keeps the author line small and leaves the datetime to assistive technology', () => {
+    renderRow({ isCreatedByUser: false, showAuthor: true });
 
     const heading = screen.getByRole('heading', { name: 'Message from Assistant Model: gpt-5.6' });
 
-    expect(heading).toHaveClass('w-full', 'gap-2');
-    expect(screen.getByTestId('message-timestamp')).toHaveClass('ml-auto');
+    expect(heading).toHaveClass('w-full', 'text-xs');
+    expect(screen.getByTestId('message-timestamp')).toHaveClass('sr-only');
   });
 
   it('keeps the model name ready to replace the provider on hover', () => {
-    renderRow({ isCreatedByUser: false });
+    renderRow({ isCreatedByUser: false, showAuthor: true });
 
     expect(screen.getByText('Assistant')).toBeVisible();
     expect(screen.getByText('gpt-5.6')).toHaveAttribute('aria-hidden', 'true');
@@ -126,7 +136,7 @@ describe('MessageRow', () => {
   /* The crossfade is pointer-only, so the header bar has to name the model in
      the heading itself rather than leave it behind a hover. */
   it('names the model in the heading for assistive technology', () => {
-    renderRow({ isCreatedByUser: false });
+    renderRow({ isCreatedByUser: false, showAuthor: true });
 
     expect(
       screen.getByRole('heading', { name: 'Message from Assistant Model: gpt-5.6' }),
@@ -151,7 +161,7 @@ describe('MessageRow', () => {
 
     expect(row.querySelector('.user-turn')).toHaveClass('w-full');
     expect(messageSurface).toHaveClass('w-full');
-    expect(messageSurface).not.toHaveClass('bg-surface-tertiary');
+    expect(messageSurface).not.toHaveClass('bg-surface-message-user');
   });
 
   it('expands an edited assistant message to full width', () => {
@@ -165,19 +175,41 @@ describe('MessageRow', () => {
     expect(messageSurface).toHaveClass('w-full');
   });
 
-  it('matches the chat form reading width', () => {
+  it('keeps replies in the 760px reading column at every width', () => {
     renderRow({ isCreatedByUser: false });
 
-    expect(screen.getByLabelText('Assistant message')).toHaveClass(
-      'sm:px-2',
-      'md:max-w-3xl',
-      'xl:max-w-4xl',
-    );
+    const row = screen.getByLabelText('Assistant message');
+    expect(row).toHaveClass('sm:px-2', 'md:max-w-[48.5rem]');
+    expect(row).not.toHaveClass('xl:max-w-4xl');
   });
 
   it('allows the maximized preference to use the full conversation width', () => {
     renderRow({ isCreatedByUser: false, fullWidth: true });
 
     expect(screen.getByLabelText('Assistant message')).toHaveClass('max-w-full');
+  });
+});
+
+describe('shouldShowAuthor', () => {
+  const conversation = { agent_id: 'agent_a', model: 'claude-sonnet' };
+
+  it('hides the name of a reply from the conversation agent', () => {
+    expect(shouldShowAuthor({ isCreatedByUser: false, model: 'agent_a' }, conversation)).toBe(
+      false,
+    );
+  });
+
+  it('shows the name of a reply written by another agent', () => {
+    expect(shouldShowAuthor({ isCreatedByUser: false, model: 'agent_b' }, conversation)).toBe(true);
+  });
+
+  it('compares against the model when the conversation has no agent', () => {
+    expect(
+      shouldShowAuthor({ isCreatedByUser: false, model: 'gpt-5.6' }, { model: 'claude-sonnet' }),
+    ).toBe(true);
+  });
+
+  it('never shows a name on the user turn', () => {
+    expect(shouldShowAuthor({ isCreatedByUser: true, model: 'agent_b' }, conversation)).toBe(false);
   });
 });

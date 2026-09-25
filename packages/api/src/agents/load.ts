@@ -4,7 +4,9 @@ import {
   Constants,
   isAgentsEndpoint,
   isEphemeralAgentId,
+  splitMCPToolKey,
   getEphemeralSender,
+  normalizeServerName,
   encodeEphemeralAgentId,
 } from 'librechat-data-provider';
 import type {
@@ -59,6 +61,46 @@ export interface LoadAgentParams {
   agent_id: string;
   endpoint: string;
   model_parameters?: AgentModelParameters & { model?: string };
+  /** Set for the conversation's own agent, so the chat's connector switches
+   *  (`ephemeralAgent.disabled_mcp`) narrow its MCP tools. */
+  applyChatMCPSelection?: boolean;
+}
+
+/**
+ * Drops the MCP tools of the switched-off servers from a saved agent's tool list.
+ * Non-MCP tools and servers not in `disabledServers` pass through unchanged.
+ * `configuredServerNames` resolves tool keys whose server name itself contains
+ * the MCP delimiter; without it the last delimiter decides.
+ */
+export function removeDisabledMCPTools(
+  tools: string[],
+  disabledServers: readonly unknown[],
+  configuredServerNames: readonly string[] = [],
+): string[] {
+  const disabled = new Set<string>();
+  for (const name of disabledServers) {
+    if (typeof name === 'string' && name !== '') {
+      disabled.add(name);
+      disabled.add(normalizeServerName(name));
+    }
+  }
+  if (disabled.size === 0) {
+    return tools;
+  }
+  const knownServerNames = [
+    ...new Set([
+      ...configuredServerNames,
+      ...configuredServerNames.map(normalizeServerName),
+      ...disabled,
+    ]),
+  ];
+  return tools.filter((tool) => {
+    if (typeof tool !== 'string' || !tool.includes(Constants.mcp_delimiter)) {
+      return true;
+    }
+    const [, serverName] = splitMCPToolKey(tool, knownServerNames);
+    return serverName == null || !disabled.has(serverName);
+  });
 }
 
 /**
@@ -229,7 +271,7 @@ export async function loadAgent(
   params: LoadAgentParams,
   deps: LoadAgentDeps,
 ): Promise<Agent | null> {
-  const { req, spec, agent_id, endpoint, model_parameters } = params;
+  const { req, spec, agent_id, endpoint, model_parameters, applyChatMCPSelection } = params;
   if (!agent_id) {
     return null;
   }
@@ -245,5 +287,22 @@ export async function loadAgent(
   // Set version count from versions array length
   const agentWithVersion = agent as Agent & { versions?: unknown[]; version?: number };
   agentWithVersion.version = agentWithVersion.versions ? agentWithVersion.versions.length : 0;
+
+  const disabledServers = req.body?.ephemeralAgent?.disabled_mcp;
+  if (
+    applyChatMCPSelection === true &&
+    Array.isArray(disabledServers) &&
+    disabledServers.length > 0 &&
+    Array.isArray(agent.tools)
+  ) {
+    return {
+      ...agent,
+      tools: removeDisabledMCPTools(
+        agent.tools,
+        disabledServers,
+        Object.keys(req.config?.mcpConfig ?? {}),
+      ),
+    };
+  }
   return agent;
 }

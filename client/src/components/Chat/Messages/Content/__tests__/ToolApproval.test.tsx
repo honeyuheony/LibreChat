@@ -7,11 +7,14 @@ import ToolApproval from '../ToolApproval';
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<string | number, string | number>) => {
+    if (key === 'com_ui_tool_approval_title') {
+      return `${values?.[0]}${values?.[1]} 이 작업을 할까요?`;
+    }
     if (key === 'com_ui_submit_decisions') {
       return `Submit ${values?.[0]} decisions`;
     }
     const map: Record<string, string> = {
-      com_ui_approve: 'Approve',
+      com_ui_approve_once: 'Allow once',
       com_ui_reject: 'Reject',
       com_ui_edit: 'Edit',
       com_ui_respond: 'Respond',
@@ -23,6 +26,15 @@ jest.mock('~/hooks', () => ({
     };
     return map[key] ?? key;
   },
+}));
+
+jest.mock('~/hooks/MCP', () => ({
+  useMCPServerNames: () => ['my-pc'],
+}));
+
+jest.mock('../connectors', () => ({
+  useConnectorTitles: () => new Map([['my-pc', '내 PC 폴더']]),
+  getConnectorTitle: (titles: Map<string, string>, server: string) => titles.get(server) ?? server,
 }));
 
 jest.mock('~/data-provider', () => ({
@@ -55,7 +67,7 @@ describe('ToolApproval', () => {
     const submit = screen.getByRole('button', { name: 'Submit' });
     expect(submit).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Allow once' }));
 
     expect(submit).toBeEnabled();
   });
@@ -63,7 +75,7 @@ describe('ToolApproval', () => {
   test('deselecting the active decision disables Submit again', () => {
     renderCards(<ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />);
 
-    const approve = screen.getByRole('button', { name: 'Approve' });
+    const approve = screen.getByRole('button', { name: 'Allow once' });
     fireEvent.click(approve);
     expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
 
@@ -130,7 +142,7 @@ describe('ToolApproval', () => {
     const submit = screen.getByRole('button', { name: 'Submit 2 decisions' });
     expect(submit).toBeDisabled();
 
-    const [approveFirst, approveSecond] = screen.getAllByRole('button', { name: 'Approve' });
+    const [approveFirst, approveSecond] = screen.getAllByRole('button', { name: 'Allow once' });
     fireEvent.click(approveFirst);
     expect(submit).toBeDisabled();
 
@@ -151,7 +163,9 @@ describe('ToolApproval', () => {
       </>,
     );
 
-    const [timelineApprove, composerApprove] = screen.getAllByRole('button', { name: 'Approve' });
+    const [timelineApprove, composerApprove] = screen.getAllByRole('button', {
+      name: 'Allow once',
+    });
     const [timelineReject, composerReject] = screen.getAllByRole('button', { name: 'Reject' });
 
     fireEvent.click(timelineApprove);
@@ -179,12 +193,42 @@ describe('ToolApproval', () => {
       </RecoilRoot>
     );
     const view = render(tree('direct'));
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
-    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Allow once' }));
+    expect(screen.getByRole('button', { name: 'Allow once' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     view.rerender(tree('phase-slice'));
 
-    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Allow once' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+  });
+
+  test('asks whether to run the action through the named connector', () => {
+    renderCards(
+      <ToolApproval
+        approval={approval()}
+        toolCallId="call-1"
+        args='{"path":"memo.txt"}'
+        toolName="read_file_mcp_my-pc"
+      />,
+    );
+
+    expect(screen.getByText('내 PC 폴더로 이 작업을 할까요?')).toBeInTheDocument();
+    expect(screen.getByText('read_file · path: memo.txt')).toBeInTheDocument();
+  });
+
+  test('places reject first and the one-time allow last', () => {
+    renderCards(<ToolApproval approval={approval()} toolCallId="call-1" args="{}" />);
+
+    const labels = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+      .filter((label) => label === 'Reject' || label === 'Allow once');
+    expect(labels).toEqual(['Reject', 'Allow once']);
   });
 });

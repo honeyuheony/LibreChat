@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tools } from 'librechat-data-provider';
 import { UIResourceRenderer } from '@mcp-ui/client';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import type { TAttachment } from 'librechat-data-provider';
 import UIResourceCarousel from '~/components/Chat/Messages/Content/UIResourceCarousel';
 import ToolCallInfo from '~/components/Chat/Messages/Content/ToolCallInfo';
@@ -10,7 +10,8 @@ import ToolCallInfo from '~/components/Chat/Messages/Content/ToolCallInfo';
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => {
     const translations: Record<string, string> = {
-      com_ui_parameters: 'Parameters',
+      com_ui_input: 'Input',
+      com_ui_result: 'Result',
     };
     return translations[key] || key;
   },
@@ -247,26 +248,25 @@ describe('ToolCallInfo', () => {
       expect(screen.getByTestId('output-renderer').textContent).toBe('Some output');
     });
 
-    it('should render parameters toggle when input has JSON content', () => {
-      render(<ToolCallInfo {...mockProps} output="Some output" />);
+    it('shows the input arguments without a toggle, in monospace', () => {
+      render(<ToolCallInfo input='{"pattern":"예산"}' output="Some output" />);
 
-      expect(screen.getByText('Parameters')).toBeInTheDocument();
+      expect(screen.getByText('Input')).toBeInTheDocument();
+      expect(screen.getByText('예산').closest('.font-mono')).not.toBeNull();
     });
 
-    it('should not render parameters toggle when input is empty', () => {
+    it('omits the input section when input is empty', () => {
       render(<ToolCallInfo input="" output="Some output" />);
 
-      expect(screen.queryByText('Parameters')).not.toBeInTheDocument();
+      expect(screen.queryByText('Input')).not.toBeInTheDocument();
     });
 
-    it('should toggle parameters visibility when clicking', () => {
+    it('places the input section before the result section', () => {
       render(<ToolCallInfo {...mockProps} output="Some output" />);
 
-      const paramsButton = screen.getByText('Parameters');
-      expect(paramsButton.closest('button')).toHaveAttribute('aria-expanded', 'false');
-
-      fireEvent.click(paramsButton.closest('button')!);
-      expect(paramsButton.closest('button')).toHaveAttribute('aria-expanded', 'true');
+      const input = screen.getByText('Input');
+      const result = screen.getByText('Result');
+      expect(input.compareDocumentPosition(result) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('should render ui_resources section when attachments have ui_resources', () => {

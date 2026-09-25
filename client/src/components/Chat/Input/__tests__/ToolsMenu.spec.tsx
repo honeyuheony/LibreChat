@@ -1,7 +1,11 @@
 import React from 'react';
+import { RecoilRoot } from 'recoil';
 import userEvent from '@testing-library/user-event';
-import { render, screen, within } from '@testing-library/react';
+import { render as rtlRender, screen, within } from '@testing-library/react';
+import { getAgentServerNames } from '../useAgentConnectorSelection';
 import ToolsMenu from '../ToolsMenu';
+
+const render = (ui: React.ReactElement) => rtlRender(<RecoilRoot>{ui}</RecoilRoot>);
 
 const mockToggleServerSelection = jest.fn();
 const mockOnConfigClick = jest.fn();
@@ -37,6 +41,12 @@ const toggle = (enabled: boolean, onChange = jest.fn()) => ({
 });
 
 let mockManager = { ...defaultManager };
+let mockAgentTools: string[] | undefined;
+
+jest.mock('~/hooks/Agents/useAgentToolPermissions', () => ({
+  __esModule: true,
+  default: () => ({ tools: mockAgentTools }),
+}));
 let mockContextTools: Record<string, unknown> = {};
 
 jest.mock('~/hooks/MCP/useMCPRefresh', () => ({
@@ -100,6 +110,8 @@ describe('ToolsMenu', () => {
     jest.clearAllMocks();
     mockManager = { ...defaultManager };
     mockContextTools = { webSearch: toggle(true, mockWebSearchChange) };
+    mockAgentTools = undefined;
+    localStorage.clear();
   });
 
   it('counts the selected connectors and enabled built-in tools on the trigger', () => {
@@ -189,5 +201,76 @@ describe('ToolsMenu', () => {
 
     expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'com_ui_tools' })).toBeInTheDocument();
+  });
+
+  describe('on a saved agent', () => {
+    const savedAgent = 'agent_saved';
+
+    beforeEach(() => {
+      mockManager = { ...defaultManager, mcpValues: [] };
+      mockAgentTools = ['web_search', 'read_mcp_files', 'list_mcp_files'];
+    });
+
+    it('shows every connector the agent carries as on until the chat switches one off', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+      expect(screen.getByTestId('tools-menu-count')).toHaveTextContent('1');
+      await user.click(screen.getByTestId('tools-menu-button'));
+      expect(screen.getByRole('menuitemcheckbox', { name: 'Shared files' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+    });
+
+    it('lists a connector the agent does not carry as unavailable, without a switch', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      const calendar = screen.getByTestId('tools-menu-unavailable');
+      expect(calendar).toHaveAccessibleName('Calendar, com_ui_connector_unavailable_for_agent');
+      expect(calendar).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.queryByRole('menuitemcheckbox', { name: /Calendar/ })).not.toBeInTheDocument();
+    });
+
+    it('records a switched-off connector for the server instead of the chat selection', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      await user.click(screen.getByRole('menuitemcheckbox', { name: 'Shared files' }));
+
+      expect(screen.getByRole('menuitemcheckbox', { name: 'Shared files' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+      expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem('LAST_MCP_DISABLED_test-conv') ?? 'null')).toEqual([
+        'files',
+      ]);
+      expect(mockToggleServerSelection).not.toHaveBeenCalled();
+    });
+
+    it('lays a stored choice back on when the conversation is opened again', async () => {
+      localStorage.setItem('LAST_MCP_DISABLED_test-conv', JSON.stringify(['files']));
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      expect(
+        await screen.findByRole('menuitemcheckbox', { name: 'Shared files', checked: false }),
+      ).toBeInTheDocument();
+    });
+  });
+});
+
+describe('getAgentServerNames', () => {
+  it('reads the connectors from the agent MCP tool keys, resolving delimiter-bearing names', () => {
+    const tools = ['web_search', 'run_mcp_foo_mcp_bar', 'sys__all__sys_mcp_docs', 'x_mcp_gone'];
+
+    expect(getAgentServerNames(tools, ['bar', 'foo_mcp_bar', 'docs'])).toEqual(
+      new Set(['foo_mcp_bar', 'docs']),
+    );
   });
 });

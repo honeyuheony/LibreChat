@@ -27,6 +27,7 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import useAgentConnectorSelection from './useAgentConnectorSelection';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
@@ -153,6 +154,30 @@ function ConnectorRow({
   );
 }
 
+/** A connector the conversation's saved agent does not carry: listed so the user
+ *  knows it exists, but it has no switch because the agent cannot use it. */
+function UnavailableConnectorRow({ server }: { server: MCPServerDefinition }) {
+  const localize = useLocalize();
+  const displayName = server.config?.title || server.serverName;
+  const reason = localize('com_ui_connector_unavailable_for_agent');
+  return (
+    <Ariakit.MenuItem
+      disabled
+      aria-label={`${displayName}, ${reason}`}
+      data-testid="tools-menu-unavailable"
+      className={cn(rowClassName, 'cursor-default opacity-50 hover:bg-transparent')}
+    >
+      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-hover">
+        <MCPIcon className="size-4 text-text-tertiary" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
+        <span className="block truncate text-xs text-text-secondary">{reason}</span>
+      </span>
+    </Ariakit.MenuItem>
+  );
+}
+
 function BuiltinRow({ tool }: { tool: BuiltinTool }) {
   return (
     <Ariakit.MenuItemCheckbox
@@ -184,10 +209,13 @@ function BuiltinRow({ tool }: { tool: BuiltinTool }) {
  */
 function ToolsMenu({
   showBuiltinTools,
+  agentId,
   disabled = false,
 }: {
   /** Built-in toggles only reach the model on endpoints that build an ephemeral agent. */
   showBuiltinTools: boolean;
+  /** The conversation's agent; a saved agent's connectors switch through `disabled_mcp`. */
+  agentId?: string | null;
   disabled?: boolean;
 }) {
   const localize = useLocalize();
@@ -233,6 +261,12 @@ function ToolsMenu({
     () => (canUseMcp ? (manager?.selectableServers ?? []) : []),
     [canUseMcp, manager?.selectableServers],
   );
+  const catalogServerNames = useMemo(() => servers.map((server) => server.serverName), [servers]);
+  const agentConnectors = useAgentConnectorSelection({
+    conversationId: context?.conversationId,
+    agentId,
+    catalogServerNames,
+  });
   const configDialogOpen = manager?.getConfigDialogProps()?.isOpen === true;
   useMCPRefresh({ enabled: (isOpen || configDialogOpen) && servers.length > 0 });
 
@@ -342,10 +376,25 @@ function ToolsMenu({
     () => new Set(manager?.mcpValues ?? []),
     [manager?.mcpValues],
   );
+  const { isSavedAgent, agentServerNames } = agentConnectors;
+  /* A saved agent switches only the connectors it carries; the chat selection
+     (`mcp`) belongs to ephemeral agents and would not reach its tools. */
+  const isConnectorOn = isSavedAgent
+    ? agentConnectors.isEnabled
+    : (serverName: string) => selectedServerNames.has(serverName);
+  const toggleConnector = isSavedAgent
+    ? agentConnectors.toggle
+    : (manager?.toggleServerSelection ?? (() => undefined));
+  const switchableServers = isSavedAgent
+    ? servers.filter((server) => agentServerNames.has(server.serverName))
+    : servers;
+  const unavailableServers = isSavedAgent
+    ? servers.filter((server) => !agentServerNames.has(server.serverName))
+    : [];
   /** Counts what the menu offers, never the raw selection: a selected name the
    *  catalog has not returned renders no row and cannot be turned off here. */
   const enabledCount =
-    servers.filter((server) => selectedServerNames.has(server.serverName)).length +
+    switchableServers.filter((server) => isConnectorOn(server.serverName)).length +
     builtinTools.filter((tool) => tool.enabled).length;
 
   if (builtinTools.length === 0 && servers.length === 0) {
@@ -413,15 +462,18 @@ function ToolsMenu({
                 <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
                   {localize('com_ui_connectors')}
                 </Ariakit.MenuGroupLabel>
-                {servers.map((server) => (
+                {switchableServers.map((server) => (
                   <ConnectorRow
                     key={server.serverName}
                     server={server}
-                    isSelected={selectedServerNames.has(server.serverName)}
+                    isSelected={isConnectorOn(server.serverName)}
                     connectionStatus={manager.connectionStatus}
                     statusIconProps={manager.getServerStatusIconProps(server.serverName)}
-                    onToggle={manager.toggleServerSelection}
+                    onToggle={toggleConnector}
                   />
+                ))}
+                {unavailableServers.map((server) => (
+                  <UnavailableConnectorRow key={server.serverName} server={server} />
                 ))}
               </Ariakit.MenuGroup>
             )}

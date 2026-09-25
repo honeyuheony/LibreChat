@@ -238,6 +238,8 @@ function ChildMessage({
       ariaLabel={label}
       headerPrefix=""
       isCreatedByUser={false}
+      /** A child thread is written by the subagent, not the conversation's agent. */
+      showAuthor
       fullWidth={fullWidth}
     >
       <SubagentActivityContent

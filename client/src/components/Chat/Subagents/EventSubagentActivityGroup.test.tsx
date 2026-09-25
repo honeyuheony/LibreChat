@@ -98,7 +98,7 @@ describe('EventSubagentActivityGroup', () => {
 
     expect(
       screen.getByRole('region', { name: 'com_ui_subagent_activity' }).parentElement,
-    ).toHaveClass('px-4', 'sm:px-0', 'md:max-w-3xl', 'xl:max-w-4xl');
+    ).toHaveClass('px-4', 'sm:px-0', 'md:max-w-[48.5rem]');
     expect(screen.queryByRole('button', { name: /Visible Agent/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /com_ui_subagent_activity/ }));
     fireEvent.click(screen.getByRole('button', { name: /Visible Agent/ }));

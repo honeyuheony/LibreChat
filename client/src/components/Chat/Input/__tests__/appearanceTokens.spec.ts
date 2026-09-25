@@ -16,14 +16,12 @@ const themedControls = [
   ['AudioRecorder.tsx', ['size="theme"', 'shape="theme"']],
   /** Controls that draw their shape from `composerControlClasses()` prove it by
    *  consuming the shared recipe; its own tokens are asserted where it lives. */
-  ['MCPSelect.tsx', ['composerControlClasses()', 'min-w-theme-control', 'md:px-theme-normal']],
   ['CodeApprovalMenu.tsx', ['composerControlClasses()', 'md:px-theme-normal']],
   ['TokenUsage/index.tsx', ['size-theme-control', 'rounded-theme-control-round']],
   ['Files/AttachFile.tsx', ['size-theme-control', 'rounded-theme-control-round']],
   /** The `+` control and the tools trigger are bordered rounded squares, like Send. */
   ['Files/AttachFileMenu.tsx', ['size-theme-control', 'rounded-theme-control border']],
   ['ToolsMenu.tsx', ['rounded-theme-control border', 'border-border-light']],
-  ['ToolsDropdown.tsx', ['size-theme-control', 'rounded-theme-control-round']],
   /** Floats over the thread rather than sitting in the composer, but stacks
    *  over Send on the same rail, so it takes the row's geometry from the shared
    *  `Button` recipe; the tokens behind those variants are asserted in `Button.spec`. */

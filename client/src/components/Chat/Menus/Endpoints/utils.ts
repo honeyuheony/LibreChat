@@ -1,16 +1,7 @@
-import React from 'react';
-import { Bot } from 'lucide-react';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
-import type {
-  TModelSpec,
-  TAgentsMap,
-  TAssistantsMap,
-  TEndpointsConfig,
-} from 'librechat-data-provider';
+import type { TModelSpec, TAgentsMap, TAssistantsMap } from 'librechat-data-provider';
 import type { useLocalize } from '~/hooks';
-import SpecIcon from '~/components/Chat/Menus/Endpoints/components/SpecIcon';
 import { Endpoint, SelectedValues } from '~/common';
-import { getSpecAgentAvatarURL } from '~/utils';
 
 export function filterItems<
   T extends {
@@ -118,73 +109,6 @@ export function filterModels(
 
     return modelName.toLowerCase().includes(searchTermLower);
   });
-}
-
-export function getSelectedIcon({
-  mappedEndpoints,
-  selectedValues,
-  modelSpecs,
-  endpointsConfig,
-  agentsMap,
-}: {
-  mappedEndpoints: Endpoint[];
-  selectedValues: SelectedValues;
-  modelSpecs: TModelSpec[];
-  endpointsConfig: TEndpointsConfig;
-  agentsMap?: TAgentsMap;
-}): React.ReactNode | null {
-  const { endpoint, model, modelSpec } = selectedValues;
-
-  if (modelSpec) {
-    const spec = modelSpecs.find((s) => s.name === modelSpec);
-    if (!spec) {
-      return null;
-    }
-    const { showIconInHeader = true } = spec;
-    if (!showIconInHeader) {
-      return null;
-    }
-    return React.createElement(SpecIcon, {
-      currentSpec: spec,
-      endpointsConfig,
-      agentAvatarURL: getSpecAgentAvatarURL(spec, agentsMap),
-    });
-  }
-
-  if (endpoint && model) {
-    const selectedEndpoint = mappedEndpoints.find((e) => e.value === endpoint);
-    if (!selectedEndpoint) {
-      return null;
-    }
-
-    if (selectedEndpoint.modelIcons?.[model]) {
-      const iconUrl = selectedEndpoint.modelIcons[model];
-      return React.createElement(
-        'div',
-        { className: 'h-5 w-5 overflow-hidden rounded-full' },
-        React.createElement('img', {
-          src: iconUrl,
-          alt: model,
-          className: 'h-full w-full object-cover',
-        }),
-      );
-    }
-
-    return (
-      selectedEndpoint.icon ||
-      React.createElement(Bot, {
-        size: 20,
-        className: 'icon-md shrink-0 text-text-primary',
-      })
-    );
-  }
-
-  if (endpoint) {
-    const selectedEndpoint = mappedEndpoints.find((e) => e.value === endpoint);
-    return selectedEndpoint?.icon || null;
-  }
-
-  return null;
 }
 
 export const getDisplayValue = ({

@@ -1,13 +1,12 @@
-import { useState, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useMemo } from 'react';
 import { Tools } from 'librechat-data-provider';
 import type { TAttachment, UIResource } from 'librechat-data-provider';
 import UIResourceRenderer, { isSupportedUIResource } from '~/components/MCPUIResource/Renderer';
 import { useOptionalMessagesOperations } from '~/Providers';
-import { useLocalize, useExpandCollapse } from '~/hooks';
 import UIResourceCarousel from './UIResourceCarousel';
 import { OutputRenderer } from './ToolOutput';
-import { handleUIAction, cn } from '~/utils';
+import { handleUIAction } from '~/utils';
+import { useLocalize } from '~/hooks';
 
 function isSimpleObject(obj: unknown): obj is Record<string, string | number | boolean | null> {
   if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
@@ -25,13 +24,11 @@ function isSimpleObject(obj: unknown): obj is Record<string, string | number | b
 
 function KeyValueInput({ data }: { data: Record<string, string | number | boolean | null> }) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-xs">
       {Object.entries(data).map(([key, value]) => (
         <div key={key} className="flex items-baseline gap-1.5">
-          <span className="font-medium text-text-secondary">{key}</span>
-          <span className="rounded bg-surface-tertiary px-1.5 py-0.5 text-text-primary">
-            {String(value ?? 'null')}
-          </span>
+          <span className="text-text-secondary">{key}:</span>
+          <span className="break-all text-text-primary">{String(value ?? 'null')}</span>
         </div>
       ))}
     </div>
@@ -54,11 +51,11 @@ function formatParamValue(value: unknown): string {
 
 function ComplexInput({ data }: { data: Record<string, unknown> }) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-xs">
       {Object.entries(data).map(([key, value]) => (
         <div key={key} className="flex items-baseline gap-1.5">
-          <span className="font-medium text-text-secondary">{key}</span>
-          <span className="max-w-[300px] overflow-hidden truncate rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-text-primary">
+          <span className="text-text-secondary">{key}:</span>
+          <span className="max-w-[300px] overflow-hidden truncate text-text-primary">
             {formatParamValue(value)}
           </span>
         </div>
@@ -82,13 +79,13 @@ function InputRenderer({ input }: { input: string }) {
     }
     // Valid JSON but not a plain object (array, string, number, boolean) — render formatted
     return (
-      <pre className="whitespace-pre-wrap text-xs text-text-primary">
+      <pre className="whitespace-pre-wrap font-mono text-xs text-text-primary">
         {typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2)}
       </pre>
     );
   } catch {
     // Not JSON — render as plain text
-    return <pre className="whitespace-pre-wrap text-xs text-text-primary">{input}</pre>;
+    return <pre className="whitespace-pre-wrap font-mono text-xs text-text-primary">{input}</pre>;
   }
 }
 
@@ -103,8 +100,6 @@ export default function ToolCallInfo({
 }) {
   const localize = useLocalize();
   const { ask } = useOptionalMessagesOperations();
-  const [showParams, setShowParams] = useState(false);
-  const { style: paramsExpandStyle, ref: paramsExpandRef } = useExpandCollapse(showParams);
 
   const hasParams = useMemo(() => {
     if (!input || input.trim().length === 0) {
@@ -130,39 +125,21 @@ export default function ToolCallInfo({
       .filter(isSupportedUIResource) ?? [];
 
   return (
-    <div className="w-full px-3 py-3.5">
-      {output && <OutputRenderer text={output} />}
-      {output && hasParams && <div className="my-2 border-t border-border-light" />}
+    <div className="flex w-full flex-col gap-2.5 px-3 py-3">
       {hasParams && (
-        <>
-          <button
-            type="button"
-            className={cn(
-              'inline-flex items-center gap-1 text-xs text-text-secondary',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-heavy',
-            )}
-            onClick={() => setShowParams((prev) => !prev)}
-            aria-expanded={showParams}
-          >
-            <span>{localize('com_ui_parameters')}</span>
-            <ChevronDown
-              className={cn(
-                'size-3 shrink-0 transition-transform duration-200 ease-out',
-                showParams && 'rotate-180',
-              )}
-              aria-hidden="true"
-            />
-          </button>
-          <div style={paramsExpandStyle}>
-            <div className="overflow-hidden pt-1" ref={paramsExpandRef}>
-              <InputRenderer input={input} />
-            </div>
-          </div>
-        </>
+        <section className="flex flex-col gap-1">
+          <p className="text-xs text-text-tertiary">{localize('com_ui_input')}</p>
+          <InputRenderer input={input} />
+        </section>
+      )}
+      {output && (
+        <section className="flex flex-col gap-1">
+          <p className="text-xs text-text-tertiary">{localize('com_ui_result')}</p>
+          <OutputRenderer text={output} />
+        </section>
       )}
       {uiResources.length > 0 && (
         <>
-          {(hasParams || output) && <div className="my-2 border-t border-border-light" />}
           {uiResources.length > 1 && <UIResourceCarousel uiResources={uiResources} />}
           {uiResources.length === 1 && (
             <UIResourceRenderer

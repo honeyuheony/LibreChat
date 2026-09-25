@@ -1,7 +1,7 @@
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
 import { RecoilRoot, type MutableSnapshot } from 'recoil';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Constants,
@@ -565,5 +565,63 @@ describe('HoverButtons feedback affordance', () => {
     expect(screen.queryByTitle('Love this')).toBeNull();
     expect(screen.queryByTitle('Needs improvement')).toBeNull();
     expect(screen.getByTestId('copy-response-button')).toBeInTheDocument();
+  });
+});
+
+describe('HoverButtons more actions', () => {
+  const assistantMessage = {
+    ...userMessage,
+    messageId: 'assistant-1',
+    parentMessageId: userMessage.messageId,
+    isCreatedByUser: false,
+    text: 'Here is the answer',
+  } as TMessage;
+
+  const renderSettledReply = () =>
+    renderHoverButtons({
+      isSubmitting: false,
+      message: assistantMessage,
+      isLast: true,
+      latestMessageId: assistantMessage.messageId,
+      handleFeedback: jest.fn(),
+      thread: [userMessage, assistantMessage],
+    });
+
+  it('keeps copy, regenerate and rating in view on a reply', () => {
+    renderSettledReply();
+
+    /** jsdom applies no Tailwind, so "in view" means outside the collapsed `.hidden` group. */
+    expect(screen.getByTestId('copy-response-button').closest('.hidden')).toBeNull();
+    expect(screen.getByTestId('regenerate-generation-button').closest('.hidden')).toBeNull();
+    expect(screen.getByTitle('Love this').closest('.hidden')).toBeNull();
+  });
+
+  it('keeps edit behind the collapsed more-actions group on a reply', () => {
+    const container = renderSettledReply();
+
+    const more = screen.getByTestId('more-actions-button');
+    const group = container.querySelector(`#${more.getAttribute('aria-controls')}`);
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    expect(group).toHaveClass('hidden');
+    expect(group).toContainElement(container.querySelector(`#edit-${assistantMessage.messageId}`));
+  });
+
+  it('reveals the grouped actions when more is pressed', () => {
+    const container = renderSettledReply();
+
+    const more = screen.getByTestId('more-actions-button');
+    fireEvent.click(more);
+
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    expect(container.querySelector(`#${more.getAttribute('aria-controls')}`)).not.toHaveClass(
+      'hidden',
+    );
+  });
+
+  it('keeps edit in view on the user turn', () => {
+    const container = renderHoverButtons({ isSubmitting: false });
+
+    const edit = container.querySelector(`#edit-${userMessage.messageId}`);
+    expect(edit?.closest('.hidden')).toBeNull();
   });
 });

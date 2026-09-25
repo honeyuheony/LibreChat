@@ -3,6 +3,7 @@ import { RecoilRoot } from 'recoil';
 import { Tools, Constants } from 'librechat-data-provider';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ToolAuthWarningContext } from '../auth';
+import { GroupedRowContext } from '../rows';
 import ToolCall from '../ToolCall';
 
 // Mock dependencies
@@ -21,6 +22,9 @@ jest.mock('~/hooks', () => ({
       com_ui_via_server: `via ${values?.[0]}`,
       com_ui_tool_failed: 'failed',
       com_ui_tool_name_set_memory: 'Save Memory',
+      com_ui_tool_step_unknown: `Ran ${values?.[0]}`,
+      com_ui_tool_step_read_file: `Read ${values?.[0]}`,
+      com_ui_tool_step_count: `${values?.[0]} items`,
     };
     return translations[key] || key;
   },
@@ -44,6 +48,11 @@ jest.mock('~/hooks/MCP', () => {
   };
 });
 
+jest.mock('../connectors', () => ({
+  useConnectorTitles: () => new Map([['my-pc', '내 PC 폴더']]),
+  getConnectorTitle: (titles: Map<string, string>, server: string) => titles.get(server) ?? server,
+}));
+
 jest.mock('~/components/Chat/Messages/Content/MessageContent', () => ({
   __esModule: true,
   default: ({ content }: { content: string }) => <div data-testid="message-content">{content}</div>,
@@ -65,15 +74,27 @@ jest.mock('../ProgressText', () => ({
     inProgressText,
     finishedText,
     subtitle,
+    trailing,
+    icon,
   }: {
     onClick?: () => void;
     inProgressText?: string;
     finishedText?: string;
     subtitle?: string;
+    trailing?: string;
+    icon?: React.ReactNode;
   }) => (
     <div data-testid="progress-text" onClick={onClick}>
+      {/* Only the grouped-row status glyph renders; ToolIcon needs icons this file does not mock. */}
+      {icon != null &&
+      typeof icon === 'object' &&
+      'props' in icon &&
+      'phase' in (icon.props as object)
+        ? icon
+        : null}
       {finishedText || inProgressText}
       {subtitle && <span data-testid="subtitle">{subtitle}</span>}
+      {trailing && <span data-testid="trailing">{trailing}</span>}
     </div>
   ),
 }));
@@ -96,6 +117,9 @@ jest.mock('lucide-react', () => ({
   ChevronDown: () => <span>{'ChevronDown'}</span>,
   ChevronUp: () => <span>{'ChevronUp'}</span>,
   TriangleAlert: () => <span>{'TriangleAlert'}</span>,
+  Check: () => <span>{'Check'}</span>,
+  X: () => <span>{'X'}</span>,
+  Loader2: () => <span>{'Loader2'}</span>,
 }));
 
 jest.mock('~/utils', () => ({
@@ -149,19 +173,19 @@ describe('ToolCall', () => {
         <ToolCall {...mockProps} args={'{"intent":"Looking up the customer record","q":"acme"}'} />,
       );
       expect(screen.getAllByText('Looking up the customer record').length).toBeGreaterThan(0);
-      expect(screen.queryByText('Completed testFunction')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ran testFunction')).not.toBeInTheDocument();
     });
 
     it('falls back to the generic labels when args carry no intent', () => {
       renderWithRecoil(<ToolCall {...mockProps} />);
-      expect(screen.getAllByText('Completed testFunction').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Ran testFunction').length).toBeGreaterThan(0);
     });
   });
 
   it('uses a friendly label for the set_memory tool', () => {
     renderWithRecoil(<ToolCall {...mockProps} name="set_memory" />);
 
-    expect(screen.getByTestId('progress-text')).toHaveTextContent('Completed Save Memory');
+    expect(screen.getByTestId('progress-text')).toHaveTextContent('Ran Save Memory');
     expect(screen.queryByText(/set_memory/)).not.toBeInTheDocument();
   });
 
@@ -527,8 +551,8 @@ describe('ToolCall', () => {
         />,
       );
       const progressText = screen.getByTestId('progress-text');
-      expect(progressText.textContent).toContain('Completed my-server');
-      expect(progressText.textContent).not.toContain('Completed oauth');
+      expect(progressText.textContent).toContain('Ran my-server');
+      expect(progressText.textContent).not.toContain('Ran oauth');
     });
 
     it('should display server name even when auth is cleared (post-completion)', () => {
@@ -544,8 +568,8 @@ describe('ToolCall', () => {
         />,
       );
       const progressText = screen.getByTestId('progress-text');
-      expect(progressText.textContent).toContain('Completed my-server');
-      expect(progressText.textContent).not.toContain('Completed oauth');
+      expect(progressText.textContent).toContain('Ran my-server');
+      expect(progressText.textContent).not.toContain('Ran oauth');
     });
 
     it('should fallback to auth URL redirect_uri when name lacks delimiter', () => {
@@ -580,7 +604,7 @@ describe('ToolCall', () => {
         />,
       );
       const progressText = screen.getByTestId('progress-text');
-      expect(progressText.textContent).toContain('Completed my-server');
+      expect(progressText.textContent).toContain('Ran my-server');
       expect(progressText.textContent).not.toContain('bare_name');
     });
 
@@ -634,6 +658,55 @@ describe('ToolCall', () => {
       const liveRegion = document.querySelector('[aria-live="polite"]');
       expect(liveRegion).not.toBeNull();
       expect(liveRegion!.className).toContain('sr-only');
+    });
+  });
+
+  describe('connector steps', () => {
+    const mcpName = `read_file${Constants.mcp_delimiter}my-pc`;
+
+    it('labels an MCP call with the verb phrase for its tool and arguments', () => {
+      renderWithRecoil(
+        <ToolCall {...mockProps} name={mcpName} args='{"path":"notes/memo.txt"}' output="memo" />,
+      );
+      expect(screen.getByTestId('progress-text')).toHaveTextContent('Read memo.txt');
+    });
+
+    it('names a standalone MCP call by the connector title', () => {
+      renderWithRecoil(<ToolCall {...mockProps} name={mcpName} args='{"path":"memo.txt"}' />);
+      expect(screen.getByTestId('subtitle')).toHaveTextContent('via 내 PC 폴더');
+    });
+
+    it('leaves the connector to the group header and shows a status glyph inside a group', () => {
+      renderWithRecoil(
+        <GroupedRowContext.Provider value>
+          <ToolCall
+            {...mockProps}
+            name={`list_folder${Constants.mcp_delimiter}my-pc`}
+            args="{}"
+            output={'{"name": "a.txt"}\n\n{"name": "b.txt"}'}
+            runStepStatus="completed"
+          />
+        </GroupedRowContext.Provider>,
+      );
+      expect(screen.queryByTestId('subtitle')).not.toBeInTheDocument();
+      expect(screen.getByTestId('step-icon-completed')).toBeInTheDocument();
+      expect(screen.getByTestId('trailing')).toHaveTextContent('2 items');
+    });
+
+    it('shows the relay error of a failed step without the "Error executing tool" prefix', () => {
+      renderWithRecoil(
+        <ToolCall
+          {...mockProps}
+          name={mcpName}
+          args='{"path":"memo.txt"}'
+          output="Error executing tool read_file: PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다."
+          runStepStatus="completed"
+        />,
+      );
+      expect(
+        screen.getByText('PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.'),
+      ).toHaveClass('text-status-error');
+      expect(screen.queryByText(/Error executing tool/)).not.toBeInTheDocument();
     });
   });
 });

@@ -48,6 +48,7 @@ export default function ProgressText({
   authText,
   icon: iconProp,
   subtitle,
+  trailing,
   durationMs,
   hasInput = true,
   popover = false,
@@ -69,6 +70,8 @@ export default function ProgressText({
   authText?: string;
   icon?: React.ReactNode;
   subtitle?: string;
+  /** Short result summary ("2개"), pushed to the right edge of the row. */
+  trailing?: string;
   /** Wall-clock duration of the run step, from `PartMetadata.runStepDurationMs`. */
   durationMs?: number;
   hasInput?: boolean;
@@ -147,6 +150,9 @@ export default function ProgressText({
               {localize(duration.announcedKey, duration.announcedValues)}
             </span>
           </>
+        )}
+        {trailing && (
+          <span className="ml-auto shrink-0 pl-2 font-normal text-text-tertiary">{trailing}</span>
         )}
         {hasInput && (
           <ChevronDown
