@@ -112,6 +112,10 @@ export type NavLink = {
   variant?: 'default' | 'ghost';
   disabled?: boolean;
   id: string;
+  /** A row that opens a page rather than a panel is active while the route starts with this. */
+  activePath?: string;
+  /** Short muted text at the row's end, such as a count. */
+  trailing?: string;
 };
 
 export interface DataColumnMeta {

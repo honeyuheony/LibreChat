@@ -136,6 +136,7 @@ function renderPanel({
   onNavigate,
   initialPanel = DEFAULT_PANEL,
   initializeState,
+  route = '/c/new',
 }: {
   expanded?: boolean;
   links?: NavLink[];
@@ -144,13 +145,14 @@ function renderPanel({
   onNavigate?: jest.Mock;
   initialPanel?: string;
   initializeState?: (snapshot: MutableSnapshot) => void;
+  route?: string;
 } = {}) {
   if (initialPanel !== DEFAULT_PANEL) {
     localStorage.setItem('side:active-panel', initialPanel);
   }
 
   const result = render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <QueryClientProvider client={createQueryClient()}>
         <RecoilRoot initializeState={initializeState}>
           <ActivePanelProvider>
@@ -215,7 +217,7 @@ describe('ExpandedPanel', () => {
       const links = [
         ...createLinks(),
         {
-          title: 'com_ui_sidebar_connectors' as const,
+          title: 'com_ui_data_hub' as const,
           icon: NotebookPen,
           id: 'connectors',
           onClick,
@@ -223,7 +225,7 @@ describe('ExpandedPanel', () => {
       ];
 
       renderPanel({ links, onNavigate });
-      fireEvent.click(screen.getByRole('button', { name: 'com_ui_sidebar_connectors' }));
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_data_hub' }));
 
       expect(onClick).toHaveBeenCalledTimes(1);
       expect(onNavigate).toHaveBeenCalledTimes(1);
@@ -242,6 +244,72 @@ describe('ExpandedPanel', () => {
       renderPanel({ expanded: false });
       expect(screen.getByRole('button', { name: 'com_ui_prompts' })).toHaveTextContent('');
       expect(screen.getByTestId('new-chat-button')).toHaveTextContent('');
+    });
+  });
+
+  describe('page rows', () => {
+    const pageLink = {
+      title: 'com_ui_data_hub' as const,
+      icon: NotebookPen,
+      id: 'connectors',
+      activePath: '/connectors',
+      trailing: 'MCP',
+      onClick: jest.fn(),
+    };
+
+    it('is active while its page is open', () => {
+      renderPanel({ links: [...createLinks(), pageLink], route: '/connectors/slack' });
+      expect(screen.getByRole('button', { name: 'com_ui_data_hub' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+
+    it('is inactive on any other page', () => {
+      renderPanel({ links: [...createLinks(), pageLink], route: '/c/new' });
+      expect(screen.getByRole('button', { name: 'com_ui_data_hub' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('shows its trailing text while expanded only', () => {
+      const { unmount } = renderPanel({ links: [...createLinks(), pageLink] });
+      expect(screen.getByRole('button', { name: 'com_ui_data_hub' })).toHaveTextContent(
+        'com_ui_data_hubMCP',
+      );
+      unmount();
+      renderPanel({ links: [...createLinks(), pageLink], expanded: false });
+      expect(screen.getByRole('button', { name: 'com_ui_data_hub' })).toHaveTextContent('');
+    });
+  });
+
+  describe('history heading', () => {
+    it('sits below the other rows, after a separator, while expanded', () => {
+      renderPanel({ expanded: true });
+      const rows = screen
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('data-testid'))
+        .filter((id) => id?.startsWith('nav-panel-'));
+      expect(rows).toEqual(['nav-panel-prompts', `nav-panel-${DEFAULT_PANEL}`]);
+      expect(screen.getByRole('separator')).toBeInTheDocument();
+    });
+
+    it('stays a rail icon in its original place while collapsed', () => {
+      renderPanel({ expanded: false });
+      const rows = screen
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('data-testid'))
+        .filter((id) => id?.startsWith('nav-panel-'));
+      expect(rows).toEqual([`nav-panel-${DEFAULT_PANEL}`, 'nav-panel-prompts']);
+      expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    });
+
+    it('brings the history back from another panel', () => {
+      renderPanel({ expanded: true, initialPanel: 'prompts' });
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_chat_history' }));
+      expect(localStorage.getItem('side:active-panel')).toBe(DEFAULT_PANEL);
+      expect(screen.getByTestId('history-panel')).toBeInTheDocument();
     });
   });
 

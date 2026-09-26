@@ -142,6 +142,7 @@ const NavRow = memo(function NavRow({
   link,
   isActive,
   expanded,
+  section = false,
   setActive,
   onExpand,
   onNavigate,
@@ -150,6 +151,8 @@ const NavRow = memo(function NavRow({
   link: NavLink;
   isActive: boolean;
   expanded: boolean;
+  /** Drawn as the heading of the list below it rather than as a row. */
+  section?: boolean;
   setActive: (id: string) => void;
   onExpand?: () => void;
   onNavigate?: () => void;
@@ -187,14 +190,19 @@ const NavRow = memo(function NavRow({
         data-testid={`nav-panel-${link.id}`}
         className={cn(
           expanded ? cn(rowClassName, 'justify-start') : cn(railButtonClassName, 'px-0'),
-          isActive
-            ? 'bg-surface-active font-medium text-text-primary'
-            : 'font-normal text-text-secondary',
+          section && 'h-8 text-[13px] font-semibold text-text-secondary',
+          !section &&
+            (isActive
+              ? 'bg-surface-active font-medium text-text-primary'
+              : 'font-normal text-text-secondary'),
         )}
         onClick={handleClick}
       >
-        <link.icon className="size-[18px] flex-shrink-0" aria-hidden="true" />
+        {!section && <link.icon className="size-[18px] flex-shrink-0" aria-hidden="true" />}
         {expanded && <span className="truncate">{label}</span>}
+        {expanded && link.trailing && (
+          <span className="ml-auto text-xs font-normal text-text-tertiary">{link.trailing}</span>
+        )}
       </Button>
     </RowTooltip>
   );
@@ -258,8 +266,9 @@ function BrandHeader({
 }
 
 /**
- * The whole desktop sidebar: brand, a list of rows (new chat, search, one per panel),
- * the active panel below them, and the account menu. Collapsed, the rows form an icon rail.
+ * The whole desktop sidebar: brand, new chat, one row per page or panel, the conversation
+ * history heading with its search field, the active panel, and the account menu.
+ * Collapsed, the rows form an icon rail.
  */
 function ExpandedPanel({
   links,
@@ -289,6 +298,26 @@ function ExpandedPanel({
     }
   }, [setActive, isInsightsRoute, onLeaveInsights]);
 
+  const isLinkActive = (link: NavLink) => {
+    if (link.activePath) {
+      return location.pathname.startsWith(link.activePath);
+    }
+    if (link.id === 'insights') {
+      return isInsightsRoute;
+    }
+    return !isInsightsRoute && link.id === effectiveActive;
+  };
+  /** Expanded, the history list gets a heading of its own under the rows instead of a row. */
+  const historyLink = expanded ? links.find((link) => link.id === DEFAULT_PANEL) : undefined;
+  const rowLinks = historyLink ? links.filter((link) => link !== historyLink) : links;
+  const searchRow = search.enabled === true && (
+    <SearchRow
+      expanded={expanded}
+      isConversationsActive={!isInsightsRoute && effectiveActive === DEFAULT_PANEL}
+      onShowConversations={showConversations}
+    />
+  );
+
   return (
     <div
       className={cn(
@@ -299,22 +328,16 @@ function ExpandedPanel({
       <BrandHeader expanded={expanded} onCollapse={onCollapse} onExpand={onExpand} />
       <div className={cn('flex flex-col gap-0.5', !expanded && 'items-center')}>
         <NewChatRow expanded={expanded} setActive={setActive} />
-        {search.enabled === true && (
-          <SearchRow
-            expanded={expanded}
-            isConversationsActive={!isInsightsRoute && effectiveActive === DEFAULT_PANEL}
-            onShowConversations={showConversations}
-          />
+        {expanded ? (
+          <div role="separator" className="mx-2.5 my-1.5 border-t border-border-light" />
+        ) : (
+          searchRow
         )}
-        {links.map((link) => (
+        {rowLinks.map((link) => (
           <NavRow
             key={link.id}
             link={link}
-            isActive={
-              link.id === 'insights'
-                ? isInsightsRoute
-                : !isInsightsRoute && link.id === effectiveActive
-            }
+            isActive={isLinkActive(link)}
             expanded={expanded}
             setActive={setActive}
             onExpand={onExpand}
@@ -324,8 +347,21 @@ function ExpandedPanel({
         ))}
       </div>
 
+      {historyLink && (
+        <div className="mt-3 flex flex-col gap-0.5">
+          <NavRow
+            section
+            link={historyLink}
+            isActive={isLinkActive(historyLink)}
+            expanded={expanded}
+            setActive={setActive}
+            onLeaveInsights={isInsightsRoute ? onLeaveInsights : undefined}
+          />
+          {searchRow}
+        </div>
+      )}
       {expanded ? (
-        <nav className="-mx-2 mt-3 min-h-0 flex-1 overflow-hidden">
+        <nav className="-mx-2 mt-1 min-h-0 flex-1 overflow-hidden">
           <SidePanelNav links={links} />
         </nav>
       ) : (

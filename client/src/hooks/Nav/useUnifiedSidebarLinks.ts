@@ -1,12 +1,17 @@
 import { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, MessagesSquare, Plug } from 'lucide-react';
+import { BarChart3, MessagesSquare, Plug, Store } from 'lucide-react';
 import { useUserKeyQuery } from 'librechat-data-provider/react-query';
 import { getConfigDefaults, getEndpointField } from 'librechat-data-provider';
 import type { TEndpointsConfig } from 'librechat-data-provider';
 import type { NavLink } from '~/common';
-import { useGetEndpointsQuery, useGetStartupConfig, useInsightsAccessQuery } from '~/data-provider';
+import {
+  useGetEndpointsQuery,
+  useGetStartupConfig,
+  useInsightsAccessQuery,
+  useSkillCategoriesQuery,
+} from '~/data-provider';
 import ConversationsSection from '~/components/UnifiedSidebar/ConversationsSection';
 import { DATA_HUB_PATH } from '~/components/Connectors/status';
 import useSideNavLinks from '~/hooks/Nav/useSideNavLinks';
@@ -14,6 +19,7 @@ import { useAuthContext } from '~/hooks';
 import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
+const SKILLS_MARKET_PATH = '/skills-market';
 
 /** The files panel is managed from settings under Data. */
 const panelsReplacedElsewhere = new Set(['files']);
@@ -67,32 +73,52 @@ export default function useUnifiedSidebarLinks() {
     includeHidePanel: false,
   });
 
+  const hasSkillsPanel = sideNavLinks.some((link) => link.id === 'skills');
+  const { data: skillCategories } = useSkillCategoriesQuery({ enabled: hasSkillsPanel });
+  /** The marketplace's own "all" count: the sum of its category counts. */
+  const marketCount = skillCategories?.categories.reduce((sum, entry) => sum + entry.count, 0);
+
   const links = useMemo(() => {
     const conversationLink: NavLink = {
-      title: 'com_ui_sidebar_chats',
+      title: 'com_ui_chat_history',
       label: '',
       icon: MessagesSquare,
       id: 'conversations',
       Component: ConversationsSection,
     };
     const connectorsLink: NavLink = {
-      title: 'com_ui_sidebar_connectors',
+      title: 'com_ui_data_hub',
       label: '',
       icon: Plug,
       id: 'connectors',
+      activePath: DATA_HUB_PATH,
+      trailing: 'MCP',
       onClick: () => navigate(DATA_HUB_PATH),
     };
+    const marketLinks: NavLink[] = hasSkillsPanel
+      ? [
+          {
+            title: 'com_skills_marketplace',
+            label: '',
+            icon: Store,
+            id: 'skills-market',
+            activePath: SKILLS_MARKET_PATH,
+            trailing: marketCount != null ? String(marketCount) : undefined,
+            onClick: () => navigate(SKILLS_MARKET_PATH),
+          },
+        ]
+      : [];
 
     const skillsLinks: NavLink[] = [];
     const otherLinks: NavLink[] = [];
     for (const link of sideNavLinks) {
       if (link.id === 'skills') {
-        skillsLinks.push({ ...link, title: 'com_ui_sidebar_skills' });
+        skillsLinks.push({ ...link, title: 'com_ui_sidebar_my_agents' });
       } else if (!panelsReplacedElsewhere.has(link.id)) {
         otherLinks.push(link);
       }
     }
-    const leadingLinks = [conversationLink, ...skillsLinks, connectorsLink];
+    const leadingLinks = [conversationLink, ...marketLinks, connectorsLink, ...skillsLinks];
 
     if (
       !insightsFeatureEnabled ||
@@ -121,6 +147,8 @@ export default function useUnifiedSidebarLinks() {
     isInsightsAccessLoading,
     isInsightsRoute,
     location.pathname,
+    hasSkillsPanel,
+    marketCount,
     navigate,
     sideNavLinks,
   ]);
