@@ -1,6 +1,7 @@
 import { createAgentQueuedTurnModel, createAgentQueuedTurnSequenceModel } from './queuedTurn';
 import { createAgentTriggerLaneSequenceModel } from './triggerLaneSequence';
 import { createScheduleModel, createScheduleRunModel } from './schedule';
+import { createDeploymentSkillUsageModel } from './deploymentSkillUsage';
 import { createSkillSyncCredentialModel } from './skillSyncCredential';
 import { createOpenIDRefreshFlightModel } from './openidRefreshFlight';
 import { createAgentTriggerUserPurgeModel } from './triggerUserPurge';
@@ -76,6 +77,7 @@ export function createModels(mongoose: typeof import('mongoose')): {
   SkillFile: ReturnType<typeof createSkillFileModel>;
   SkillSyncCredential: ReturnType<typeof createSkillSyncCredentialModel>;
   SkillSyncStatus: ReturnType<typeof createSkillSyncStatusModel>;
+  DeploymentSkillUsage: ReturnType<typeof createDeploymentSkillUsageModel>;
   ConversationTag: ReturnType<typeof createConversationTagModel>;
   SharedLink: ReturnType<typeof createSharedLinkModel>;
   ToolCall: ReturnType<typeof createToolCallModel>;
@@ -125,6 +127,7 @@ export function createModels(mongoose: typeof import('mongoose')): {
     SkillFile: createSkillFileModel(mongoose),
     SkillSyncCredential: createSkillSyncCredentialModel(mongoose),
     SkillSyncStatus: createSkillSyncStatusModel(mongoose),
+    DeploymentSkillUsage: createDeploymentSkillUsageModel(mongoose),
     ConversationTag: createConversationTagModel(mongoose),
     SharedLink: createSharedLinkModel(mongoose),
     ToolCall: createToolCallModel(mongoose),

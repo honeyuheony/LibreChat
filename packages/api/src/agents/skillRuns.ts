@@ -1,4 +1,5 @@
 import type { Types } from 'mongoose';
+import { isDeploymentSkillId } from '~/skills/deployment';
 import { extractInvokedSkillsFromPayload } from './run';
 
 type SkillId = Types.ObjectId | string;
@@ -16,15 +17,29 @@ export interface RecordTurnSkillRunsParams {
     options?: { preferModelInvocable?: boolean },
   ) => Promise<{ _id: SkillId; deployment?: boolean } | null>;
   recordSkillRuns: (skillIds: SkillId[], durationSeconds: number) => Promise<unknown>;
+  /** 배포 스킬은 `Skill` 문서가 없어 따로 기록한다. 없으면 배포 스킬 실행은 세지 않는다. */
+  recordDeploymentSkillRuns?: (
+    skills: Array<{ _id: SkillId; name: string }>,
+    durationSeconds: number,
+  ) => Promise<unknown>;
 }
 
 /** 끝난 턴에서 `$`로 붙였거나 모델이 불러온 스킬마다 실행 1회와 턴 시간을 기록하고, 기록한 id를 돌려준다. */
 export async function recordTurnSkillRuns(params: RecordTurnSkillRunsParams): Promise<string[]> {
   const { manualSkillPrimes = [], contentParts = [], accessibleSkillIds = [] } = params;
   // always-apply 스킬은 모든 턴에 자동으로 붙으므로 실행으로 세지 않는다.
-  const idsByKey = new Map<string, SkillId>();
+  const dbIdsByKey = new Map<string, SkillId>();
+  const deploymentByKey = new Map<string, { _id: SkillId; name: string }>();
+  const addRun = (skill: { _id: SkillId; name: string; deployment?: boolean }) => {
+    const key = skill._id.toString();
+    if (skill.deployment === true || isDeploymentSkillId(skill._id)) {
+      deploymentByKey.set(key, { _id: skill._id, name: skill.name });
+    } else {
+      dbIdsByKey.set(key, skill._id);
+    }
+  };
   for (const prime of manualSkillPrimes) {
-    idsByKey.set(prime._id.toString(), prime._id);
+    addRun(prime);
   }
 
   const manualNames = new Set(manualSkillPrimes.map((prime) => prime.name));
@@ -39,16 +54,22 @@ export async function recordTurnSkillRuns(params: RecordTurnSkillRunsParams): Pr
         lookup(name, accessibleSkillIds, { preferModelInvocable: true }),
       ),
     );
-    for (const skill of skills) {
-      if (skill && !skill.deployment) {
-        idsByKey.set(skill._id.toString(), skill._id);
+    skills.forEach((skill, index) => {
+      if (skill) {
+        addRun({ ...skill, name: modelInvokedNames[index] });
       }
-    }
+    });
   }
 
-  if (idsByKey.size === 0) {
-    return [];
+  const durationSeconds = params.durationMs / 1000;
+  const recorded: string[] = [];
+  if (dbIdsByKey.size > 0) {
+    await params.recordSkillRuns([...dbIdsByKey.values()], durationSeconds);
+    recorded.push(...dbIdsByKey.keys());
   }
-  await params.recordSkillRuns([...idsByKey.values()], params.durationMs / 1000);
-  return [...idsByKey.keys()];
+  if (deploymentByKey.size > 0 && params.recordDeploymentSkillRuns) {
+    await params.recordDeploymentSkillRuns([...deploymentByKey.values()], durationSeconds);
+    recorded.push(...deploymentByKey.keys());
+  }
+  return recorded;
 }

@@ -114,6 +114,7 @@ afterEach(async () => {
   await SkillFile.deleteMany({});
   await AclEntry.deleteMany({});
   await mongoose.models.Agent.deleteMany({});
+  await mongoose.models.DeploymentSkillUsage.deleteMany({});
 });
 
 function makeAgentDoc(skillIds: string[], overrides: Record<string, unknown> = {}) {
@@ -694,6 +695,68 @@ describe('Skill CRUD methods', () => {
       runTimeSampleCount: 3,
       manualMinutes: 20,
     });
+  });
+
+  it('stores an emoji icon on create, lists it and updates it', async () => {
+    const { skill } = await methods.createSkill(makeSkillInput({ icon: ' 📄 ' }));
+    expect(skill.icon).toBe('📄');
+
+    const result = await methods.updateSkill({
+      id: skill._id.toString(),
+      expectedVersion: 1,
+      update: { icon: '📊' },
+    });
+    expect(result.status === 'updated' && result.skill.icon).toBe('📊');
+    const { skills } = await methods.listSkillsByAccess({ accessibleIds: [skill._id], limit: 10 });
+    expect(skills[0].icon).toBe('📊');
+  });
+
+  it('rejects an empty or overlong icon', async () => {
+    await expect(methods.createSkill(makeSkillInput({ icon: '   ' }))).rejects.toMatchObject({
+      code: 'SKILL_VALIDATION_FAILED',
+      issues: [expect.objectContaining({ field: 'icon' })],
+    });
+    await expect(
+      methods.createSkill(makeSkillInput({ icon: 'x'.repeat(17) })),
+    ).rejects.toMatchObject({
+      code: 'SKILL_VALIDATION_FAILED',
+      issues: [expect.objectContaining({ field: 'icon' })],
+    });
+  });
+
+  it('accumulates deployment skill runs per skill id outside the Skill collection', async () => {
+    const reportId = new mongoose.Types.ObjectId();
+    const summaryId = new mongoose.Types.ObjectId();
+
+    await methods.recordDeploymentSkillRuns(
+      [
+        { _id: reportId, name: 'hwp-report' },
+        { _id: summaryId.toString(), name: 'doc-summary' },
+        { _id: 'not-an-id', name: 'broken' },
+      ],
+      30,
+    );
+    await methods.recordDeploymentSkillRuns([{ _id: reportId, name: 'hwp-report' }], 0);
+
+    const usage = await methods.getDeploymentSkillUsage([reportId, summaryId, 'not-an-id']);
+    expect(usage).toEqual({
+      [reportId.toString()]: { useCount: 2, runTimeTotalSeconds: 30, runTimeSampleCount: 1 },
+      [summaryId.toString()]: { useCount: 1, runTimeTotalSeconds: 30, runTimeSampleCount: 1 },
+    });
+    expect(await Skill.countDocuments({ _id: { $in: [reportId, summaryId] } })).toBe(0);
+  });
+
+  it('reads author departments only where the user document has one', async () => {
+    await User.collection.updateOne({ _id: owner._id }, { $set: { department: ' 정세분석팀 ' } });
+
+    const departments = await methods.getSkillAuthorDepartments([
+      owner._id,
+      other._id.toString(),
+      'not-an-id',
+    ]);
+
+    expect(departments).toEqual({ [owner._id.toString()]: '정세분석팀' });
+    await User.collection.updateOne({ _id: owner._id }, { $unset: { department: '' } });
   });
 
   it('rejects an oversized body before scanning its frontmatter on create', async () => {

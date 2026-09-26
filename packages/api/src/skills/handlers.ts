@@ -33,9 +33,11 @@ import type {
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
+import type { SkillUsageCountersInput } from './market';
+import { applyDeploymentUsage, isVisibleToDepartment, readUserDepartment } from './market';
+import { getDeploymentSkillIds, getDeploymentSkillRegistry } from './deployment';
 import { extractSkillContent, inspectContentWithTraversal } from '~/protection';
 import { contentFilterBlockResponse } from '~/middleware/contentFilter';
-import { getDeploymentSkillIds } from './deployment';
 import { resolveDownloadPath } from '~/storage/path';
 import { resolveSkillFilePathParam } from './path';
 import { computeSkillUsageMetrics } from './usage';
@@ -118,6 +120,14 @@ export interface SkillsHandlersDeps {
   countPublishedForks?: (
     originalIds: Array<string | Types.ObjectId>,
   ) => Promise<Record<string, number>>;
+  /** 배포 스킬 id별로 쌓인 실행 기록. 없으면 배포 스킬 지표는 출발값만 보인다. */
+  getDeploymentSkillUsage?: (
+    skillIds: Array<string | Types.ObjectId>,
+  ) => Promise<Record<string, SkillUsageCountersInput>>;
+  /** 작성자 id별 부서. 없으면 사용자 스킬 응답에 `authorDepartment`를 싣지 않는다. */
+  getSkillAuthorDepartments?: (
+    authorIds: Array<string | Types.ObjectId>,
+  ) => Promise<Record<string, string>>;
 }
 
 /**
@@ -186,6 +196,7 @@ export function serializeSkill(
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
     examples: skill.examples,
+    icon: skill.icon,
     ...serializeUsage(skill),
     reviewedAt: skill.reviewedAt ? new Date(skill.reviewedAt).toISOString() : undefined,
     reviewedBy: skill.reviewedBy ? skill.reviewedBy.toString() : undefined,
@@ -218,6 +229,7 @@ function serializeSkillSummary(
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
     examples: skill.examples,
+    icon: skill.icon,
     ...serializeUsage(skill),
     reviewedAt: skill.reviewedAt ? new Date(skill.reviewedAt).toISOString() : undefined,
     reviewedBy: skill.reviewedBy ? skill.reviewedBy.toString() : undefined,
@@ -376,6 +388,8 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     grantPermission,
     isValidObjectIdString,
     countPublishedForks,
+    getDeploymentSkillUsage,
+    getSkillAuthorDepartments,
   } = deps;
 
   async function withForkCounts<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
@@ -384,6 +398,43 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
     const counts = await countPublishedForks(skills.map((skill) => skill._id));
     return skills.map((skill) => ({ ...skill, forkCount: counts[skill._id] ?? 0 }));
+  }
+
+  /** 배포 스킬에는 `metadata` 값과 출발값을 더한 지표를, 사용자 스킬에는 작성자 부서를 싣는다. */
+  async function withMarketFields<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
+    const registry = getDeploymentSkillRegistry();
+    const deploymentIds = skills.filter((skill) => registry.hasId(skill._id)).map((s) => s._id);
+    const authorIds = skills.filter((skill) => !registry.hasId(skill._id)).map((s) => s.author);
+    const [usageById, departmentByAuthor] = await Promise.all([
+      getDeploymentSkillUsage && deploymentIds.length > 0
+        ? getDeploymentSkillUsage(deploymentIds)
+        : Promise.resolve<Record<string, SkillUsageCountersInput>>({}),
+      getSkillAuthorDepartments && authorIds.length > 0
+        ? getSkillAuthorDepartments(authorIds)
+        : Promise.resolve<Record<string, string>>({}),
+    ]);
+    return skills.map((skill) => {
+      const deployment = registry.getById(skill._id);
+      if (!deployment) {
+        const authorDepartment = departmentByAuthor[skill.author];
+        return authorDepartment ? { ...skill, authorDepartment } : skill;
+      }
+      const seed = deployment.seedMetrics;
+      return {
+        ...applyDeploymentUsage(skill, seed, usageById[skill._id]),
+        ...(deployment.authorDepartment !== undefined && {
+          authorDepartment: deployment.authorDepartment,
+        }),
+        ...(deployment.marketProfile !== undefined && { marketProfile: deployment.marketProfile }),
+        ...((skill.forkCount !== undefined || seed !== undefined) && {
+          forkCount: (skill.forkCount ?? 0) + (seed?.forks ?? 0),
+        }),
+      };
+    });
+  }
+
+  async function withCountsAndMarketFields<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
+    return withMarketFields(await withForkCounts(skills));
   }
 
   /** O(1) public check for a single skill (avoids fetching all public IDs). */
@@ -443,8 +494,14 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       });
 
       const publicSet = new Set(publicIds.map((id) => id.toString()));
-      const skills = await withForkCounts(
-        result.skills.map((s) => serializeSkillSummary(s, publicSet)),
+      const registry = getDeploymentSkillRegistry();
+      const userDepartment = readUserDepartment(user);
+      const visibleRows = result.skills.filter((row) => {
+        const deployment = registry.getById(row._id);
+        return !deployment || isVisibleToDepartment(deployment, userDepartment);
+      });
+      const skills = await withCountsAndMarketFields(
+        visibleRows.map((s) => serializeSkillSummary(s, publicSet)),
       );
 
       return res.status(200).json({
@@ -490,6 +547,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           frontmatter: body.frontmatter as Record<string, unknown> | undefined,
           category: body.category,
           alwaysApply: body.alwaysApply,
+          icon: body.icon,
           author: authorId,
           authorName,
           tenantId: user.tenantId,
@@ -558,7 +616,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         return res.status(404).json({ error: 'Skill not found' });
       }
       const pub = options?.includePublicStatus === false ? false : await isSkillPublic(skill._id);
-      const [serialized] = await withForkCounts([serializeSkill(skill, pub)]);
+      const [serialized] = await withCountsAndMarketFields([serializeSkill(skill, pub)]);
       return res.status(200).json(serialized);
     } catch (error) {
       logger.error('[GET /skills/:id] Error fetching skill', error);
@@ -596,6 +654,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       }
       if (rest.category !== undefined) update.category = rest.category;
       if (rest.alwaysApply !== undefined) update.alwaysApply = rest.alwaysApply;
+      if (rest.icon !== undefined) update.icon = rest.icon;
       if (rest.manualMinutes !== undefined) {
         const minutes: unknown = rest.manualMinutes;
         if (typeof minutes !== 'number' || !Number.isInteger(minutes) || minutes < 0) {
@@ -635,7 +694,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         };
         return res.status(409).json(conflict);
       }
-      const [serialized] = await withForkCounts([serializeSkill(result.skill, pub)]);
+      const [serialized] = await withCountsAndMarketFields([serializeSkill(result.skill, pub)]);
       return res.status(200).json(attachWarnings(serialized, result.warnings));
     } catch (error) {
       logger.error('[PATCH /skills/:id] Error updating skill', error);

@@ -80,4 +80,29 @@ describe('recordTurnSkillRuns', () => {
       }),
     ).rejects.toThrow('db down');
   });
+
+  it('records deployment skills through their own recorder, apart from Skill documents', async () => {
+    const dbId = new Types.ObjectId();
+    const deploymentId = new Types.ObjectId();
+    const recordSkillRuns = jest.fn().mockResolvedValue(undefined);
+    const recordDeploymentSkillRuns = jest.fn().mockResolvedValue(undefined);
+    const getSkillByName = jest.fn().mockResolvedValue({ _id: deploymentId, deployment: true });
+
+    const recorded = await recordTurnSkillRuns({
+      manualSkillPrimes: [{ _id: dbId, name: 'my-draft' }],
+      contentParts: [skillToolCall('hwp-report')],
+      accessibleSkillIds,
+      durationMs: 30_000,
+      getSkillByName,
+      recordSkillRuns,
+      recordDeploymentSkillRuns,
+    });
+
+    expect(recorded).toEqual([dbId.toString(), deploymentId.toString()]);
+    expect(recordSkillRuns).toHaveBeenCalledWith([dbId], 30);
+    expect(recordDeploymentSkillRuns).toHaveBeenCalledWith(
+      [{ _id: deploymentId, name: 'hwp-report' }],
+      30,
+    );
+  });
 });

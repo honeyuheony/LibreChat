@@ -106,6 +106,8 @@ export interface ISkill {
   manualMinutes?: number;
   /** 응용(fork) 원본 스킬. */
   forkOf?: Types.ObjectId;
+  /** 마켓 목록과 상세 창에 보이는 이모지 아이콘. 없으면 화면이 기본 아이콘을 쓴다. */
+  icon?: string;
   createdAt?: Date;
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */
@@ -113,6 +115,19 @@ export interface ISkill {
 }
 
 export interface ISkillDocument extends ISkill, Document {}
+
+/** 배포 스킬 실행 기록 한 줄(스킬 id별 원래 값). */
+export interface IDeploymentSkillUsage {
+  skillId: Types.ObjectId;
+  name?: string;
+  useCount: number;
+  runTimeTotalSeconds: number;
+  runTimeSampleCount: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface IDeploymentSkillUsageDocument extends IDeploymentSkillUsage, Document {}
 
 /**
  * Lean summary projection returned by `listSkillsByAccess`. The list query

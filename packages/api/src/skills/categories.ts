@@ -4,6 +4,7 @@ import type { ListSkillsByAccessParams, ListSkillsByAccessResult } from '@librec
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest } from '~/types';
+import { isVisibleToDepartment, readUserDepartment } from './market';
 import { getDeploymentSkillRegistry } from './deployment';
 
 /** `GET /api/skills` 이 접근 가능한 스킬 id를 구할 때 쓰는 것과 같은 두 building block. */
@@ -54,11 +55,13 @@ async function countDbSkillCategories(
 }
 
 /** 배포 스킬은 권한 자원이 아니라 항상 접근 가능하므로(`mergeDeploymentSkillIds`가 무조건
- *  합치는 것과 같은 규칙) accessibleIds로 거르지 않고 전부 센다. */
-function countDeploymentSkillCategories(): Map<string, number> {
+ *  합치는 것과 같은 규칙) accessibleIds로 거르지 않는다. 팀 공개 agent 만 목록과 같게 부서로 거른다. */
+function countDeploymentSkillCategories(userDepartment: string | undefined): Map<string, number> {
   const counts = new Map<string, number>();
   for (const skill of getDeploymentSkillRegistry().list()) {
-    bumpCategoryCount(counts, skill.category);
+    if (isVisibleToDepartment(skill, userDepartment)) {
+      bumpCategoryCount(counts, skill.category);
+    }
   }
   return counts;
 }
@@ -91,7 +94,7 @@ export function createSkillCategoriesHandler(
 
       const [dbCounts, deploymentCounts] = await Promise.all([
         countDbSkillCategories(deps.listSkillsByAccess, mergedIds),
-        Promise.resolve(countDeploymentSkillCategories()),
+        Promise.resolve(countDeploymentSkillCategories(readUserDepartment(user))),
       ]);
 
       const combined = new Map(dbCounts);

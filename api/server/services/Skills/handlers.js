@@ -7,6 +7,8 @@ const {
   deleteSkill,
   deleteSkillFile,
   countPublishedForks,
+  getDeploymentSkillUsage,
+  getSkillAuthorDepartments,
 } = require('~/models');
 const {
   findAccessibleResources,
@@ -49,6 +51,8 @@ function getSkillsHandlers() {
     grantPermission,
     isValidObjectIdString,
     countPublishedForks,
+    getDeploymentSkillUsage,
+    getSkillAuthorDepartments,
   });
 }
 module.exports = { getSkillsHandlers };
