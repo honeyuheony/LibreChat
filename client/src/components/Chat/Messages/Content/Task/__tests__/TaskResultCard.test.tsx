@@ -264,10 +264,18 @@ describe('TaskResultCard', () => {
     );
   });
 
-  test('explains the missing file and hides HWP download when the report has no file', () => {
-    renderCard(attachment({ kind: 'report', notice: 'hwp-mcp down' }));
+  test('shows the server notice and hides HWP download when the report has no file', () => {
+    const notice = '보고서 양식이 등록되어 있지 않아 HWP 파일을 만들지 못했습니다.';
+    renderCard(attachment({ kind: 'report', notice }));
+
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_task_result_report_no_file')).not.toBeInTheDocument();
+    expect(buttonNames()).toEqual(['com_ui_task_open']);
+  });
+
+  test('falls back to the stock text when a report without a file carries no notice', () => {
+    renderCard(attachment({ kind: 'report' }));
 
     expect(screen.getByText('com_ui_task_result_report_no_file')).toBeInTheDocument();
-    expect(buttonNames()).toEqual(['com_ui_task_open']);
   });
 });

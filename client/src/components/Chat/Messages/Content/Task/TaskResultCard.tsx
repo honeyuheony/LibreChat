@@ -142,7 +142,9 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
     message = localize('com_ui_task_result_report');
     note = localize('com_ui_task_result_report_note', { 0: stats.none }) + textOnly;
   } else {
-    message = localize('com_ui_task_result_report_no_file');
+    /** The server says why the HWPX file is missing (unreachable or timed out, unknown
+     *  template, format mismatch, fill failure); the stock text covers older results. */
+    message = result.notice?.trim() || localize('com_ui_task_result_report_no_file');
     note = localize('com_ui_task_result_report_note', { 0: stats.none }) + textOnly;
   }
 
