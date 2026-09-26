@@ -19,6 +19,7 @@ import { areConversationRenderPropsEqual } from './utils';
 import { cn, logger, setDocumentTitle } from '~/utils';
 import { NotificationSeverity } from '~/common';
 import { CONVERSATION_DRAG_TYPE } from './dnd';
+import RowEditActions from './RowEditActions';
 import ConvoActions from './ConvoActions';
 import UnpinButton from './UnpinButton';
 import RenameForm from './RenameForm';
@@ -39,6 +40,9 @@ interface ConversationProps {
   /** Shortcuts an owning list handles for this row, declared on its focusable
    *  element so they are announced rather than left to be discovered. */
   keyShortcuts?: string;
+  /** The sidebar history's wireframe row: title only, ✎ and ✕ on hover instead of the
+   *  overflow menu, and a 「생성 중」 dot while a reply is being written. */
+  editActions?: boolean;
 }
 
 function Conversation({
@@ -49,6 +53,7 @@ function Conversation({
   draggable = false,
   onRenamingChange,
   keyShortcuts,
+  editActions = false,
 }: ConversationProps) {
   const params = useParams();
   const localize = useLocalize();
@@ -302,10 +307,43 @@ function Conversation({
   }
 
   let actionContent: React.ReactNode = null;
-  if (isGenerating) {
+  if (editActions) {
+    if (isGenerating) {
+      actionVisibilityClassName = 'pointer-events-none scale-x-100 opacity-100';
+      actionWidthClassName = '';
+      actionContent = (
+        <span className="flex items-center gap-1.5 whitespace-nowrap pr-1 text-xs text-text-muted">
+          <span aria-hidden="true" className="size-[7px] rounded-full bg-amber-500" />
+          {localize('com_ui_convo_generating')}
+        </span>
+      );
+    } else if (!renaming && conversationId) {
+      actionWidthClassName = 'group-focus-within:w-12 group-hover:w-12';
+      if (isSmallScreen || isActiveConvo) {
+        actionWidthClassName = 'w-12';
+      }
+      actionContent = (
+        <RowEditActions
+          conversationId={conversationId}
+          title={title ?? ''}
+          onRename={handleRename}
+          retainView={retainView}
+        />
+      );
+    }
+  } else if (isGenerating) {
     actionContent = generatingSpinner;
   } else if (!renaming) {
     actionContent = <ConvoActions {...convoOptionsProps} hasInteracted={hasInteracted} />;
+  }
+
+  let rowStateClassName = editActions
+    ? 'text-text-secondary hover:bg-surface-hover'
+    : 'hover:bg-surface-active-alt';
+  if (isActiveConvo || isPopoverActive) {
+    rowStateClassName = editActions
+      ? 'bg-surface-active-alt'
+      : 'bg-surface-active-alt before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-text-primary';
   }
 
   return (
@@ -313,9 +351,8 @@ function Conversation({
       ref={containerRef}
       className={cn(
         'group relative flex h-12 w-full items-center rounded-lg outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text-primary md:h-9',
-        isActiveConvo || isPopoverActive
-          ? 'bg-surface-active-alt before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-text-primary'
-          : 'hover:bg-surface-active-alt',
+        editActions && 'rounded-theme-control text-[15px]',
+        rowStateClassName,
       )}
       onPointerEnter={(event) => {
         if (event.pointerType === 'mouse') {
@@ -357,7 +394,9 @@ function Conversation({
           localize={localize}
           keyShortcuts={keyShortcuts}
         >
-          <ConversationEndpointIcon conversation={conversation} size={20} context="menu-item" />
+          {!editActions && (
+            <ConversationEndpointIcon conversation={conversation} size={20} context="menu-item" />
+          )}
         </ConvoLink>
       )}
       {isSharedBadgeVisible && (

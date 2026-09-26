@@ -1,4 +1,4 @@
-import { memo, useCallback, lazy, Suspense } from 'react';
+import { memo, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Plus, Search } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcut
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
+import { useSidebarConversationCount } from './ConversationsSection';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { DEFAULT_APP_TITLE } from '~/utils/documentTitle';
 import SidePanelNav from '~/components/SidePanel/Nav';
@@ -345,6 +346,11 @@ function ExpandedPanel({
   };
   /** Expanded, the history list gets a heading of its own under the rows instead of a row. */
   const historyLink = expanded ? links.find((link) => link.id === DEFAULT_PANEL) : undefined;
+  const conversationCount = useSidebarConversationCount();
+  const historyHeading = useMemo(
+    () => (historyLink ? { ...historyLink, trailing: conversationCount } : undefined),
+    [historyLink, conversationCount],
+  );
   const rowLinks = historyLink ? links.filter((link) => link !== historyLink) : links;
   const searchRow = search.enabled === true && (
     <SearchRow
@@ -383,11 +389,11 @@ function ExpandedPanel({
         ))}
       </div>
 
-      {historyLink && (
+      {historyLink && historyHeading && (
         <div className="mt-3 flex flex-col gap-0.5">
           <NavRow
             section
-            link={historyLink}
+            link={historyHeading}
             isActive={isLinkActive(historyLink)}
             expanded={expanded}
             setActive={setActive}

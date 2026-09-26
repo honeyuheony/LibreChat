@@ -10,46 +10,24 @@ import {
   chatSortAtom,
   isArchivedChatViewAtom,
 } from '~/components/Conversations/chatFilters';
-import {
-  useConversationsInfiniteQuery,
-  usePinnedConversationsQuery,
-  useTitleGeneration,
-} from '~/data-provider';
 import { useLocalize, useAuthContext, useLocalStorage, useNavScrolling } from '~/hooks';
-import ProjectsSection from '~/components/Conversations/ProjectsSection';
-import ChatFilterMenu from '~/components/Conversations/ChatFilterMenu';
-import PinnedSection from '~/components/Conversations/PinnedSection';
+import { useConversationsInfiniteQuery, useTitleGeneration } from '~/data-provider';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { Conversations } from '~/components/Conversations';
-import { collectPinnedConversations } from '~/utils';
 import store from '~/store';
 
-const chatsHeaderTrailing = <ChatFilterMenu />;
-
-const ConversationsSection = memo(() => {
-  const localize = useLocalize();
-  const isSmallScreen = useMediaQuery('(max-width: 768px)');
-  const { setSidebarOpen } = useSidebarToggle();
+/**
+ * The sidebar history's conversations request. The history heading reads the same
+ * request for its count; identical parameters let react-query serve both from one fetch.
+ */
+export function useSidebarConversationsQuery() {
   const { isAuthenticated } = useAuthContext();
-  useTitleGeneration(isAuthenticated);
-
-  const [isChatsExpanded, setIsChatsExpanded] = useLocalStorage('chatsExpanded', true);
-
   const tags = useAtomValue(chatFilterTagsAtom);
   const sort = useAtomValue(chatSortAtom);
   const isArchivedView = useAtomValue(isArchivedChatViewAtom);
   const search = useRecoilValue(store.search);
 
-  const {
-    data,
-    fetchNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isFetching,
-    isPreviousData,
-    isError,
-    refetch,
-  } = useConversationsInfiniteQuery(
+  return useConversationsInfiniteQuery(
     {
       /** Omitted rather than `false`: the parameter's absence is what the server reads
        *  as "not archived", and a stray `isArchived=false` would key a third cache. */
@@ -65,6 +43,44 @@ const ConversationsSection = memo(() => {
       cacheTime: 300000,
     },
   );
+}
+
+/** The count beside the history heading: what the list holds, with `+` while pages remain. */
+export function useSidebarConversationCount(): string | undefined {
+  const { data } = useSidebarConversationsQuery();
+  if (!data) {
+    return undefined;
+  }
+  const count = data.pages.reduce((sum, page) => sum + page.conversations.length, 0);
+  const hasMore = data.pages[data.pages.length - 1]?.nextCursor != null;
+  return hasMore ? `${count}+` : String(count);
+}
+
+/**
+ * The AgentHub wireframe's history: conversation names only. Projects, pins and the
+ * filter menu are left out, and pinned chats sit in the list like any other.
+ */
+const ConversationsSection = memo(() => {
+  const localize = useLocalize();
+  const isSmallScreen = useMediaQuery('(max-width: 768px)');
+  const { setSidebarOpen } = useSidebarToggle();
+  const { isAuthenticated } = useAuthContext();
+  useTitleGeneration(isAuthenticated);
+
+  const [isChatsExpanded, setIsChatsExpanded] = useLocalStorage('chatsExpanded', true);
+
+  const search = useRecoilValue(store.search);
+
+  const {
+    data,
+    fetchNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isFetching,
+    isPreviousData,
+    isError,
+    refetch,
+  } = useSidebarConversationsQuery();
 
   const computedHasNextPage = useMemo(() => {
     if (data?.pages && data.pages.length > 0) {
@@ -89,27 +105,6 @@ const ConversationsSection = memo(() => {
   const conversations = useMemo(() => {
     return data ? data.pages.flatMap((page) => page.conversations) : [];
   }, [data]);
-
-  /** Pins are fetched on their own so one older than the first page of the chats list
-   * still shows on first paint, instead of appearing only once that list scrolls to it.
-   * The Chats filters are deliberately not passed: they narrow that list alone. */
-  const {
-    data: pinnedData,
-    isSuccess: isPinnedFetched,
-    isFetching: isPinnedFetching,
-    dataUpdatedAt: pinnedUpdatedAt,
-  } = usePinnedConversationsQuery({ enabled: isAuthenticated });
-  const isPinnedComplete = isPinnedFetched && !isPinnedFetching;
-
-  /* `groupConversations` strips pins from the chats groups. A failed
-     refetch keeps the previous dedicated result, so merge in pins from the
-     live chats cache rather than hiding a newly pinned row — but only while that
-     cache holds the same unarchived chats this section shows. */
-  const pinnedConversations = useMemo(
-    () =>
-      collectPinnedConversations(pinnedData?.conversations, isArchivedView ? [] : conversations),
-    [pinnedData?.conversations, conversations, isArchivedView],
-  );
 
   /**
    * Selecting a conversation is the most common close path — it must take
@@ -155,17 +150,15 @@ const ConversationsSection = memo(() => {
     }
   }, [search.query, search.isTyping, isLoading, isFetching]);
 
-  /** Projects, Pinned and Chats share one scroll container so the sidebar scrolls
-   *  as a single surface: the chats list is virtualized against this viewport
-   *  rather than scrolling inside a pane of its own. */
+  /** The chats list is virtualized against this viewport rather than scrolling inside a
+   *  pane of its own, so the sidebar scrolls as a single surface. */
   const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
   const [scrollContent, setScrollContent] = useState<HTMLDivElement | null>(null);
 
-  /** Searching replaces what the surface holds: Projects and Pinned leave and
-   *  the chats become results. A scroll position kept from the previous
-   *  contents would open those results partway down whenever they are long
-   *  enough for the browser not to clamp it, so the surface returns to the top
-   *  whenever it changes what it is showing. */
+  /** Searching replaces what the surface holds with results. A scroll position kept
+   *  from the previous contents would open those results partway down whenever they
+   *  are long enough for the browser not to clamp it, so the surface returns to the
+   *  top whenever it changes what it is showing. */
   const isSearching = Boolean(search.query);
   useEffect(() => {
     if (scrollViewport) {
@@ -188,23 +181,6 @@ const ConversationsSection = memo(() => {
         {/* `min-h-full` keeps the sections filling a tall sidebar, so the chats
             list still claims the space below them when there is little to show. */}
         <div ref={setScrollContent} className="flex min-h-full flex-col">
-          {!search.query && (
-            <ProjectsSection toggleNav={toggleNav} isAuthenticated={isAuthenticated} />
-          )}
-          {!search.query && (
-            <PinnedSection
-              conversations={pinnedConversations}
-              toggleNav={toggleNav}
-              isSmallScreen={isSmallScreen}
-              /* Only a successful drain proves the list is whole: a failed later
-                 page still publishes partial data and stops fetching. The Chats filters
-                 never reach this query, so nothing else can truncate it. */
-              membershipComplete={isPinnedComplete}
-              /* When that drain last ran, which decides whether it is current
-                 enough to prune the stored order against. */
-              membershipUpdatedAt={pinnedUpdatedAt}
-            />
-          )}
           <Conversations
             conversations={conversations}
             moveToTop={moveToTop}
@@ -218,9 +194,9 @@ const ConversationsSection = memo(() => {
             hasNextPage={computedHasNextPage}
             isError={isError}
             onRetry={retryConversations}
-            chatsHeaderTrailing={chatsHeaderTrailing}
             scrollViewport={scrollViewport}
             scrollContent={scrollContent}
+            flat
           />
         </div>
       </div>

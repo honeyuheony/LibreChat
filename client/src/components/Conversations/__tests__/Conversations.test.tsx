@@ -151,6 +151,47 @@ describe('Conversations: pinned chats live in PinnedSection', () => {
   });
 });
 
+describe('Conversations: flat sidebar history', () => {
+  const containerRef = createRef<List>();
+
+  const renderFlat = (conversations: TConversation[]) =>
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DndProvider backend={HTML5Backend}>
+          <RecoilRoot>
+            <Conversations
+              conversations={conversations}
+              moveToTop={jest.fn()}
+              toggleNav={jest.fn()}
+              containerRef={containerRef}
+              loadMoreConversations={jest.fn()}
+              isLoading={false}
+              isSearchLoading={false}
+              isChatsExpanded={false}
+              setIsChatsExpanded={jest.fn()}
+              scrollViewport={null}
+              scrollContent={null}
+              flat
+            />
+          </RecoilRoot>
+        </DndProvider>
+      </QueryClientProvider>,
+    );
+
+  it('lists every conversation, pins included, even with the chats section collapsed', () => {
+    const { getAllByTestId } = renderFlat([
+      pinnedConvo,
+      { ...pinnedConvo, conversationId: 'plain-1', title: 'Plain', pinned: false },
+    ]);
+    expect(getAllByTestId('convo')).toHaveLength(2);
+  });
+
+  it('draws no collapsible header', () => {
+    const { queryByText } = renderFlat([pinnedConvo]);
+    expect(queryByText('com_ui_sidebar_recents')).not.toBeInTheDocument();
+  });
+});
+
 describe('Conversations: all-pin pages still paginate', () => {
   const containerRef = createRef<List>();
 

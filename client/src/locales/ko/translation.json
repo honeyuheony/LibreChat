@@ -1490,6 +1490,7 @@
   "com_ui_convo_archived": "대화를 보관했습니다",
   "com_ui_convo_delete_error": "대화 삭제 실패",
   "com_ui_convo_delete_success": "대화 삭제 완료",
+  "com_ui_convo_generating": "생성 중",
   "com_ui_convo_unarchived": "대화를 보관 해제했습니다",
   "com_ui_copied": "복사됨",
   "com_ui_copied_to_clipboard": "클립보드에 복사되었습니다",

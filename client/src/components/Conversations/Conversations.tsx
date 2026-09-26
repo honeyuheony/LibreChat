@@ -64,6 +64,9 @@ interface ConversationsProps {
   /** Wrapper around everything inside that viewport, whose height changes when a
    *  section above the list expands or collapses. */
   scrollContent: HTMLElement | null;
+  /** Only the conversation rows, pins included: no collapsible header and no date or
+   *  letter groups, as the sidebar history in the AgentHub wireframe. */
+  flat?: boolean;
 }
 
 interface MeasuredRowProps {
@@ -72,6 +75,7 @@ interface MeasuredRowProps {
   parent: MeasuredCellParent;
   index: number;
   style: React.CSSProperties;
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -79,13 +83,13 @@ interface MeasuredRowProps {
  *  The List renders role="grid" over a role="rowgroup" container, so each row carries the
  *  row/gridcell roles those parents require of their children. */
 const MeasuredRow: FC<MeasuredRowProps> = memo(
-  ({ cache, rowKey, parent, index, style, children }) => (
+  ({ cache, rowKey, parent, index, style, className = 'px-3', children }) => (
     <CellMeasurer cache={cache} columnIndex={0} key={rowKey} parent={parent} rowIndex={index}>
       {({ registerChild }) => (
         <div
           ref={registerChild as React.LegacyRef<HTMLDivElement>}
           style={style}
-          className="px-3"
+          className={className}
           data-testid="convo-list-row"
           role="row"
         >
@@ -195,8 +199,10 @@ const Conversations: FC<ConversationsProps> = ({
   onRetry,
   scrollViewport,
   scrollContent,
+  flat = false,
 }) => {
   const localize = useLocalize();
+  const isExpanded = flat || isChatsExpanded;
   const search = useRecoilValue(store.search);
   const sort = useAtomValue(chatSortAtom);
   const isArchivedView = useAtomValue(isArchivedChatViewAtom);
@@ -298,13 +304,17 @@ const Conversations: FC<ConversationsProps> = ({
      deliberate act, so reopening it is allowed to try once more, which is a
      retry path rather than a loop. */
   useEffect(() => {
-    if (!isChatsExpanded) {
+    if (!isExpanded) {
       paginatedFromRef.current = null;
     }
-  }, [isChatsExpanded]);
+  }, [isExpanded]);
+
+  /** The flat list keeps pins among its rows, so only the grouped one can end up empty
+   *  on a page that holds nothing but pins. */
+  const listedCount = flat ? filteredConversations.length : groupedConversations.length;
 
   useEffect(() => {
-    if (!isChatsExpanded || isLoading || isSearchLoading || groupedConversations.length > 0) {
+    if (!isExpanded || isLoading || isSearchLoading || listedCount > 0) {
       return;
     }
     if (paginatedFromRef.current === rawConversations) {
@@ -313,28 +323,32 @@ const Conversations: FC<ConversationsProps> = ({
     paginatedFromRef.current = rawConversations;
     loadMoreConversations();
   }, [
-    isChatsExpanded,
+    isExpanded,
     isLoading,
     isSearchLoading,
-    groupedConversations.length,
+    listedCount,
     rawConversations,
     loadMoreConversations,
   ]);
 
   const flattenedItems = useMemo(() => {
     const items: FlattenedItem[] = [];
-    if (isChatsExpanded) {
-      groupedConversations.forEach(([groupName, convos]) => {
-        items.push({ type: 'header', groupName });
-        items.push(...convos.map((convo) => ({ type: 'convo' as const, convo })));
-      });
+    if (isExpanded) {
+      if (flat) {
+        items.push(...filteredConversations.map((convo) => ({ type: 'convo' as const, convo })));
+      } else {
+        groupedConversations.forEach(([groupName, convos]) => {
+          items.push({ type: 'header', groupName });
+          items.push(...convos.map((convo) => ({ type: 'convo' as const, convo })));
+        });
+      }
 
       if (isLoading) {
         items.push({ type: 'loading' } as any);
       }
     }
     return items;
-  }, [groupedConversations, isLoading, isChatsExpanded]);
+  }, [flat, filteredConversations, groupedConversations, isLoading, isExpanded]);
 
   // Store flattenedItems in a ref for keyMapper to access without recreating cache
   const flattenedItemsRef = useRef(flattenedItems);
@@ -408,7 +422,14 @@ const Conversations: FC<ConversationsProps> = ({
   const rowRenderer = useCallback(
     ({ index, key, parent, style }) => {
       const item = flattenedItems[index];
-      const rowProps = { cache, rowKey: key, parent, index, style };
+      const rowProps = {
+        cache,
+        rowKey: key,
+        parent,
+        index,
+        style,
+        className: flat ? 'px-2' : undefined,
+      };
 
       if (item.type === 'loading') {
         return (
@@ -440,6 +461,7 @@ const Conversations: FC<ConversationsProps> = ({
               toggleNav={toggleNav}
               isGenerating={isGenerating}
               draggable
+              editActions={flat}
             />
           </MeasuredRow>
         );
@@ -447,7 +469,7 @@ const Conversations: FC<ConversationsProps> = ({
 
       return null;
     },
-    [cache, flattenedItems, moveToTop, toggleNav, activeJobIds, sort.field],
+    [cache, flattenedItems, moveToTop, toggleNav, activeJobIds, sort.field, flat],
   );
 
   const getRowHeight = useCallback(
@@ -484,11 +506,7 @@ const Conversations: FC<ConversationsProps> = ({
     [flattenedItems.length, throttledLoadMore, isListOnScreen],
   );
   const isListError =
-    isChatsExpanded &&
-    isError &&
-    !isLoading &&
-    !isSearchLoading &&
-    filteredConversations.length === 0;
+    isExpanded && isError && !isLoading && !isSearchLoading && filteredConversations.length === 0;
 
   /** A list that came back empty is a dead end the user has to be able to leave: say why
    *  it is empty and offer the way back. A drained page can still contain only pinned rows,
@@ -496,12 +514,12 @@ const Conversations: FC<ConversationsProps> = ({
   const hasUnfilteredRows =
     !search.query && filterTags.length === 0 && !isArchivedView && filteredConversations.length > 0;
   const isEmpty =
-    isChatsExpanded &&
+    isExpanded &&
     !isLoading &&
     !isSearchLoading &&
     !isListError &&
     !hasNextPage &&
-    groupedConversations.length === 0 &&
+    listedCount === 0 &&
     !hasUnfilteredRows;
 
   let emptyLabel: TranslationKeys = 'com_ui_no_chats';
@@ -587,14 +605,16 @@ const Conversations: FC<ConversationsProps> = ({
       ref={chatsRegionRef}
       className="relative flex flex-1 flex-col pb-2 text-sm text-text-primary"
     >
-      <div className="px-3">
-        <ChatsHeader
-          isExpanded={isChatsExpanded}
-          onToggle={() => setIsChatsExpanded(!isChatsExpanded)}
-          trailing={chatsHeaderTrailing}
-          highlight={isDropOver && canDrop}
-        />
-      </div>
+      {!flat && (
+        <div className="px-3">
+          <ChatsHeader
+            isExpanded={isChatsExpanded}
+            onToggle={() => setIsChatsExpanded(!isChatsExpanded)}
+            trailing={chatsHeaderTrailing}
+            highlight={isDropOver && canDrop}
+          />
+        </div>
+      )}
       {body}
     </div>
   );

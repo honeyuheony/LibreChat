@@ -178,19 +178,14 @@ const renderSection = () =>
     </QueryClientProvider>,
   );
 
-describe('ConversationsSection section order', () => {
-  it('renders Pinned between Projects and Chats', async () => {
-    const { getByTestId } = renderSection();
+describe('ConversationsSection sections', () => {
+  it('shows only the chats list, without Projects or Pinned', async () => {
+    const { getByTestId, queryByTestId } = renderSection();
     await settleRenders();
 
-    const projects = getByTestId('projects-stub');
-    const pinned = getByTestId('pinned-stub');
-    const chats = getByTestId('conversations-stub');
-
-    expect(
-      projects.compareDocumentPosition(pinned) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(pinned.compareDocumentPosition(chats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getByTestId('conversations-stub')).toBeInTheDocument();
+    expect(queryByTestId('projects-stub')).not.toBeInTheDocument();
+    expect(queryByTestId('pinned-stub')).not.toBeInTheDocument();
   });
 });
 
@@ -214,9 +209,6 @@ describe('ConversationsSection streaming re-renders', () => {
       renderSection();
       await settleRenders();
 
-      expect(mockUseFavorites.mock.calls.length).toBeGreaterThan(0);
-
-      const favBaseline = mockUseFavorites.mock.calls.length;
       const conversationsBaseline = mockConversationsRender.mock.calls.length;
       const titleBaseline = mockUseTitleGeneration.mock.calls.length;
 
@@ -230,8 +222,7 @@ describe('ConversationsSection streaming re-renders', () => {
       // Sanity check: the section genuinely re-rendered each tick.
       expect(mockUseTitleGeneration.mock.calls.length).toBeGreaterThan(titleBaseline);
 
-      // The memoized children, fed referentially stable props, did not re-render.
-      expect(mockUseFavorites.mock.calls.length).toBe(favBaseline);
+      // The memoized list, fed referentially stable props, did not re-render.
       expect(mockConversationsRender.mock.calls.length).toBe(conversationsBaseline);
     },
     TEST_TIMEOUT,

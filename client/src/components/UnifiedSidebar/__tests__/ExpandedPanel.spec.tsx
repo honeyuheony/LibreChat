@@ -103,6 +103,12 @@ jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({ data: { appTitle: 'Work Agent' } }),
 }));
 
+jest.mock('../ConversationsSection', () => ({
+  __esModule: true,
+  default: () => null,
+  useSidebarConversationCount: () => '8',
+}));
+
 const mockSetSidebarOpen = jest.fn();
 jest.mock('~/hooks/Nav/useSidebarToggle', () => ({
   __esModule: true,
@@ -293,6 +299,13 @@ describe('ExpandedPanel', () => {
         .filter((id) => id?.startsWith('nav-panel-'));
       expect(rows).toEqual(['nav-panel-prompts', `nav-panel-${DEFAULT_PANEL}`]);
       expect(screen.getByRole('separator')).toBeInTheDocument();
+    });
+
+    it('counts the conversations beside the heading', () => {
+      renderPanel({ expanded: true });
+      expect(screen.getByRole('button', { name: 'com_ui_chat_history' })).toHaveTextContent(
+        'com_ui_chat_history8',
+      );
     });
 
     it('stays a rail icon in its original place while collapsed', () => {
