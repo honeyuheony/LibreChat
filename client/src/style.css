@@ -2762,3 +2762,132 @@ html[data-input-modality='keyboard']
 ::view-transition-group(chat-form) {
   z-index: 2;
 }
+
+/* AgentHub wireframe v24 motion and accessibility preferences.
+ * Press feedback and entrances use the individual `scale` / `translate` properties rather than
+ * `transform`, so they compose with the Tailwind transforms (dialog centering, translate
+ * utilities) already on these elements instead of replacing them. Press scaling carries no
+ * transition of its own: a `transition` here would override the Tailwind transition utilities
+ * those controls already set, so the scale applies on pointer-down and releases the same way. */
+:root {
+  --wf-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --wf-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wf-enter: 420ms;
+  --wf-leave: 180ms;
+}
+button,
+[role='menuitem'],
+[role='option'],
+[data-testid='convo-item'] {
+  -webkit-tap-highlight-color: transparent;
+}
+button:active:not(:disabled) {
+  scale: 0.97;
+}
+[role='menuitem']:active,
+[role='menuitemradio']:active,
+[role='menuitemcheckbox']:active,
+[role='option']:active,
+[data-testid='convo-item']:active {
+  scale: 0.985;
+}
+
+/* Dialogs arrive from slightly below with a blur, and leave the same way at a shorter length. */
+@keyframes wf-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 8px;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    filter: none;
+  }
+}
+@keyframes wf-dialog-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.97;
+    translate: 0 6px;
+  }
+}
+@keyframes wf-message-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes wf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes wf-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+[role='dialog'].bg-surface-dialog[data-state='open'],
+[role='alertdialog'].bg-surface-dialog[data-state='open'] {
+  animation: wf-dialog-in var(--wf-enter) var(--wf-spring) both;
+}
+[role='dialog'].bg-surface-dialog[data-state='closed'],
+[role='alertdialog'].bg-surface-dialog[data-state='closed'] {
+  animation: wf-dialog-out var(--wf-leave) var(--wf-ease-out) both;
+}
+/* Every message row runs this once when it mounts, which covers a new turn arriving. */
+.message-render {
+  animation: wf-message-in var(--wf-enter) var(--wf-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled),
+  [role='menuitem']:active,
+  [role='menuitemradio']:active,
+  [role='menuitemcheckbox']:active,
+  [role='option']:active,
+  [data-testid='convo-item']:active {
+    scale: none;
+  }
+  [role='dialog'].bg-surface-dialog[data-state='open'],
+  [role='alertdialog'].bg-surface-dialog[data-state='open'],
+  .message-render {
+    animation: wf-fade-in 0.2s ease both;
+  }
+  [role='dialog'].bg-surface-dialog[data-state='closed'],
+  [role='alertdialog'].bg-surface-dialog[data-state='closed'] {
+    animation: wf-fade-out 0.15s ease both;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur-sm,
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  [role='dialog'].bg-surface-dialog,
+  [role='alertdialog'].bg-surface-dialog,
+  [role='menu'] {
+    border: 1px solid rgb(var(--border-xheavy));
+  }
+}
