@@ -7,7 +7,7 @@ import { useLocalize, useHasAccess, useGetAgentsConfig, useAgentCapabilities } f
 import { showSkillsPopoverFamily } from './skillsState';
 
 /**
- * The `+` menu's "attach a skill" entry. It opens the same skill picker the `$`
+ * The `+` menu's "attach a skill" entry. It opens the same skill picker the `/`
  * command opens, under the same access and capability checks.
  */
 export default function useSkillAttachItems(
