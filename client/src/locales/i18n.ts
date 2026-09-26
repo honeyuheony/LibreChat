@@ -215,10 +215,17 @@ export function normalizeLocale(locale?: string | null): SupportedLocale {
   return localeByLowercase[base] ?? localeAliases[base] ?? 'en';
 }
 
+/**
+ * The language a browser gets before its user picks one. The service is for a Korean
+ * organization, so an English-language browser still opens in Korean; choosing 「자동 감지」
+ * in settings brings the browser's own language back.
+ */
+export const DEFAULT_LANGUAGE = 'ko-KR';
+
 export function detectInitialLanguage() {
   const cookieLang = readCookie('lang');
   const storedLang = readStoredLanguage();
-  return normalizeLocale(cookieLang || storedLang || getNavigatorLanguage());
+  return normalizeLocale(cookieLang || storedLang || DEFAULT_LANGUAGE);
 }
 
 export async function ensureLocale(locale?: string | null): Promise<SupportedLocale> {
