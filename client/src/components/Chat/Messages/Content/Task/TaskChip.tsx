@@ -1,4 +1,7 @@
+import { Button } from '@librechat/client';
 import { TriangleAlert } from 'lucide-react';
+import type { Agents } from 'librechat-data-provider';
+import type { ReactNode } from 'react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -46,5 +49,58 @@ export function TaskApprovalStatus({ status }: { status: string }) {
       <TriangleAlert className="mr-1.5 size-4" aria-hidden="true" />
       {localize(status === 'expired' ? 'com_ui_approval_expired' : 'com_ui_approval_error')}
     </span>
+  );
+}
+
+/**
+ * The row under a task approval card: 「실행」, 「취소」 when the policy allows a reject,
+ * the card's own details (the estimate), and why run is blocked. Once the decision is
+ * sent it collapses to 「실행됨」 or 「취소됨」.
+ */
+export function TaskApprovalActions({
+  status,
+  locked,
+  decision,
+  runDisabled,
+  onRun,
+  onReject,
+  blockedReason,
+  children,
+}: {
+  status: string;
+  locked: boolean;
+  decision?: Agents.ToolApprovalDecisionType;
+  runDisabled: boolean;
+  onRun: () => void;
+  onReject?: () => void;
+  blockedReason?: string;
+  children?: ReactNode;
+}) {
+  const localize = useLocalize();
+  if (status === 'submitted') {
+    return (
+      <span className="text-sm text-text-secondary">
+        {localize(decision === 'reject' ? 'com_ui_task_cancelled' : 'com_ui_task_ran')}
+      </span>
+    );
+  }
+  return (
+    <>
+      <Button size="sm" variant="submit" disabled={locked || runDisabled} onClick={onRun}>
+        {localize('com_ui_task_run')}
+      </Button>
+      {onReject != null && (
+        <Button size="sm" variant="outline" disabled={locked} onClick={onReject}>
+          {localize('com_ui_cancel')}
+        </Button>
+      )}
+      {children}
+      {blockedReason != null && (
+        <span className="text-sm text-text-warning" role="status">
+          {blockedReason}
+        </span>
+      )}
+      <TaskApprovalStatus status={status} />
+    </>
   );
 }

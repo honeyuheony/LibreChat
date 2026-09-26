@@ -35,8 +35,11 @@ const args = {
   suggested_fields: ['출처 매체', '관련 지표'],
 };
 
-const renderCard = (cardArgs: Record<string, unknown> = args) =>
-  render(<TaskSchemaApproval approval={approval()} toolCallId="call-1" args={cardArgs} />, {
+const renderCard = (
+  cardArgs: Record<string, unknown> = args,
+  allowed?: Agents.ToolApprovalDecisionType[],
+) =>
+  render(<TaskSchemaApproval approval={approval(allowed)} toolCallId="call-1" args={cardArgs} />, {
     wrapper: createTaskWrapper(),
   });
 
@@ -148,5 +151,24 @@ describe('TaskSchemaApproval', () => {
     expect(await screen.findByText('com_ui_task_ran')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '정세 전망' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'com_ui_task_run' })).not.toBeInTheDocument();
+  });
+
+  test('cancels the call with a reject and says so once it is sent', async () => {
+    mockApprovalMutate.mockImplementation((_payload, options: { onSuccess: () => void }) =>
+      options.onSuccess(),
+    );
+    renderCard();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
+
+    expect(submittedDecisions()).toEqual([{ tool_call_id: 'call-1', decision: 'reject' }]);
+    expect(await screen.findByText('com_ui_task_cancelled')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_task_ran')).not.toBeInTheDocument();
+  });
+
+  test('offers no cancel when the policy does not allow a reject', () => {
+    renderCard(args, ['approve', 'edit']);
+
+    expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
   });
 });

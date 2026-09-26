@@ -1,9 +1,8 @@
 import { useContext, useMemo, useState } from 'react';
-import { Button } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
 import { Constants, dataService } from 'librechat-data-provider';
 import type { Agents } from 'librechat-data-provider';
-import { TaskApprovalStatus, TaskChip } from './TaskChip';
+import { TaskApprovalActions, TaskChip } from './TaskChip';
 import { ChatContext } from '~/Providers/ChatContext';
 import useTaskApproval from './useTaskApproval';
 import { stringList } from './stages';
@@ -65,11 +64,11 @@ export default function TaskSchemaApproval({
 }) {
   const localize = useLocalize();
   const conversationId = useContext(ChatContext)?.conversation?.conversationId ?? '';
-  const { status, locked, submit } = useTaskApproval(approval.actionId, toolCallId);
+  const { status, locked, decision, canEdit, canReject, resolveRun, decide, reject } =
+    useTaskApproval(approval, toolCallId);
   const [chips, setChips] = useState<FieldChip[]>(() => initialChips(args));
   const [adding, setAdding] = useState(false);
   const [draftField, setDraftField] = useState('');
-  const canEdit = approval.allowed_decisions.includes('edit');
   const selected = useMemo(() => chips.filter((chip) => chip.on).map((chip) => chip.name), [chips]);
 
   const estimate = useQuery(
@@ -102,10 +101,8 @@ export default function TaskSchemaApproval({
     setAdding(false);
   };
 
-  const run = () => {
-    const unchanged = sameList(selected, stringList(args.fields));
-    submit(unchanged ? null : { ...args, fields: selected });
-  };
+  const changed = !sameList(selected, stringList(args.fields));
+  const resolution = resolveRun({ ...args, fields: selected }, changed);
 
   return (
     <div className="mt-3 flex flex-col gap-2" data-testid="task-schema-approval">
@@ -159,35 +156,32 @@ export default function TaskSchemaApproval({
           )}
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-          {status === 'submitted' ? (
-            <span className="text-sm text-text-secondary">{localize('com_ui_task_ran')}</span>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                variant="submit"
-                disabled={locked || selected.length === 0}
-                onClick={run}
-              >
-                {localize('com_ui_task_run')}
-              </Button>
-              {estimate.data != null && (
-                <span className="text-sm text-text-secondary">
-                  {localize('com_ui_task_estimate', {
-                    0: estimate.data.minutes.min,
-                    1: estimate.data.minutes.max,
-                  })}
-                  {' · '}
-                  {localize(
-                    estimate.data.cached > 0
-                      ? 'com_ui_task_estimate_cached'
-                      : 'com_ui_task_estimate_first',
-                  )}
-                </span>
-              )}
-              <TaskApprovalStatus status={status} />
-            </>
-          )}
+          <TaskApprovalActions
+            status={status}
+            locked={locked}
+            decision={decision}
+            runDisabled={selected.length === 0 || resolution == null}
+            onRun={() => resolution != null && decide(resolution)}
+            onReject={canReject ? reject : undefined}
+            blockedReason={
+              changed && resolution == null ? localize('com_ui_task_edit_not_allowed') : undefined
+            }
+          >
+            {estimate.data != null && (
+              <span className="text-sm text-text-secondary">
+                {localize('com_ui_task_estimate', {
+                  0: estimate.data.minutes.min,
+                  1: estimate.data.minutes.max,
+                })}
+                {' · '}
+                {localize(
+                  estimate.data.cached > 0
+                    ? 'com_ui_task_estimate_cached'
+                    : 'com_ui_task_estimate_first',
+                )}
+              </span>
+            )}
+          </TaskApprovalActions>
         </div>
       </div>
     </div>

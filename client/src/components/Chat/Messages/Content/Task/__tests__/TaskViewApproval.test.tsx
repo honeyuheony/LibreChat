@@ -23,10 +23,18 @@ const approval: NonNullable<Agents.ToolCall['approval']> = {
 
 const views = ['부서장 보고용', '실무 공유용', '대외 설명용'];
 
-const renderCard = (args: Record<string, unknown>) =>
-  render(<TaskViewApproval approval={approval} toolCallId="call-1" args={args} />, {
-    wrapper: createTaskWrapper(),
-  });
+const renderCard = (
+  args: Record<string, unknown>,
+  allowed: Agents.ToolApprovalDecisionType[] = approval.allowed_decisions,
+) =>
+  render(
+    <TaskViewApproval
+      approval={{ ...approval, allowed_decisions: allowed }}
+      toolCallId="call-1"
+      args={args}
+    />,
+    { wrapper: createTaskWrapper() },
+  );
 
 const runButton = () => screen.getByRole('button', { name: 'com_ui_task_run' });
 
@@ -106,5 +114,35 @@ describe('TaskViewApproval', () => {
       views: ['간부 보고용', '위험 요인 중심', '정책 시사점 중심'],
       view: '위험 요인 중심',
     });
+  });
+
+  test('cancels the call with a reject', () => {
+    renderCard({ views });
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
+
+    expect(submittedDecision()).toEqual({ tool_call_id: 'call-1', decision: 'reject' });
+  });
+
+  test('approves the proposed perspective when the policy does not allow edits', () => {
+    renderCard({ views, view: '실무 공유용' }, ['approve', 'reject']);
+
+    expect(
+      screen.queryByRole('button', { name: 'com_ui_task_view_custom' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '실무 공유용' }));
+    fireEvent.click(runButton());
+
+    expect(submittedDecision()).toEqual({ tool_call_id: 'call-1', decision: 'approve' });
+  });
+
+  test('blocks run and says why when another perspective needs an edit the policy forbids', () => {
+    renderCard({ views, view: '실무 공유용' }, ['approve', 'reject']);
+
+    fireEvent.click(screen.getByRole('button', { name: '대외 설명용' }));
+
+    expect(runButton()).toBeDisabled();
+    expect(screen.getByText('com_ui_task_edit_not_allowed')).toBeInTheDocument();
+    expect(mockApprovalMutate).not.toHaveBeenCalled();
   });
 });

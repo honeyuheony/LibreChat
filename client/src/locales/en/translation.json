@@ -3313,5 +3313,7 @@
   "com_ui_task_off": "Off",
   "com_ui_task_mode_task": "Task",
   "com_ui_task_mode_chat": "Chat",
-  "com_ui_task_status_stopped": "Stopped"
+  "com_ui_task_status_stopped": "Stopped",
+  "com_ui_task_cancelled": "Cancelled",
+  "com_ui_task_edit_not_allowed": "This task can only run as proposed. Pick the proposed option or cancel."
 }
