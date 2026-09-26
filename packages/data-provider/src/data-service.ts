@@ -1288,6 +1288,13 @@ export function deleteSkill(id: string): Promise<sk.TDeleteSkillResponse> {
   return request.delete(endpoints.getSkill(id));
 }
 
+export function forkSkill(
+  id: string,
+  payload: sk.TForkSkillRequest = {},
+): Promise<sk.TForkSkillResponse> {
+  return request.post(endpoints.forkSkill(id), payload);
+}
+
 export function listSkillFiles(skillId: string): Promise<sk.TListSkillFilesResponse> {
   return request.get(endpoints.skillFiles(skillId));
 }
