@@ -1,0 +1,144 @@
+import React from 'react';
+import { createStore } from 'jotai';
+import { TaskTools } from 'librechat-data-provider';
+import { act, render, screen } from '@testing-library/react';
+import type { Agents, TAttachment, TaskToolName } from 'librechat-data-provider';
+import { createTaskWrapper } from 'test/task-test-utils';
+import { taskProgressByToolCallId } from '~/store/task';
+import TaskPlanCard from '../TaskPlanCard';
+
+jest.mock('~/hooks', () => ({
+  useLocalize: () => (key: string, values?: Record<string, unknown>) =>
+    values == null ? key : `${key}:${Object.values(values).join('|')}`,
+}));
+jest.mock('~/data-provider', () => ({
+  useSubmitToolApprovalMutation: () => ({ mutate: jest.fn() }),
+  useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
+}));
+jest.mock('~/store/agents', () => ({ useGetEphemeralAgent: () => () => undefined }));
+jest.mock('../api', () => ({ fetchTaskEstimate: jest.fn(() => new Promise(() => undefined)) }));
+jest.mock('../TaskResultCard', () => ({
+  __esModule: true,
+  default: ({ result, autoOpen }: { result: { resultId: string }; autoOpen: boolean }) => (
+    <div data-testid="result-card" data-auto-open={String(autoOpen)}>
+      {result.resultId}
+    </div>
+  ),
+}));
+
+const approval: NonNullable<Agents.ToolCall['approval']> = {
+  actionId: 'action-1',
+  allowed_decisions: ['approve', 'reject', 'edit'],
+};
+
+type CardProps = Partial<React.ComponentProps<typeof TaskPlanCard>> & { toolName: TaskToolName };
+
+function renderPlan(props: CardProps, jotaiStore = createStore()) {
+  return render(<TaskPlanCard toolCallId="call-1" args={{}} isSubmitting={false} {...props} />, {
+    wrapper: createTaskWrapper({ jotaiStore }),
+  });
+}
+
+const stepStates = () =>
+  screen
+    .getAllByRole('listitem')
+    .map((item) => `${item.getAttribute('data-state')} ${item.textContent}`);
+
+describe('TaskPlanCard', () => {
+  test('lists the five table steps and marks field confirmation current while awaiting approval', () => {
+    renderPlan({
+      toolName: TaskTools.extract_table,
+      args: JSON.stringify({ fields: ['정세 전망'] }),
+      approval,
+    });
+
+    expect(stepStates()).toEqual([
+      'done ✓1. com_ui_task_stage_prepare',
+      'now ▶2. com_ui_task_stage_confirm_fields',
+      'todo ○3. com_ui_task_stage_extract_all',
+      'todo ○4. com_ui_task_stage_aggregate',
+      'todo ○5. com_ui_task_stage_save',
+    ]);
+    expect(screen.getByTestId('task-schema-approval')).toBeInTheDocument();
+  });
+
+  test('shows the perspective picker, not the field picker, for a paused summary', () => {
+    renderPlan({
+      toolName: TaskTools.summarize_documents,
+      args: { views: ['위험 요인 중심'] },
+      approval,
+    });
+
+    expect(screen.getByTestId('task-view-approval')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-schema-approval')).not.toBeInTheDocument();
+  });
+
+  test('moves the current step with progress events and appends the view and count', () => {
+    const jotaiStore = createStore();
+    renderPlan(
+      {
+        toolName: TaskTools.summarize_documents,
+        args: { views: ['위험 요인 중심'], view: '위험 요인 중심' },
+        isSubmitting: true,
+      },
+      jotaiStore,
+    );
+
+    act(() => {
+      jotaiStore.set(taskProgressByToolCallId('call-1'), {
+        toolCallId: 'call-1',
+        stage: 'summarize',
+        done: 5,
+        total: 12,
+        label: '문서별 요약',
+      });
+    });
+
+    expect(stepStates()[2]).toBe('now ▶3. com_ui_task_stage_summarize · 위험 요인 중심 · 5/12');
+    expect(stepStates()[1]).toBe('done ✓2. com_ui_task_stage_confirm_view');
+  });
+
+  test('marks every report step done and renders the result once the tool returned', () => {
+    const attachments = [
+      {
+        type: 'task_result',
+        toolCallId: 'call-1',
+        messageId: 'm1',
+        conversationId: 'c1',
+        task_result: { resultId: 'result-9', kind: 'report', title: 't', stats: {} },
+      },
+      { type: 'file_search', toolCallId: 'call-1', messageId: 'm1', conversationId: 'c1' },
+    ] as unknown as TAttachment[];
+    renderPlan({
+      toolName: TaskTools.write_report,
+      args: { template_id: 'hwp-report' },
+      output: '보고서 초안을 만들었습니다.',
+      attachments,
+      isSubmitting: true,
+    });
+
+    expect(stepStates().every((state) => state.startsWith('done'))).toBe(true);
+    expect(stepStates().map((state) => state.split('. ')[1])).toEqual([
+      'com_ui_task_stage_prepare',
+      'com_ui_task_stage_extract',
+      'com_ui_task_stage_compose',
+      'com_ui_task_stage_render',
+      'com_ui_task_stage_save',
+    ]);
+    expect(screen.getAllByTestId('result-card').map((card) => card.textContent)).toEqual([
+      'result-9',
+    ]);
+    expect(screen.getByTestId('result-card')).toHaveAttribute('data-auto-open', 'true');
+  });
+
+  test('hides the pickers once the paused call has an output', () => {
+    renderPlan({
+      toolName: TaskTools.extract_table,
+      args: { fields: ['정세 전망'] },
+      approval,
+      output: 'done',
+    });
+
+    expect(screen.queryByTestId('task-schema-approval')).not.toBeInTheDocument();
+  });
+});

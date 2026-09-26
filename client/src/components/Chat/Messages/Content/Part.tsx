@@ -31,6 +31,8 @@ import AskUserQuestionCall from './AskUserQuestionCall';
 import { isBashProgrammaticToolCall } from './routing';
 import { ErrorMessage } from './MessageContent';
 import AskUserQuestion from './AskUserQuestion';
+import { isTaskToolName } from './Task/stages';
+import TaskPlanCard from './Task/TaskPlanCard';
 import RetrievalCall from './RetrievalCall';
 import ToolApproval from './ToolApproval';
 import AgentHandoff from './AgentHandoff';
@@ -400,6 +402,20 @@ const Part = memo(function Part({
           );
         } else if (toolCall.name?.startsWith(Constants.LC_TRANSFER_TO_)) {
           return <AgentHandoff args={toolCall.args ?? ''} name={toolCall.name || ''} />;
+        } else if (isTaskToolName(toolCall.name)) {
+          /** Task tools draw their own field/perspective picker instead of the
+           *  generic approval controls, so the approval block below skips them. */
+          return (
+            <TaskPlanCard
+              toolName={toolCall.name}
+              toolCallId={toolCallId ?? ''}
+              args={toolCall.args}
+              output={toolCall.output}
+              approval={toolCall.approval}
+              attachments={attachments}
+              isSubmitting={isSubmitting}
+            />
+          );
         }
         return (
           <ToolCall
@@ -426,7 +442,11 @@ const Part = memo(function Part({
        *  card — so a HITL policy that gates a specialized tool (bash, code, file…)
        *  still surfaces approve/reject/edit/respond. Only while the call is unresolved
        *  (no output yet). */
-      if (toolCall.approval != null && (toolCall.output?.length ?? 0) === 0) {
+      if (
+        toolCall.approval != null &&
+        (toolCall.output?.length ?? 0) === 0 &&
+        !isTaskToolName(toolCall.name)
+      ) {
         return (
           <>
             {card}
