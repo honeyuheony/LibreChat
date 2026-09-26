@@ -348,6 +348,8 @@ export const deskPermissions = () => `${BASE_URL}/api/connectors/desk-permission
 
 export const deskAppRelease = () => `${BASE_URL}/api/connectors/desk-app`;
 
+export const connectorActivity = () => `${BASE_URL}/api/connectors/activity`;
+
 export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${serverName}`;
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;

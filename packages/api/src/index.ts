@@ -124,6 +124,7 @@ export { memoryDiagnostics } from './utils/memory';
 export * from './rum/proxy';
 /* Connectors */
 export * from './connectors/desk';
+export * from './connectors/activity';
 /* OpenAPI */
 export { createOpenApiRouter } from './openapi/router';
 export type { OpenApiRouterDeps } from './openapi/router';

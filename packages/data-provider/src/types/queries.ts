@@ -277,6 +277,17 @@ export interface DeskPermission {
 
 export type DeskPermissionDecision = 'once' | 'always' | 'deny';
 
+/** One connector tool the user's conversation called, possibly several times in one turn. */
+export interface ConnectorActivityItem {
+  /** Model-facing tool key, `${tool}${Constants.mcp_delimiter}${server}`. */
+  toolKey: string;
+  count: number;
+  conversationId: string;
+  conversationTitle: string | null;
+  /** ISO 8601 */
+  createdAt: string;
+}
+
 /** The desktop app installer the relay serves; every field is `null` when no release is known. */
 export interface DeskAppReleaseResponse {
   installerUrl: string | null;

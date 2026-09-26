@@ -367,6 +367,10 @@ export const getDeskAppRelease = (): Promise<q.DeskAppReleaseResponse> => {
   return request.get(endpoints.deskAppRelease());
 };
 
+export const getConnectorActivity = (): Promise<q.ConnectorActivityItem[]> => {
+  return request.get(endpoints.connectorActivity());
+};
+
 export const getMCPConnectionStatus = (): Promise<q.MCPConnectionStatusResponse> => {
   return request.get(endpoints.mcpConnectionStatus());
 };
