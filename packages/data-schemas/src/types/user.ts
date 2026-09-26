@@ -18,6 +18,8 @@ export interface IUser extends Document {
   id: string;
   name?: string;
   username?: string;
+  department?: string;
+  organization?: string;
   email: string;
   emailVerified: boolean;
   password?: string;

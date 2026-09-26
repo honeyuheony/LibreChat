@@ -324,6 +324,8 @@ export type TUser = {
   username: string;
   email: string;
   name: string;
+  department?: string;
+  organization?: string;
   avatar: string;
   role: string;
   provider: string;

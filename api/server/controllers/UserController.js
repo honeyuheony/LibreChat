@@ -47,6 +47,8 @@ const PUBLIC_USER_RESPONSE_FIELDS = [
   'id',
   'name',
   'username',
+  'department',
+  'organization',
   'email',
   'emailVerified',
   'avatar',

@@ -33,6 +33,14 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       lowercase: true,
       default: '',
     },
+    /** Shown under the name in the sidebar's account card (e.g. 정세분석팀). */
+    department: {
+      type: String,
+    },
+    /** The organization the account belongs to (e.g. 통일부), shown in the same card and the home notice. */
+    organization: {
+      type: String,
+    },
     email: {
       type: String,
       required: [true, "can't be blank"],
