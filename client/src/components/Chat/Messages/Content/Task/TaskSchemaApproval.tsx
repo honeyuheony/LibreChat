@@ -4,11 +4,15 @@ import { Constants, dataService } from 'librechat-data-provider';
 import type { Agents } from 'librechat-data-provider';
 import { TaskApprovalActions, TaskChip } from './TaskChip';
 import { ChatContext } from '~/Providers/ChatContext';
+import useDebounce from '~/hooks/Input/useDebounce';
 import useTaskApproval from './useTaskApproval';
 import { stringList } from './stages';
 import { useLocalize } from '~/hooks';
 
 type FieldChip = { name: string; on: boolean };
+
+/** Chip clicks within this window share one estimate request. */
+const ESTIMATE_DEBOUNCE_MS = 400;
 
 function initialChips(args: Record<string, unknown>): FieldChip[] {
   const fields = stringList(args.fields);
@@ -79,13 +83,19 @@ export default function TaskSchemaApproval({
   const [adding, setAdding] = useState(false);
   const [draftField, setDraftField] = useState('');
   const selected = useMemo(() => chips.filter((chip) => chip.on).map((chip) => chip.name), [chips]);
+  /** The estimate follows the chips once they settle; the last one stays shown meanwhile. */
+  const settledKey = useDebounce(JSON.stringify(selected), ESTIMATE_DEBOUNCE_MS);
+  const estimateFields = useMemo(() => JSON.parse(settledKey) as string[], [settledKey]);
 
   const estimate = useQuery(
-    ['taskEstimate', conversationId, selected],
-    () => dataService.getTaskEstimate(conversationId, selected),
+    ['taskEstimate', conversationId, estimateFields],
+    () => dataService.getTaskEstimate(conversationId, estimateFields),
     {
       enabled:
-        conversationId.length > 0 && conversationId !== Constants.NEW_CONVO && selected.length > 0,
+        conversationId.length > 0 &&
+        conversationId !== Constants.NEW_CONVO &&
+        estimateFields.length > 0,
+      keepPreviousData: true,
       retry: false,
       refetchOnWindowFocus: false,
     },

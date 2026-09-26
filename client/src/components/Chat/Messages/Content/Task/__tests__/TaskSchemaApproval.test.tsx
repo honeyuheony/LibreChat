@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { dataService } from 'librechat-data-provider';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
 import { useApprovalContext, useResumeSubmit } from '../../ApprovalContext';
 import { CONVERSATION_ID, createTaskWrapper } from 'test/task-test-utils';
@@ -130,6 +130,40 @@ describe('TaskSchemaApproval', () => {
       screen.getByText('com_ui_task_estimate:2|3 · com_ui_task_estimate_cached'),
     ).toBeInTheDocument();
     expect(mockEstimate).toHaveBeenCalledWith(CONVERSATION_ID, args.fields);
+  });
+
+  test('asks for a new estimate once the chips settle and keeps the last one meanwhile', async () => {
+    jest.useFakeTimers();
+    try {
+      renderCard();
+      expect(
+        await screen.findByText('com_ui_task_schema_intro:12', { exact: false }),
+      ).toBeVisible();
+      expect(mockEstimate).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole('button', { name: '위험도' }));
+      fireEvent.click(screen.getByRole('button', { name: '출처 매체' }));
+      fireEvent.click(screen.getByRole('button', { name: '관련 지표' }));
+
+      expect(mockEstimate).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('com_ui_task_schema_intro:12', { exact: false })).toBeVisible();
+      expect(
+        screen.getByText('com_ui_task_estimate:1|1 · com_ui_task_estimate_first'),
+      ).toBeVisible();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(mockEstimate).toHaveBeenCalledTimes(2);
+      expect(mockEstimate).toHaveBeenLastCalledWith(CONVERSATION_ID, [
+        '정세 전망',
+        '전월 대비',
+        '출처 매체',
+        '관련 지표',
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('keeps the card usable without a count when the estimate request fails', async () => {
