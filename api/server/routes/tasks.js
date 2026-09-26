@@ -7,7 +7,7 @@ const {
   normalizeKey,
 } = require('@librechat/api');
 const { TaskExtraction, TaskResult } = require('~/db');
-const { getFiles, getMessages } = require('~/models');
+const { getAgent, getConvo, getFiles, getMessages } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 
 const router = express.Router();
@@ -31,16 +31,20 @@ router.get('/estimate', async (req, res, next) => {
   }
   try {
     const userId = req.user.id;
-    const docs = await loadConversationDocuments({
-      userId,
-      conversationId,
-      getMessages,
-      getFiles,
-    });
-    const previousResult = await TaskResult.findOne({ user: userId, conversationId, kind: 'table' })
-      .sort({ createdAt: -1 })
-      .lean();
-    const model = previousResult?.result?.extractor?.model;
+    const [docs, conversation, previousResult] = await Promise.all([
+      loadConversationDocuments({ userId, conversationId, getMessages, getFiles }),
+      getConvo(userId, conversationId),
+      TaskResult.findOne({ user: userId, conversationId, kind: 'table' })
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+    const agent = conversation?.agent_id ? await getAgent({ id: conversation.agent_id }) : null;
+    const agentModel = agent?.model_parameters?.model;
+    const model =
+      (typeof agentModel === 'string' && agentModel) ||
+      agent?.model ||
+      conversation?.model ||
+      previousResult?.result?.extractor?.model;
     const cachedCells = model
       ? await TaskExtraction.find({
           user: userId,
