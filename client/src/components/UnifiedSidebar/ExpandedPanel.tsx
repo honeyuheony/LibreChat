@@ -410,7 +410,14 @@ function ExpandedPanel({
         <div className="flex-1" />
       )}
 
-      <div className={cn('pt-2', expanded ? 'w-full' : 'flex justify-center')}>
+      <div
+        className={cn(
+          'pt-2',
+          expanded
+            ? '-mx-2 w-auto border-t border-border-light px-3 pt-2.5'
+            : 'flex justify-center',
+        )}
+      >
         <Suspense
           fallback={
             <Skeleton className={cn('rounded-theme-control', expanded ? 'h-14' : 'size-9')} />
