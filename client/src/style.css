@@ -153,59 +153,59 @@
 
 html {
   --brand-purple: 126 34 206;
-  --presentation: 247 248 250; /* #f7f8fa mock bg */
-  --text-primary: 21 24 30; /* #15181e mock text */
-  --text-secondary: 60 65 74; /* #3c414a mock text2 */
-  --text-secondary-alt: 93 100 112; /* #5d6470 mock text3 */
-  --text-tertiary: 93 100 112; /* #5d6470 mock text3 */
-  --text-muted: 105 110 121; /* Click UI global.color.text.muted #696e79 */
+  --presentation: 251 251 253; /* #fbfbfd wireframe bg */
+  --text-primary: 21 21 28; /* #15151c wireframe gray-900 */
+  --text-secondary: 59 59 73; /* #3b3b49 wireframe gray-700 */
+  --text-secondary-alt: 86 86 102; /* #565666 wireframe gray-600 */
+  --text-tertiary: 86 86 102; /* #565666 wireframe gray-600 */
+  --text-muted: 107 107 124; /* #6b6b7c wireframe gray-500 darkened to clear AA, 5.22:1 on white */
   --shimmer-dip: 129 130 134;
   --shimmer-dip-alpha: 0.18;
   --text-warning: var(--amber-800);
   --text-destructive: var(--red-700);
-  --link: 6 55 123; /* #06377b brand navy */
-  --link-hover: 5 44 98; /* #052c62 brand navy, darkened ~20% */
+  --link: 109 40 217; /* #6d28d9 wireframe brand-700 */
+  --link-hover: 91 33 182; /* #5b21b6 wireframe brand-800 */
   --link-visited: 147 51 234;
-  --accent-primary: 6 55 123; /* #06377b brand navy */
-  --accent-primary-hover: 5 44 98; /* #052c62 brand navy, darkened ~20% */
-  --ring-primary: 80 118 175; /* #5076af ndesign 초점 표시 지정 색 */
-  --header-primary: 247 248 250; /* #f7f8fa mock bg */
-  --header-hover: 238 241 245; /* #eef1f5 mock tile */
-  --header-button-hover: 238 241 245; /* #eef1f5 mock tile */
-  --surface-active: 227 232 239; /* #e3e8ef mock active */
-  --surface-active-alt: 221 226 234; /* #dde2ea mock border */
-  --surface-hover: 227 232 239; /* #e3e8ef mock active */
-  --surface-hover-alt: 211 217 226; /* #d3d9e2 cool gray, derived */
-  --surface-composer-hover: 227 232 239; /* #e3e8ef mock active */
-  --surface-primary: 255 255 255; /* #ffffff mock surface */
+  --accent-primary: 109 40 217; /* #6d28d9 wireframe brand-700 */
+  --accent-primary-hover: 91 33 182; /* #5b21b6 wireframe brand-800 */
+  --ring-primary: 139 92 246; /* #8b5cf6 wireframe brand-500, the focus-ring token */
+  --header-primary: 251 251 253; /* #fbfbfd wireframe bg */
+  --header-hover: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --header-button-hover: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --surface-active: 231 231 239; /* #e7e7ef wireframe gray-200 */
+  --surface-active-alt: 231 231 239; /* #e7e7ef wireframe gray-200 */
+  --surface-hover: 231 231 239; /* #e7e7ef wireframe gray-200 */
+  --surface-hover-alt: 211 211 222; /* #d3d3de wireframe gray-300 */
+  --surface-composer-hover: 231 231 239; /* #e7e7ef wireframe gray-200 */
+  --surface-primary: 255 255 255; /* #ffffff wireframe surface */
   --chart-widget-surface: 255 255 255; /* Click UI dashboards.chartWidget.color.background.default #ffffff */
   --chart-widget-stroke: 230 231 233; /* Click UI dashboards.chartWidget.color.stroke.default #e6e7e9 */
-  --surface-primary-alt: 239 242 246; /* #eff2f6 mock side */
-  --surface-primary-contrast: 236 239 243; /* #eceff3 mock muteSoft */
-  --surface-secondary: 247 249 251; /* #f7f9fb mock sub */
-  --surface-secondary-alt: 227 232 239; /* #e3e8ef mock active */
-  --surface-tertiary: 238 241 245; /* #eef1f5 mock tile */
-  --surface-tertiary-alt: 255 255 255; /* #ffffff mock surface */
-  --surface-dialog: 255 255 255; /* #ffffff mock surface */
+  --surface-primary-alt: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --surface-primary-contrast: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --surface-secondary: 250 250 252; /* #fafafc wireframe gray-50 */
+  --surface-secondary-alt: 231 231 239; /* #e7e7ef wireframe gray-200 */
+  --surface-tertiary: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --surface-tertiary-alt: 255 255 255; /* #ffffff wireframe surface */
+  --surface-dialog: 255 255 255; /* #ffffff wireframe surface */
   --surface-overlay: var(--gray-500);
-  --surface-submit: 6 55 123; /* #06377b brand navy */
-  --surface-submit-hover: 5 44 98; /* #052c62 brand navy, darkened ~20% */
-  --surface-message-user: 233 237 243; /* #e9edf3 mock userBubble */
-  --surface-brand-subtle: 233 239 248; /* #e9eff8 mock brandSoft */
+  --surface-submit: 124 58 237; /* #7c3aed wireframe brand-600 */
+  --surface-submit-hover: 109 40 217; /* #6d28d9 wireframe brand-700 */
+  --surface-message-user: 237 233 254; /* #ede9fe wireframe brand-100 user bubble */
+  --surface-brand-subtle: 245 243 255; /* #f5f3ff wireframe brand-50 */
   --surface-destructive: var(--red-700);
   --surface-destructive-hover: var(--red-800);
   --surface-chat: 255 255 255; /* #ffffff mock surface */
-  --surface-code: 244 246 249; /* #f4f6f9 mock code */
+  --surface-code: 243 243 248; /* #f3f3f8 wireframe gray-100 */
   --surface-qr: var(--white);
-  --border-light: 221 226 234; /* #dde2ea mock border */
+  --border-light: 231 231 239; /* #e7e7ef wireframe gray-200 */
   --border-light-alpha: 1;
-  --border-medium-alt: 200 207 217; /* #c8cfd9 cool gray, derived */
-  --border-medium: 200 207 217; /* #c8cfd9 cool gray, derived */
+  --border-medium-alt: 211 211 222; /* #d3d3de wireframe gray-300 */
+  --border-medium: 211 211 222; /* #d3d3de wireframe gray-300 */
   --border-medium-alpha: 1;
-  --border-brand: 185 201 226; /* #b9c9e2 mock brandLine */
-  --border-heavy: 152 160 173; /* #98a0ad cool gray, derived */
+  --border-brand: 221 214 254; /* #ddd6fe wireframe brand-200 */
+  --border-heavy: 166 166 182; /* #a6a6b6 wireframe gray-400 */
   --border-heavy-alpha: 1;
-  --border-xheavy: 93 100 112; /* #5d6470 mock text3 */
+  --border-xheavy: 86 86 102; /* #565666 wireframe gray-600 */
   --border-xheavy-alpha: 1;
   --border-destructive: var(--red-600);
   --status-success: 25 116 71; /* #197447 mock ok */
@@ -215,7 +215,7 @@ html {
   --status-info: var(--blue-600);
   --status-info-subtle: var(--blue-50);
   --status-info-border: var(--blue-300);
-  --status-info-strong: 93 100 112; /* #5d6470 mock text3 */
+  --status-info-strong: 86 86 102; /* #565666 wireframe gray-600 */
   --status-warning: var(--amber-700);
   --status-warning-subtle: var(--amber-50);
   --status-warning-border: var(--amber-300);
@@ -224,9 +224,9 @@ html {
   --status-error-subtle: var(--red-50);
   --status-error-border: var(--red-300);
   --status-error-strong: 224 47 31;
-  --status-neutral: 74 81 92; /* #4a515c mock mute */
-  --status-neutral-subtle: 236 239 243; /* #eceff3 mock muteSoft */
-  --status-neutral-border: 200 207 217; /* #c8cfd9 cool gray, derived */
+  --status-neutral: 86 86 102; /* #565666 wireframe gray-600 */
+  --status-neutral-subtle: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --status-neutral-border: 211 211 222; /* #d3d3de wireframe gray-300 */
   --status-verified: 37 99 235;
   --text-on-status: var(--white);
 
@@ -241,30 +241,32 @@ html {
   --series-8: 63 81 181;
 
   /* Code syntax highlighting */
-  --syntax-text: 21 24 30; /* #15181e mock text */
-  --syntax-comment: 93 100 112; /* #5d6470 mock text3 */
-  --syntax-meta: 60 65 74; /* #3c414a mock text2 */
+  --syntax-text: 21 21 28; /* #15151c wireframe gray-900 */
+  --syntax-comment: 86 86 102; /* #565666 wireframe gray-600 */
+  --syntax-meta: 59 59 73; /* #3b3b49 wireframe gray-700 */
   --syntax-builtin: 154 103 0;
   --syntax-keyword: 5 80 174;
   --syntax-string: 10 123 98;
   --syntax-attr: 154 47 106;
   --syntax-title: 180 35 24;
 
-  --surface-inverted: 21 24 30; /* #15181e mock text */
-  --surface-inverted-hover: 60 65 74; /* #3c414a mock text2 */
+  --surface-inverted: 21 21 28; /* #15151c wireframe gray-900 */
+  --surface-inverted-hover: 59 59 73; /* #3b3b49 wireframe gray-700 */
   --text-inverted: var(--white);
   --surface-fixed: var(--white);
-  --surface-fixed-hover: 238 241 245; /* #eef1f5 mock tile, same in light + dark */
-  --text-fixed: 21 24 30; /* #15181e mock text, same in light + dark */
-  --radius: 0.5rem;
-  --theme-control-radius: 0.5rem;
+  --surface-fixed-hover: 243 243 248; /* #f3f3f8 wireframe gray-100, same in light + dark */
+  --text-fixed: 21 21 28; /* #15151c wireframe gray-900, same in light + dark */
+  /* AgentHub wireframe radii: 10px rows and fields (so rounded-md 8px, rounded-sm 6px), pill .btn
+     buttons, 14px cards, 24px composer. Dialogs take the wireframe 22px further down. */
+  --radius: 0.625rem;
+  --theme-control-radius: 0.625rem;
   --theme-round-control-radius: 9999px;
-  --theme-surface-radius: 0.75rem;
-  --theme-large-surface-radius: 1rem;
+  --theme-surface-radius: 0.875rem;
+  --theme-large-surface-radius: 1.5rem;
   --theme-control-height: 2.25rem;
   --theme-space-compact: 0.375rem;
   --theme-space-normal: 0.75rem;
-  --theme-font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --theme-font-family: 'SUIT Variable', SUIT, 'Spoqa Han Sans Neo', 'Noto Sans KR', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --theme-elevation-surface: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --theme-motion-fast: 150ms;
   --theme-motion-normal: 200ms;
@@ -279,11 +281,11 @@ html {
 }
 .dark {
   --brand-purple: 171 104 255;
-  --presentation: 15 18 23; /* #0f1217 mock bg */
-  --text-primary: 238 241 245; /* #eef1f5 mock text */
-  --text-secondary: 195 201 211; /* #c3c9d3 mock text2 */
-  --text-secondary-alt: 152 160 173; /* #98a0ad mock text3 */
-  --text-tertiary: 152 160 173; /* #98a0ad mock text3 */
+  --presentation: 17 17 23; /* #111117 violet gray, derived */
+  --text-primary: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --text-secondary: 211 211 222; /* #d3d3de wireframe gray-300 */
+  --text-secondary-alt: 166 166 182; /* #a6a6b6 wireframe gray-400 */
+  --text-tertiary: 166 166 182; /* #a6a6b6 wireframe gray-400 */
   --text-muted: 179 182 189; /* Click UI global.color.text.muted #b3b6bd */
   --shimmer-base: 255 255 255;
   --shimmer-base-alpha: 0.8;
@@ -291,46 +293,46 @@ html {
   --shimmer-dip-alpha: 0.25;
   --text-warning: var(--amber-500);
   --text-destructive: var(--red-400);
-  --link: 157 187 232; /* #9dbbe8 mock brandText */
-  --ring-primary: 123 159 214; /* #7b9fd6 cool navy, derived */
-  --link-hover: 193 212 240; /* #c1d4f0 mock brandText, lightened */
+  --link: 196 181 253; /* #c4b5fd wireframe brand-300 */
+  --ring-primary: 167 139 250; /* #a78bfa wireframe brand-400: 4.18:1 on the #393945 hover */
+  --link-hover: 221 214 254; /* #ddd6fe wireframe brand-200 */
   --link-visited: 192 132 252;
-  --accent-primary: 157 187 232; /* #9dbbe8 mock brandText */
-  --accent-primary-hover: 193 212 240; /* #c1d4f0 mock brandText, lightened */
-  --header-primary: 15 18 23; /* #0f1217 mock bg */
-  --header-hover: 34 42 53; /* #222a35 mock tile */
-  --header-button-hover: 34 42 53; /* #222a35 mock tile */
-  --surface-active: 35 43 55; /* #232b37 mock active */
-  --surface-active-alt: 42 49 60; /* #2a313c mock border */
-  --surface-hover: 38 46 58; /* #262e3a cool gray, derived */
-  --surface-hover-alt: 49 58 71; /* #313a47 cool gray, derived */
-  --surface-composer-hover: 49 58 71; /* #313a47 cool gray, derived */
-  --surface-primary: 26 32 41; /* #1a2029 mock surface */
+  --accent-primary: 196 181 253; /* #c4b5fd wireframe brand-300 */
+  --accent-primary-hover: 221 214 254; /* #ddd6fe wireframe brand-200 */
+  --header-primary: 17 17 23; /* #111117 violet gray, derived */
+  --header-hover: 40 40 50; /* #282832 violet gray, derived */
+  --header-button-hover: 40 40 50; /* #282832 violet gray, derived */
+  --surface-active: 42 42 52; /* #2a2a34 violet gray, derived */
+  --surface-active-alt: 48 48 59; /* #30303b violet gray, derived */
+  --surface-hover: 45 45 56; /* #2d2d38 violet gray, derived */
+  --surface-hover-alt: 57 57 69; /* #393945 violet gray, derived */
+  --surface-composer-hover: 57 57 69; /* #393945 violet gray, derived */
+  --surface-primary: 31 31 40; /* #1f1f28 violet gray, derived */
   --chart-widget-surface: 40 40 40; /* Click UI dashboards.chartWidget.color.background.default #282828 */
   --chart-widget-stroke: 50 50 50; /* Click UI dashboards.chartWidget.color.stroke.default #323232 */
-  --surface-primary-alt: 20 25 32; /* #141920 mock side */
-  --surface-primary-contrast: 22 28 36; /* #161c24 mock sub */
-  --surface-secondary: 22 28 36; /* #161c24 mock sub */
-  --surface-secondary-alt: 34 42 53; /* #222a35 mock tile */
-  --surface-tertiary: 34 42 53; /* #222a35 mock tile */
-  --surface-tertiary-alt: 34 42 53; /* #222a35 mock tile */
-  --surface-dialog: 26 32 41; /* #1a2029 mock surface */
+  --surface-primary-alt: 24 24 31; /* #18181f violet gray, derived */
+  --surface-primary-contrast: 27 27 35; /* #1b1b23 violet gray, derived */
+  --surface-secondary: 27 27 35; /* #1b1b23 violet gray, derived */
+  --surface-secondary-alt: 40 40 50; /* #282832 violet gray, derived */
+  --surface-tertiary: 40 40 50; /* #282832 violet gray, derived */
+  --surface-tertiary-alt: 40 40 50; /* #282832 violet gray, derived */
+  --surface-dialog: 31 31 40; /* #1f1f28 violet gray, derived */
   --surface-overlay: 0 0 0;
-  --surface-submit: 47 95 174; /* #2f5fae mock brand */
-  --surface-submit-hover: 38 79 146; /* #264f92 mock brand, darkened */
-  --surface-message-user: 34 42 53; /* #222a35 mock userBubble */
-  --surface-brand-subtle: 23 35 56; /* #172338 mock brandSoft */
+  --surface-submit: 124 58 237; /* #7c3aed wireframe brand-600 */
+  --surface-submit-hover: 109 40 217; /* #6d28d9 wireframe brand-700 */
+  --surface-message-user: 40 40 50; /* #282832 violet gray, derived */
+  --surface-brand-subtle: 34 31 61; /* #221f3d wireframe ink-2 */
   --surface-destructive: var(--red-800);
   --surface-destructive-hover: var(--red-900);
-  --surface-chat: 34 42 53; /* #222a35 mock tile */
-  --surface-code: 20 26 34; /* #141a22 mock code */
+  --surface-chat: 40 40 50; /* #282832 violet gray, derived */
+  --surface-code: 25 25 33; /* #191921 violet gray, derived */
   --surface-qr: var(--white);
-  --border-light: 42 49 60; /* #2a313c mock border */
-  --border-medium-alt: 58 66 79; /* #3a424f cool gray, derived */
-  --border-medium: 58 66 79; /* #3a424f cool gray, derived */
-  --border-brand: 44 68 112; /* #2c4470 mock brandLine */
-  --border-heavy: 83 92 106; /* #535c6a cool gray, derived */
-  --border-xheavy: 152 160 173; /* #98a0ad mock text3 */
+  --border-light: 48 48 59; /* #30303b violet gray, derived */
+  --border-medium-alt: 65 65 78; /* #41414e violet gray, derived */
+  --border-medium: 65 65 78; /* #41414e violet gray, derived */
+  --border-brand: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --border-heavy: 91 91 106; /* #5b5b6a violet gray, derived */
+  --border-xheavy: 166 166 182; /* #a6a6b6 wireframe gray-400 */
   --border-destructive: var(--red-500);
   --status-success: 111 207 154; /* #6fcf9a mock ok */
   --status-success-subtle: 22 48 31; /* #16301f mock okSoft */
@@ -339,7 +341,7 @@ html {
   --status-info: var(--blue-300);
   --status-info-subtle: var(--blue-950);
   --status-info-border: var(--blue-800);
-  --status-info-strong: 58 66 79; /* #3a424f cool gray, derived */
+  --status-info-strong: 65 65 78; /* #41414e violet gray, derived */
   --status-warning: var(--amber-300);
   --status-warning-subtle: var(--amber-950);
   --status-warning-border: var(--amber-800);
@@ -348,9 +350,9 @@ html {
   --status-error-subtle: var(--red-950);
   --status-error-border: var(--red-800);
   --status-error-strong: var(--red-800);
-  --status-neutral: 195 201 211; /* #c3c9d3 mock mute */
-  --status-neutral-subtle: 38 45 56; /* #262d38 mock muteSoft */
-  --status-neutral-border: 42 49 60; /* #2a313c mock border */
+  --status-neutral: 211 211 222; /* #d3d3de wireframe gray-300 */
+  --status-neutral-subtle: 44 44 55; /* #2c2c37 violet gray, derived */
+  --status-neutral-border: 48 48 59; /* #30303b violet gray, derived */
   --status-verified: 26 127 216;
   --text-on-status: var(--white);
 
@@ -376,12 +378,12 @@ html {
   --syntax-title: 242 44 61;
 
   --surface-inverted: var(--white);
-  --surface-inverted-hover: 238 241 245; /* #eef1f5 mock text */
-  --text-inverted: 21 24 30; /* #15181e light mock text */
+  --surface-inverted-hover: 243 243 248; /* #f3f3f8 wireframe gray-100 */
+  --text-inverted: 21 21 28; /* #15151c wireframe gray-900 */
   --surface-fixed: var(--white);
-  --surface-fixed-hover: 238 241 245; /* #eef1f5 mock tile, same in light + dark */
-  --text-fixed: 21 24 30; /* #15181e mock text, same in light + dark */
-  --switch-unchecked: 107 116 130; /* #6b7482 cool gray, derived */
+  --surface-fixed-hover: 243 243 248; /* #f3f3f8 wireframe gray-100, same in light + dark */
+  --text-fixed: 21 21 28; /* #15151c wireframe gray-900, same in light + dark */
+  --switch-unchecked: 115 115 130; /* #737382 violet gray, derived */
   --provider-openai: #19c37d;
   --provider-openai-gpt4: #ab68ff;
   --provider-openai-reasoning: #000000;
@@ -423,6 +425,47 @@ html {
   --border-medium: 217 217 227;
   --border-heavy: 217 217 227;
   --border-xheavy: 217 217 227;
+}
+
+/* Sidebar ink. The AgentHub wireframe keeps the sidebar dark (#17152b "ink") in every mode, so the
+ * sidebar restates the semantic tokens its contents read instead of each row picking new classes.
+ * Values are the wireframe's #side overrides; ratios are against the ink canvas (script-computed):
+ * text-secondary 12.12:1, text-tertiary 8.48:1 (6.30:1 on the ink-3 selection), text-muted 5.52:1.
+ * High contrast keeps its own palette, so the scope stops there. */
+html:not(.high-contrast) .sidebar-ink {
+  --surface-primary-alt: 23 21 43; /* #17152b wireframe ink */
+  --surface-primary: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-secondary: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-tertiary: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-hover: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-hover-alt: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --surface-active: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --surface-active-alt: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --border-light: 44 41 71; /* #2c2947 wireframe #side g20 */
+  --border-medium: 58 54 96; /* #3a3660 wireframe #side g30 */
+  --border-heavy: 111 108 140; /* #6f6c8c wireframe #side g40 */
+  --text-primary: 255 255 255; /* #ffffff wireframe #side g90 */
+  --text-secondary: 213 211 230; /* #d5d3e6 wireframe #side g70 */
+  --text-secondary-alt: 179 176 204; /* #b3b0cc wireframe #side g60 */
+  --text-tertiary: 179 176 204; /* #b3b0cc wireframe #side g60 */
+  --text-muted: 143 140 171; /* #8f8cab wireframe #side g50 */
+  --shimmer-base: 255 255 255;
+  --accent-primary: 196 181 253; /* #c4b5fd wireframe #side orange */
+  --ring-primary: 167 139 250; /* #a78bfa wireframe brand-400 */
+  color: rgb(var(--text-secondary));
+}
+/* Selected panel row: ink-3 fill from the tokens above plus the wireframe's 3px brand-400 rail. */
+html:not(.high-contrast) .sidebar-ink [data-testid^='nav-panel-'][aria-pressed='true'] {
+  box-shadow: inset 3px 0 0 rgb(167 139 250);
+}
+
+/* Wireframe modal corners (22px). The shared dialog shells hard-code rounded-lg/xl/2xl, so the
+ * radius is set on the Radix content element; phones keep the shells' bottom-sheet corners. */
+@media (min-width: 640px) {
+  [role='dialog'].bg-surface-dialog,
+  [role='alertdialog'].bg-surface-dialog {
+    border-radius: 1.375rem;
+  }
 }
 
 /* High contrast appearance modes.
@@ -642,6 +685,16 @@ html.high-contrast.dark .btn-neutral:hover {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* SUIT 2.0.5 (github sun-typeface/SUIT, fonts/variable/woff2), SIL OFL 1.1:
+   client/public/fonts/SUIT-OFL.txt. The AgentHub wireframe's first UI font. */
+@font-face {
+  font-display: swap;
+  font-family: 'SUIT Variable';
+  font-style: normal;
+  font-weight: 100 900;
+  src: url('$fonts/SUIT-Variable.woff2') format('woff2');
 }
 
 /* Pretendard 1.3.9 (npm `pretendard`), SIL OFL 1.1: client/public/fonts/Pretendard-OFL.txt */
@@ -2708,4 +2761,143 @@ html[data-input-modality='keyboard']
    question card, so the card travels behind the ChatForm, not over it. */
 ::view-transition-group(chat-form) {
   z-index: 2;
+}
+
+/* AgentHub wireframe v24 motion and accessibility preferences.
+ * Press feedback and entrances use the individual `scale` / `translate` properties rather than
+ * `transform`, so they compose with the Tailwind transforms (dialog centering, translate
+ * utilities) already on these elements instead of replacing them. Press scaling carries no
+ * transition of its own: a `transition` here would override the Tailwind transition utilities
+ * those controls already set, so the scale applies on pointer-down and releases the same way. */
+:root {
+  --wf-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --wf-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wf-enter: 420ms;
+  --wf-leave: 180ms;
+}
+button,
+[role='menuitem'],
+[role='option'],
+[data-testid='convo-item'] {
+  -webkit-tap-highlight-color: transparent;
+}
+button:active:not(:disabled) {
+  scale: 0.97;
+}
+[role='menuitem']:active,
+[role='menuitemradio']:active,
+[role='menuitemcheckbox']:active,
+[role='option']:active,
+[data-testid='convo-item']:active {
+  scale: 0.985;
+}
+
+/* Dialogs arrive from slightly below with a blur, and leave the same way at a shorter length. */
+@keyframes wf-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 8px;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    filter: none;
+  }
+}
+@keyframes wf-dialog-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    scale: 0.97;
+    translate: 0 6px;
+  }
+}
+@keyframes wf-message-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes wf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes wf-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+[role='dialog'].bg-surface-dialog[data-state='open'],
+[role='alertdialog'].bg-surface-dialog[data-state='open'] {
+  animation: wf-dialog-in var(--wf-enter) var(--wf-spring) both;
+}
+[role='dialog'].bg-surface-dialog[data-state='closed'],
+[role='alertdialog'].bg-surface-dialog[data-state='closed'] {
+  animation: wf-dialog-out var(--wf-leave) var(--wf-ease-out) both;
+}
+/* Every message row runs this once when it mounts, which covers a new turn arriving. */
+.message-render {
+  animation: wf-message-in var(--wf-enter) var(--wf-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled),
+  [role='menuitem']:active,
+  [role='menuitemradio']:active,
+  [role='menuitemcheckbox']:active,
+  [role='option']:active,
+  [data-testid='convo-item']:active {
+    scale: none;
+  }
+  [role='dialog'].bg-surface-dialog[data-state='open'],
+  [role='alertdialog'].bg-surface-dialog[data-state='open'],
+  .message-render {
+    animation: wf-fade-in 0.2s ease both;
+  }
+  [role='dialog'].bg-surface-dialog[data-state='closed'],
+  [role='alertdialog'].bg-surface-dialog[data-state='closed'] {
+    animation: wf-fade-out 0.15s ease both;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur-sm,
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  [role='dialog'].bg-surface-dialog,
+  [role='alertdialog'].bg-surface-dialog,
+  [role='menu'] {
+    border: 1px solid rgb(var(--border-xheavy));
+  }
+}
+
+/* Wireframe --grad (brand-500 #8b5cf6 → pink #db2777) on the send button. The white glyph is a
+ * graphic, so the 3:1 floor applies: 4.23:1 at the violet end, 4.60:1 at the pink end
+ * (script-computed). `surface-submit` stays the solid fallback, and high contrast keeps it. */
+html:not(.high-contrast) #send-button:not(:disabled) {
+  background-image: linear-gradient(135deg, rgb(139 92 246), rgb(219 39 119));
+}
+html:not(.high-contrast) #send-button:not(:disabled):hover {
+  filter: brightness(1.06);
 }

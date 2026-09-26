@@ -1,78 +1,80 @@
 import { IThemeRGB } from '../types';
 
 /**
- * Default light theme: brand navy on cool grays. "mock" labels name the palette key in the
- * platform repo's docs/design-web-claude-style.md mockups; "derived" values are interpolated.
+ * Default light theme: brand violet on violet-tinted grays. "wireframe" labels name the token in
+ * the planner's AgentHub wireframe (docs/agent-hub-prototype_v29.html, "AgentHub 테마 v2");
+ * "mock" labels are the earlier status palette the wireframe does not restate.
  */
 export const defaultTheme: IThemeRGB = {
   // Text colors
-  'rgb-text-primary': '21 24 30', // #15181e (mock text)
-  'rgb-text-secondary': '60 65 74', // #3c414a (mock text2)
-  'rgb-text-secondary-alt': '93 100 112', // #5d6470 (mock text3)
-  'rgb-text-tertiary': '93 100 112', // #5d6470 (mock text3)
-  'rgb-text-muted': '105 110 121', // #696e79 (Click UI text.muted)
-  'rgb-text-warning': '146 64 14', // #92400e (amber-800), AA on the #eff2f6 sidebar
-  'rgb-text-destructive': '185 28 28', // #b91c1c (red-700), AA on the #eff2f6 sidebar
-  'rgb-shimmer-base': '21 24 30', // #15181e (mock text, matching text-primary)
+  'rgb-text-primary': '21 21 28', // #15151c (wireframe gray-900)
+  'rgb-text-secondary': '59 59 73', // #3b3b49 (wireframe gray-700)
+  'rgb-text-secondary-alt': '86 86 102', // #565666 (wireframe gray-600)
+  'rgb-text-tertiary': '86 86 102', // #565666 (wireframe gray-600)
+  'rgb-text-muted': '107 107 124', // #6b6b7c (wireframe gray-500 darkened to clear AA, 5.22:1 on white)
+  'rgb-text-warning': '146 64 14', // #92400e (amber-800), AA on the #f3f3f8 surface-primary-alt
+  'rgb-text-destructive': '185 28 28', // #b91c1c (red-700), AA on the #f3f3f8 surface-primary-alt
+  'rgb-shimmer-base': '21 21 28', // #15151c (wireframe gray-900, matching text-primary)
   'rgb-shimmer-dip': '129 130 134', // #818286
 
   // Link and accent colors
-  /** 브랜드 네이비(#06377b) 계열. 흰 배경 대비 11.4:1(수동 계산, 자동 회귀 검증은
-   *  하지 못함)로 기존 blue-600(4.5:1대)보다 대비가 높아지므로 접근성은 낮아지지 않는다. */
-  'rgb-link': '6 55 123', // #06377b (brand navy)
-  'rgb-link-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
+  /** 와이어프레임 브랜드 보라(brand-700). 흰 배경 대비 7.10:1, hover 인 brand-800 은 8.98:1
+   *  (스크립트로 계산). AA 하한은 semanticTokens.spec.ts 가 brand-subtle 위에서 검사한다. */
+  'rgb-link': '109 40 217', // #6d28d9 (wireframe brand-700)
+  'rgb-link-hover': '91 33 182', // #5b21b6 (wireframe brand-800)
   'rgb-link-visited': '147 51 234', // #9333ea (purple-600)
-  'rgb-accent-primary': '6 55 123', // #06377b (brand navy)
-  'rgb-accent-primary-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
+  'rgb-accent-primary': '109 40 217', // #6d28d9 (wireframe brand-700)
+  'rgb-accent-primary-hover': '91 33 182', // #5b21b6 (wireframe brand-800)
 
   // Ring colors
-  'rgb-ring-primary': '80 118 175', // #5076af (ndesign 초점 표시 지정 색)
+  'rgb-ring-primary': '139 92 246', // #8b5cf6 (wireframe brand-500, the focus-ring token)
 
   // Header colors
-  'rgb-header-primary': '247 248 250', // #f7f8fa (mock bg)
-  'rgb-header-hover': '238 241 245', // #eef1f5 (mock tile)
-  'rgb-header-button-hover': '238 241 245', // #eef1f5 (mock tile)
+  'rgb-header-primary': '251 251 253', // #fbfbfd (wireframe bg)
+  'rgb-header-hover': '243 243 248', // #f3f3f8 (wireframe gray-100)
+  'rgb-header-button-hover': '243 243 248', // #f3f3f8 (wireframe gray-100)
 
   // Surface colors
-  'rgb-surface-active': '227 232 239', // #e3e8ef (mock active)
-  'rgb-surface-active-alt': '221 226 234', // #dde2ea (mock border)
-  'rgb-surface-hover': '227 232 239', // #e3e8ef (mock active)
-  'rgb-surface-hover-alt': '211 217 226', // #d3d9e2 (cool gray, derived)
-  'rgb-surface-composer-hover': '227 232 239', // #e3e8ef (mock active)
-  'rgb-surface-primary': '255 255 255', // #ffffff (mock surface)
+  'rgb-surface-active': '231 231 239', // #e7e7ef (wireframe gray-200)
+  'rgb-surface-active-alt': '231 231 239', // #e7e7ef (wireframe gray-200)
+  'rgb-surface-hover': '231 231 239', // #e7e7ef (wireframe gray-200)
+  'rgb-surface-hover-alt': '211 211 222', // #d3d3de (wireframe gray-300)
+  'rgb-surface-composer-hover': '231 231 239', // #e7e7ef (wireframe gray-200)
+  'rgb-surface-primary': '255 255 255', // #ffffff (wireframe surface)
   'rgb-chart-widget-surface': '255 255 255', // #fff (Click UI chart widget)
   'rgb-chart-widget-stroke': '230 231 233', // #e6e7e9 (Click UI chart widget)
-  'rgb-surface-primary-alt': '239 242 246', // #eff2f6 (mock side)
-  'rgb-surface-primary-contrast': '236 239 243', // #eceff3 (mock muteSoft)
-  'rgb-surface-secondary': '247 249 251', // #f7f9fb (mock sub)
-  'rgb-surface-secondary-alt': '227 232 239', // #e3e8ef (mock active)
-  'rgb-surface-tertiary': '238 241 245', // #eef1f5 (mock tile)
-  'rgb-surface-tertiary-alt': '255 255 255', // #ffffff (mock surface)
-  'rgb-surface-dialog': '255 255 255', // #ffffff (mock surface)
+  'rgb-surface-primary-alt': '243 243 248', // #f3f3f8 (wireframe gray-100)
+  'rgb-surface-primary-contrast': '243 243 248', // #f3f3f8 (wireframe gray-100)
+  'rgb-surface-secondary': '250 250 252', // #fafafc (wireframe gray-50)
+  'rgb-surface-secondary-alt': '231 231 239', // #e7e7ef (wireframe gray-200)
+  'rgb-surface-tertiary': '243 243 248', // #f3f3f8 (wireframe gray-100)
+  'rgb-surface-tertiary-alt': '255 255 255', // #ffffff (wireframe surface)
+  'rgb-surface-dialog': '255 255 255', // #ffffff (wireframe surface)
   'rgb-surface-overlay': '89 89 89', // #595959 (gray-500)
-  /** 흰 글자 위 대비 11.4:1(수동 계산). 다크 테마는 시안의 밝은 네이비를 쓴다 (dark.ts 참고). */
-  'rgb-surface-submit': '6 55 123', // #06377b (brand navy)
-  'rgb-surface-submit-hover': '5 44 98', // #052c62 (brand navy, darkened ~20%)
-  'rgb-surface-message-user': '233 237 243', // #e9edf3 (mock userBubble)
-  'rgb-surface-brand-subtle': '233 239 248', // #e9eff8 (mock brandSoft)
+  /** 흰 글자 위 대비 5.70:1(스크립트로 계산). 보내기 버튼은 style.css 에서 보라→분홍
+   *  그라데이션을 덧입히고, 이 값은 그라데이션을 못 그리는 곳의 단색이다. */
+  'rgb-surface-submit': '124 58 237', // #7c3aed (wireframe brand-600)
+  'rgb-surface-submit-hover': '109 40 217', // #6d28d9 (wireframe brand-700)
+  'rgb-surface-message-user': '237 233 254', // #ede9fe (wireframe brand-100 user bubble)
+  'rgb-surface-brand-subtle': '245 243 255', // #f5f3ff (wireframe brand-50)
   'rgb-surface-destructive': '185 28 28', // #b91c1c (red-700)
   'rgb-surface-destructive-hover': '153 27 27', // #991b1b (red-800)
-  'rgb-surface-chat': '255 255 255', // #ffffff (mock surface)
-  'rgb-surface-code': '244 246 249', // #f4f6f9 (mock code)
-  'rgb-surface-inverted': '21 24 30', // #15181e (mock text)
-  'rgb-surface-inverted-hover': '60 65 74', // #3c414a (mock text2)
+  'rgb-surface-chat': '255 255 255', // #ffffff (wireframe surface)
+  'rgb-surface-code': '243 243 248', // #f3f3f8 (wireframe gray-100)
+  'rgb-surface-inverted': '21 21 28', // #15151c (wireframe gray-900)
+  'rgb-surface-inverted-hover': '59 59 73', // #3b3b49 (wireframe gray-700)
   'rgb-text-inverted': '255 255 255', // #fff (white)
   'rgb-surface-fixed': '255 255 255', // #fff (white) — same in light + dark
-  'rgb-surface-fixed-hover': '238 241 245', // #eef1f5 (mock tile, same in light + dark)
-  'rgb-text-fixed': '21 24 30', // #15181e (mock text, same in light + dark)
+  'rgb-surface-fixed-hover': '243 243 248', // #f3f3f8 (wireframe gray-100, same in light + dark)
+  'rgb-text-fixed': '21 21 28', // #15151c (wireframe gray-900, same in light + dark)
 
   // Border colors
-  'rgb-border-light': '221 226 234', // #dde2ea (mock border)
-  'rgb-border-medium': '200 207 217', // #c8cfd9 (cool gray, derived)
-  'rgb-border-medium-alt': '200 207 217', // #c8cfd9 (cool gray, derived)
-  'rgb-border-brand': '185 201 226', // #b9c9e2 (mock brandLine)
-  'rgb-border-heavy': '152 160 173', // #98a0ad (cool gray, derived)
-  'rgb-border-xheavy': '93 100 112', // #5d6470 (mock text3)
+  'rgb-border-light': '231 231 239', // #e7e7ef (wireframe gray-200)
+  'rgb-border-medium': '211 211 222', // #d3d3de (wireframe gray-300)
+  'rgb-border-medium-alt': '211 211 222', // #d3d3de (wireframe gray-300)
+  'rgb-border-brand': '221 214 254', // #ddd6fe (wireframe brand-200)
+  'rgb-border-heavy': '166 166 182', // #a6a6b6 (wireframe gray-400)
+  'rgb-border-xheavy': '86 86 102', // #565666 (wireframe gray-600)
   'rgb-border-destructive': '220 38 38', // #dc2626 (red-600)
 
   // Status colors
@@ -83,7 +85,7 @@ export const defaultTheme: IThemeRGB = {
   'rgb-status-info': '37 99 235', // #2563eb (blue-600)
   'rgb-status-info-subtle': '239 246 255', // #eff6ff (blue-50)
   'rgb-status-info-border': '147 197 253', // #93c5fd (blue-300)
-  'rgb-status-info-strong': '93 100 112', // #5d6470 (mock text3)
+  'rgb-status-info-strong': '86 86 102', // #565666 (wireframe gray-600)
   'rgb-status-warning': '180 83 9', // #b45309 (amber-700)
   'rgb-status-warning-subtle': '255 251 235', // #fffbeb (amber-50)
   'rgb-status-warning-border': '252 211 77', // #fcd34d (amber-300)
@@ -92,9 +94,9 @@ export const defaultTheme: IThemeRGB = {
   'rgb-status-error-subtle': '254 242 242', // #fef2f2 (red-50)
   'rgb-status-error-border': '252 165 165', // #fca5a5 (red-300)
   'rgb-status-error-strong': '224 47 31', // #e02f1f
-  'rgb-status-neutral': '74 81 92', // #4a515c (mock mute)
-  'rgb-status-neutral-subtle': '236 239 243', // #eceff3 (mock muteSoft)
-  'rgb-status-neutral-border': '200 207 217', // #c8cfd9 (cool gray, derived)
+  'rgb-status-neutral': '86 86 102', // #565666 (wireframe gray-600)
+  'rgb-status-neutral-subtle': '243 243 248', // #f3f3f8 (wireframe gray-100)
+  'rgb-status-neutral-border': '211 211 222', // #d3d3de (wireframe gray-300)
   /** Verified mark. `blue-600` doubles as `status-info` here, and that is the
    *  point: one blue for "this is informational/first-party", 5.17:1 under the
    *  white label and 4.90:1 against the panel. */
@@ -105,9 +107,9 @@ export const defaultTheme: IThemeRGB = {
   'rgb-brand-purple': '126 34 206', // #7e22ce (purple-700)
 
   /** Code syntax highlighting, measured against the `surface-code` fill. */
-  'rgb-syntax-text': '21 24 30', // #15181e (mock text)
-  'rgb-syntax-comment': '93 100 112', // #5d6470 (mock text3)
-  'rgb-syntax-meta': '60 65 74', // #3c414a (mock text2)
+  'rgb-syntax-text': '21 21 28', // #15151c (wireframe gray-900)
+  'rgb-syntax-comment': '86 86 102', // #565666 (wireframe gray-600)
+  'rgb-syntax-meta': '59 59 73', // #3b3b49 (wireframe gray-700)
   'rgb-syntax-builtin': '154 103 0', // #9a6700
   'rgb-syntax-keyword': '5 80 174', // #0550ae
   'rgb-syntax-string': '10 123 98', // #0a7b62
@@ -134,5 +136,5 @@ export const defaultTheme: IThemeRGB = {
   'rgb-switch-unchecked': '148 148 148', // #949494
 
   // Presentation
-  'rgb-presentation': '247 248 250', // #f7f8fa (mock bg)
+  'rgb-presentation': '251 251 253', // #fbfbfd (wireframe bg)
 };

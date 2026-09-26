@@ -1,5 +1,9 @@
 import { logger } from '@librechat/data-schemas';
-import type { DeskAppReleaseResponse, DeskStatusResponse } from 'librechat-data-provider';
+import type {
+  DeskPermission,
+  DeskStatusResponse,
+  DeskAppReleaseResponse,
+} from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 
 const DEFAULT_INTERNAL_URL = 'http://desk-relay:8766';
@@ -8,7 +12,7 @@ const RELAY_TIMEOUT_MS = 3000;
 const INSTALLER_FILE_PATTERN = /^[\w.-]+\.exe$/;
 
 export interface DeskRelayConfig {
-  /** Container-network relay base URL (`/internal/status`, `/app/latest.yml`). */
+  /** Container-network relay base URL (`/internal/status`, `/internal/permissions`, `/app/latest.yml`). */
   internalUrl: string;
   /** `DESK_RELAY_SERVICE_KEY`; without it the relay is not asked at all. */
   serviceKey?: string;
@@ -20,14 +24,14 @@ export interface DeskRelayConfig {
 interface RelayStatusBody {
   online: boolean;
   device_name: string | null;
-  folder_name: string | null;
+  folders: string[];
   connected_at: string | null;
 }
 
 const unknownStatus = (installerUrl: string | null): DeskStatusResponse => ({
   state: 'unknown',
   deviceName: null,
-  folderName: null,
+  folders: [],
   connectedAt: null,
   installerUrl,
 });
@@ -51,15 +55,45 @@ function parseRelayStatus(body: unknown): RelayStatusBody | null {
   if (typeof body !== 'object' || body === null || !('online' in body)) {
     return null;
   }
-  const fields = body as Partial<Record<keyof RelayStatusBody, unknown>>;
+  const fields = body as Partial<Record<keyof RelayStatusBody | 'folder_name', unknown>>;
   if (typeof fields.online !== 'boolean') {
     return null;
+  }
+  /** Relays before the multi-folder app send only `folder_name`. */
+  const legacyFolder = optionalString(fields.folder_name);
+  let folders: string[] = legacyFolder ? [legacyFolder] : [];
+  if (Array.isArray(fields.folders)) {
+    folders = fields.folders.filter((name): name is string => typeof name === 'string');
   }
   return {
     online: fields.online,
     device_name: optionalString(fields.device_name),
-    folder_name: optionalString(fields.folder_name),
+    folders,
     connected_at: optionalString(fields.connected_at),
+  };
+}
+
+function parseRelayPermission(entry: unknown): DeskPermission | null {
+  if (typeof entry !== 'object' || entry === null) {
+    return null;
+  }
+  const fields = entry as Record<string, unknown>;
+  const { request_id, path, local_port, approve_token, expires_at } = fields;
+  if (
+    !Number.isInteger(request_id) ||
+    !Number.isInteger(local_port) ||
+    typeof path !== 'string' ||
+    typeof approve_token !== 'string' ||
+    typeof expires_at !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    requestId: request_id as number,
+    path,
+    localPort: local_port as number,
+    approveToken: approve_token,
+    expiresAt: expires_at,
   };
 }
 
@@ -178,10 +212,47 @@ export async function getDeskStatus(
   return {
     state: 'online',
     deviceName: relayStatus.device_name,
-    folderName: relayStatus.folder_name,
+    folders: relayStatus.folders,
     connectedAt: relayStatus.connected_at,
     installerUrl,
   };
+}
+
+/**
+ * Reads outside the switched-on folders that the user's app is waiting on. Failures return none,
+ * so the chat simply shows no permission card; the app's own window still asks.
+ */
+export async function getDeskPermissions(
+  config: DeskRelayConfig,
+  userId: string,
+): Promise<DeskPermission[]> {
+  if (!config.serviceKey) {
+    return [];
+  }
+  try {
+    const response = await fetch(
+      `${config.internalUrl}/internal/permissions?user=${encodeURIComponent(userId)}`,
+      {
+        headers: { Authorization: `Bearer ${config.serviceKey}` },
+        signal: AbortSignal.timeout(config.timeoutMs ?? RELAY_TIMEOUT_MS),
+      },
+    );
+    if (!response.ok) {
+      logger.warn(`[deskPermissions] Relay permissions answered ${response.status}`);
+      return [];
+    }
+    const body: unknown = await response.json();
+    if (!Array.isArray(body)) {
+      logger.warn('[deskPermissions] Relay permissions body was not a list');
+      return [];
+    }
+    return body
+      .map(parseRelayPermission)
+      .filter((permission): permission is DeskPermission => permission !== null);
+  } catch (error) {
+    logger.warn('[deskPermissions] Could not reach the desk relay', error);
+    return [];
+  }
 }
 
 interface DeskStatusRequest extends Request {
@@ -197,6 +268,19 @@ export function createDeskStatusHandler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
     return res.json(await getDeskStatus(config, userId));
+  };
+}
+
+/** Only the signed-in user's own requests: the token in each lets that user's PC accept an answer. */
+export function createDeskPermissionsHandler(
+  config: DeskRelayConfig,
+): (req: DeskStatusRequest, res: Response) => Promise<Response> {
+  return async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    return res.json(await getDeskPermissions(config, userId));
   };
 }
 

@@ -1,5 +1,6 @@
 import {
   describeToolStep,
+  describeToolError,
   directionParticle,
   getToolErrorMessage,
   objectParticle,
@@ -113,6 +114,24 @@ describe('getToolErrorMessage', () => {
 
   it('returns null for a successful output', () => {
     expect(getToolErrorMessage('3분기 예산 메모\n')).toBeNull();
+  });
+});
+
+describe('describeToolError', () => {
+  it('shows a short label when the user did not allow the read on the PC', () => {
+    expect(
+      describeToolError(
+        'Error executing tool read_file: 사용자가 이 폴더 읽기를 허락하지 않았습니다.',
+        localizeKo,
+      ),
+    ).toBe('사용자가 허락하지 않음');
+  });
+
+  it('keeps any other failure message as the app wrote it', () => {
+    expect(describeToolError(RELAY_OFFLINE_OUTPUT, localizeKo)).toBe(
+      'PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.',
+    );
+    expect(describeToolError('3분기 예산 메모\n', localizeKo)).toBeNull();
   });
 });
 

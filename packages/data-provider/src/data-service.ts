@@ -359,6 +359,10 @@ export const getDeskStatus = (): Promise<q.DeskStatusResponse> => {
   return request.get(endpoints.deskStatus());
 };
 
+export const getDeskPermissions = (): Promise<q.DeskPermission[]> => {
+  return request.get(endpoints.deskPermissions());
+};
+
 export const getDeskAppRelease = (): Promise<q.DeskAppReleaseResponse> => {
   return request.get(endpoints.deskAppRelease());
 };

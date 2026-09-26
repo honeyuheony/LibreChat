@@ -124,7 +124,7 @@ const useHandleKeyUp = ({
     ) {
       return;
     }
-    if (shouldTriggerCommand(textAreaRef, '$')) {
+    if (shouldTriggerCommand(textAreaRef, '/')) {
       setShowSkillsPopover(true);
     }
   }, [
@@ -140,8 +140,10 @@ const useHandleKeyUp = ({
     () => ({
       '@': handleAtCommand,
       '+': handlePlusCommand,
-      '/': handlePromptsCommand,
-      $: handleSkillsCommand,
+      '/': () => {
+        handlePromptsCommand();
+        handleSkillsCommand();
+      },
     }),
     [handleAtCommand, handlePlusCommand, handlePromptsCommand, handleSkillsCommand],
   );
