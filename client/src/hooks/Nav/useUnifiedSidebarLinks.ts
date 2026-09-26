@@ -113,6 +113,8 @@ export default function useUnifiedSidebarLinks() {
     const otherLinks: NavLink[] = [];
     for (const link of sideNavLinks) {
       if (link.id === 'skills') {
+        /* Temporary: the market has no 「내 agent」 tab or create entry yet, so the old agent
+           panel stays as its own row. Drop this push once the market carries both. */
         skillsLinks.push({ ...link, title: 'com_ui_sidebar_my_agents' });
       } else if (!panelsReplacedElsewhere.has(link.id)) {
         otherLinks.push(link);
