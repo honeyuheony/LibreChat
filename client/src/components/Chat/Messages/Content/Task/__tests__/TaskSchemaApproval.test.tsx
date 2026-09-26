@@ -43,7 +43,12 @@ const submittedDecisions = () =>
 beforeEach(() => {
   mockApprovalMutate.mockReset();
   mockEstimate.mockReset();
-  mockEstimate.mockResolvedValue({ docs: 12, minMinutes: 1, maxMinutes: 1, cached: 0 });
+  mockEstimate.mockResolvedValue({
+    docs: 12,
+    cached: 0,
+    minutes: { min: 1, max: 1 },
+    allCached: false,
+  });
 });
 
 describe('TaskSchemaApproval', () => {
@@ -103,7 +108,12 @@ describe('TaskSchemaApproval', () => {
   });
 
   test('shows the document count and estimate returned for the selected fields', async () => {
-    mockEstimate.mockResolvedValue({ docs: 40, minMinutes: 2, maxMinutes: 3, cached: 5 });
+    mockEstimate.mockResolvedValue({
+      docs: 40,
+      cached: 5,
+      minutes: { min: 2, max: 3 },
+      allCached: false,
+    });
     renderCard();
 
     expect(

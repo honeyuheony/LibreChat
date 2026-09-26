@@ -15,10 +15,10 @@ export type TaskResultAttachment = {
 /** Response of `GET /api/tasks/estimate` for the field confirmation card. */
 export type TaskEstimate = {
   docs: number;
-  minMinutes: number;
-  maxMinutes: number;
   /** Documents whose every requested field is already in the extraction cache. */
   cached: number;
+  minutes: { min: number; max: number };
+  allCached: boolean;
 };
 
 const tasksUrl = () => `${apiBaseUrl()}/api/tasks`;
