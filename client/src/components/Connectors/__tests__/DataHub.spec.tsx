@@ -31,7 +31,9 @@ jest.mock('~/hooks', () => {
     useLocalize: () => localize,
     useDocumentTitle: jest.fn(),
     activateCatalog: jest.fn(),
-    useAuthContext: () => ({ user: { id: 'user-a', role: mockRole.current } }),
+    useAuthContext: () => ({
+      user: { id: 'user-a', role: mockRole.current, name: 'Hong', department: 'Analysis' },
+    }),
     useMCPServerManager: () => ({
       availableMCPServers: mockServers.current,
       isLoading: false,
@@ -179,6 +181,14 @@ describe('DataHub', () => {
     renderHub();
     const list = screen.getByRole('list', { name: 'Data sources' });
     expect(within(list).queryByRole('heading')).not.toBeInTheDocument();
+  });
+
+  it('names the page, the number of sources and whose access the list reflects', () => {
+    renderHub();
+    const bar = screen.getByRole('banner');
+    expect(bar).toHaveTextContent('Data sources (MCP)');
+    expect(bar).toHaveTextContent('4 internal sources');
+    expect(bar).toHaveTextContent('As seen by Hong · Analysis');
   });
 
   it('counts each observable status, reading the desktop app rather than its relay', () => {

@@ -5,13 +5,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { MCPServerDefinition } from '~/hooks';
 import type { HubStatus } from '../status';
 import {
+  useLocalize,
+  useAuthContext,
+  activateCatalog,
+  useDocumentTitle,
+  useMCPServerManager,
+} from '~/hooks';
+import {
   DATA_HUB_PATH,
   DESK_SERVER_NAME,
   getHubStatus,
   hubStatusView,
   toHubStatusProps,
 } from '../status';
-import { useLocalize, useMCPServerManager, activateCatalog, useDocumentTitle } from '~/hooks';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
@@ -46,6 +52,9 @@ export default function DataHub() {
   const navigate = useNavigate();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { serverName: selectedParam } = useParams();
+  const { user } = useAuthContext();
+  /** Whose access the list reflects, as the wireframe's 「홍길동 · 정세분석팀 기준」. */
+  const viewer = [user?.name, user?.department].filter(Boolean).join(' · ');
   const [filter, setFilter] = useState<Filter | null>(null);
   useDocumentTitle(`${localize('com_ui_data_hub')} | LibreChat`);
 
@@ -214,12 +223,23 @@ export default function DataHub() {
       className="relative flex h-full w-full grow flex-col overflow-y-auto bg-presentation"
       data-testid="data-hub"
     >
-      <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-6 md:pt-10">
-        {isSmallScreen && (
-          <div className="mb-3">
-            <OpenSidebar />
-          </div>
+      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+        {isSmallScreen && <OpenSidebar />}
+        <span className="font-semibold text-text-primary">
+          {localize('com_ui_data_hub_topbar_title')}
+        </span>
+        {!isLoading && (
+          <span className="text-text-tertiary">
+            {localize('com_ui_data_hub_topbar_count', { 0: String(servers.length) })}
+          </span>
         )}
+        {viewer && (
+          <span className="ml-auto hidden truncate text-text-tertiary md:inline">
+            {localize('com_ui_data_hub_topbar_viewer', { 0: viewer })}
+          </span>
+        )}
+      </header>
+      <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-6 md:pt-8">
         <h1 className="flex items-baseline gap-2 text-2xl font-bold text-text-primary">
           {localize('com_ui_data_hub')}
           <span className="text-sm font-medium text-text-secondary">
