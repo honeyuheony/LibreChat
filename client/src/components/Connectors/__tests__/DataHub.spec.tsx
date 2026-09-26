@@ -168,22 +168,18 @@ describe('DataHub', () => {
     ]);
   });
 
-  it('groups connectors under their config category, with the rest under Other', () => {
+  it('groups connectors under their config category by name, with the rest under Other', () => {
     mockServers.current = [
       server('filesystem', { title: 'Shared folder', category: 'Documents' }),
       server('google-workspace', { title: 'Google', category: 'Documents' }),
       server('slack', { title: 'Slack' }),
-      server('my-pc', { title: 'My PC folder', category: 'Analytics' }),
+      server('my-pc', { title: 'My PC folder', category: 'Zeta' }),
     ];
     renderHub();
     const list = screen.getByRole('list', { name: 'Data sources' });
     const headings = within(list).getAllByRole('heading', { level: 3 });
-    expect(headings.map((heading) => heading.textContent)).toEqual([
-      'Analytics',
-      'Documents',
-      'Other',
-    ]);
-    const documents = headings[1].nextElementSibling as HTMLElement;
+    expect(headings.map((heading) => heading.textContent)).toEqual(['Documents', 'Zeta', 'Other']);
+    const documents = headings[0].nextElementSibling as HTMLElement;
     expect(
       within(documents)
         .getAllByRole('button')

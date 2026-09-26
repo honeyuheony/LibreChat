@@ -33,8 +33,9 @@ type Filter = Exclude<HubStatus, 'checking'>;
 const FILTERS: Filter[] = ['available', 'needs_connection', 'unavailable'];
 
 /**
- * The list's groups, in the order their first connector appears. Connectors without a
- * `category` in their config share one group, kept last.
+ * The list's groups, sorted by name so the order does not follow whichever connector the
+ * registry happened to list first. Connectors without a `category` in their config share one
+ * group, kept last. Inside a group the list keeps its own order (desktop folder first).
  */
 function groupByCategory(servers: MCPServerDefinition[]) {
   const groups = new Map<string | undefined, MCPServerDefinition[]>();
@@ -44,7 +45,12 @@ function groupByCategory(servers: MCPServerDefinition[]) {
   }
   return [...groups.entries()]
     .map(([category, members]) => ({ category, servers: members }))
-    .sort((a, b) => Number(a.category == null) - Number(b.category == null));
+    .sort((a, b) => {
+      if (a.category == null || b.category == null) {
+        return Number(a.category == null) - Number(b.category == null);
+      }
+      return a.category.localeCompare(b.category);
+    });
 }
 
 /** Every configured connector, what the signed-in user can do with each, and recent use. */
