@@ -1,3 +1,4 @@
+import { createTaskExtractionModel, createTaskResultModel, createTaskSummaryModel } from './task';
 import { createAgentQueuedTurnModel, createAgentQueuedTurnSequenceModel } from './queuedTurn';
 import { createAgentTriggerLaneSequenceModel } from './triggerLaneSequence';
 import { createScheduleModel, createScheduleRunModel } from './schedule';
@@ -98,6 +99,9 @@ export function createModels(mongoose: typeof import('mongoose')): {
   ScheduleRun: ReturnType<typeof createScheduleRunModel>;
   RefreshTokenBridge: ReturnType<typeof createRefreshTokenBridgeModel>;
   OpenIDRefreshFlight: ReturnType<typeof createOpenIDRefreshFlightModel>;
+  TaskExtraction: ReturnType<typeof createTaskExtractionModel>;
+  TaskSummary: ReturnType<typeof createTaskSummaryModel>;
+  TaskResult: ReturnType<typeof createTaskResultModel>;
 } {
   const models = {
     User: createUserModel(mongoose),
@@ -148,6 +152,9 @@ export function createModels(mongoose: typeof import('mongoose')): {
     ScheduleRun: createScheduleRunModel(mongoose),
     RefreshTokenBridge: createRefreshTokenBridgeModel(mongoose),
     OpenIDRefreshFlight: createOpenIDRefreshFlightModel(mongoose),
+    TaskExtraction: createTaskExtractionModel(mongoose),
+    TaskSummary: createTaskSummaryModel(mongoose),
+    TaskResult: createTaskResultModel(mongoose),
   };
   /**
    * Background index builds fail silently unless an 'index' listener is

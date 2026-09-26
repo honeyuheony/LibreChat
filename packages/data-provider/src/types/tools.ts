@@ -17,6 +17,12 @@ export enum Tools {
   bash_tool = 'bash_tool',
 }
 
+export enum TaskTools {
+  extract_table = 'extract_table',
+  summarize_documents = 'summarize_documents',
+  write_report = 'write_report',
+}
+
 export enum EToolResources {
   code_interpreter = 'code_interpreter',
   execute_code = 'execute_code',

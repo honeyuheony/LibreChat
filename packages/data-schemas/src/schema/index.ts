@@ -43,3 +43,6 @@ export { default as queuedTurnSchema } from './queuedTurn';
 export { default as queuedTurnSequenceSchema } from './queuedTurnSequence';
 export { default as scheduleSchema } from './schedule';
 export { default as scheduleRunSchema } from './scheduleRun';
+export { default as taskExtractionSchema } from './taskExtraction';
+export { default as taskSummarySchema } from './taskSummary';
+export { default as taskResultSchema } from './taskResult';
