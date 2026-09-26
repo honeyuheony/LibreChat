@@ -1,4 +1,7 @@
+import os from 'os';
+import fs from 'fs';
 import path from 'path';
+import JSZip from 'jszip';
 import { HWP_UPLOAD_ERRORS, hwpToText } from './hwp';
 import { parseDocument } from './crud';
 
@@ -76,6 +79,45 @@ describe('HWP document parser', () => {
       await expect(hwpToText(file)).rejects.toThrow(HWP_UPLOAD_ERRORS.unreadable);
     },
   );
+
+  test('rejects an HWPX zip bomb before sending it to hwp-mcp', async () => {
+    const zip = new JSZip();
+    zip.file('mimetype', 'application/hwp+zip', { compression: 'STORE' });
+    zip.file('Contents/section0.xml', 'x'.repeat(26 * 1024 * 1024), { compression: 'DEFLATE' });
+    const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hwpx-bomb-'));
+    const bombPath = path.join(dir, 'bomb.hwpx');
+    await fs.promises.writeFile(bombPath, await zip.generateAsync({ type: 'nodebuffer' }));
+    try {
+      const bomb = {
+        originalname: 'bomb.hwpx',
+        path: bombPath,
+        mimetype: 'application/hwp+zip',
+      } as Express.Multer.File;
+      await expect(parseDocument({ file: bomb })).rejects.toThrow(/MB per-entry decompressed cap/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('sends a binary HWP (not a zip) to hwp-mcp without the zip check', async () => {
+    const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hwp-cfb-'));
+    const hwpPath = path.join(dir, 'binary.hwp');
+    // HWP 5.0 is a Compound File Binary container, which starts with this signature
+    await fs.promises.writeFile(
+      hwpPath,
+      Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]),
+    );
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(extractResponse), { status: 200 }));
+    try {
+      await expect(
+        hwpToText({ ...file, originalname: 'binary.hwp', path: hwpPath } as Express.Multer.File),
+      ).resolves.toContain('첫 문단');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true });
+    }
+  });
 
   test('reports a failed hwp-mcp connection with the upload guidance', async () => {
     fetchMock.mockRejectedValue(new Error('connection refused'));

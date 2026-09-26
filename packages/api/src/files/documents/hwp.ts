@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { assertSafeZipSize } from './zipSafety';
 
 const HWP_MCP_URL = process.env.HWP_MCP_URL ?? 'http://hwp-mcp:8765';
 const HWP_MCP_TIMEOUT_MS = 30_000;
@@ -24,6 +25,12 @@ type HwpErrorResponse = {
 
 export async function hwpToText(file: Express.Multer.File): Promise<string> {
   const contents = await fs.promises.readFile(file.path);
+  /* HWPX is a ZIP (OWPML) that hwp-mcp inflates, so reject a zip bomb here as
+   * docx/xlsx do. HWP 5.0 is a Compound File Binary container (D0 CF 11 E0),
+   * not a ZIP; the magic-byte check skips it whatever the declared MIME type. */
+  if (contents.length >= 4 && contents[0] === 0x50 && contents[1] === 0x4b) {
+    await assertSafeZipSize(contents, { name: file.originalname ?? 'hwpx' });
+  }
   const form = new FormData();
   form.append('file', new Blob([new Uint8Array(contents)]), file.originalname);
   form.append('filename', file.originalname);
