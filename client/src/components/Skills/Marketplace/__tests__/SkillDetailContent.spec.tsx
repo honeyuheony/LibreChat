@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import SkillDetailContent, { stripLeadingTitle } from '../SkillDetailContent';
 import { ALL_SKILLS, weekly, weeklyFork } from '../__fixtures__/skills';
-import SkillDetailContent from '../SkillDetailContent';
 
 const mockNavigate = jest.fn();
 const mockToggle = jest.fn();
@@ -132,5 +132,15 @@ describe('SkillDetailContent', () => {
     renderDetail();
     fireEvent.click(screen.getByRole('switch'));
     expect(mockToggle).toHaveBeenCalledWith(weekly);
+  });
+});
+
+describe('stripLeadingTitle', () => {
+  it('창 머리와 겹치는 본문 첫 줄의 h1 만 뺀다', () => {
+    expect(stripLeadingTitle('# 문장 교정\n\n## 역할\n다듬는다.')).toBe('\n## 역할\n다듬는다.');
+  });
+
+  it('h1 으로 시작하지 않는 본문은 그대로 둔다', () => {
+    expect(stripLeadingTitle('## 역할\n# 중간 제목')).toBe('## 역할\n# 중간 제목');
   });
 });

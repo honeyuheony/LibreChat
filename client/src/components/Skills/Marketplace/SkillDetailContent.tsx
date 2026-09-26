@@ -39,6 +39,11 @@ interface SkillDetailContentProps {
 }
 
 /** 와이어프레임 `pvBlock`: 제목이 작게 붙은 테두리 칸. */
+/** SKILL.md 본문은 보통 `# 제목` 으로 시작한다. 창 머리에 이미 제목이 있으니 첫 줄의 h1 은 뺀다. */
+export function stripLeadingTitle(body: string): string {
+  return body.replace(/^\s*#[ \t]+[^\n]*\n?/, '');
+}
+
 function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border-[1.5px] border-border-light bg-surface-primary px-3.5 py-3 text-left">
@@ -141,7 +146,9 @@ export default function SkillDetailContent({
     manual: skill.manualMinutes ?? 0,
     seconds: averageSeconds ?? 0,
   });
-  const instructions = detailQuery.data?.body ? parseFrontmatter(detailQuery.data.body).body : '';
+  const instructions = detailQuery.data?.body
+    ? stripLeadingTitle(parseFrontmatter(detailQuery.data.body).body)
+    : '';
   const footnote = [
     perRun == null
       ? null
@@ -234,7 +241,7 @@ export default function SkillDetailContent({
             {detailQuery.isLoading ? (
               <Spinner className="size-4 text-text-primary" />
             ) : (
-              <div className="max-h-72 overflow-y-auto text-sm">
+              <div className="max-h-72 overflow-y-auto text-sm [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold">
                 <SkillMarkdownRenderer
                   content={instructions}
                   skillId={skill._id}
