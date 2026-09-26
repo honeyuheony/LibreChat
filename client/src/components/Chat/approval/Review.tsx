@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo } from 'react';
 import { atomFamily } from 'jotai/utils';
 import { atom, useAtom, useAtomValue } from 'jotai';
+import { TaskTools } from 'librechat-data-provider';
 import { Button, TooltipAnchor } from '@librechat/client';
 import { ChevronDown, ChevronUp, ShieldQuestion, TriangleAlert } from 'lucide-react';
 import type { Agents } from 'librechat-data-provider';
@@ -17,13 +18,31 @@ import { useLocalize } from '~/hooks';
 
 const approvalPanelOpenFamily = atomFamily((_conversationId: string) => atom(false));
 
+/**
+ * Calls whose approval card sits in the message itself (field chips, perspective
+ * picker); the composer panel would only repeat them as raw JSON. `write_report`
+ * has no such card, so it stays here.
+ */
+const IN_MESSAGE_APPROVAL_TOOLS = new Set<string>([
+  TaskTools.extract_table,
+  TaskTools.summarize_documents,
+]);
+
+/** The pending batch and the calls in it this panel reviews; null when none are left. */
 function usePendingToolApproval(conversationId: string) {
   const pendingAction = useAtomValue(pendingApprovalActionFamily(conversationId));
-  return pendingAction?.payload.type === 'tool_approval'
-    ? (pendingAction as Agents.PendingAction & {
-        payload: Agents.ToolApprovalInterruptPayload;
-      })
-    : null;
+  return useMemo(() => {
+    if (pendingAction?.payload.type !== 'tool_approval') {
+      return null;
+    }
+    const action = pendingAction as Agents.PendingAction & {
+      payload: Agents.ToolApprovalInterruptPayload;
+    };
+    const requests = action.payload.action_requests.filter(
+      (request) => !IN_MESSAGE_APPROVAL_TOOLS.has(request.name),
+    );
+    return requests.length > 0 ? { action, requests } : null;
+  }, [pendingAction]);
 }
 
 const KIND_LABELS: Record<ReturnType<typeof buildApprovalPreview>['kind'], TranslationKeys> = {
@@ -57,7 +76,8 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
   conversationId: string;
 }) {
   const localize = useLocalize();
-  const pendingAction = usePendingToolApproval(conversationId);
+  const pending = usePendingToolApproval(conversationId);
+  const pendingAction = pending?.action ?? null;
   const [open, setOpen] = useAtom(approvalPanelOpenFamily(conversationId));
   const { getDecisions, getStatus, isReady } = useApprovalContext();
   const { submitToolApproval } = useResumeSubmit();
@@ -72,23 +92,26 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
   useComposerOverlay(conversationId, open && pendingAction != null);
 
   const reviews = useMemo(() => {
-    if (pendingAction == null) return [];
+    if (pending == null) return [];
     const configById = new Map(
-      pendingAction.payload.review_configs.map((config) => [config.tool_call_id, config]),
+      pending.action.payload.review_configs.map((config) => [config.tool_call_id, config]),
     );
-    const previews = buildApprovalPreviews(pendingAction.payload.action_requests);
-    return pendingAction.payload.action_requests.map((request, index) => ({
+    const previews = buildApprovalPreviews(pending.requests);
+    return pending.requests.map((request, index) => ({
       request,
       config: configById.get(request.tool_call_id),
       preview: previews[index],
     }));
-  }, [pendingAction]);
+  }, [pending]);
 
   if (!open || pendingAction == null) {
     return null;
   }
 
-  const decisions = getDecisions(pendingAction.actionId);
+  const reviewedIds = new Set(reviews.map(({ request }) => request.tool_call_id));
+  const decisions = getDecisions(pendingAction.actionId).filter((decision) =>
+    reviewedIds.has(decision.tool_call_id),
+  );
   const status = getStatus(pendingAction.actionId);
   const locked = status === 'submitting' || status === 'submitted' || status === 'expired';
 
@@ -209,14 +232,14 @@ export const PendingToolApprovalButton = memo(function PendingToolApprovalButton
   conversationId: string;
 }) {
   const localize = useLocalize();
-  const pendingAction = usePendingToolApproval(conversationId);
+  const pending = usePendingToolApproval(conversationId);
   const [open, setOpen] = useAtom(approvalPanelOpenFamily(conversationId));
 
-  if (pendingAction == null) {
+  if (pending == null) {
     return null;
   }
 
-  const count = pendingAction.payload.action_requests.length;
+  const count = pending.requests.length;
   return (
     <Button
       type="button"

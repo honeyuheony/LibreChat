@@ -133,4 +133,69 @@ describe('PendingToolApproval', () => {
       'false',
     );
   });
+
+  const renderWith = (action: Agents.PendingAction) => {
+    const jotaiStore = createStore();
+    jotaiStore.set(pendingApprovalActionFamily('conversation-1'), action);
+    render(
+      <RecoilRoot>
+        <JotaiProvider store={jotaiStore}>
+          <ApprovalProvider pendingAction={action}>
+            <PendingToolApprovalPanel conversationId="conversation-1" />
+            <PendingToolApprovalButton conversationId="conversation-1" />
+          </ApprovalProvider>
+        </JotaiProvider>
+      </RecoilRoot>,
+    );
+    return jotaiStore;
+  };
+
+  const taskRequest = (name: string, id: string) => ({
+    request: { name, source: 'librechat', tool_call_id: id, arguments: { fields: ['위험도'] } },
+    config: { action_name: name, tool_call_id: id, allowed_decisions: ['approve', 'edit'] },
+  });
+
+  const withRequests = (
+    entries: {
+      request: Agents.ToolApprovalRequest;
+      config: Agents.ToolApprovalInterruptPayload['review_configs'][number];
+    }[],
+  ): Agents.PendingAction => ({
+    ...pendingAction,
+    payload: {
+      type: 'tool_approval',
+      action_requests: entries.map((entry) => entry.request),
+      review_configs: entries.map((entry) => entry.config),
+    },
+  });
+
+  test('leaves field and perspective approvals to their cards in the message', () => {
+    const jotaiStore = renderWith(
+      withRequests([
+        taskRequest('extract_table', 'task-1'),
+        taskRequest('summarize_documents', 'task-2'),
+      ]),
+    );
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pending-tool-approval-button')).not.toBeInTheDocument();
+    expect(jotaiStore.get(composerOverlayCountFamily('conversation-1'))).toBe(0);
+  });
+
+  test('still reviews the other calls of a batch that also holds a card tool', async () => {
+    const payload = pendingAction.payload as Agents.ToolApprovalInterruptPayload;
+    renderWith(
+      withRequests([
+        taskRequest('extract_table', 'task-1'),
+        { request: payload.action_requests[1], config: payload.review_configs[1] },
+        taskRequest('write_report', 'task-3'),
+      ]),
+    );
+
+    expect(await screen.findByRole('region', { name: 'Review 2 actions' })).toBeInTheDocument();
+    expect(screen.getByText('npm test -- new')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '2. write_report' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /extract_table/ })).not.toBeInTheDocument();
+    expect(screen.getByText('0 of 2 decisions selected')).toBeInTheDocument();
+  });
 });
