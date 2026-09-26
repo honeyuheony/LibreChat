@@ -191,8 +191,33 @@ export type TSkill = {
   reviewedAt?: string;
   /** Admin user id who approved the review at `reviewedAt`. */
   reviewedBy?: string;
-  /** Count of manual (`$` popover) invocations resolved against this skill. */
+  /** 실행 수. 스킬이 쓰인 대화 턴이 끝날 때 1 오른다. */
   useCount?: number;
+  /** 실행 시간 합계(초). 원래 값이며, 평균은 `usageMetrics`에 있다. */
+  runTimeTotalSeconds?: number;
+  /** `runTimeTotalSeconds`에 더해진 측정 횟수. */
+  runTimeSampleCount?: number;
+  /** 작성자가 입력한 수작업 소요 분. 입력하지 않았으면 없다. */
+  manualMinutes?: number;
+  /** 응용(fork) 원본 스킬 id. */
+  forkOf?: string;
+  /** 이 스킬을 원본으로 응용해 만든 스킬 수. */
+  forkCount?: number;
+  /** 원래 값으로 응답을 만들 때 계산한 지표. */
+  usageMetrics?: TSkillUsageMetrics;
+};
+
+/**
+ * 스킬 지표. 절감 시간 = 실행 수 × max(0, 수작업 분 − 평균 실행 초 / 60).
+ * 값을 낼 수 없으면(측정 기록이나 수작업 분이 없으면) `null`이다.
+ */
+export type TSkillUsageMetrics = {
+  /** 평균 실행 시간(초, 소수 첫째 자리). */
+  averageRunSeconds: number | null;
+  /** 회당 단축 시간(분, 소수 첫째 자리). */
+  savedMinutesPerRun: number | null;
+  /** 누적 절감 시간(시간, 소수 첫째 자리). */
+  savedHours: number | null;
 };
 
 /**
@@ -326,6 +351,8 @@ export type TUpdateSkillPayload = {
   frontmatter?: Partial<SkillFrontmatter>;
   category?: string;
   alwaysApply?: boolean;
+  /** 수작업 소요 분(0 이상 정수). */
+  manualMinutes?: number;
 };
 
 /** Variables passed into the update mutation: id + expectedVersion + partial payload. */

@@ -17,6 +17,7 @@ import {
   getCanonicalSkillFrontmatterKey,
   normalizeSkillFrontmatterKeys,
   validateAlwaysApply,
+  validateManualMinutes,
   validateRelativePath,
   inferSkillFileCategory,
   filterExistingSkillIds,
@@ -494,6 +495,20 @@ describe('skill validation helpers', () => {
     });
   });
 
+  describe('validateManualMinutes', () => {
+    it('accepts undefined and non-negative integers', () => {
+      expect(validateManualMinutes(undefined)).toEqual([]);
+      expect(validateManualMinutes(0)).toEqual([]);
+      expect(validateManualMinutes(45)).toEqual([]);
+    });
+
+    it('rejects negatives, fractions, null, and strings', () => {
+      for (const value of [-1, 1.5, null, '30', Number.NaN]) {
+        expect(validateManualMinutes(value).some((i) => i.code === 'INVALID_TYPE')).toBe(true);
+      }
+    });
+  });
+
   describe('deriveStructuredFrontmatterFields', () => {
     it('returns empty object for missing or non-object frontmatter', () => {
       expect(deriveStructuredFrontmatterFields(undefined)).toEqual({});
@@ -566,6 +581,55 @@ describe('skill validation helpers', () => {
 });
 
 describe('Skill CRUD methods', () => {
+  it('stores manualMinutes and forkOf on create and updates manualMinutes', async () => {
+    const origin = new mongoose.Types.ObjectId();
+    const { skill } = await methods.createSkill(
+      makeSkillInput({ manualMinutes: 30, forkOf: origin }),
+    );
+    expect(skill.manualMinutes).toBe(30);
+    expect(skill.forkOf?.toString()).toBe(origin.toString());
+    expect(skill.forkCount).toBe(0);
+    expect(skill.useCount).toBe(0);
+
+    const result = await methods.updateSkill({
+      id: skill._id.toString(),
+      expectedVersion: 1,
+      update: { manualMinutes: 12 },
+    });
+    expect(result.status).toBe('updated');
+    expect(result.status === 'updated' && result.skill.manualMinutes).toBe(12);
+  });
+
+  it('rejects an invalid manualMinutes on update', async () => {
+    const { skill } = await methods.createSkill(makeSkillInput());
+    await expect(
+      methods.updateSkill({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        update: { manualMinutes: -5 },
+      }),
+    ).rejects.toMatchObject({
+      code: 'SKILL_VALIDATION_FAILED',
+      issues: [expect.objectContaining({ field: 'manualMinutes' })],
+    });
+  });
+
+  it('includes usage counters in list summaries', async () => {
+    const { skill } = await methods.createSkill(makeSkillInput({ manualMinutes: 20 }));
+    await Skill.updateOne(
+      { _id: skill._id },
+      { $set: { useCount: 4, runTimeTotalSeconds: 90, runTimeSampleCount: 3, forkCount: 2 } },
+    );
+    const { skills } = await methods.listSkillsByAccess({ accessibleIds: [skill._id], limit: 10 });
+    expect(skills[0]).toMatchObject({
+      useCount: 4,
+      runTimeTotalSeconds: 90,
+      runTimeSampleCount: 3,
+      manualMinutes: 20,
+      forkCount: 2,
+    });
+  });
+
   it('rejects an oversized body before scanning its frontmatter on create', async () => {
     const body = `---\nalways-apply: a${' '.repeat(SKILL_BODY_MAX_LENGTH)}b\n---`;
 

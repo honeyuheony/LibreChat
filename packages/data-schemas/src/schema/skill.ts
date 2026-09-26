@@ -227,8 +227,44 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
-    /** Count of manual (`$` popover) invocations resolved against this doc. */
+    /**
+     * 실행 수. 스킬이 쓰인 대화 턴(사용자가 `$`로 붙였거나 모델이 `skill` 도구로 불러온 턴)이
+     * 끝날 때 1 오른다. 이 방식 이전에 쌓인 값은 `$` 호출을 해석한 시점에 센 것이다.
+     */
     useCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    /** 실행 시간 합계(초). 평균 실행 시간은 응답을 만들 때 `runTimeSampleCount`로 나눠 낸다. */
+    runTimeTotalSeconds: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    /** `runTimeTotalSeconds`에 더해진 측정 횟수. 시간을 재지 않았던 과거 실행은 빠져 있다. */
+    runTimeSampleCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    /** 작성자가 입력한, 같은 일을 사람이 직접 할 때 걸리는 분. 절감 시간 계산의 기준이다. */
+    manualMinutes: {
+      type: Number,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: 'manualMinutes must be an integer',
+      },
+    },
+    /** 이 스킬이 응용(fork)으로 만들어졌을 때 원본 스킬. 원본이 지워져도 값은 남는다. */
+    forkOf: {
+      type: Schema.Types.ObjectId,
+      ref: 'Skill',
+      index: true,
+    },
+    /** 이 스킬을 원본으로 응용해 만든 스킬 수. 응용한 스킬이 지워져도 줄이지 않는다. */
+    forkCount: {
       type: Number,
       default: 0,
       min: 0,

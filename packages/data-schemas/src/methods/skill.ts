@@ -219,6 +219,23 @@ export function validateSkillDisplayTitle(displayTitle: unknown): ValidationIssu
  * boolean column, leaving the skill in a state that is neither "on" nor
  * "off" while `listAlwaysApplySkills` only matches `true`.
  */
+/** 수작업 분은 0 이상 정수만 받는다. */
+export function validateManualMinutes(manualMinutes: unknown): ValidationIssue[] {
+  if (manualMinutes === undefined) {
+    return [];
+  }
+  if (typeof manualMinutes !== 'number' || !Number.isInteger(manualMinutes) || manualMinutes < 0) {
+    return [
+      {
+        field: 'manualMinutes',
+        code: 'INVALID_TYPE',
+        message: 'manualMinutes must be a non-negative integer',
+      },
+    ];
+  }
+  return [];
+}
+
 export function validateAlwaysApply(alwaysApply: unknown): ValidationIssue[] {
   if (alwaysApply === undefined) {
     return [];
@@ -609,6 +626,10 @@ export type CreateSkillInput = {
    */
   alwaysApply?: boolean;
   tenantId?: string;
+  /** 작성자가 입력한 수작업 소요 분. */
+  manualMinutes?: number;
+  /** 응용(fork)으로 만들 때 원본 스킬 id. */
+  forkOf?: Types.ObjectId;
 };
 
 export type UpdateSkillInput = {
@@ -621,6 +642,8 @@ export type UpdateSkillInput = {
   alwaysApply?: boolean;
   source?: 'inline' | 'github' | 'notion';
   sourceMetadata?: Record<string, unknown>;
+  /** 수작업 소요 분(0 이상 정수). */
+  manualMinutes?: number;
 };
 
 export type GetAuthorSkillByNameParams = {
@@ -1176,6 +1199,7 @@ export function createSkillMethods(
       ...validateSkillDisplayTitle(data.displayTitle),
       ...validateSkillFrontmatter(frontmatter),
       ...validateAlwaysApply(data.alwaysApply),
+      ...validateManualMinutes(data.manualMinutes),
     ];
     /* Body-level `always-apply:` only needs to be well-formed when a
        higher-precedence source won't override it (see
@@ -1245,6 +1269,8 @@ export function createSkillMethods(
         bodyAlwaysApply,
       ),
       tenantId: data.tenantId,
+      manualMinutes: data.manualMinutes,
+      forkOf: data.forkOf,
       ...derived,
     });
     return {
@@ -1378,7 +1404,7 @@ export function createSkillMethods(
          still called below as defensive code; it short-circuits when
          `frontmatter` is undefined. */
       .select(
-        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools createdAt updatedAt',
+        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf forkCount createdAt updatedAt',
       )
       .lean();
 
@@ -1513,6 +1539,7 @@ export function createSkillMethods(
       issues.push(...validateSkillDisplayTitle(update.displayTitle));
     if (update.frontmatter !== undefined) issues.push(...validateSkillFrontmatter(frontmatter));
     if (update.alwaysApply !== undefined) issues.push(...validateAlwaysApply(update.alwaysApply));
+    issues.push(...validateManualMinutes(update.manualMinutes));
     /* Body-level `always-apply:` only needs to be well-formed when a
        higher-precedence source won't override it (see
        `resolveAlwaysApplyFromInput` for precedence). Rejecting a typo
@@ -1566,6 +1593,7 @@ export function createSkillMethods(
       }
     }
     if (update.category !== undefined) setPayload.category = update.category;
+    if (update.manualMinutes !== undefined) setPayload.manualMinutes = update.manualMinutes;
     /**
      * Keep the indexed `alwaysApply` column in sync with whatever the update
      * is carrying: an explicit top-level `alwaysApply` always wins; a

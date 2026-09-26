@@ -679,6 +679,42 @@ describe('Skill routes', () => {
       expect(res.status).toBe(403);
     });
 
+    it('stores manualMinutes and returns metrics computed from the stored counters', async () => {
+      const created = await createSkillAsOwner();
+      await Skill.updateOne(
+        { _id: created.body._id },
+        { $set: { useCount: 12, runTimeTotalSeconds: 120, runTimeSampleCount: 2 } },
+      );
+      const res = await request(app)
+        .patch(`/api/skills/${created.body._id}`)
+        .send({ expectedVersion: 1, manualMinutes: 16 });
+      expect(res.status).toBe(200);
+      expect(res.body.manualMinutes).toBe(16);
+      expect(res.body.usageMetrics).toEqual({
+        averageRunSeconds: 60,
+        savedMinutesPerRun: 15,
+        savedHours: 3,
+      });
+
+      const list = await request(app).get('/api/skills');
+      expect(list.body.skills[0]).toMatchObject({
+        useCount: 12,
+        manualMinutes: 16,
+        usageMetrics: { averageRunSeconds: 60, savedMinutesPerRun: 15, savedHours: 3 },
+      });
+    });
+
+    it.each([-1, 2.5, '10', null])('rejects manualMinutes %p', async (manualMinutes) => {
+      const created = await createSkillAsOwner();
+      const res = await request(app)
+        .patch(`/api/skills/${created.body._id}`)
+        .send({ expectedVersion: 1, manualMinutes });
+      expect(res.status).toBe(400);
+      const persisted = await Skill.findById(created.body._id).lean();
+      expect(persisted.manualMinutes).toBeUndefined();
+      expect(persisted.version).toBe(1);
+    });
+
     it('blocks configured content before updating a skill', async () => {
       const created = await createSkillAsOwner();
       mockFilters = {

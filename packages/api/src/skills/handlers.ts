@@ -38,6 +38,7 @@ import { contentFilterBlockResponse } from '~/middleware/contentFilter';
 import { getDeploymentSkillIds } from './deployment';
 import { resolveDownloadPath } from '~/storage/path';
 import { resolveSkillFilePathParam } from './path';
+import { computeSkillUsageMetrics } from './usage';
 import { parseSkillMarkdown } from './parse';
 import { isBinaryBuffer } from './binary';
 
@@ -137,6 +138,38 @@ function serializeSourceMetadata(
   return metadata as TSkill['sourceMetadata'];
 }
 
+/** 지표의 원래 값과 그 값으로 계산한 지표를 함께 싣는다. */
+function serializeUsage(
+  skill: Pick<
+    ISkill,
+    | 'useCount'
+    | 'runTimeTotalSeconds'
+    | 'runTimeSampleCount'
+    | 'manualMinutes'
+    | 'forkOf'
+    | 'forkCount'
+  >,
+): Pick<
+  TSkill,
+  | 'useCount'
+  | 'runTimeTotalSeconds'
+  | 'runTimeSampleCount'
+  | 'manualMinutes'
+  | 'forkOf'
+  | 'forkCount'
+  | 'usageMetrics'
+> {
+  return {
+    useCount: skill.useCount,
+    runTimeTotalSeconds: skill.runTimeTotalSeconds,
+    runTimeSampleCount: skill.runTimeSampleCount,
+    manualMinutes: skill.manualMinutes,
+    forkOf: skill.forkOf ? skill.forkOf.toString() : undefined,
+    forkCount: skill.forkCount,
+    usageMetrics: computeSkillUsageMetrics(skill),
+  };
+}
+
 /** Converts a skill document to the wire format returned by the API. */
 export function serializeSkill(
   skill: ISkill & { _id: Types.ObjectId },
@@ -155,7 +188,7 @@ export function serializeSkill(
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
     examples: skill.examples,
-    useCount: skill.useCount,
+    ...serializeUsage(skill),
     reviewedAt: skill.reviewedAt ? new Date(skill.reviewedAt).toISOString() : undefined,
     reviewedBy: skill.reviewedBy ? skill.reviewedBy.toString() : undefined,
     author: skill.author.toString(),
@@ -187,7 +220,7 @@ function serializeSkillSummary(
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
     examples: skill.examples,
-    useCount: skill.useCount,
+    ...serializeUsage(skill),
     reviewedAt: skill.reviewedAt ? new Date(skill.reviewedAt).toISOString() : undefined,
     reviewedBy: skill.reviewedBy ? skill.reviewedBy.toString() : undefined,
     author: skill.author.toString(),
@@ -553,6 +586,13 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       }
       if (rest.category !== undefined) update.category = rest.category;
       if (rest.alwaysApply !== undefined) update.alwaysApply = rest.alwaysApply;
+      if (rest.manualMinutes !== undefined) {
+        const minutes: unknown = rest.manualMinutes;
+        if (typeof minutes !== 'number' || !Number.isInteger(minutes) || minutes < 0) {
+          return res.status(400).json({ error: 'manualMinutes must be a non-negative integer' });
+        }
+        update.manualMinutes = minutes;
+      }
 
       if (Object.keys(update).length === 0) {
         return res.status(400).json({ error: 'At least one field must be provided for update' });

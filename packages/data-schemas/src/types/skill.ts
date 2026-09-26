@@ -96,8 +96,18 @@ export interface ISkill {
   reviewedAt?: Date;
   /** Admin user who approved the review at `reviewedAt`. */
   reviewedBy?: Types.ObjectId;
-  /** Count of manual (`$` popover) invocations resolved against this doc. */
+  /** 실행 수. 스킬이 쓰인 대화 턴이 끝날 때 오른다(스키마 주석 참고). */
   useCount?: number;
+  /** 실행 시간 합계(초). */
+  runTimeTotalSeconds?: number;
+  /** `runTimeTotalSeconds`에 더해진 측정 횟수. */
+  runTimeSampleCount?: number;
+  /** 작성자가 입력한 수작업 소요 분(0 이상 정수). */
+  manualMinutes?: number;
+  /** 응용(fork) 원본 스킬. */
+  forkOf?: Types.ObjectId;
+  /** 이 스킬을 원본으로 응용해 만든 스킬 수. */
+  forkCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */
