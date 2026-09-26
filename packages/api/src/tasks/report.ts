@@ -427,7 +427,7 @@ export async function composeReport({
 
 const BODY_STILL_AVAILABLE = '본문은 오른쪽에서 확인하고 복사할 수 있습니다.';
 
-export const RENDER_UNAVAILABLE_NOTICE = `한글 문서 변환 서버에 연결하지 못했거나 응답이 제시간에 오지 않아 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`;
+export const RENDER_UNAVAILABLE_NOTICE: string = `한글 문서 변환 서버에 연결하지 못했거나 응답이 제시간에 오지 않아 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`;
 
 /** Keyed by hwp-mcp error code; other codes fall back to the generic render failure. */
 const RENDER_FAILURE_NOTICES: Record<string, string> = {
