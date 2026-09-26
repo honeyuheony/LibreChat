@@ -1,6 +1,6 @@
 export const COLLAPSED_WIDTH = 52;
-/** The design's sidebar width (docs/design-web-claude-style.md mock); users can drag it wider. */
-export const EXPANDED_MIN = 272;
+/** The AgentHub wireframe's sidebar width (its grid column is 260px); users can drag it wider. */
+export const EXPANDED_MIN = 260;
 
 /**
  * How much of the viewport the mobile drawer covers.
