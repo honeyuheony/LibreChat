@@ -28,6 +28,26 @@ describe('locateQuote', () => {
     expect(locateQuote(doc, '식량 전망을 낮췄다')).toBeNull();
   });
 
+  it('matches a word the HWP line wrap split across paragraphs', () => {
+    const doc = prepareDocument({
+      file_id: 'f1',
+      filename: 'a.hwp',
+      text: '모집 공고\n\n  봉사하실 인천가좌\n\n여자중학교 배움터지킴이를 모십니다.',
+    });
+    expect(locateQuote(doc, '봉사하실 인천가좌여자중학교 배움터지킴이')?.paragraph).toBe(2);
+  });
+
+  it('accepts excerpts joined by blank lines when each one is verbatim, located at the first', () => {
+    const doc = prepareDocument({ file_id: 'f1', filename: 'a.hwp', text: hwpText });
+    const quote = '경제 부문의 식량 수급\n\n9.9절 행사가 간소화';
+    expect(locateQuote(doc, quote)).toEqual({ quote, paragraph: 3 });
+  });
+
+  it('rejects joined excerpts when any one of them is not in the text', () => {
+    const doc = prepareDocument({ file_id: 'f1', filename: 'a.hwp', text: hwpText });
+    expect(locateQuote(doc, '9.9절 행사가 간소화\n\n식량 전망을 낮췄다')).toBeNull();
+  });
+
   it('reports the page and the paragraph within that page for PDFs', () => {
     const doc = prepareDocument({
       file_id: 'p1',

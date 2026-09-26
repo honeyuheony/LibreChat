@@ -11,15 +11,19 @@ const normalizedCache = new WeakMap<TaskDocument, NormalizedText>();
 
 const isSpace = (ch: string) => /\s/.test(ch);
 
-/** NFKC per character plus whitespace runs folded to one space, keeping an offset map back. */
-function normalizeWithOrigin(source: string): NormalizedText {
+/**
+ * NFKC per character, keeping an offset map back. Whitespace runs fold to one space, or are
+ * dropped with `dropSpaces`: HWP text wraps lines inside words, so a quote copied from the
+ * rendered sentence would otherwise miss the break the stored text has.
+ */
+function normalizeWithOrigin(source: string, dropSpaces = false): NormalizedText {
   let text = '';
   const origin: number[] = [];
   let pendingSpace = false;
   for (let i = 0; i < source.length; i++) {
     const ch = source[i];
     if (isSpace(ch)) {
-      pendingSpace = text.length > 0;
+      pendingSpace = !dropSpaces && text.length > 0;
       continue;
     }
     if (pendingSpace) {
@@ -28,6 +32,9 @@ function normalizeWithOrigin(source: string): NormalizedText {
       pendingSpace = false;
     }
     for (const part of ch.normalize('NFKC')) {
+      if (dropSpaces && isSpace(part)) {
+        continue;
+      }
       text += part;
       origin.push(i);
     }
@@ -42,7 +49,7 @@ export function normalizeQuote(quote: string): string {
 function getNormalized(doc: TaskDocument): NormalizedText {
   let normalized = normalizedCache.get(doc);
   if (!normalized) {
-    normalized = normalizeWithOrigin(doc.text);
+    normalized = normalizeWithOrigin(doc.text, true);
     normalizedCache.set(doc, normalized);
   }
   return normalized;
@@ -79,17 +86,28 @@ function pageAt(pageStarts: number[] | undefined, offset: number): number | unde
   return page;
 }
 
-/** Finds `quote` verbatim (after normalization) in the document; `null` when absent. */
+/** Models join excerpts from separate places with a blank line, as the prompt asks. */
+const EXCERPT_BREAK = /\n[^\S\n]*\n/;
+
+/**
+ * Finds `quote` verbatim (after normalization, ignoring whitespace) in the document; `null`
+ * when absent. A quote of several excerpts counts only when every excerpt is found, and is
+ * located at the first one.
+ */
 export function locateQuote(doc: TaskDocument, quote: string): TaskEvidence | null {
-  const needle = normalizeQuote(quote);
-  if (needle.length === 0) {
+  const needles = quote
+    .split(EXCERPT_BREAK)
+    .map((excerpt) => normalizeWithOrigin(excerpt, true).text)
+    .filter((needle) => needle.length > 0);
+  if (needles.length === 0) {
     return null;
   }
   const haystack = getNormalized(doc);
-  const index = haystack.text.indexOf(needle);
-  if (index < 0) {
+  const indexes = needles.map((needle) => haystack.text.indexOf(needle));
+  if (indexes.some((found) => found < 0)) {
     return null;
   }
+  const index = indexes[0];
   const offset = haystack.origin[index];
   const page = pageAt(doc.pageStarts, offset);
   const pageOffset = page != null && doc.pageStarts ? doc.pageStarts[page - 1] : 0;
