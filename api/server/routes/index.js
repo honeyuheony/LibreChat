@@ -44,10 +44,12 @@ const mcp = require('./mcp');
 const rum = require('./rum');
 const insights = require('./insights');
 const connectors = require('./connectors');
+const tasks = require('./tasks');
 
 module.exports = {
   insights,
   connectors,
+  tasks,
   rum,
   mcp,
   auth,

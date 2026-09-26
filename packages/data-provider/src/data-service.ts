@@ -8,6 +8,7 @@ import type {
 } from './types/traces';
 import type { TInsightsAccessResponse, TInsightsParams, TInsightsResponse } from './types/insights';
 import type { TFileConfig } from './file-config';
+import type { TaskResult } from './types/tasks';
 import type * as tl from './types/tools';
 import type * as t from './types';
 import * as permissions from './accessPermissions';
@@ -1046,6 +1047,29 @@ export function createProject(payload: t.TCreateChatProjectRequest): Promise<t.T
 
 export function getProjectById(projectId: string): Promise<t.TChatProject> {
   return request.get(endpoints.projectById(projectId));
+}
+
+export function getTaskEstimate(
+  conversationId: string,
+  fields: string[],
+): Promise<{
+  docs: number;
+  cached: number;
+  minutes: { min: number; max: number };
+  allCached: boolean;
+}> {
+  return request.get(endpoints.taskEstimate(conversationId, fields));
+}
+
+export function getTaskResult(resultId: string): Promise<TaskResult> {
+  return request.get(endpoints.taskResult(resultId));
+}
+
+export function getTaskResultExport(resultId: string): Promise<AxiosResponse> {
+  return request.getResponse(endpoints.taskResultExport(resultId), {
+    responseType: 'blob',
+    headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+  });
 }
 
 export function updateProject(payload: t.TUpdateChatProjectRequest): Promise<t.TChatProject> {

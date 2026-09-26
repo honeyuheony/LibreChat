@@ -172,6 +172,13 @@ export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent
 export const projectConversation = (conversationId: string) =>
   `${projectsRoot}/conversations/${encodeURIComponent(conversationId)}`;
 
+const tasksRoot = `${BASE_URL}/api/tasks`;
+export const taskEstimate = (conversationId: string, fields: string[]) =>
+  `${tasksRoot}/estimate${buildQuery({ conversationId, kind: 'table', fields })}`;
+export const taskResult = (resultId: string) =>
+  `${tasksRoot}/results/${encodeURIComponent(resultId)}`;
+export const taskResultExport = (resultId: string) => `${taskResult(resultId)}/export.xlsx`;
+
 export const search = (q: string, cursor?: string | null) =>
   `${BASE_URL}/api/search?q=${q}${cursor ? `&cursor=${cursor}` : ''}`;
 
