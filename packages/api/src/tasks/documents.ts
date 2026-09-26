@@ -5,6 +5,7 @@ export interface TaskDocument {
   file_id: string;
   filename: string;
   text: string;
+  /** Cache key part; see `documentTextHash`. */
   textHash: string;
   parse: 'ok' | 'text_only';
   /** Start offset of each page in `text`; only PDFs have it. */
@@ -25,6 +26,14 @@ export function hashText(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+/**
+ * Always the stored File `text`, even when the pages were re-read: the estimate endpoint
+ * only has the stored text, and its cache count must match the keys the tools write.
+ */
+export function documentTextHash(input: Pick<PrepareDocumentInput, 'text'>): string {
+  return hashText(input.text ?? '');
+}
+
 export function prepareDocument(input: PrepareDocumentInput): TaskDocument {
   if (input.pages != null && input.pages.length > 0) {
     const pageStarts: number[] = [];
@@ -37,7 +46,7 @@ export function prepareDocument(input: PrepareDocumentInput): TaskDocument {
       file_id: input.file_id,
       filename: input.filename,
       text,
-      textHash: hashText(text),
+      textHash: documentTextHash(input),
       parse: input.parse ?? 'ok',
       pageStarts,
     };
@@ -47,7 +56,7 @@ export function prepareDocument(input: PrepareDocumentInput): TaskDocument {
     file_id: input.file_id,
     filename: input.filename,
     text,
-    textHash: hashText(text),
+    textHash: documentTextHash(input),
     parse: input.parse ?? 'ok',
   };
 }

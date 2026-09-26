@@ -1,5 +1,6 @@
 import type { StoredFile } from './runtime';
 import { loadConversationDocuments } from './runtime';
+import { hashText } from './documents';
 
 const files: Array<StoredFile & { user: string }> = [
   { user: 'u1', file_id: 'a', filename: 'a.hwp', type: 'application/x-hwp', text: '가' },
@@ -52,6 +53,23 @@ describe('loadConversationDocuments', () => {
       ...deps(),
     });
     expect(docs.map((doc) => doc.file_id)).toEqual(['a']);
+  });
+
+  it('hashes a PDF the same way whether or not its pages are re-read', async () => {
+    const [withPages] = await loadConversationDocuments({
+      userId: 'u1',
+      conversationId: 'c1',
+      fileIds: ['b'],
+      ...deps(async () => ['1쪽', '2쪽']),
+    });
+    const [storedOnly] = await loadConversationDocuments({
+      userId: 'u1',
+      conversationId: 'c1',
+      fileIds: ['b'],
+      ...deps(),
+    });
+    expect(withPages.textHash).toBe(storedOnly.textHash);
+    expect(withPages.textHash).toBe(hashText('나'));
   });
 
   it('falls back to stored text marked text_only when PDF pages cannot be read', async () => {
