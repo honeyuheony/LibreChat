@@ -41,7 +41,6 @@ export default function TaskPlanCard({
   output,
   approval,
   attachments,
-  isSubmitting,
 }: {
   toolName: TaskToolName;
   toolCallId: string;
@@ -49,7 +48,8 @@ export default function TaskPlanCard({
   output?: string | null;
   approval?: Agents.ToolCall['approval'];
   attachments?: TAttachment[];
-  isSubmitting: boolean;
+  /** Unused since the task panel alone opens live results; `Part` still passes it. */
+  isSubmitting?: boolean;
 }) {
   const localize = useLocalize();
   const args = useMemo(() => parseTaskArgs(rawArgs), [rawArgs]);
@@ -132,7 +132,7 @@ export default function TaskPlanCard({
       {ran && toolName === TaskTools.extract_table && <TaskSchemaRan args={args} />}
       {ran && toolName === TaskTools.summarize_documents && <TaskViewRan args={args} />}
       {results.map((result) => (
-        <TaskResultCard key={result.resultId} result={result} autoOpen={isSubmitting} />
+        <TaskResultCard key={result.resultId} result={result} />
       ))}
     </div>
   );

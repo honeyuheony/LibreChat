@@ -107,9 +107,9 @@ const summaryResult: TaskDocResult = {
 
 function renderCard(
   result: TaskResultAttachment,
-  { autoOpen = false, inChat = true, jotaiStore = createStore() } = {},
+  { inChat = true, jotaiStore = createStore() } = {},
 ) {
-  render(<TaskResultCard result={result} autoOpen={autoOpen} />, {
+  render(<TaskResultCard result={result} />, {
     wrapper: createTaskWrapper({ jotaiStore, inChat }),
   });
   return jotaiStore;
@@ -169,14 +169,8 @@ describe('TaskResultCard', () => {
     });
   });
 
-  test('opens the task panel on its own for a result that arrived live', () => {
-    const jotaiStore = renderCard(attachment(), { autoOpen: true });
-
-    expect(jotaiStore.get(taskPanelState).resultId).toBe('result-1');
-  });
-
-  test('leaves the task panel closed for a result loaded from history', () => {
-    const jotaiStore = renderCard(attachment(), { autoOpen: false });
+  test('leaves the task panel closed until the card is pressed', () => {
+    const jotaiStore = renderCard(attachment());
 
     expect(jotaiStore.get(taskPanelState).open).toBe(false);
   });

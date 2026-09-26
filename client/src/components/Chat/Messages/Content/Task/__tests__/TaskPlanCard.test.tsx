@@ -139,7 +139,8 @@ describe('TaskPlanCard', () => {
     expect(screen.getAllByTestId('result-card').map((card) => card.textContent)).toEqual([
       'result-9',
     ]);
-    expect(screen.getByTestId('result-card')).toHaveAttribute('data-auto-open', 'true');
+    /** Opening the panel for a live result is the task panel's job, not the card's. */
+    expect(screen.getByTestId('result-card')).toHaveAttribute('data-auto-open', 'undefined');
   });
 
   test('stops on the confirmation step when the paused call was rejected', () => {

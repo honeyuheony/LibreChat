@@ -9,7 +9,8 @@ import useTaskPanel from '../useTaskPanel';
 const mockMessagesByConvo: Record<string, TMessage[]> = {};
 
 jest.mock('~/data-provider', () => ({
-  useGetMessagesByConvoId: (id: string) => ({ data: mockMessagesByConvo[id] ?? [] }),
+  /** Undefined until a conversation's messages are loaded, like the query cache. */
+  useGetMessagesByConvoId: (id: string) => ({ data: mockMessagesByConvo[id] }),
 }));
 
 const taskCall = (id: string) =>
@@ -113,5 +114,24 @@ describe('useTaskPanel', () => {
     mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old')];
     rerender({ conversationId: 'a', autoOpen: true, isSubmitting: false });
     expect(jotai.get(taskPanelState)).toEqual({ open: true, view: 'overview', resultId: null });
+  });
+
+  it('leaves the panel closed on small screens when a result arrives live', () => {
+    mockMessagesByConvo.a = [taskCall('t1')];
+    const { jotai, rerender } = setup({ conversationId: 'a', autoOpen: false, isSubmitting: true });
+    mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-new')];
+    rerender({ conversationId: 'a', autoOpen: false, isSubmitting: true });
+    expect(jotai.get(taskPanelState).open).toBe(false);
+  });
+
+  it('does not open an old result that loads while a paused reply resumes', () => {
+    const { jotai, rerender } = setup({ conversationId: 'a', autoOpen: true, isSubmitting: true });
+    mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old')];
+    rerender({ conversationId: 'a', autoOpen: true, isSubmitting: true });
+    expect(jotai.get(taskPanelState).resultId).toBeNull();
+
+    mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old'), resultMessage('r-new')];
+    rerender({ conversationId: 'a', autoOpen: true, isSubmitting: true });
+    expect(jotai.get(taskPanelState).resultId).toBe('r-new');
   });
 });

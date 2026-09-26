@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef } from 'react';
+import { useContext, useMemo } from 'react';
 import { useSetAtom } from 'jotai';
 import copy from 'copy-to-clipboard';
 import { useSetRecoilState } from 'recoil';
@@ -90,15 +90,10 @@ function HwpDownloadButton({ file }: { file: { file_id: string; filename: string
 
 /**
  * Result message for a finished task tool: coverage line, code-counted notes and the
- * open/export buttons. Opens the task panel on its own when the result arrives live.
+ * open/export buttons. The task panel opens for a live result on its own
+ * (`useTaskPanel`); this card opens it only when pressed.
  */
-export default function TaskResultCard({
-  result,
-  autoOpen = false,
-}: {
-  result: TaskResultAttachment;
-  autoOpen?: boolean;
-}) {
+export default function TaskResultCard({ result }: { result: TaskResultAttachment }) {
   const localize = useLocalize();
   const queryClient = useQueryClient();
   const { showToast } = useToastContext();
@@ -125,16 +120,6 @@ export default function TaskResultCard({
     setArtifactsVisible(false);
     setTaskPanel({ open: true, view: 'result', resultId });
   };
-
-  const openedRef = useRef(false);
-  useEffect(() => {
-    if (autoOpen && !openedRef.current) {
-      openedRef.current = true;
-      openResult();
-    }
-    // Opens once per mounted live result; later renders must not reopen a closed panel.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpen]);
 
   const copyResult = async () => {
     try {
