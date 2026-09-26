@@ -3,10 +3,10 @@ import { useAtomValue } from 'jotai';
 import { TaskTools } from 'librechat-data-provider';
 import type { Agents, TAttachment, TaskToolName } from 'librechat-data-provider';
 import type { TaskResultAttachment } from './api';
+import TaskSchemaApproval, { TaskSchemaRan } from './TaskSchemaApproval';
+import TaskViewApproval, { TaskViewRan } from './TaskViewApproval';
 import { taskProgressByToolCallId } from '~/store/task';
 import { TASK_STAGES, parseTaskArgs } from './stages';
-import TaskSchemaApproval from './TaskSchemaApproval';
-import TaskViewApproval from './TaskViewApproval';
 import TaskResultCard from './TaskResultCard';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -30,8 +30,8 @@ function taskResultsOf(attachments: TAttachment[] | undefined): TaskResultAttach
 
 /**
  * Card for `extract_table`, `summarize_documents` and `write_report` calls: the plan
- * steps, the field or perspective picker while the call waits for approval, and the
- * result message once the tool returns.
+ * steps, the field or perspective picker while the call waits for approval (kept
+ * read-only once it ran), and the result message once the tool returns.
  */
 export default function TaskPlanCard({
   toolName,
@@ -57,6 +57,9 @@ export default function TaskPlanCard({
   const stages = TASK_STAGES[toolName];
   const finished = (output?.length ?? 0) > 0;
   const awaitingApproval = approval != null && !finished;
+  /** A returned call with a saved result ran past its confirmation; a rejected or
+   *  failed one has no result, so no "ran" card claims otherwise. */
+  const ran = finished && results.length > 0;
 
   const progressIndex = stages.findIndex((stage) => stage.id === progress?.stage);
   const confirmIndex = awaitingApproval ? stages.findIndex((stage) => stage.id === 'confirm') : -1;
@@ -118,6 +121,8 @@ export default function TaskPlanCard({
       {awaitingApproval && toolName === TaskTools.summarize_documents && (
         <TaskViewApproval approval={approval} toolCallId={toolCallId} args={args} />
       )}
+      {ran && toolName === TaskTools.extract_table && <TaskSchemaRan args={args} />}
+      {ran && toolName === TaskTools.summarize_documents && <TaskViewRan args={args} />}
       {results.map((result) => (
         <TaskResultCard key={result.resultId} result={result} autoOpen={isSubmitting} />
       ))}

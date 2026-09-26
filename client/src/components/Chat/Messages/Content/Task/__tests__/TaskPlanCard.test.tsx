@@ -149,5 +149,57 @@ describe('TaskPlanCard', () => {
     });
 
     expect(screen.queryByTestId('task-schema-approval')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('task-schema-ran')).not.toBeInTheDocument();
+  });
+
+  const resultAttachment = (kind: string) =>
+    [
+      {
+        type: 'task_result',
+        toolCallId: 'call-1',
+        messageId: 'm1',
+        conversationId: 'c1',
+        task_result: { resultId: 'result-1', kind, title: 't', stats: {} },
+      },
+    ] as unknown as TAttachment[];
+
+  test('keeps the fields the table ran with as a read-only card marked as run', () => {
+    renderPlan({
+      toolName: TaskTools.extract_table,
+      args: JSON.stringify({ fields: ['정세 전망', '위험도'], suggested_fields: ['출처 매체'] }),
+      output: 'done',
+      attachments: resultAttachment('table'),
+    });
+
+    const card = screen.getByTestId('task-schema-ran');
+    expect(card).toHaveTextContent('com_ui_task_ran');
+    expect(screen.queryByRole('button', { name: 'com_ui_task_run' })).not.toBeInTheDocument();
+    for (const name of ['정세 전망', '위험도']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name })).toBeDisabled();
+    }
+    expect(screen.getByRole('button', { name: '출처 매체' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  test('keeps the perspective the summary ran with as a read-only card marked as run', () => {
+    renderPlan({
+      toolName: TaskTools.summarize_documents,
+      args: { views: ['간부 보고용', '위험 요인 중심'], view: '남북 교류 영향' },
+      output: 'done',
+      attachments: resultAttachment('summary'),
+    });
+
+    expect(screen.getByTestId('task-view-ran')).toHaveTextContent('com_ui_task_ran');
+    expect(screen.getByRole('button', { name: '남북 교류 영향' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: '간부 보고용' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 });

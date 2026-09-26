@@ -24,6 +24,35 @@ function sameList(a: string[], b: string[]) {
   return a.length === b.length && a.every((item, index) => item === b[index]);
 }
 
+/**
+ * The same card after the call ran: the fields it ran with stay on, the unused
+ * suggestions off, nothing can be changed. `args` come from the saved tool call,
+ * which the completion step rewrites with the arguments the tool actually got, so
+ * fields the user edited on the card show here.
+ */
+export function TaskSchemaRan({ args }: { args: Record<string, unknown> }) {
+  const localize = useLocalize();
+  const chips = initialChips(args);
+  return (
+    <div className="mt-3 flex flex-col gap-2" data-testid="task-schema-ran">
+      <p className="text-[0.9375rem] text-text-primary">
+        {localize('com_ui_task_schema_intro_nocount')}
+      </p>
+      <div className="rounded-xl border border-border-light bg-surface-primary px-3.5 py-3">
+        <h4 className="mb-2 text-[0.8125rem] font-medium text-text-secondary">
+          {localize('com_ui_task_schema_title')}
+        </h4>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {chips.map((chip) => (
+            <TaskChip key={chip.name} label={chip.name} on={chip.on} disabled />
+          ))}
+        </div>
+        <p className="mt-2.5 text-sm text-text-secondary">{localize('com_ui_task_ran')}</p>
+      </div>
+    </div>
+  );
+}
+
 /** Field confirmation card for a paused `extract_table` call. */
 export default function TaskSchemaApproval({
   approval,

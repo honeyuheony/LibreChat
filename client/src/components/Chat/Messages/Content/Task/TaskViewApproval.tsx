@@ -15,6 +15,34 @@ const DEFAULT_VIEW_KEYS: TranslationKeys[] = [
 ];
 
 /**
+ * The picker after the call ran, read-only, with the perspective it ran with on.
+ * `args` come from the saved tool call, rewritten on completion with the arguments
+ * the tool actually got, so `view` is the user's pick rather than the model's.
+ */
+export function TaskViewRan({ args }: { args: Record<string, unknown> }) {
+  const localize = useLocalize();
+  const picked = typeof args.view === 'string' ? args.view : null;
+  const offered = stringList(args.views);
+  const views = offered.length > 0 ? offered : DEFAULT_VIEW_KEYS.map((key) => localize(key));
+  if (picked != null && !views.includes(picked)) {
+    views.push(picked);
+  }
+  return (
+    <div className="mt-3 flex flex-col gap-2" data-testid="task-view-ran">
+      <p className="text-[0.9375rem] text-text-primary">{localize('com_ui_task_view_intro')}</p>
+      <div className="rounded-xl border border-border-light bg-surface-primary px-3.5 py-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {views.map((view) => (
+            <TaskChip key={view} label={view} on={view === picked} disabled />
+          ))}
+        </div>
+        <p className="mt-2.5 text-sm text-text-secondary">{localize('com_ui_task_ran')}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Perspective picker for a paused `summarize_documents` call. Nothing is picked up
  * front, even when the model passed `view`, so the user always chooses before running.
  */
