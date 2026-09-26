@@ -19,7 +19,7 @@ export type HwpRenderOutcome =
   | { ok: true; buffer: Buffer; filename: string; title?: string }
   | {
       ok: false;
-      /** `unavailable` = no answer (down, refused, timed out); the rest are hwp-mcp error codes. */
+      /** `unavailable` = no full answer (down, refused, timed out, body cut off); the rest are hwp-mcp error codes. */
       code: 'unavailable' | 'unknown_template' | 'invalid_request' | 'render_failed' | string;
       message: string;
     };
@@ -94,7 +94,17 @@ export function createHwpService({
           message: body?.message ?? `HTTP ${response.status}`,
         };
       }
-      const buffer = Buffer.from(await response.arrayBuffer());
+      let buffer: Buffer;
+      try {
+        // The timeout also covers the body, so a stalled or reset stream fails here
+        buffer = Buffer.from(await response.arrayBuffer());
+      } catch (error) {
+        return {
+          ok: false,
+          code: 'unavailable',
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
       const title = decodeHeader(response.headers.get('X-Hwp-Title'));
       const filename =
         parseContentDispositionFilename(response.headers.get('Content-Disposition')) ??

@@ -18,8 +18,8 @@ import type { HwpService } from './hwpService';
 import type { TaskCache } from './cache';
 import type { TaskLLM } from './llm';
 import { buildSummaryResult, mergeSummaries, summarizeDocuments } from './summarize';
-import { RENDER_UNAVAILABLE_NOTICE, composeReport } from './report';
 import { buildTableResult, countTopValues } from './aggregate';
+import { composeReport, renderFailureNotice } from './report';
 import { extractFields, normalizeFields } from './extract';
 import { normalizeKey } from './cache';
 
@@ -390,7 +390,7 @@ async function runWriteReport(
       filename: rendered.filename,
     });
   } else {
-    notice = RENDER_UNAVAILABLE_NOTICE;
+    notice = renderFailureNotice(rendered.code);
   }
   await progress('save');
   await deps.saveResult(result);

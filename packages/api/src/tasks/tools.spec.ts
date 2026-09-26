@@ -127,6 +127,24 @@ describe('write_report tool', () => {
     expect(env.files).toHaveLength(0);
   });
 
+  it('tells the user why rendering failed, not always that the server was unreachable', async () => {
+    const notices: string[] = [];
+    for (const code of ['unknown_template', 'invalid_request', 'render_failed']) {
+      const env = setup(() => ({ ok: false, code, message: code }));
+      const message = await call(
+        TaskTools.write_report,
+        { template_id: 'weekly-report' },
+        env.deps,
+      );
+      const notice = message.artifact?.[TASK_RESULT_ARTIFACT].notice ?? '';
+      expect(notice).not.toContain('연결하지 못해');
+      expect(message.content).toContain(notice);
+      expect(env.saved[0].kind).toBe('report');
+      notices.push(notice);
+    }
+    expect(new Set([...notices, RENDER_UNAVAILABLE_NOTICE]).size).toBe(4);
+  });
+
   it('reuses cells a previous table extracted, making only the writer call', async () => {
     const env = setup(() => ({ ok: true, buffer: Buffer.from('x'), filename: 'a.hwpx' }));
     await call(TaskTools.extract_table, { fields: ['담당', '금주 실적'] }, env.deps);

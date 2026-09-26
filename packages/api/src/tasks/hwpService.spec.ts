@@ -58,6 +58,20 @@ describe('createHwpService', () => {
     });
   });
 
+  it('reports unavailable instead of throwing when the body cannot be read', async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.error(new Error('socket hang up'));
+      },
+    });
+    const { fetchImpl } = respond(new Response(body, { status: 200 }));
+    await expect(createHwpService({ fetchImpl }).render(request)).resolves.toEqual({
+      ok: false,
+      code: 'unavailable',
+      message: 'socket hang up',
+    });
+  });
+
   it('reports unavailable when nothing listens on the port', async () => {
     const outcome = await createHwpService({
       baseUrl: 'http://127.0.0.1:9',

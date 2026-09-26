@@ -425,5 +425,18 @@ export async function composeReport({
   };
 }
 
-export const RENDER_UNAVAILABLE_NOTICE =
-  '한글 문서 변환 서버에 연결하지 못해 HWP 파일을 만들지 못했습니다. 본문은 오른쪽에서 확인하고 복사할 수 있습니다.';
+const BODY_STILL_AVAILABLE = '본문은 오른쪽에서 확인하고 복사할 수 있습니다.';
+
+export const RENDER_UNAVAILABLE_NOTICE = `한글 문서 변환 서버에 연결하지 못했거나 응답이 제시간에 오지 않아 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`;
+
+/** Keyed by hwp-mcp error code; other codes fall back to the generic render failure. */
+const RENDER_FAILURE_NOTICES: Record<string, string> = {
+  unavailable: RENDER_UNAVAILABLE_NOTICE,
+  unknown_template: `한글 문서 변환 서버에 이 보고서 양식이 등록되어 있지 않아 HWP 파일을 만들지 못했습니다. 관리자에게 양식 등록을 요청해 주세요. ${BODY_STILL_AVAILABLE}`,
+  invalid_request: `보고서 내용이 양식이 받는 형식과 맞지 않아 HWP 파일을 만들지 못했습니다. 계속되면 관리자에게 알려 주세요. ${BODY_STILL_AVAILABLE}`,
+  render_failed: `한글 문서 변환 서버가 양식을 채우다 실패해 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`,
+};
+
+export function renderFailureNotice(code: string): string {
+  return RENDER_FAILURE_NOTICES[code] ?? RENDER_FAILURE_NOTICES.render_failed;
+}
