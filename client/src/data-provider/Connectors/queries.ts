@@ -48,3 +48,19 @@ export const useDeskAppReleaseQuery = (
     },
   );
 };
+
+/** The signed-in user's recent connector tool calls, newest first. */
+export const useConnectorActivityQuery = (
+  config?: UseQueryOptions<t.ConnectorActivityItem[]>,
+): QueryObserverResult<t.ConnectorActivityItem[]> => {
+  return useQuery<t.ConnectorActivityItem[]>(
+    [QueryKeys.connectorActivity],
+    () => dataService.getConnectorActivity(),
+    {
+      refetchOnWindowFocus: true,
+      staleTime: 30 * 1000,
+      retry: false,
+      ...config,
+    },
+  );
+};

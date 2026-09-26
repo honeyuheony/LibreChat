@@ -1,4 +1,4 @@
-import type { MCPServerStatus, MCPTool } from 'librechat-data-provider';
+import type { DeskStatusResponse, MCPServerStatus, MCPTool } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 
 export type PillTone = 'success' | 'neutral' | 'error';
@@ -25,6 +25,9 @@ interface ConnectorStateInput {
 
 /** The server name the desk relay MCP server is configured under (`librechat.yaml` `mcpServers.my-pc`). */
 export const DESK_SERVER_NAME = 'my-pc';
+
+/** The sidebar's data hub page, which lists every connector (`routes/index.tsx`). */
+export const DATA_HUB_PATH = '/connectors';
 
 /** Public page every "get the desktop app" entry opens (`routes/index.tsx`). */
 export const DESK_DOWNLOAD_PATH = '/download';
@@ -109,4 +112,40 @@ export function isWriteTool(toolName: string): boolean {
 
 export function summarizeToolAccess(tools: MCPTool[]): { count: number; hasWrite: boolean } {
   return { count: tools.length, hasWrite: tools.some((tool) => isWriteTool(tool.name)) };
+}
+
+/** What the data hub tells the user, limited to what the app can actually observe. */
+export type HubStatus = 'available' | 'needs_connection' | 'unavailable' | 'checking';
+
+export const hubStatusView: Record<HubStatus, { labelKey: TranslationKeys; tone: PillTone }> = {
+  available: { labelKey: 'com_ui_data_hub_status_available', tone: 'success' },
+  needs_connection: { labelKey: 'com_ui_data_hub_status_needs_connection', tone: 'neutral' },
+  unavailable: { labelKey: 'com_ui_data_hub_status_unavailable', tone: 'error' },
+  checking: { labelKey: 'com_ui_connectors_status_checking', tone: 'neutral' },
+};
+
+interface HubStatusInput {
+  serverStatus?: MCPServerStatus;
+  isInitializing: boolean;
+  /** Only for the desk relay server, whose MCP connection stays up while the app is closed. */
+  desk?: { state?: DeskStatusResponse['state'] };
+}
+
+export function getHubStatus({ serverStatus, isInitializing, desk }: HubStatusInput): HubStatus {
+  if (desk) {
+    if (!desk.state) {
+      return 'checking';
+    }
+    return desk.state === 'online' ? 'available' : 'needs_connection';
+  }
+  if (isInitializing || !serverStatus || serverStatus.connectionState === 'connecting') {
+    return 'checking';
+  }
+  if (serverStatus.requestScoped === true || serverStatus.connectionState === 'connected') {
+    return 'available';
+  }
+  if (serverStatus.connectionState === 'error' && serverStatus.requiresOAuth !== true) {
+    return 'unavailable';
+  }
+  return 'needs_connection';
 }

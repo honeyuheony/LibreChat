@@ -1,18 +1,18 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
+import { Provider as JotaiProvider } from 'jotai';
 import userEvent from '@testing-library/user-event';
-import { Provider as JotaiProvider, useAtomValue } from 'jotai';
-import { SettingsTabValues, dataService } from 'librechat-data-provider';
+import { dataService } from 'librechat-data-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
-import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import { getAgentServerNames } from '../useAgentConnectorSelection';
 import ToolsMenu from '../ToolsMenu';
 
-function SettingsTabReader() {
-  const settingsTab = useAtomValue(settingsDialogTabAtom);
-  return <span data-testid="settings-tab">{settingsTab ?? 'none'}</span>;
-}
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
 
 const render = (ui: React.ReactElement) =>
   rtlRender(
@@ -174,14 +174,9 @@ describe('ToolsMenu', () => {
     expect(screen.getByRole('menu', { name: 'com_ui_tools' })).toBeVisible();
   });
 
-  it('opens connector settings for a connector that needs a connection', async () => {
+  it('opens the data hub on a connector that needs a connection', async () => {
     const user = userEvent.setup();
-    render(
-      <>
-        <ToolsMenu showBuiltinTools={true} />
-        <SettingsTabReader />
-      </>,
-    );
+    render(<ToolsMenu showBuiltinTools={true} />);
 
     await user.click(screen.getByTestId('tools-menu-button'));
     const calendar = screen.getByRole('menuitemcheckbox', {
@@ -191,7 +186,7 @@ describe('ToolsMenu', () => {
 
     await user.click(within(calendar).getByTestId('tools-menu-connect'));
 
-    expect(screen.getByTestId('settings-tab')).toHaveTextContent(SettingsTabValues.CONNECTORS);
+    expect(mockNavigate).toHaveBeenCalledWith('/connectors/calendar');
     expect(screen.getByTestId('tools-menu-button')).toHaveAttribute('aria-expanded', 'false');
     expect(mockOnConfigClick).not.toHaveBeenCalled();
     expect(mockToggleServerSelection).not.toHaveBeenCalled();

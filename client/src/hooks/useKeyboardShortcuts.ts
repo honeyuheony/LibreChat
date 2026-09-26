@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { useSetAtom } from 'jotai';
 import copy from 'copy-to-clipboard';
 import { useToastContext } from '@librechat/client';
 import { useMatch, useNavigate } from 'react-router-dom';
+import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
-import { PermissionTypes, Permissions, SettingsTabValues } from 'librechat-data-provider';
 import type { ShortcutBinding } from '~/utils/shortcuts';
 import type { ShortcutOverride } from '~/store/misc';
 import {
@@ -15,8 +14,8 @@ import {
   isMacPlatform,
   parseBinding,
 } from '~/utils/shortcuts';
-import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import { mainTextareaId, NotificationSeverity } from '~/common';
+import { DATA_HUB_PATH } from '~/components/Connectors/status';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { useArchiveConvoMutation } from '~/data-provider';
 import { useHasAccess, useLocalize } from '~/hooks';
@@ -508,7 +507,6 @@ export function useShortcutActions(): ShortcutAction[] {
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   const setIsTemporary = useSetRecoilState(store.isTemporary);
   const setDeleteTarget = useSetRecoilState(store.keyboardDeleteTarget);
-  const setSettingsTab = useSetAtom(settingsDialogTabAtom);
   const hasAccessToTemporaryChat = useHasAccess({
     permissionType: PermissionTypes.TEMPORARY_CHAT,
     permission: Permissions.USE,
@@ -831,9 +829,9 @@ export function useShortcutActions(): ShortcutAction[] {
   const handleOpenFiles = useCallback(() => handleOpenPanel('files'), [handleOpenPanel]);
   const handleOpenBookmarks = useCallback(() => handleOpenPanel('bookmarks'), [handleOpenPanel]);
   const handleOpenMCP = useCallback(() => {
-    setSettingsTab(SettingsTabValues.CONNECTORS);
+    navigate(DATA_HUB_PATH);
     return true;
-  }, [setSettingsTab]);
+  }, [navigate]);
 
   const handlers = useMemo<Record<ShortcutActionId, () => boolean | void>>(
     () => ({

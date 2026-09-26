@@ -1,6 +1,6 @@
 import React, { memo, useRef, useMemo, useEffect } from 'react';
-import { useSetAtom } from 'jotai';
 import * as Ariakit from '@ariakit/react';
+import { useNavigate } from 'react-router-dom';
 import { MCPIcon, VectorIcon, TooltipAnchor } from '@librechat/client';
 import {
   Box,
@@ -16,7 +16,6 @@ import {
   Permissions,
   ArtifactModes,
   PermissionTypes,
-  SettingsTabValues,
   defaultAgentCapabilities,
 } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
@@ -29,9 +28,12 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
-import { DESK_SERVER_NAME, DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
+import {
+  DATA_HUB_PATH,
+  DESK_SERVER_NAME,
+  DESK_DOWNLOAD_PATH,
+} from '~/components/Connectors/status';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
-import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import useAgentConnectorSelection from './useAgentConnectorSelection';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
@@ -116,7 +118,7 @@ function ConnectorRow({
   connectionStatus,
   statusIconProps,
   onToggle,
-  onOpenConnectorsSettings,
+  onOpenDataHub,
   deskAppOff = false,
 }: {
   server: MCPServerDefinition;
@@ -124,7 +126,7 @@ function ConnectorRow({
   connectionStatus?: ConnectionStatusMap;
   statusIconProps?: MCPServerStatusIconProps | null;
   onToggle: (serverName: string) => void;
-  onOpenConnectorsSettings: () => void;
+  onOpenDataHub: (serverName: string) => void;
   /** 「내 PC 폴더」 only: the relay sees no running desktop app for this user. */
   deskAppOff?: boolean;
 }) {
@@ -185,7 +187,7 @@ function ConnectorRow({
             data-testid="tools-menu-connect"
             onClick={(e) => {
               e.stopPropagation();
-              onOpenConnectorsSettings();
+              onOpenDataHub(server.serverName);
             }}
             className="rounded-theme-control border border-border-light px-2 py-1 text-xs font-medium text-accent-primary hover:bg-surface-brand-subtle"
           >
@@ -297,12 +299,12 @@ function ToolsMenu({
   });
   const canUseMemory = useHasMemoryAccess();
 
-  const setSettingsTab = useSetAtom(settingsDialogTabAtom);
+  const navigate = useNavigate();
   const menuStore = Ariakit.useMenuStore({ focusLoop: true, placement: 'top-start' });
   const isOpen = menuStore.useState('open');
-  const openConnectorsSettings = () => {
-    setSettingsTab(SettingsTabValues.CONNECTORS);
+  const openDataHub = (serverName: string) => {
     menuStore.hide();
+    navigate(`${DATA_HUB_PATH}/${encodeURIComponent(serverName)}`);
   };
 
   const servers = useMemo(
@@ -520,7 +522,7 @@ function ToolsMenu({
                     connectionStatus={manager.connectionStatus}
                     statusIconProps={manager.getServerStatusIconProps(server.serverName)}
                     onToggle={toggleConnector}
-                    onOpenConnectorsSettings={openConnectorsSettings}
+                    onOpenDataHub={openDataHub}
                     deskAppOff={
                       server.serverName === DESK_SERVER_NAME && deskStatus?.state === 'offline'
                     }

@@ -1,7 +1,6 @@
 import { isValidElementType } from 'react-is';
 import { SettingsTabValues } from 'librechat-data-provider';
 import type { SettingsContextValue } from '../types';
-import ConnectorsSettings from '~/components/Connectors/ConnectorsSettings';
 import en from '~/locales/en/translation.json';
 import { registry } from '../registry';
 import { TABS } from '../types';
@@ -79,11 +78,8 @@ describe('settings registry', () => {
       expect(tabOf('modularChat')).toBeUndefined();
     });
 
-    it('lists no entries under the Connectors tab, which renders its own panel', () => {
-      expect(registry.filter((entry) => entry.tab === SettingsTabValues.CONNECTORS)).toEqual([]);
-      expect(TABS.find((tab) => tab.id === SettingsTabValues.CONNECTORS)?.Panel).toBe(
-        ConnectorsSettings,
-      );
+    it('has no Connectors tab, since connectors live on the sidebar data hub', () => {
+      expect(TABS.map((tab) => tab.id)).not.toContain(SettingsTabValues.CONNECTORS);
     });
   });
 

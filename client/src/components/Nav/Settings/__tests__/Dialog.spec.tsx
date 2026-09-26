@@ -38,9 +38,7 @@ describe('SettingsDialog', () => {
   });
 
   it('opens on the tab it was asked for', () => {
-    render(
-      <SettingsDialog open onOpenChange={jest.fn()} initialTab={SettingsTabValues.CONNECTORS} />,
-    );
-    expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('Connectors');
+    render(<SettingsDialog open onOpenChange={jest.fn()} initialTab={SettingsTabValues.DATA} />);
+    expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('Data & Privacy');
   });
 });

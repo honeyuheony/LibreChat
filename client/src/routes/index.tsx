@@ -13,6 +13,7 @@ import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
 import DeskDownload from '~/components/Connectors/DeskDownload';
 import AgentMarketplace from '~/components/Agents/Marketplace';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
+import DataHub from '~/components/Connectors/Hub/DataHub';
 import { AuthContextProvider } from '~/hooks/AuthContext';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import StartupLayout from './Layouts/Startup';
@@ -202,6 +203,14 @@ export const router = createBrowserRouter(
                   <AgentMarketplace />
                 </MarketplaceProvider>
               ),
+            },
+            {
+              path: 'connectors',
+              element: <DataHub />,
+            },
+            {
+              path: 'connectors/:serverName',
+              element: <DataHub />,
             },
             {
               path: 'skills-market',

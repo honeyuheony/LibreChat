@@ -40,15 +40,15 @@ function setup(extra: Partial<SettingsContextValue> = {}, query = '') {
 }
 
 describe('Sidebar', () => {
-  it('lists exactly the general, personal, connectors and data tabs in that order', () => {
+  it('lists exactly the general, personal and data tabs in that order', () => {
     setup();
     const names = screen.getAllByRole('tab').map((tab) => tab.textContent);
-    expect(names).toEqual(['General', 'Personal', 'Connectors', 'Data & Privacy']);
+    expect(names).toEqual(['General', 'Personal', 'Data & Privacy']);
   });
 
   it('keeps the same tabs whatever features the deployment enables', () => {
     setup({ aboutEnabled: true, langfuseConnectionAccess: true, hasPrompts: true });
-    expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
     expect(screen.queryByRole('tab', { name: 'About' })).not.toBeInTheDocument();
   });
 

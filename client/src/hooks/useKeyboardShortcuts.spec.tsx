@@ -1,8 +1,7 @@
 import copy from 'copy-to-clipboard';
-import { MemoryRouter } from 'react-router-dom';
+import { Provider as JotaiProvider } from 'jotai';
 import { RecoilRoot, useRecoilValue } from 'recoil';
-import { SettingsTabValues } from 'librechat-data-provider';
-import { Provider as JotaiProvider, useAtomValue } from 'jotai';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, act, cleanup, renderHook } from '@testing-library/react';
 import type { TConversation } from 'librechat-data-provider';
@@ -17,7 +16,6 @@ import useKeyboardShortcuts, {
   useShortcutDisplay,
   useShortcutAriaKey,
 } from './useKeyboardShortcuts';
-import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import store from '~/store';
 
 jest.mock('copy-to-clipboard', () => ({
@@ -50,12 +48,12 @@ function Harness() {
   useKeyboardShortcuts();
   const deleteTarget = useRecoilValue(store.keyboardDeleteTarget);
   const sidebarExpanded = useRecoilValue(store.sidebarExpanded);
-  const settingsTab = useAtomValue(settingsDialogTabAtom);
+  const location = useLocation();
   return (
     <>
       <span data-testid="delete-target">{deleteTarget?.conversationId ?? 'none'}</span>
       <span data-testid="sidebar">{String(sidebarExpanded)}</span>
-      <span data-testid="settings-tab">{settingsTab ?? 'none'}</span>
+      <span data-testid="location">{location.pathname}</span>
     </>
   );
 }
@@ -203,7 +201,7 @@ describe('global shortcut dispatch', () => {
     expect(getByTestId('sidebar').textContent).not.toBe(before);
   });
 
-  it('opens connector settings from the MCP shortcut', () => {
+  it('opens the data hub from the MCP shortcut', () => {
     const { getByTestId } = renderHarness(undefined, '/c/test-convo', (snapshot) => {
       snapshot.set(store.customShortcuts, {
         openMCP: {
@@ -216,7 +214,7 @@ describe('global shortcut dispatch', () => {
     const event = dispatchKey({ key: 'm', ctrlKey: true, altKey: true, shiftKey: true });
 
     expect(event.defaultPrevented).toBe(true);
-    expect(getByTestId('settings-tab')).toHaveTextContent(SettingsTabValues.CONNECTORS);
+    expect(getByTestId('location')).toHaveTextContent('/connectors');
   });
 
   it('yields when a closer handler already claimed the keypress', () => {

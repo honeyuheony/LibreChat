@@ -1,5 +1,5 @@
 import type { MCPServerStatus } from 'librechat-data-provider';
-import { getConnectorState, isWriteTool, summarizeToolAccess } from '../status';
+import { getConnectorState, getHubStatus, isWriteTool, summarizeToolAccess } from '../status';
 
 const status = (overrides: Partial<MCPServerStatus>): MCPServerStatus => ({
   requiresOAuth: false,
@@ -108,5 +108,42 @@ describe('summarizeToolAccess', () => {
     ];
     expect(summarizeToolAccess(tools)).toEqual({ count: 2, hasWrite: true });
     expect(summarizeToolAccess(tools.slice(0, 1))).toEqual({ count: 1, hasWrite: false });
+  });
+});
+
+describe('getHubStatus', () => {
+  it('reads a failed Google sign-in as needing a connection, not as broken', () => {
+    expect(
+      getHubStatus({
+        serverStatus: status({ connectionState: 'error', requiresOAuth: true }),
+        isInitializing: false,
+      }),
+    ).toBe('needs_connection');
+  });
+
+  it('reads a failed shared server as unavailable', () => {
+    expect(
+      getHubStatus({ serverStatus: status({ connectionState: 'error' }), isInitializing: false }),
+    ).toBe('unavailable');
+  });
+
+  it('reads a server that connects per chat as available', () => {
+    expect(
+      getHubStatus({
+        serverStatus: status({ connectionState: 'disconnected', requestScoped: true }),
+        isInitializing: false,
+      }),
+    ).toBe('available');
+  });
+
+  it('waits while the server or the desktop app is still being checked', () => {
+    expect(getHubStatus({ serverStatus: undefined, isInitializing: false })).toBe('checking');
+    expect(
+      getHubStatus({
+        serverStatus: status({ connectionState: 'connected' }),
+        isInitializing: false,
+        desk: {},
+      }),
+    ).toBe('checking');
   });
 });

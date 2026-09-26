@@ -1,15 +1,14 @@
 import { useMemo } from 'react';
-import { useSetAtom } from 'jotai';
 import { useRecoilValue } from 'recoil';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, MessagesSquare, Plug } from 'lucide-react';
 import { useUserKeyQuery } from 'librechat-data-provider/react-query';
-import { getConfigDefaults, getEndpointField, SettingsTabValues } from 'librechat-data-provider';
+import { getConfigDefaults, getEndpointField } from 'librechat-data-provider';
 import type { TEndpointsConfig } from 'librechat-data-provider';
 import type { NavLink } from '~/common';
 import { useGetEndpointsQuery, useGetStartupConfig, useInsightsAccessQuery } from '~/data-provider';
 import ConversationsSection from '~/components/UnifiedSidebar/ConversationsSection';
-import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
+import { DATA_HUB_PATH } from '~/components/Connectors/status';
 import useSideNavLinks from '~/hooks/Nav/useSideNavLinks';
 import { useAuthContext } from '~/hooks';
 import store from '~/store';
@@ -28,7 +27,6 @@ export default function useUnifiedSidebarLinks() {
   const endpoint = useRecoilValue(store.conversationEndpointByIndex(0)) ?? undefined;
   const { data: startupConfig } = useGetStartupConfig();
   const { data: endpointsConfig = {} as TEndpointsConfig } = useGetEndpointsQuery();
-  const setSettingsTab = useSetAtom(settingsDialogTabAtom);
 
   const interfaceConfig = useMemo(
     () => startupConfig?.interface ?? defaultInterface,
@@ -82,7 +80,7 @@ export default function useUnifiedSidebarLinks() {
       label: '',
       icon: Plug,
       id: 'connectors',
-      onClick: () => setSettingsTab(SettingsTabValues.CONNECTORS),
+      onClick: () => navigate(DATA_HUB_PATH),
     };
 
     const skillsLinks: NavLink[] = [];
@@ -124,7 +122,6 @@ export default function useUnifiedSidebarLinks() {
     isInsightsRoute,
     location.pathname,
     navigate,
-    setSettingsTab,
     sideNavLinks,
   ]);
 

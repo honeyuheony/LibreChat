@@ -1,15 +1,12 @@
 import { createElement } from 'react';
-import { Plug } from 'lucide-react';
 import { SettingsTabValues } from 'librechat-data-provider';
 import { GearIcon, DataIcon, UserIcon } from '@librechat/client';
 import type { ComponentType, ReactNode } from 'react';
 import type { TranslationKeys } from '~/hooks';
-import ConnectorsSettings from '~/components/Connectors/ConnectorsSettings';
 
 export type SettingsTab =
   | SettingsTabValues.GENERAL
   | SettingsTabValues.PERSONALIZATION
-  | SettingsTabValues.CONNECTORS
   | SettingsTabValues.DATA;
 
 export type SectionId =
@@ -109,13 +106,6 @@ export const TABS: TabMeta[] = [
       { id: 'tts', labelKey: 'com_ui_settings_section_tts' },
       { id: 'security', labelKey: 'com_ui_settings_section_security' },
     ],
-  },
-  {
-    id: SettingsTabValues.CONNECTORS,
-    labelKey: 'com_ui_settings_tab_connectors',
-    icon: createElement(Plug, { className: 'icon-sm', 'aria-hidden': true }),
-    sections: [],
-    Panel: ConnectorsSettings,
   },
   {
     id: SettingsTabValues.DATA,
