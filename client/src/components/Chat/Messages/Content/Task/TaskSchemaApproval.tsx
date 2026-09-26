@@ -64,8 +64,17 @@ export default function TaskSchemaApproval({
 }) {
   const localize = useLocalize();
   const conversationId = useContext(ChatContext)?.conversation?.conversationId ?? '';
-  const { status, locked, decision, canEdit, canReject, resolveRun, decide, reject } =
-    useTaskApproval(approval, toolCallId);
+  const {
+    status,
+    locked,
+    decision,
+    othersPending,
+    canEdit,
+    canReject,
+    resolveRun,
+    decide,
+    reject,
+  } = useTaskApproval(approval, toolCallId);
   const [chips, setChips] = useState<FieldChip[]>(() => initialChips(args));
   const [adding, setAdding] = useState(false);
   const [draftField, setDraftField] = useState('');
@@ -160,6 +169,7 @@ export default function TaskSchemaApproval({
             status={status}
             locked={locked}
             decision={decision}
+            othersPending={othersPending}
             runDisabled={selected.length === 0 || resolution == null}
             onRun={() => resolution != null && decide(resolution)}
             onReject={canReject ? reject : undefined}

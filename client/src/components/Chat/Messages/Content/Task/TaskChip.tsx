@@ -54,8 +54,9 @@ export function TaskApprovalStatus({ status }: { status: string }) {
 
 /**
  * The row under a task approval card: 「실행」, 「취소」 when the policy allows a reject,
- * the card's own details (the estimate), and why run is blocked. Once the decision is
- * sent it collapses to 「실행됨」 or 「취소됨」.
+ * the card's own details (the estimate), why run is blocked, and how many other
+ * approvals of the same batch are still open. Once the decision is sent it collapses
+ * to 「실행됨」 or 「취소됨」.
  */
 export function TaskApprovalActions({
   status,
@@ -65,6 +66,7 @@ export function TaskApprovalActions({
   onRun,
   onReject,
   blockedReason,
+  othersPending = 0,
   children,
 }: {
   status: string;
@@ -74,6 +76,7 @@ export function TaskApprovalActions({
   onRun: () => void;
   onReject?: () => void;
   blockedReason?: string;
+  othersPending?: number;
   children?: ReactNode;
 }) {
   const localize = useLocalize();
@@ -98,6 +101,16 @@ export function TaskApprovalActions({
       {blockedReason != null && (
         <span className="text-sm text-text-warning" role="status">
           {blockedReason}
+        </span>
+      )}
+      {othersPending > 0 && (
+        <span className="basis-full text-sm text-text-secondary" role="status">
+          {localize(
+            decision != null
+              ? 'com_ui_task_decision_saved_waiting'
+              : 'com_ui_task_other_approvals_pending',
+            { 0: othersPending },
+          )}
         </span>
       )}
       <TaskApprovalStatus status={status} />

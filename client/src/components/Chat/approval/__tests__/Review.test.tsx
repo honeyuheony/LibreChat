@@ -3,9 +3,9 @@ import { RecoilRoot } from 'recoil';
 import { Provider as JotaiProvider, createStore } from 'jotai';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
+import ApprovalProvider, { useApprovalContext } from '../../Messages/Content/ApprovalContext';
 import { PendingToolApprovalButton, PendingToolApprovalPanel } from '../Review';
 import { composerOverlayCountFamily } from '~/components/Chat/Input/overlay';
-import ApprovalProvider from '../../Messages/Content/ApprovalContext';
 import { pendingApprovalActionFamily } from '../state';
 
 jest.mock('@librechat/client', () => ({
@@ -197,5 +197,49 @@ describe('PendingToolApproval', () => {
     expect(screen.getByRole('heading', { name: '2. write_report' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /extract_table/ })).not.toBeInTheDocument();
     expect(screen.getByText('0 of 2 decisions selected')).toBeInTheDocument();
+  });
+
+  /** Stands in for the task card in the message, which records its own decision. */
+  function TaskCardDecision({ toolCallId }: { toolCallId: string }) {
+    const { setDecision } = useApprovalContext();
+    return (
+      <button
+        type="button"
+        aria-label="decide-card"
+        onClick={() =>
+          setDecision('action-1', toolCallId, { tool_call_id: toolCallId, decision: 'approve' })
+        }
+      />
+    );
+  }
+
+  test('says a task card still waits and enables continue once the card decides', async () => {
+    const payload = pendingAction.payload as Agents.ToolApprovalInterruptPayload;
+    const action = withRequests([
+      taskRequest('extract_table', 'task-1'),
+      { request: payload.action_requests[1], config: payload.review_configs[1] },
+    ]);
+    const jotaiStore = createStore();
+    jotaiStore.set(pendingApprovalActionFamily('conversation-1'), action);
+    render(
+      <RecoilRoot>
+        <JotaiProvider store={jotaiStore}>
+          <ApprovalProvider pendingAction={action}>
+            <PendingToolApprovalPanel conversationId="conversation-1" />
+            <TaskCardDecision toolCallId="task-1" />
+          </ApprovalProvider>
+        </JotaiProvider>
+      </RecoilRoot>,
+    );
+
+    expect(await screen.findByRole('region', { name: 'Review 1 action' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Allow once' }));
+    expect(screen.getByText('1 of 1 decisions selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(screen.getByText('com_ui_task_card_approvals_pending')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'decide-card' }));
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    expect(screen.queryByText('com_ui_task_card_approvals_pending')).not.toBeInTheDocument();
   });
 });

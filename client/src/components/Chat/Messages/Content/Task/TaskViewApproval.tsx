@@ -67,8 +67,17 @@ export default function TaskViewApproval({
   args: Record<string, unknown>;
 }) {
   const localize = useLocalize();
-  const { status, locked, decision, canEdit, canReject, resolveRun, decide, reject } =
-    useTaskApproval(approval, toolCallId);
+  const {
+    status,
+    locked,
+    decision,
+    othersPending,
+    canEdit,
+    canReject,
+    resolveRun,
+    decide,
+    reject,
+  } = useTaskApproval(approval, toolCallId);
   const offered = useMemo(() => {
     const views = stringList(args.views);
     return views.length > 0 ? views : DEFAULT_VIEW_VALUES;
@@ -141,6 +150,7 @@ export default function TaskViewApproval({
             status={status}
             locked={locked}
             decision={decision}
+            othersPending={othersPending}
             runDisabled={resolution == null}
             onRun={() => resolution != null && decide(resolution)}
             onReject={canReject ? reject : undefined}

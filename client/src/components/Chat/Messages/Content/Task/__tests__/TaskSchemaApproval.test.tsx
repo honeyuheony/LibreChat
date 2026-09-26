@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { dataService } from 'librechat-data-provider';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
+import { useApprovalContext, useResumeSubmit } from '../../ApprovalContext';
 import { CONVERSATION_ID, createTaskWrapper } from 'test/task-test-utils';
 import TaskSchemaApproval from '../TaskSchemaApproval';
 
@@ -170,5 +171,45 @@ describe('TaskSchemaApproval', () => {
     renderCard(args, ['approve', 'edit']);
 
     expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
+  });
+
+  /** Another call paused in the same batch, decided the way the composer panel does it. */
+  function OtherCall() {
+    const { registerToolCall, setDecision } = useApprovalContext();
+    const { submitToolApproval } = useResumeSubmit();
+    useEffect(() => registerToolCall('action-1', 'call-2'), [registerToolCall]);
+    return (
+      <button
+        type="button"
+        aria-label="decide-other"
+        onClick={() => {
+          setDecision('action-1', 'call-2', { tool_call_id: 'call-2', decision: 'approve' });
+          submitToolApproval('action-1');
+        }}
+      />
+    );
+  }
+
+  test('says other approvals remain and sends the batch once the last one is decided', () => {
+    render(
+      <>
+        <TaskSchemaApproval approval={approval()} toolCallId="call-1" args={args} />
+        <OtherCall />
+      </>,
+      { wrapper: createTaskWrapper() },
+    );
+
+    expect(screen.getByText('com_ui_task_other_approvals_pending:1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_run' }));
+    expect(mockApprovalMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_task_decision_saved_waiting:1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'decide-other' }));
+    expect(mockApprovalMutate).toHaveBeenCalledTimes(1);
+    expect(submittedDecisions()).toEqual([
+      { tool_call_id: 'call-1', decision: 'approve' },
+      { tool_call_id: 'call-2', decision: 'approve' },
+    ]);
   });
 });

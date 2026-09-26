@@ -3320,5 +3320,8 @@
   "com_ui_task_mode_chat": "대화",
   "com_ui_task_status_stopped": "중단됨",
   "com_ui_task_cancelled": "취소됨",
-  "com_ui_task_edit_not_allowed": "이 작업은 제안된 그대로만 실행할 수 있습니다. 제안대로 고르거나 취소해 주세요."
+  "com_ui_task_edit_not_allowed": "이 작업은 제안된 그대로만 실행할 수 있습니다. 제안대로 고르거나 취소해 주세요.",
+  "com_ui_task_other_approvals_pending": "이번 차례에 결정할 승인이 {{0}}개 더 있습니다. 모두 결정해야 함께 실행됩니다.",
+  "com_ui_task_decision_saved_waiting": "결정을 저장했습니다. 남은 승인 {{0}}개를 마저 결정하면 함께 실행됩니다.",
+  "com_ui_task_card_approvals_pending": "메시지의 작업 카드에 결정하지 않은 승인이 {{0}}개 남아 있습니다."
 }

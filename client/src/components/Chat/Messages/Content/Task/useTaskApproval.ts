@@ -38,6 +38,8 @@ export default function useTaskApproval(
     setDecision,
     setDecisionDraft,
     getDecision,
+    getDecisions,
+    getRegisteredCount,
     getStatus,
   } = useApprovalContext();
   const { submitToolApproval } = useResumeSubmit();
@@ -50,6 +52,13 @@ export default function useTaskApproval(
   const status = getStatus(actionId);
   const locked = status === 'submitting' || status === 'submitted' || status === 'expired';
   const decision = getDecision(actionId, toolCallId)?.decision;
+  /** Other calls paused in the same batch that nobody has decided yet. The server takes
+   *  the batch whole, so this card's choice is only sent once they are decided too. */
+  const decidedIds = new Set(getDecisions(actionId).map((item) => item.tool_call_id));
+  const othersPending = Math.max(
+    0,
+    getRegisteredCount(actionId) - decidedIds.size - (decidedIds.has(toolCallId) ? 0 : 1),
+  );
 
   const decide = useCallback(
     (resolution: Agents.ToolApprovalResolution) => {
@@ -84,6 +93,7 @@ export default function useTaskApproval(
     locked,
     /** The decision this card holds, so a sent reject reads 「취소됨」 rather than 「실행됨」. */
     decision,
+    othersPending,
     canEdit: allowed.includes('edit'),
     canReject: allowed.includes('reject'),
     resolveRun,
