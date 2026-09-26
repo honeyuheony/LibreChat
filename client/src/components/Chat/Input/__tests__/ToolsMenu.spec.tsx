@@ -6,6 +6,7 @@ import { Provider as JotaiProvider, createStore } from 'jotai';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import { getAgentServerNames } from '../useAgentConnectorSelection';
+import { cleanupTimestampedStorage } from '~/utils/timestamps';
 import { newChatExtraConnectorAtom } from '~/store';
 import ToolsMenu from '../ToolsMenu';
 
@@ -296,7 +297,15 @@ describe('ToolsMenu', () => {
     const savedAgent = 'agent_saved';
 
     beforeEach(() => {
-      mockManager = { ...defaultManager, mcpValues: [] };
+      /* Both default on, so a conversation with no stored choice starts with everything on. */
+      mockManager = {
+        ...defaultManager,
+        mcpValues: [],
+        selectableServers: defaultManager.selectableServers.map((server) => ({
+          ...server,
+          config: { ...server.config, defaultOn: true },
+        })),
+      };
       mockAgentTools = ['web_search', 'read_mcp_files', 'list_mcp_files'];
     });
 
@@ -339,6 +348,42 @@ describe('ToolsMenu', () => {
         'files',
       ]);
       expect(mockToggleServerSelection).not.toHaveBeenCalled();
+    });
+
+    it("keeps the chat's choice through the startup cleanup of stale storage", async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      await user.click(screen.getByRole('menuitemcheckbox', { name: 'Shared files' }));
+      cleanupTimestampedStorage();
+
+      expect(JSON.parse(localStorage.getItem('LAST_MCP_DISABLED_test-conv') ?? 'null')).toEqual([
+        'files',
+      ]);
+    });
+
+    it('starts a conversation opened with no stored choice from the new-chat defaults', async () => {
+      mockManager = {
+        ...mockManager,
+        selectableServers: [
+          { serverName: 'files', config: { title: 'Shared files' } },
+          { serverName: 'calendar', config: { title: 'Calendar' } },
+        ],
+      } as typeof mockManager;
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+      expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('tools-menu-button'));
+      expect(
+        await screen.findByRole('menuitemcheckbox', { name: 'Shared files', checked: false }),
+      ).toBeInTheDocument();
+      /* The defaults become the chat's own choice, which is what the next message sends. */
+      expect(JSON.parse(localStorage.getItem('LAST_MCP_DISABLED_test-conv') ?? 'null')).toEqual([
+        'files',
+        'calendar',
+      ]);
     });
 
     describe('in a new chat', () => {

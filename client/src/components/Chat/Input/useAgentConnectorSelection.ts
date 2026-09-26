@@ -12,6 +12,7 @@ import {
   newChatExtraConnectorAtom,
   NEW_CHAT_EXTRA_CONNECTOR_TTL_MS,
 } from '~/store';
+import { getTimestampedValue, setTimestampedValue } from '~/utils/timestamps';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import { isEphemeralAgent } from '~/common';
 
@@ -25,7 +26,7 @@ export interface AgentConnectorSelection {
 }
 
 function readStoredDisabled(storageKey: string): string[] | undefined {
-  const raw = localStorage.getItem(storageKey);
+  const raw = getTimestampedValue(storageKey);
   if (raw == null) {
     return undefined;
   }
@@ -72,7 +73,9 @@ export function getAgentServerNames(
  * The chat's connector switches for a saved agent. A new chat starts with the connectors
  * the user keeps on for new chats (`newChatOff` lists the rest); switching one off records
  * it in `ephemeralAgent.disabled_mcp`, which the server uses to leave that connector's tools
- * out of the run. A switch changes only its own conversation.
+ * out of the run. A switch changes only its own conversation. A conversation opened with no
+ * stored choice (another browser, or one older than the storage keeps) starts from the same
+ * new-chat defaults rather than with every connector on.
  */
 export default function useAgentConnectorSelection({
   conversationId,
@@ -131,24 +134,26 @@ export default function useAgentConnectorSelection({
     if (!isSavedAgent || isNewChat || disabledList !== undefined) {
       return;
     }
-    const stored = readStoredDisabled(storageKey);
+    const stored = readStoredDisabled(storageKey) ?? newChatOff;
     if (stored !== undefined) {
-      setEphemeralAgent((prev) => ({ ...(prev ?? {}), disabled_mcp: stored }));
+      setEphemeralAgent((prev) => ({ ...(prev ?? {}), disabled_mcp: [...stored] }));
     }
-  }, [isSavedAgent, isNewChat, disabledList, storageKey, setEphemeralAgent]);
+  }, [isSavedAgent, isNewChat, disabledList, storageKey, newChatOff, setEphemeralAgent]);
 
-  /* A new chat's choice moves to its real id with the ephemeral agent, and is stored from there. */
+  /* A new chat's choice moves to its real id with the ephemeral agent, and is stored from there.
+     The timestamp keeps app startup's cleanup, which drops `LAST_MCP_*` keys without one,
+     from deleting it on the next load. */
   useEffect(() => {
     if (isNewChat || !Array.isArray(disabledList)) {
       return;
     }
-    localStorage.setItem(storageKey, JSON.stringify(disabledList));
+    setTimestampedValue(storageKey, disabledList);
   }, [isNewChat, disabledList, storageKey]);
 
-  /* Until the defaults are laid on, read them directly so the chips never flash all on. */
+  /* Until a choice is laid on, read the defaults directly so the chips never flash all on. */
   const disabled = useMemo(
-    () => new Set(disabledList ?? (isNewChat ? newChatOff : undefined) ?? []),
-    [disabledList, isNewChat, newChatOff],
+    () => new Set(disabledList ?? newChatOff ?? []),
+    [disabledList, newChatOff],
   );
 
   const isEnabled = useCallback(
@@ -162,7 +167,7 @@ export default function useAgentConnectorSelection({
         return;
       }
       setEphemeralAgent((prev) => {
-        const current = new Set(prev?.disabled_mcp ?? (isNewChat ? newChatOff : undefined) ?? []);
+        const current = new Set(prev?.disabled_mcp ?? newChatOff ?? []);
         if (current.has(serverName)) {
           current.delete(serverName);
         } else {
@@ -171,7 +176,7 @@ export default function useAgentConnectorSelection({
         return { ...(prev ?? {}), disabled_mcp: [...current] };
       });
     },
-    [agentServerNames, isNewChat, newChatOff, setEphemeralAgent],
+    [agentServerNames, newChatOff, setEphemeralAgent],
   );
 
   return { isSavedAgent, agentServerNames, isEnabled, toggle };
