@@ -159,8 +159,8 @@ export default function DataHub() {
   const showHeadings = servers.some((server) => server.config.category?.trim());
 
   let content = (
-    <div className="grid gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <div>
+    <div className="grid items-start gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="rounded-theme-surface border border-border-light bg-surface-primary p-2">
         {filter && (
           <div className="mb-2 flex items-center justify-between px-1 text-sm text-text-secondary">
             <span>
