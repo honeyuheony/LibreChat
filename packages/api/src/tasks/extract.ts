@@ -33,6 +33,7 @@ export function buildExtractionPrompt(doc: TaskDocument, fields: readonly string
     'You extract fields from one document. Answer with a single JSON object and nothing else.',
     'For each field: "value" is a short answer in the document language, or null when the document does not state it. Never guess.',
     '"quote" is a verbatim span copied from the document that supports the value (null when value is null). Copy it exactly; do not paraphrase.',
+    'When the value draws on several places, copy each span on its own and separate them with a blank line. Add nothing between or around the spans.',
     '',
     'Output shape:',
     '{',

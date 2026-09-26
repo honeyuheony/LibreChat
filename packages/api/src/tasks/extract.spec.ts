@@ -43,6 +43,23 @@ describe('extractFields', () => {
     });
   });
 
+  it('verifies a quote made of excerpts from separate places, as the prompt asks for', async () => {
+    const { llm, prompts } = fakeLLM(() => ({
+      '전월 대비': {
+        value: '12% 증가, 긴장 완화',
+        quote: '전월 대비 12% 증가\n\n긴장 완화가 예상된다',
+      },
+    }));
+    const rows = await extractFields({
+      docs: docs.slice(0, 1),
+      fields: ['전월 대비'],
+      llm,
+      cache: memoryCache(),
+    });
+    expect(prompts[0]).toContain('separate them with a blank line');
+    expect(rows[0].cells[0]).toMatchObject({ status: 'ok', evidence: { paragraph: 2 } });
+  });
+
   it('makes no model call when every requested field is cached', async () => {
     const cache = memoryCache();
     const first = fakeLLM((prompt) => answers[documentName(prompt)]);
@@ -189,6 +206,6 @@ describe('table aggregation', () => {
       ['f2', '불확실'],
       ['f3', null],
     ]);
-    expect(table.extractor).toEqual({ promptVersion: 'extract-v1', model: 'fake-model' });
+    expect(table.extractor).toEqual({ promptVersion: 'extract-v2', model: 'fake-model' });
   });
 });
