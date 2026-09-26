@@ -8,6 +8,7 @@ import {
   StepEvents,
   ContentTypes,
   ToolCallTypes,
+  TASK_PROGRESS_EVENT,
 } from 'librechat-data-provider';
 import type {
   TMessageContentParts,
@@ -18,6 +19,7 @@ import type {
   TMessage,
   SubagentUpdateEvent,
   PtcToolCallEvent,
+  TaskProgressEvent,
   Agents,
 } from 'librechat-data-provider';
 import type { PtcTrace, PtcTraceEntry } from '~/store/ptc';
@@ -28,6 +30,7 @@ import {
 import { ptcTraceByToolCallId, ptcTraceKey, PTC_TRACE_MAX_ENTRIES } from '~/store/ptc';
 import { resolveAskUserQuestionPart } from '~/utils/approval';
 import useStepHandler from '~/hooks/SSE/useStepHandler';
+import { taskProgressByToolCallId } from '~/store/task';
 import { IsolatedAtomStore } from 'test/harness';
 
 /** `Constants` is a heterogeneous enum (`string | number`); annotate as
@@ -187,6 +190,41 @@ describe('useStepHandler', () => {
       expect(typeof result.current.stepHandler).toBe('function');
       expect(typeof result.current.clearStepMaps).toBe('function');
       expect(typeof result.current.syncStepMessage).toBe('function');
+    });
+  });
+
+  describe('on_task_progress event', () => {
+    const taskProgressStoreWrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(IsolatedAtomStore, null, children);
+
+    it('stores progress by tool call ID', () => {
+      const progress: TaskProgressEvent = {
+        toolCallId: 'task-tool-call-1',
+        stage: 'extract',
+        done: 3,
+        total: 8,
+        label: '문서 추출',
+      };
+      const { result } = renderHook(
+        () => {
+          const handler = useStepHandler(createHookParams());
+          const jotaiStore = useStore();
+          return {
+            handler,
+            readProgress: () => jotaiStore.get(taskProgressByToolCallId(progress.toolCallId)),
+          };
+        },
+        { wrapper: taskProgressStoreWrapper },
+      );
+
+      act(() => {
+        result.current.handler.stepHandler(
+          { event: TASK_PROGRESS_EVENT, data: progress },
+          createSubmission(),
+        );
+      });
+
+      expect(result.current.readProgress()).toEqual(progress);
     });
   });
 
