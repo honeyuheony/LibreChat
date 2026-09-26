@@ -1,12 +1,11 @@
 import { useContext, useMemo, useState } from 'react';
 import { Button } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
-import { Constants } from 'librechat-data-provider';
+import { Constants, dataService } from 'librechat-data-provider';
 import type { Agents } from 'librechat-data-provider';
 import { TaskApprovalStatus, TaskChip } from './TaskChip';
 import { ChatContext } from '~/Providers/ChatContext';
 import useTaskApproval from './useTaskApproval';
-import { fetchTaskEstimate } from './api';
 import { stringList } from './stages';
 import { useLocalize } from '~/hooks';
 
@@ -46,7 +45,7 @@ export default function TaskSchemaApproval({
 
   const estimate = useQuery(
     ['taskEstimate', conversationId, selected],
-    () => fetchTaskEstimate(conversationId, selected),
+    () => dataService.getTaskEstimate(conversationId, selected),
     {
       enabled:
         conversationId.length > 0 && conversationId !== Constants.NEW_CONVO && selected.length > 0,

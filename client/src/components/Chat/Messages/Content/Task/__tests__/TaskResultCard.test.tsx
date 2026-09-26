@@ -1,10 +1,10 @@
 import React from 'react';
 import { createStore } from 'jotai';
+import { dataService } from 'librechat-data-provider';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { TaskDocResult, TaskStats, TaskTableResult } from 'librechat-data-provider';
 import type { TaskResultAttachment } from '../api';
 import { createTaskWrapper } from 'test/task-test-utils';
-import { fetchTaskExcel, fetchTaskResult } from '../api';
 import TaskResultCard from '../TaskResultCard';
 import { taskPanelState } from '~/store/task';
 
@@ -38,10 +38,20 @@ jest.mock('copy-to-clipboard', () => ({
   __esModule: true,
   default: (text: string, options?: unknown) => mockCopy(text, options),
 }));
-jest.mock('../api', () => ({ fetchTaskResult: jest.fn(), fetchTaskExcel: jest.fn() }));
+jest.mock('librechat-data-provider', () => {
+  const actual = jest.requireActual('librechat-data-provider');
+  return {
+    ...actual,
+    dataService: {
+      ...actual.dataService,
+      getTaskResult: jest.fn(),
+      getTaskResultExport: jest.fn(),
+    },
+  };
+});
 
-const mockFetchResult = jest.mocked(fetchTaskResult);
-const mockFetchExcel = jest.mocked(fetchTaskExcel);
+const mockFetchResult = jest.mocked(dataService.getTaskResult);
+const mockFetchExcel = jest.mocked(dataService.getTaskResultExport);
 
 const stats = (overrides: Partial<TaskStats> = {}): TaskStats => ({
   docs: 12,
@@ -188,7 +198,9 @@ describe('TaskResultCard', () => {
 
   test('downloads the Excel export named after the result title', async () => {
     const blob = new Blob(['xlsx']);
-    mockFetchExcel.mockResolvedValue(blob);
+    mockFetchExcel.mockResolvedValue({ data: blob } as Awaited<
+      ReturnType<typeof dataService.getTaskResultExport>
+    >);
     const createObjectURL = jest.fn(() => 'blob:excel');
     Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, configurable: true });
     renderCard(attachment());

@@ -16,7 +16,16 @@ jest.mock('~/data-provider', () => ({
   useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
 }));
 jest.mock('~/store/agents', () => ({ useGetEphemeralAgent: () => () => undefined }));
-jest.mock('../api', () => ({ fetchTaskEstimate: jest.fn(() => new Promise(() => undefined)) }));
+jest.mock('librechat-data-provider', () => {
+  const actual = jest.requireActual('librechat-data-provider');
+  return {
+    ...actual,
+    dataService: {
+      ...actual.dataService,
+      getTaskEstimate: jest.fn(() => new Promise(() => undefined)),
+    },
+  };
+});
 jest.mock('../TaskResultCard', () => ({
   __esModule: true,
   default: ({ result, autoOpen }: { result: { resultId: string }; autoOpen: boolean }) => (

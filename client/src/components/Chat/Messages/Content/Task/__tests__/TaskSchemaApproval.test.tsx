@@ -1,9 +1,9 @@
 import React from 'react';
+import { dataService } from 'librechat-data-provider';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
 import { CONVERSATION_ID, createTaskWrapper } from 'test/task-test-utils';
 import TaskSchemaApproval from '../TaskSchemaApproval';
-import { fetchTaskEstimate } from '../api';
 
 const mockApprovalMutate = jest.fn();
 
@@ -16,9 +16,12 @@ jest.mock('~/data-provider', () => ({
   useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
 }));
 jest.mock('~/store/agents', () => ({ useGetEphemeralAgent: () => () => undefined }));
-jest.mock('../api', () => ({ fetchTaskEstimate: jest.fn() }));
+jest.mock('librechat-data-provider', () => {
+  const actual = jest.requireActual('librechat-data-provider');
+  return { ...actual, dataService: { ...actual.dataService, getTaskEstimate: jest.fn() } };
+});
 
-const mockEstimate = jest.mocked(fetchTaskEstimate);
+const mockEstimate = jest.mocked(dataService.getTaskEstimate);
 
 const approval = (
   allowed: Agents.ToolApprovalDecisionType[] = ['approve', 'reject', 'edit'],

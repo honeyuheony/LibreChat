@@ -2,12 +2,13 @@ import { useContext, useEffect, useMemo, useRef } from 'react';
 import { useSetAtom } from 'jotai';
 import copy from 'copy-to-clipboard';
 import { useSetRecoilState } from 'recoil';
+import { dataService } from 'librechat-data-provider';
 import { Button, useToastContext } from '@librechat/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TaskDocResult, TaskEvidence, TaskTableResult } from 'librechat-data-provider';
 import type { TaskResultAttachment } from './api';
 import { useAuthContext, useLocalize, useSubmitMessage } from '~/hooks';
-import { fetchTaskExcel, fetchTaskResult } from './api';
+import { taskResultQueryKey } from '~/data-provider/Tasks/queries';
 import { ChatContext } from '~/Providers/ChatContext';
 import { useFileDownload } from '~/data-provider';
 import { taskPanelState } from '~/store/task';
@@ -15,8 +16,6 @@ import { cn, triggerDownload } from '~/utils';
 import store from '~/store';
 
 type Localize = ReturnType<typeof useLocalize>;
-
-const taskResultKey = (resultId: string) => ['taskResult', resultId];
 
 /** Top three values per field, counted from the rows ("값 3건, 없음 2건"). */
 export function topValueCounts(result: TaskTableResult, localize: Localize): string[] {
@@ -108,11 +107,15 @@ export default function TaskResultCard({
   const setArtifactsVisible = useSetRecoilState(store.artifactsVisibility);
   const { resultId, kind, stats } = result;
 
-  const tableQuery = useQuery(taskResultKey(resultId), () => fetchTaskResult(resultId), {
-    enabled: kind === 'table',
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  const tableQuery = useQuery(
+    taskResultQueryKey(resultId),
+    () => dataService.getTaskResult(resultId),
+    {
+      enabled: kind === 'table',
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  );
   const valueCounts = useMemo(
     () => (tableQuery.data?.kind === 'table' ? topValueCounts(tableQuery.data, localize) : []),
     [tableQuery.data, localize],
@@ -135,8 +138,8 @@ export default function TaskResultCard({
 
   const copyResult = async () => {
     try {
-      const doc = await queryClient.fetchQuery(taskResultKey(resultId), () =>
-        fetchTaskResult(resultId),
+      const doc = await queryClient.fetchQuery(taskResultQueryKey(resultId), () =>
+        dataService.getTaskResult(resultId),
       );
       if (
         doc.kind === 'table' ||
@@ -152,8 +155,8 @@ export default function TaskResultCard({
 
   const downloadExcel = async () => {
     try {
-      const blob = await fetchTaskExcel(resultId);
-      triggerDownload(URL.createObjectURL(blob), `${result.title}.xlsx`);
+      const response = await dataService.getTaskResultExport(resultId);
+      triggerDownload(URL.createObjectURL(response.data as Blob), `${result.title}.xlsx`);
     } catch {
       showToast({ status: 'error', message: localize('com_ui_task_excel_error') });
     }
