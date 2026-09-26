@@ -10236,3 +10236,58 @@ describe('seedContextMeta', () => {
     expect(client.contextMeta).toBeUndefined();
   });
 });
+
+describe('recordSkillRuns', () => {
+  const primeId = '64b000000000000000000001';
+
+  function createClient(contentParts) {
+    const client = Object.create(AgentClient.prototype);
+    client.options = {
+      req: { body: {} },
+      agent: { manualSkillPrimes: [{ _id: primeId, name: 'weekly-report' }] },
+    };
+    client.contentParts = contentParts;
+    return client;
+  }
+
+  beforeEach(() => {
+    require('~/models').recordSkillRuns = jest.fn().mockResolvedValue({ matchedCount: 1 });
+  });
+
+  afterEach(() => {
+    delete require('~/models').recordSkillRuns;
+  });
+
+  it('records the primed skill with the turn duration in seconds', async () => {
+    createClient([{ type: ContentTypes.TEXT, text: 'done' }]).recordSkillRuns(42_500, undefined);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(require('~/models').recordSkillRuns).toHaveBeenCalledTimes(1);
+    expect(require('~/models').recordSkillRuns).toHaveBeenCalledWith([primeId], 42.5);
+  });
+
+  it('skips an aborted turn', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    createClient([{ type: ContentTypes.TEXT, text: 'partial' }]).recordSkillRuns(
+      1_000,
+      controller.signal,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(require('~/models').recordSkillRuns).not.toHaveBeenCalled();
+  });
+
+  it('skips a turn that ended with an error part', async () => {
+    createClient([{ type: ContentTypes.ERROR, error: 'boom' }]).recordSkillRuns(1_000, undefined);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(require('~/models').recordSkillRuns).not.toHaveBeenCalled();
+  });
+
+  it('does not throw when recording fails', async () => {
+    require('~/models').recordSkillRuns.mockRejectedValue(new Error('db down'));
+    expect(() =>
+      createClient([{ type: ContentTypes.TEXT, text: 'done' }]).recordSkillRuns(1_000, undefined),
+    ).not.toThrow();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(require('~/models').recordSkillRuns).toHaveBeenCalledTimes(1);
+  });
+});

@@ -614,6 +614,38 @@ describe('Skill CRUD methods', () => {
     });
   });
 
+  it('records a turn on every listed skill and ignores invalid ids', async () => {
+    const { skill: first } = await methods.createSkill(makeSkillInput({ name: 'first-skill' }));
+    const { skill: second } = await methods.createSkill(makeSkillInput({ name: 'second-skill' }));
+
+    await methods.recordSkillRuns([first._id, second._id.toString(), 'not-an-id'], 40);
+    const result = await methods.recordSkillRuns([first._id], 20.5);
+
+    expect(result.matchedCount).toBe(1);
+    const [firstDoc, secondDoc] = await Promise.all([
+      methods.getSkillById(first._id),
+      methods.getSkillById(second._id),
+    ]);
+    expect(firstDoc).toMatchObject({
+      useCount: 2,
+      runTimeTotalSeconds: 60.5,
+      runTimeSampleCount: 2,
+    });
+    expect(secondDoc).toMatchObject({
+      useCount: 1,
+      runTimeTotalSeconds: 40,
+      runTimeSampleCount: 1,
+    });
+  });
+
+  it('counts a run without a timing sample when the duration is not a positive number', async () => {
+    const { skill } = await methods.createSkill(makeSkillInput());
+    await methods.recordSkillRuns([skill._id], Number.NaN);
+    await methods.recordSkillRuns([skill._id], 0);
+    const doc = await methods.getSkillById(skill._id);
+    expect(doc).toMatchObject({ useCount: 2, runTimeTotalSeconds: 0, runTimeSampleCount: 0 });
+  });
+
   it('includes usage counters in list summaries', async () => {
     const { skill } = await methods.createSkill(makeSkillInput({ manualMinutes: 20 }));
     await Skill.updateOne(

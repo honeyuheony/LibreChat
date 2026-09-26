@@ -3,6 +3,7 @@ const { logger, MAX_AGENT_EVENT_ACTOR_ENCODING_LENGTH } = require('@librechat/da
 const { getBufferString, HumanMessage } = require('@librechat/agents/langchain/messages');
 const {
   createRun,
+  recordTurnSkillRuns,
   isEnabled,
   checkAccess,
   buildRunToolSet,
@@ -220,6 +221,7 @@ const { createContextHandlers } = require('~/app/clients/prompts');
 const { resolveConfigServers, getAccessibleMcpServerNames } = require('~/server/services/MCP');
 const { getMCPServerTools } = require('~/server/services/Config');
 const { getAccessibleMCPServers } = require('~/server/services/MCP');
+const { getSkillDbMethods } = require('~/server/services/Endpoints/agents/skillDeps');
 const BaseClient = require('~/app/clients/BaseClient');
 const { getMCPManager } = require('~/config');
 const db = require('~/models');
@@ -3561,12 +3563,17 @@ class AgentClient extends BaseClient {
 
   /** @type {sendCompletion} */
   async sendCompletion(payload, opts = {}) {
+    const turnStartedAt = Date.now();
     await this.chatCompletion({
       payload,
       onProgress: opts.onProgress,
       userMCPAuthMap: opts.userMCPAuthMap,
       abortController: opts.abortController,
     });
+    this.recordSkillRuns(
+      Date.now() - turnStartedAt,
+      opts.abortController?.signal ?? this.abortController?.signal,
+    );
 
     const completion = filterMalformedContentParts(this.contentParts);
     if (this.isCompactionTurn()) {
@@ -3576,6 +3583,31 @@ class AgentClient extends BaseClient {
     }
     const metadata = this.buildResponseMetadata();
     return metadata ? { completion, metadata } : { completion };
+  }
+
+  /**
+   * 스킬 마켓 지표용으로 이번 턴에 쓰인 스킬의 실행 수와 실행 시간을 기록한다. 중단·오류·압축
+   * 턴은 세지 않는다. 기다리지 않고 실패도 경고 로그로만 남겨 응답을 막지 않는다.
+   * @param {number} durationMs
+   * @param {AbortSignal | undefined} abortSignal
+   */
+  recordSkillRuns(durationMs, abortSignal) {
+    const aborted = abortSignal?.aborted === true;
+    const failed = (this.contentParts ?? []).some((part) => part?.type === ContentTypes.ERROR);
+    if (aborted || failed || this.isCompactionTurn()) {
+      return;
+    }
+    const agent = this.options.agent;
+    recordTurnSkillRuns({
+      manualSkillPrimes: agent?.manualSkillPrimes,
+      contentParts: this.contentParts,
+      accessibleSkillIds: agent?.accessibleSkillIds,
+      durationMs,
+      getSkillByName: (...args) => getSkillDbMethods().getSkillByName(...args),
+      recordSkillRuns: db.recordSkillRuns,
+    }).catch((error) => {
+      logger.warn('[AgentClient] Failed to record skill runs', getSafeErrorMetadata(error));
+    });
   }
 
   /** A manual compaction runs the graph summarize-only: the summary is the response. */

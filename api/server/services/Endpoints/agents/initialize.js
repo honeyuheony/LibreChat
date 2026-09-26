@@ -750,7 +750,6 @@ const initializeClientWithProvider = async ({
       listSkillsByAccess: skillDbMethods.listSkillsByAccess,
       listAlwaysApplySkills: skillDbMethods.listAlwaysApplySkills,
       getSkillByName: skillDbMethods.getSkillByName,
-      incrementSkillUseCount: db.incrementSkillUseCount,
       provisionToCodeEnv,
       provisionToVectorDB,
       checkSessionsAlive,

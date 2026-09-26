@@ -1115,6 +1115,10 @@ export function createSkillMethods(
     relativePath: string,
     update: { content?: string; isBinary?: boolean },
   ) => Promise<void>;
+  recordSkillRuns: (
+    skillIds: Array<Types.ObjectId | string>,
+    durationSeconds: number,
+  ) => Promise<{ matchedCount: number }>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
       skillId: Types.ObjectId | string;
@@ -1982,12 +1986,29 @@ export function createSkillMethods(
   }
 
   /**
-   * 마켓 카드에 보여 줄 사용 횟수를 올린다. 수동 호출(`$스킬`)이 스킬 문서로 해석된 직후
-   * 응답을 기다리지 않고 부르므로, 실패해도 대화에는 영향을 주지 않는다.
+   * 스킬이 쓰인 대화 턴 하나를 기록한다. 실행 수와 측정 횟수를 1씩, 실행 시간 합계를 그 턴의
+   * 초만큼 올린다. 한 턴에 여러 스킬이 쓰였으면 각 스킬에 같은 턴 시간을 더한다. 시간이 0 이하이거나
+   * 숫자가 아니면 평균을 흐리지 않도록 실행 수만 올린다.
    */
-  async function incrementSkillUseCount(skillId: Types.ObjectId | string): Promise<unknown> {
+  async function recordSkillRuns(
+    skillIds: Array<Types.ObjectId | string>,
+    durationSeconds: number,
+  ): Promise<{ matchedCount: number }> {
+    const ids = skillIds.filter((id) => typeof id !== 'string' || isValidObjectIdString(id));
+    if (ids.length === 0) {
+      return { matchedCount: 0 };
+    }
+    const timed = Number.isFinite(durationSeconds) && durationSeconds > 0;
     const Skill = mongoose.models.Skill as Model<ISkill>;
-    return Skill.updateOne({ _id: skillId }, { $inc: { useCount: 1 } });
+    const result = await Skill.updateMany(
+      { _id: { $in: ids } },
+      {
+        $inc: timed
+          ? { useCount: 1, runTimeTotalSeconds: durationSeconds, runTimeSampleCount: 1 }
+          : { useCount: 1 },
+      },
+    );
+    return { matchedCount: result.matchedCount };
   }
 
   /** 검수 통과 표시를 켜거나(날짜·검수자) 끈다(null). 마켓 카드의 "검수됨" 배지가 이 값을 본다. */
@@ -2010,7 +2031,7 @@ export function createSkillMethods(
     getSkillById,
     getSkillByName,
     getAuthorSkillByName,
-    incrementSkillUseCount,
+    recordSkillRuns,
     updateSkillReview,
     listSkillsByAccess,
     listAlwaysApplySkills,

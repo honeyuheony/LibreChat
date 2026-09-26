@@ -58,6 +58,7 @@ export * from './subagentIdentity';
 export * from './subagentCompletionWakeup';
 export * from './subagentTaskRouting';
 export * from './skillConfigurable';
+export * from './skillRuns';
 export * from './skillFiles';
 export * from './codeFilesSession';
 export * from './run';
