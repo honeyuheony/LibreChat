@@ -13,6 +13,7 @@ import type { ServerRequest, StrategyFunctions } from '~/types';
 import type { ImportSkillDeps } from './import';
 import { resolveRequestTenantId } from '~/middleware/tenant';
 import { resolveDownloadPath } from '~/storage/path';
+import { isDeploymentSkillId } from './deployment';
 import { persistSkillFile } from './import';
 import { serializeSkill } from './handlers';
 
@@ -95,7 +96,13 @@ export function createForkSkillHandler(deps: ForkSkillDeps) {
 
       const authorId = (user._id ?? user.id) as unknown as Types.ObjectId;
       const tenantId = resolveRequestTenantId(req);
-      const names = requestedName ? [requestedName] : forkNameCandidates(original.name);
+      // 배포 스킬과 이름이 같은 사용자 스킬은 목록에서 배포 스킬에 가려지므로 원본 이름을 건너뛴다.
+      const fromDeployment = isDeploymentSkillId(original._id);
+      const names = requestedName
+        ? [requestedName]
+        : forkNameCandidates(original.name).filter(
+            (name) => !fromDeployment || name !== original.name,
+          );
       let created: CreateSkillResult | null = null;
       for (const name of names) {
         try {
@@ -109,6 +116,7 @@ export function createForkSkillHandler(deps: ForkSkillDeps) {
             alwaysApply: original.alwaysApply,
             manualMinutes: original.manualMinutes,
             forkOf: original._id,
+            icon: original.icon,
             author: authorId,
             authorName: user.name ?? user.username ?? 'Unknown',
             tenantId,
