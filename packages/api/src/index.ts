@@ -82,6 +82,8 @@ export * from './conversations';
 export * from './schedules';
 export * from './schedules/service';
 export * from './skills';
+/* Document tasks */
+export * from './tasks';
 export * from './favorites';
 /* User */
 export * from './user';

@@ -2,6 +2,7 @@ import { WebSearchToolDefinition, CalculatorToolDefinition } from '@librechat/ag
 import type { ExtendedJsonSchema } from './schema';
 import { AskUserQuestionToolDefinition } from '~/agents/hitl/askUserQuestionTool';
 import { geminiToolkit } from '~/tools/toolkits/gemini';
+import { TASK_TOOL_DEFINITIONS } from '~/tasks/tools';
 import { oaiToolkit } from '~/tools/toolkits/oai';
 
 export type { ExtendedJsonSchema } from './schema';
@@ -454,6 +455,18 @@ const agentToolDefinitions: Record<string, ToolRegistryDefinition> = {
     schema: AskUserQuestionToolDefinition.schema as ExtendedJsonSchema,
     toolType: 'builtin',
   },
+  ...Object.fromEntries(
+    Object.values(TASK_TOOL_DEFINITIONS).map((definition) => [
+      definition.name,
+      {
+        name: definition.name,
+        description: definition.description,
+        schema: definition.schema,
+        toolType: 'builtin',
+        responseFormat: 'content_and_artifact',
+      } satisfies ToolRegistryDefinition,
+    ]),
+  ),
 };
 
 export function getToolDefinition(toolName: string): ToolRegistryDefinition | undefined {
