@@ -1,102 +1,79 @@
-import React, { useEffect, useMemo } from 'react';
-import { Spinner, useMediaQuery } from '@librechat/client';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { OGDialog, Spinner, useMediaQuery } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { TSkillSummary } from 'librechat-data-provider';
-import { useDocumentTitle, useHasAccess, useLocalize } from '~/hooks';
 import {
-  useGetEndpointsQuery,
-  useSkillsInfiniteQuery,
-  useSkillCategoriesQuery,
-} from '~/data-provider';
-import { ALL_CATEGORY, collectCategories, filterSkills, getCategoryLabel } from './skillCategories';
+  MINE_TAB,
+  POPULAR_TAB,
+  SKILL_CATEGORIES,
+  formatCount,
+  getCategoryLabel,
+  getSkillTitle,
+  isBaseSkill,
+  isOwnSkill,
+  runsOf,
+  sortByRuns,
+  sumSavedHours,
+} from './skillCategories';
+import { useAuthContext, useDocumentTitle, useHasAccess, useLocalize } from '~/hooks';
+import { useGetEndpointsQuery, useSkillsInfiniteQuery } from '~/data-provider';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
-import SearchBar from '~/components/Agents/SearchBar';
 import { SidePanelGroup } from '~/components/SidePanel';
+import SkillDetailContent from './SkillDetailContent';
 import SkillCategoryTabs from './SkillCategoryTabs';
-import SkillCard from './SkillCard';
+import SkillRankRow from './SkillRankRow';
 
 const BASE_PATH = '/skills-market';
+const CREATE_PATH = '/skills/new';
+const POPULAR_LIMIT = 10;
 
 /**
- * SkillMarketplace - full-page catalog of skills, laid out like the agent marketplace
- * (hero, search, category tabs, two-column cards, detail dialog).
- *
- * Differences from the agent marketplace: skills have no "promoted" flag, so the
- * whole catalog is still loaded once for filtering and search on the client, but the
- * category tabs and their counts come from `GET /api/skills/categories` instead of
- * being derived from that loaded catalog.
+ * Agent 마켓(와이어프레임 v29 `renderAgents`): 머리 · 누적 지표 · 분류 탭 · 순위 목록 · 상세 창.
+ * 목록 전체를 한 번 불러와 탭과 지표를 클라이언트에서 계산한다.
  */
 export default function SkillMarketplace() {
   const localize = useLocalize();
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   const { category } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
-  const searchQuery = searchParams.get('q') || '';
-  const activeCategory = category || ALL_CATEGORY;
+  const activeTab = category || POPULAR_TAB;
+  const userId = user?.id;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useDocumentTitle(`${localize('com_skills_marketplace')} | LibreChat`);
   useGetEndpointsQuery();
 
   const { data, isLoading, isError, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useSkillsInfiniteQuery({ limit: 100 });
-  const { data: categoriesData } = useSkillCategoriesQuery();
 
-  /* Load every page so tabs and search cover the full catalog (same as SkillsCommand). */
+  /* Load every page so tabs, ranks and totals cover the full catalog (same as SkillsCommand). */
   useEffect(() => {
     if (!isError && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
 
-  const allSkills = useMemo<TSkillSummary[]>(() => {
-    if (!data?.pages) {
-      return [];
-    }
-    return data.pages.flatMap((page) => page.skills);
-  }, [data?.pages]);
-
-  const categories = useMemo(
-    () => collectCategories(categoriesData?.categories ?? []),
-    [categoriesData?.categories],
+  const allSkills = useMemo<TSkillSummary[]>(
+    () => (data?.pages ? data.pages.flatMap((page) => page.skills) : []),
+    [data?.pages],
   );
-  const categoryCounts = useMemo(() => {
-    const entries = categoriesData?.categories ?? [];
-    const counts: Record<string, number> = {
-      [ALL_CATEGORY]: entries.reduce((sum, entry) => sum + entry.count, 0),
-    };
-    for (const entry of entries) {
-      counts[entry.value] = entry.count;
-    }
-    return counts;
-  }, [categoriesData?.categories]);
-  const visibleSkills = useMemo(
-    () => filterSkills(allSkills, activeCategory, searchQuery),
-    [allSkills, activeCategory, searchQuery],
+  const madeSkills = useMemo(() => allSkills.filter((skill) => !isBaseSkill(skill)), [allSkills]);
+  const mySkills = useMemo(
+    () =>
+      allSkills
+        .filter((skill) => isOwnSkill(skill, userId))
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [allSkills, userId],
   );
-
-  const goTo = (nextCategory: string, params: URLSearchParams) => {
-    const suffix = params.toString() ? `?${params.toString()}` : '';
-    const path = nextCategory === ALL_CATEGORY ? BASE_PATH : `${BASE_PATH}/${nextCategory}`;
-    navigate(`${path}${suffix}`);
-  };
-
-  const handleTabChange = (value: string) => {
-    if (value !== activeCategory) {
-      goTo(value, new URLSearchParams(searchParams));
-    }
-  };
-
-  const handleSearch = (query: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (query.trim()) {
-      params.set('q', query.trim());
-    } else {
-      params.delete('q');
-    }
-    setSearchParams(params);
-  };
+  const titleById = useMemo(
+    () => new Map(allSkills.map((skill) => [skill._id, getSkillTitle(skill)])),
+    [allSkills],
+  );
+  const selectedSkill = selectedId
+    ? allSkills.find((skill) => skill._id === selectedId)
+    : undefined;
 
   const hasAccessToSkills = useHasAccess({
     permissionType: PermissionTypes.SKILLS,
@@ -114,83 +91,250 @@ export default function SkillMarketplace() {
     return null;
   }
 
+  const handleTabChange = (value: string) => {
+    if (value !== activeTab) {
+      navigate(value === POPULAR_TAB ? BASE_PATH : `${BASE_PATH}/${encodeURIComponent(value)}`);
+    }
+  };
+  const selectSkill = (skill: TSkillSummary) => setSelectedId(skill._id);
+  const originTitle = (skill: TSkillSummary) =>
+    skill.forkOf ? (titleById.get(skill.forkOf) ?? null) : undefined;
+
+  const tabs = [
+    { value: POPULAR_TAB, label: localize('com_skills_tab_popular') },
+    ...SKILL_CATEGORIES.map((value) => ({ value, label: getCategoryLabel(value, localize) })),
+    { value: MINE_TAB, label: localize('com_skills_tab_mine') },
+  ];
+
+  let tabContent: React.ReactNode;
+  if (activeTab === POPULAR_TAB) {
+    tabContent = (
+      <>
+        <div className="mx-auto mt-[30px] max-w-[760px]">
+          <h2 className="mb-0.5 text-[21px] font-bold text-text-primary">
+            {localize('com_skills_popular_title', { count: POPULAR_LIMIT })}
+          </h2>
+          <div className="mb-2.5 text-[13.5px] text-text-muted">
+            {localize('com_skills_popular_subtitle')}
+          </div>
+          <RankList
+            skills={sortByRuns(madeSkills).slice(0, POPULAR_LIMIT)}
+            numbered
+            userId={userId}
+            onSelect={selectSkill}
+            emptyLabel={localize('com_skills_empty')}
+          />
+        </div>
+        <div className="mt-3.5 text-center text-sm text-text-muted">
+          {localize('com_skills_popular_note')}
+        </div>
+      </>
+    );
+  } else if (activeTab === MINE_TAB) {
+    const runs = mySkills.reduce((sum, skill) => sum + runsOf(skill), 0);
+    const forks = mySkills.reduce((sum, skill) => sum + (skill.forkCount ?? 0), 0);
+    tabContent = (
+      <section className="mt-8">
+        <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
+          {localize('com_skills_mine_title', { count: mySkills.length })}
+        </h2>
+        <div className="mb-3.5 text-[13.5px] text-text-muted">
+          {mySkills.length > 0
+            ? localize('com_skills_mine_summary', {
+                runs: formatCount(runs),
+                forks: formatCount(forks),
+                hours: formatCount(sumSavedHours(mySkills)),
+              })
+            : localize('com_skills_mine_empty')}
+        </div>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => navigate(CREATE_PATH)}
+            className="flex items-center gap-3.5 rounded-[18px] border-[1.5px] border-dashed border-border-medium px-2.5 py-3 text-left hover:border-[#a78bfa] hover:bg-surface-brand-subtle"
+          >
+            <span className="inline-flex size-[46px] flex-none items-center justify-center rounded-full bg-[#ede9fe] text-[22px] text-[#6d28d9]">
+              {'＋'}
+            </span>
+            <span className="min-w-0 flex-1">
+              <b className="block text-[15.5px] font-bold">{localize('com_skills_new_agent')}</b>
+              <span className="text-[13.5px] text-text-tertiary">
+                {localize('com_skills_new_agent_hint')}
+              </span>
+            </span>
+          </button>
+        </div>
+        <RankList
+          skills={mySkills}
+          twoColumns
+          userId={userId}
+          detailedByLine
+          originTitle={originTitle}
+          onSelect={selectSkill}
+        />
+      </section>
+    );
+  } else {
+    const list = sortByRuns(allSkills.filter((skill) => skill.category === activeTab));
+    tabContent = (
+      <section className="mt-8">
+        <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
+          {getCategoryLabel(activeTab, localize)}
+        </h2>
+        <div className="mb-3.5 text-[13.5px] text-text-muted">
+          {localize('com_skills_category_subtitle', { count: list.length })}
+        </div>
+        <RankList
+          skills={list}
+          numbered
+          twoColumns
+          userId={userId}
+          detailedByLine
+          originTitle={originTitle}
+          onSelect={selectSkill}
+          emptyLabel={localize('com_skills_empty')}
+        />
+      </section>
+    );
+  }
+
+  const madeRuns = madeSkills.reduce((sum, skill) => sum + runsOf(skill), 0);
+
   return (
     <div className="relative flex w-full grow overflow-hidden bg-presentation">
       <SidePanelGroup>
         <main className="flex h-full flex-col overflow-hidden" role="main">
           <div className="scrollbar-gutter-stable relative flex h-full flex-col overflow-y-auto overflow-x-hidden">
-            {!isSmallScreen && (
-              <div className="container mx-auto max-w-4xl">
-                <div className="mb-8 mt-12 text-center">
-                  <h1 className="mb-3 text-3xl font-bold tracking-tight text-text-primary md:text-5xl">
-                    {localize('com_skills_marketplace')}
-                  </h1>
-                  <p className="mx-auto mb-6 max-w-2xl text-lg text-text-secondary">
-                    {localize('com_skills_marketplace_subtitle')}
-                  </p>
-                </div>
-              </div>
-            )}
-            <div className="sticky top-0 z-10 mt-4 bg-presentation pb-4 md:mt-0">
-              <div className="container mx-auto max-w-4xl px-4">
-                {isSmallScreen ? (
-                  <div className="mx-auto mb-3 flex max-w-2xl items-center gap-2">
-                    <OpenSidebar />
-                  </div>
-                ) : null}
-                <div className="mx-auto flex max-w-2xl gap-2 pb-6">
-                  <SearchBar
-                    value={searchQuery}
-                    onSearch={handleSearch}
-                    placeholder={localize('com_skills_search_placeholder')}
-                  />
-                </div>
-                {categories.length > 1 && (
-                  <SkillCategoryTabs
-                    categories={categories}
-                    activeTab={activeCategory}
-                    onChange={handleTabChange}
-                    counts={categoryCounts}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="container mx-auto max-w-4xl px-4 pb-8">
-              {!searchQuery && (
-                <div className="mb-6 mt-6 text-left">
-                  <h2 className="text-2xl font-bold text-text-primary">
-                    {getCategoryLabel(activeCategory, localize)}
-                  </h2>
+            <div className="mx-auto w-full max-w-[1000px] px-6 pb-[70px]">
+              {isSmallScreen && (
+                <div className="mt-3 flex items-center gap-2">
+                  <OpenSidebar />
                 </div>
               )}
+              <div className="bg-[radial-gradient(ellipse_50%_70%_at_50%_0%,rgba(124,58,237,0.10),transparent_70%)] pb-1.5 pt-[38px] text-center">
+                <h1 className="mb-2.5 text-[28px] font-extrabold tracking-[-0.04em] text-text-primary md:text-[40px]">
+                  {localize('com_skills_hero_before')}
+                  <em className="bg-gradient-to-br from-[#8b5cf6] to-[#db2777] bg-clip-text not-italic text-transparent">
+                    {localize('com_skills_hero_highlight')}
+                  </em>
+                  {localize('com_skills_hero_after')}
+                </h1>
+                <p className="mx-auto mb-[22px] text-[15px] leading-[1.55] text-text-muted">
+                  {localize('com_skills_hero_subtitle')}
+                </p>
+                <div className="flex flex-wrap justify-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => navigate(CREATE_PATH)}
+                    className="rounded-full bg-surface-submit px-[26px] py-3 text-[15.5px] font-semibold text-white shadow-md hover:bg-surface-submit-hover"
+                  >
+                    {localize('com_skills_create_agent')}
+                  </button>
+                </div>
+                <div className="mt-[18px] inline-flex flex-wrap justify-center gap-x-[22px] gap-y-1.5 rounded-full border border-border-light bg-surface-primary px-[18px] py-[9px] text-[13.5px] text-text-tertiary">
+                  <span>
+                    {localize('com_skills_impact_agents')}{' '}
+                    <b className="font-semibold text-text-primary">
+                      {localize('com_skills_count_unit', { count: madeSkills.length })}
+                    </b>
+                  </span>
+                  <span>
+                    {localize('com_skills_impact_runs')}{' '}
+                    <b className="font-semibold text-text-primary">
+                      {localize('com_skills_runs_unit', { value: formatCount(madeRuns) })}
+                    </b>
+                  </span>
+                  <span>
+                    {localize('com_skills_impact_saved')}{' '}
+                    <b className="font-semibold text-text-primary">
+                      {localize('com_skills_hours_unit', {
+                        value: formatCount(sumSavedHours(madeSkills)),
+                      })}
+                    </b>{' '}
+                    <small className="text-[11px] text-[rgb(var(--border-heavy))]">
+                      {localize('com_skills_estimate')}
+                    </small>
+                  </span>
+                </div>
+              </div>
+              <SkillCategoryTabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
               <div
-                className="space-y-6"
                 role="tabpanel"
-                id={`skill-category-panel-${activeCategory}`}
+                id={`skill-category-panel-${activeTab}`}
+                aria-labelledby={`skill-category-tab-${activeTab}`}
                 aria-busy={isLoading}
               >
                 {isLoading ? (
                   <div className="flex justify-center py-12" role="status">
                     <Spinner className="h-6 w-6 text-text-primary" />
                   </div>
-                ) : visibleSkills.length === 0 ? (
-                  <div className="py-12 text-center text-text-secondary" role="status">
-                    <h3 className="mb-2 text-lg font-medium">{localize('com_skills_empty')}</h3>
-                  </div>
                 ) : (
-                  <div className="mx-4 grid grid-cols-1 gap-6 md:grid-cols-2" role="grid">
-                    {visibleSkills.map((skill) => (
-                      <div key={skill._id} role="gridcell">
-                        <SkillCard skill={skill} />
-                      </div>
-                    ))}
-                  </div>
+                  tabContent
                 )}
               </div>
             </div>
           </div>
         </main>
       </SidePanelGroup>
+      <OGDialog open={selectedSkill != null} onOpenChange={(open) => !open && setSelectedId(null)}>
+        {selectedSkill && (
+          <SkillDetailContent
+            key={selectedSkill._id}
+            skill={selectedSkill}
+            allSkills={allSkills}
+            userId={userId}
+            onSelectSkill={selectSkill}
+          />
+        )}
+      </OGDialog>
+    </div>
+  );
+}
+
+function RankList({
+  skills,
+  numbered = false,
+  twoColumns = false,
+  detailedByLine = false,
+  userId,
+  originTitle,
+  onSelect,
+  emptyLabel,
+}: {
+  skills: TSkillSummary[];
+  numbered?: boolean;
+  twoColumns?: boolean;
+  detailedByLine?: boolean;
+  userId?: string;
+  originTitle?: (skill: TSkillSummary) => string | null | undefined;
+  onSelect: (skill: TSkillSummary) => void;
+  emptyLabel?: string;
+}) {
+  if (skills.length === 0) {
+    return emptyLabel ? (
+      <div className="py-8 text-center text-sm text-text-muted" role="status">
+        {emptyLabel}
+      </div>
+    ) : null;
+  }
+  return (
+    <div
+      role="grid"
+      className={
+        twoColumns ? 'grid grid-cols-1 gap-x-6 gap-y-0.5 md:grid-cols-2' : 'flex flex-col gap-0.5'
+      }
+    >
+      {skills.map((skill, index) => (
+        <SkillRankRow
+          key={skill._id}
+          skill={skill}
+          rank={numbered ? index + 1 : undefined}
+          userId={userId}
+          detailedByLine={detailedByLine}
+          originTitle={originTitle?.(skill)}
+          onSelect={onSelect}
+        />
+      ))}
     </div>
   );
 }

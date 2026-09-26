@@ -8,6 +8,12 @@ import { createForkSkillHandler, forkNameCandidates } from './fork';
 
 jest.mock('~/middleware/tenant', () => ({ resolveRequestTenantId: () => undefined }));
 
+const mockDeploymentOriginId = new Types.ObjectId();
+jest.mock('./deployment', () => ({
+  ...jest.requireActual('./deployment'),
+  isDeploymentSkillId: (id: unknown) => String(id) === mockDeploymentOriginId.toString(),
+}));
+
 describe('forkNameCandidates', () => {
   it('tries the original name first, then -fork suffixes', () => {
     expect(forkNameCandidates('weekly-report').slice(0, 3)).toEqual([
@@ -99,5 +105,62 @@ describe('createForkSkillHandler', () => {
       expect.objectContaining({ name: 'weekly-report', forkOf: originalId, manualMinutes: 25 }),
     );
     expect(deps.saveBuffer).toHaveBeenCalledTimes(1);
+  });
+
+  it('names a fork of a deployment skill with a suffix so the deployment skill does not hide it', async () => {
+    const userId = new Types.ObjectId();
+    const original = {
+      _id: mockDeploymentOriginId,
+      name: 'hwp-report',
+      description: 'Drafts a standard HWP report from uploaded material.',
+      body: '# Report',
+      frontmatter: {},
+      author: new Types.ObjectId(),
+      authorName: '디지털혁신팀',
+      version: 1,
+      source: 'deployment',
+      fileCount: 0,
+      alwaysApply: false,
+      manualMinutes: 41,
+      icon: '📄',
+    };
+    const forked = {
+      ...original,
+      _id: new Types.ObjectId(),
+      name: 'hwp-report-fork',
+      source: 'inline' as const,
+      author: userId,
+      forkOf: mockDeploymentOriginId,
+    };
+    const deps = {
+      getSkillById: jest.fn().mockResolvedValueOnce(original).mockResolvedValueOnce(forked),
+      listSkillFiles: jest.fn().mockResolvedValue([]),
+      getStrategyFunctions: jest.fn(),
+      createSkill: jest.fn().mockResolvedValue({ skill: forked, warnings: [] }),
+      deleteSkill: jest.fn(),
+      upsertSkillFile: jest.fn(),
+      saveBuffer: jest.fn(),
+      deleteFile: jest.fn(),
+      grantPermission: jest.fn().mockResolvedValue(undefined),
+    } as unknown as ForkSkillDeps;
+    const req = {
+      params: { id: mockDeploymentOriginId.toString() },
+      body: {},
+      user: { id: userId.toString(), _id: userId, name: '홍길동' },
+    } as unknown as ServerRequest;
+    const res = createResponse();
+
+    await createForkSkillHandler(deps)(req, res as unknown as Response);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(deps.createSkill).toHaveBeenCalledTimes(1);
+    expect(deps.createSkill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'hwp-report-fork',
+        forkOf: mockDeploymentOriginId,
+        manualMinutes: 41,
+        icon: '📄',
+      }),
+    );
   });
 });

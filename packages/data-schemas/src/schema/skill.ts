@@ -13,6 +13,9 @@ const SKILL_BODY_MAX_LENGTH = 100_000;
 /** Max length for the human-friendly `displayTitle`. */
 const SKILL_DISPLAY_TITLE_MAX_LENGTH = 128;
 
+/** Max length for the emoji `icon` (librechat-data-provider `SKILL_ICON_MAX_LENGTH`). */
+const SKILL_ICON_MAX = 16;
+
 const skillNamePattern = /^[a-z0-9][a-z0-9-]*$/;
 
 /**
@@ -265,6 +268,12 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Skill',
       index: true,
+    },
+    /** 마켓 목록과 상세 창에 보이는 이모지 아이콘. 글자 모양만 쓰므로 짧은 문자열로 둔다. */
+    icon: {
+      type: String,
+      trim: true,
+      maxlength: SKILL_ICON_MAX,
     },
   },
   {

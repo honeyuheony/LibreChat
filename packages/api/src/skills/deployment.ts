@@ -16,7 +16,9 @@ import {
   deriveStructuredFrontmatterFields,
   normalizeSkillFrontmatterKeys,
 } from '@librechat/data-schemas';
+import type { TSkillMarketProfile } from 'librechat-data-provider';
 import type { ValidationIssue } from '@librechat/data-schemas';
+import { readDeploymentMarketFields, type SkillSeedMetrics } from './market';
 import { parseFrontmatter, guessMimeType } from './import';
 
 export const DEPLOYMENT_SKILLS_DIR_ENV = 'DEPLOYMENT_SKILLS_DIR';
@@ -82,6 +84,16 @@ export type DeploymentSkill = {
   files: DeploymentSkillFile[];
   createdAt: Date;
   updatedAt: Date;
+  /* 아래는 SKILL.md `metadata`에서 읽은 마켓 표시 값이다(market.ts). */
+  icon?: string;
+  authorDepartment?: string;
+  manualMinutes?: number;
+  /** `metadata.forkOf`에 적힌 원본 agent 이름. 로딩이 끝나면 `forkOf` id로 바꾼다. */
+  forkOfName?: string;
+  /** 같은 배포 목록 안의 원본 agent id. 원본을 찾지 못하면 비운다. */
+  forkOf?: Types.ObjectId;
+  seedMetrics?: SkillSeedMetrics;
+  marketProfile?: TSkillMarketProfile;
 };
 
 type SkillLookupOptions = {
@@ -501,7 +513,25 @@ export async function loadDeploymentSkillsFromDirectory(
   );
   validateUniqueNames(skills);
   const merged = [...skills, ...appendPluginSkills(skills, additionalSkills)];
+  resolveForkOrigins(merged);
   return new DeploymentSkillRegistry(directory, merged.sort(compareBySkillCursor));
+}
+
+function resolveForkOrigins(skills: DeploymentSkill[]): void {
+  const idsByName = new Map(skills.map((skill) => [skill.name, skill._id]));
+  for (const skill of skills) {
+    if (skill.forkOfName === undefined) {
+      continue;
+    }
+    const originId = idsByName.get(skill.forkOfName);
+    if (originId && !originId.equals(skill._id)) {
+      skill.forkOf = originId;
+    } else {
+      logger.warn(
+        `[deploymentSkills] "${skill.name}" names forkOf "${skill.forkOfName}", which is not a loaded deployment skill; lineage is left empty`,
+      );
+    }
+  }
 }
 
 export function createDeploymentSkillMethods<T extends DeploymentSkillBaseMethods>(
@@ -726,6 +756,7 @@ export async function loadSkillFromDirectory(
   }
 
   const derived = deriveStructuredFrontmatterFields(frontmatter);
+  const market = readDeploymentMarketFields(frontmatter);
   const skillId = stableObjectId(`${identity.idNamespace ?? 'deployment-skill'}:${name}`);
   const files = await loadDeploymentSkillFiles({
     skillId,
@@ -744,10 +775,18 @@ export async function loadSkillFromDirectory(
     category: typeof frontmatter.category === 'string' ? frontmatter.category : '',
     ...(typeof frontmatter.title === 'string' && { displayTitle: frontmatter.title }),
     ...(Array.isArray(frontmatter.examples) && {
-      examples: frontmatter.examples.filter((entry): entry is string => typeof entry === 'string').slice(0, 5),
+      examples: frontmatter.examples
+        .filter((entry): entry is string => typeof entry === 'string')
+        .slice(0, 5),
     }),
     author: getDeploymentAuthorId(),
-    authorName: 'Deployment',
+    authorName: market.owner ?? 'Deployment',
+    ...(market.icon !== undefined && { icon: market.icon }),
+    ...(market.department !== undefined && { authorDepartment: market.department }),
+    ...(market.manualMinutes !== undefined && { manualMinutes: market.manualMinutes }),
+    ...(market.forkOfName !== undefined && { forkOfName: market.forkOfName }),
+    ...(market.seedMetrics !== undefined && { seedMetrics: market.seedMetrics }),
+    ...(market.marketProfile !== undefined && { marketProfile: market.marketProfile }),
     version: 1,
     source: DEPLOYMENT_SKILL_SOURCE,
     sourceMetadata: {

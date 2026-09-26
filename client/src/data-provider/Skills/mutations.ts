@@ -4,6 +4,8 @@ import type {
   TSkill,
   TSkillFile,
   TCreateSkill,
+  TForkSkillRequest,
+  TForkSkillResponse,
   TUpdateSkillVariables,
   TUpdateSkillResponse,
   TDeleteSkillResponse,
@@ -20,7 +22,12 @@ import type {
   ImportSkillOptions,
   DeleteSkillFileOptions,
 } from 'librechat-data-provider';
-import type { InfiniteData, QueryKey, UseMutationResult } from '@tanstack/react-query';
+import type {
+  InfiniteData,
+  QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
+} from '@tanstack/react-query';
 
 function isInfiniteSkillData(
   data: TSkillListResponse | InfiniteData<TSkillListResponse>,
@@ -152,6 +159,27 @@ export const useImportSkillMutation = (
   const { onSuccess, ...rest } = options ?? {};
   return useMutation({
     mutationFn: (formData: FormData) => dataService.importSkill(formData),
+    ...rest,
+    onSuccess: async (skill, variables, context) => {
+      await queryClient.cancelQueries([QueryKeys.skills]);
+      queryClient.setQueryData<TSkill>([QueryKeys.skill, skill._id], skill);
+      addSkillToCachedLists(queryClient, skill);
+      void queryClient.invalidateQueries([QueryKeys.skills]);
+      if (onSuccess) onSuccess(skill, variables, context);
+    },
+  });
+};
+
+export type TForkSkillVariables = { id: string } & TForkSkillRequest;
+
+/** 응용하기: 원본을 복사한 비공개 사본을 만들고 목록 캐시에 넣는다. 원본의 응용 수는 사본을 게시해야 오른다. */
+export const useForkSkillMutation = (
+  options?: UseMutationOptions<TForkSkillResponse, unknown, TForkSkillVariables>,
+): UseMutationResult<TForkSkillResponse, unknown, TForkSkillVariables> => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...rest } = options ?? {};
+  return useMutation({
+    mutationFn: ({ id, ...payload }: TForkSkillVariables) => dataService.forkSkill(id, payload),
     ...rest,
     onSuccess: async (skill, variables, context) => {
       await queryClient.cancelQueries([QueryKeys.skills]);

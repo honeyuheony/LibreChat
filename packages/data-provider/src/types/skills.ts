@@ -13,6 +13,8 @@ export const SKILL_NAME_MAX_LENGTH = 64;
 export const SKILL_DESCRIPTION_MAX_LENGTH = 1024;
 export const SKILL_DESCRIPTION_SHORT_THRESHOLD = 20;
 export const SKILL_DISPLAY_TITLE_MAX_LENGTH = 128;
+/** 스킬 이모지 아이콘 길이 상한. 이모지 하나가 여러 코드 단위로 이루어져도 들어가게 넉넉히 잡았다. */
+export const SKILL_ICON_MAX_LENGTH = 16;
 export const SKILL_BODY_MAX_LENGTH = 100_000;
 
 /**
@@ -205,6 +207,31 @@ export type TSkill = {
   forkCount?: number;
   /** 원래 값으로 응답을 만들 때 계산한 지표. */
   usageMetrics?: TSkillUsageMetrics;
+  /** 마켓 목록과 상세 창에 보이는 이모지 아이콘. */
+  icon?: string;
+  /** 작성자 부서. 사용자 스킬은 작성자 user 문서에서, 배포 스킬은 `metadata.department`에서 읽는다. */
+  authorDepartment?: string;
+  /** 배포 스킬 SKILL.md `metadata`에서 읽은 마켓 표시 정보. 사용자 스킬에는 없다. */
+  marketProfile?: TSkillMarketProfile;
+};
+
+/** 배포 스킬의 마켓 표시 정보(SKILL.md 머리말 `metadata`). 값이 없는 필드는 빠진다. */
+export type TSkillMarketProfile = {
+  /** `기본`: 전 부서에 기본으로 주는 agent, `공유`: 직원이 만들어 공유한 agent. */
+  kind?: string;
+  /** 공개 범위(`전 부서` 또는 `팀`). `팀`이면 같은 부서 사용자에게만 보인다. */
+  scope?: string;
+  version?: string;
+  /** 이럴 때 쓰세요: 부르는 말. */
+  triggers?: string[];
+  /** 일하는 방법 한 줄 요약. */
+  pipeline?: string;
+  /** 결과물. */
+  output?: string;
+  /** 읽는 자료. */
+  sources?: string[];
+  /** 바탕이 된 기본 agent의 이름(slug). */
+  base?: string;
 };
 
 /**
@@ -340,6 +367,8 @@ export type TCreateSkill = {
   category?: string;
   /** When `true`, the skill auto-primes into every turn (mirrors always-apply frontmatter). */
   alwaysApply?: boolean;
+  /** 이모지 아이콘. */
+  icon?: string;
 };
 
 /** Partial payload for PATCH `/api/skills/:id` — all fields optional. */
@@ -353,6 +382,8 @@ export type TUpdateSkillPayload = {
   alwaysApply?: boolean;
   /** 수작업 소요 분(0 이상 정수). */
   manualMinutes?: number;
+  /** 이모지 아이콘. */
+  icon?: string;
 };
 
 /** POST `/api/skills/:id/fork` 요청 본문. 이름을 비우면 원본 이름을 쓰고, 겹치면 `-fork` 꼬리를 붙인다. */

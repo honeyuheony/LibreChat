@@ -3605,6 +3605,7 @@ class AgentClient extends BaseClient {
       durationMs,
       getSkillByName: (...args) => getSkillDbMethods().getSkillByName(...args),
       recordSkillRuns: db.recordSkillRuns,
+      recordDeploymentSkillRuns: db.recordDeploymentSkillRuns,
     }).catch((error) => {
       logger.warn('[AgentClient] Failed to record skill runs', getSafeErrorMetadata(error));
     });

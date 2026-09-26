@@ -6,6 +6,7 @@ import {
   SKILL_DESCRIPTION_MAX_LENGTH,
   SKILL_DESCRIPTION_SHORT_THRESHOLD as SKILL_DESCRIPTION_SHORT_THRESHOLD_SHARED,
   SKILL_DISPLAY_TITLE_MAX_LENGTH,
+  SKILL_ICON_MAX_LENGTH,
   SKILL_BODY_MAX_LENGTH,
   SKILL_NAME_PATTERN as SKILL_NAME_PATTERN_SHARED,
 } from 'librechat-data-provider';
@@ -17,6 +18,7 @@ import type {
   ISkillFile,
   ISkillFileDocument,
   ISkillSummary,
+  IDeploymentSkillUsage,
 } from '~/types/skill';
 import type { IAclEntry } from '~/types/aclEntry';
 import type { IAgent } from '~/types/agent';
@@ -221,6 +223,26 @@ export function validateSkillDisplayTitle(displayTitle: unknown): ValidationIssu
  * boolean column, leaving the skill in a state that is neither "on" nor
  * "off" while `listAlwaysApplySkills` only matches `true`.
  */
+/** 아이콘은 비어 있지 않은 짧은 문자열(이모지 하나)만 받는다. */
+export function validateSkillIcon(icon: unknown): ValidationIssue[] {
+  if (icon === undefined) {
+    return [];
+  }
+  if (typeof icon !== 'string') {
+    return [{ field: 'icon', code: 'INVALID_TYPE', message: 'icon must be a string' }];
+  }
+  if (icon.trim().length === 0 || icon.length > SKILL_ICON_MAX_LENGTH) {
+    return [
+      {
+        field: 'icon',
+        code: 'INVALID_LENGTH',
+        message: `icon must be 1 to ${SKILL_ICON_MAX_LENGTH} characters`,
+      },
+    ];
+  }
+  return [];
+}
+
 /** 수작업 분은 0 이상 정수만 받는다. */
 export function validateManualMinutes(manualMinutes: unknown): ValidationIssue[] {
   if (manualMinutes === undefined) {
@@ -632,6 +654,15 @@ export type CreateSkillInput = {
   manualMinutes?: number;
   /** 응용(fork)으로 만들 때 원본 스킬 id. */
   forkOf?: Types.ObjectId;
+  /** 이모지 아이콘. */
+  icon?: string;
+};
+
+/** 배포 스킬 실행 기록의 원래 값. */
+export type DeploymentSkillUsageCounters = {
+  useCount: number;
+  runTimeTotalSeconds: number;
+  runTimeSampleCount: number;
 };
 
 export type UpdateSkillInput = {
@@ -646,6 +677,8 @@ export type UpdateSkillInput = {
   sourceMetadata?: Record<string, unknown>;
   /** 수작업 소요 분(0 이상 정수). */
   manualMinutes?: number;
+  /** 이모지 아이콘. */
+  icon?: string;
 };
 
 export type GetAuthorSkillByNameParams = {
@@ -1124,6 +1157,16 @@ export function createSkillMethods(
   countPublishedForks: (
     originalIds: Array<Types.ObjectId | string>,
   ) => Promise<Record<string, number>>;
+  recordDeploymentSkillRuns: (
+    skills: Array<{ _id: Types.ObjectId | string; name?: string }>,
+    durationSeconds: number,
+  ) => Promise<{ upsertedCount: number; modifiedCount: number }>;
+  getDeploymentSkillUsage: (
+    skillIds: Array<Types.ObjectId | string>,
+  ) => Promise<Record<string, DeploymentSkillUsageCounters>>;
+  getSkillAuthorDepartments: (
+    authorIds: Array<Types.ObjectId | string>,
+  ) => Promise<Record<string, string>>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
       skillId: Types.ObjectId | string;
@@ -1209,6 +1252,7 @@ export function createSkillMethods(
       ...validateSkillFrontmatter(frontmatter),
       ...validateAlwaysApply(data.alwaysApply),
       ...validateManualMinutes(data.manualMinutes),
+      ...validateSkillIcon(data.icon),
     ];
     /* Body-level `always-apply:` only needs to be well-formed when a
        higher-precedence source won't override it (see
@@ -1280,6 +1324,7 @@ export function createSkillMethods(
       tenantId: data.tenantId,
       manualMinutes: data.manualMinutes,
       forkOf: data.forkOf,
+      icon: data.icon?.trim(),
       ...derived,
     });
     return {
@@ -1413,7 +1458,7 @@ export function createSkillMethods(
          still called below as defensive code; it short-circuits when
          `frontmatter` is undefined. */
       .select(
-        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf createdAt updatedAt',
+        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon createdAt updatedAt',
       )
       .lean();
 
@@ -1549,6 +1594,7 @@ export function createSkillMethods(
     if (update.frontmatter !== undefined) issues.push(...validateSkillFrontmatter(frontmatter));
     if (update.alwaysApply !== undefined) issues.push(...validateAlwaysApply(update.alwaysApply));
     issues.push(...validateManualMinutes(update.manualMinutes));
+    issues.push(...validateSkillIcon(update.icon));
     /* Body-level `always-apply:` only needs to be well-formed when a
        higher-precedence source won't override it (see
        `resolveAlwaysApplyFromInput` for precedence). Rejecting a typo
@@ -1603,6 +1649,7 @@ export function createSkillMethods(
     }
     if (update.category !== undefined) setPayload.category = update.category;
     if (update.manualMinutes !== undefined) setPayload.manualMinutes = update.manualMinutes;
+    if (update.icon !== undefined) setPayload.icon = update.icon.trim();
     /**
      * Keep the indexed `alwaysApply` column in sync with whatever the update
      * is carrying: an explicit top-level `alwaysApply` always wins; a
@@ -2065,6 +2112,90 @@ export function createSkillMethods(
     return counts;
   }
 
+  /**
+   * 배포 스킬이 쓰인 대화 턴 하나를 기록한다. 배포 스킬은 `Skill` 컬렉션에 문서가 없어
+   * `recordSkillRuns`가 올릴 곳이 없으므로 `DeploymentSkillUsage`에 스킬 id별로 쌓는다.
+   * 시간 규칙은 `recordSkillRuns`와 같다.
+   */
+  async function recordDeploymentSkillRuns(
+    skills: Array<{ _id: Types.ObjectId | string; name?: string }>,
+    durationSeconds: number,
+  ): Promise<{ upsertedCount: number; modifiedCount: number }> {
+    const valid = skills.filter(
+      (skill) => typeof skill._id !== 'string' || isValidObjectIdString(skill._id),
+    );
+    if (valid.length === 0) {
+      return { upsertedCount: 0, modifiedCount: 0 };
+    }
+    const timed = Number.isFinite(durationSeconds) && durationSeconds > 0;
+    const Usage = mongoose.models.DeploymentSkillUsage as Model<IDeploymentSkillUsage>;
+    const results = await Promise.all(
+      valid.map((skill) =>
+        Usage.updateOne(
+          { skillId: new ObjectId(skill._id.toString()) },
+          {
+            $inc: timed
+              ? { useCount: 1, runTimeTotalSeconds: durationSeconds, runTimeSampleCount: 1 }
+              : { useCount: 1 },
+            ...(skill.name ? { $set: { name: skill.name } } : {}),
+          },
+          { upsert: true },
+        ),
+      ),
+    );
+    return {
+      upsertedCount: results.reduce((sum, result) => sum + result.upsertedCount, 0),
+      modifiedCount: results.reduce((sum, result) => sum + result.modifiedCount, 0),
+    };
+  }
+
+  /** 배포 스킬 id별로 쌓인 실행 기록. 기록이 없는 스킬은 결과에 없다. */
+  async function getDeploymentSkillUsage(
+    skillIds: Array<Types.ObjectId | string>,
+  ): Promise<Record<string, DeploymentSkillUsageCounters>> {
+    const ids = skillIds.filter((id) => typeof id !== 'string' || isValidObjectIdString(id));
+    if (ids.length === 0) {
+      return {};
+    }
+    const Usage = mongoose.models.DeploymentSkillUsage as Model<IDeploymentSkillUsage>;
+    const rows = await Usage.find({ skillId: { $in: ids } })
+      .select('skillId useCount runTimeTotalSeconds runTimeSampleCount')
+      .lean<IDeploymentSkillUsage[]>();
+    const usage: Record<string, DeploymentSkillUsageCounters> = {};
+    for (const row of rows) {
+      usage[row.skillId.toString()] = {
+        useCount: row.useCount ?? 0,
+        runTimeTotalSeconds: row.runTimeTotalSeconds ?? 0,
+        runTimeSampleCount: row.runTimeSampleCount ?? 0,
+      };
+    }
+    return usage;
+  }
+
+  /**
+   * 작성자 id별 부서. user 스키마에 `department`가 없던 때의 문서도 있으므로 값이 문자열로
+   * 있을 때만 싣는다. user 스키마를 이 모듈이 정하지 않으므로 lean 문서에서 그대로 읽는다.
+   */
+  async function getSkillAuthorDepartments(
+    authorIds: Array<Types.ObjectId | string>,
+  ): Promise<Record<string, string>> {
+    const ids = [...new Set(authorIds.map((id) => id.toString()))].filter(isValidObjectIdString);
+    const User = mongoose.models.User as Model<{ department?: unknown }> | undefined;
+    if (ids.length === 0 || !User) {
+      return {};
+    }
+    const users = await User.find({ _id: { $in: ids } })
+      .select('department')
+      .lean<Array<{ _id: Types.ObjectId; department?: unknown }>>();
+    const departments: Record<string, string> = {};
+    for (const user of users) {
+      if (typeof user.department === 'string' && user.department.trim().length > 0) {
+        departments[user._id.toString()] = user.department.trim();
+      }
+    }
+    return departments;
+  }
+
   /** 검수 통과 표시를 켜거나(날짜·검수자) 끈다(null). 마켓 카드의 "검수됨" 배지가 이 값을 본다. */
   async function updateSkillReview(params: {
     skillId: Types.ObjectId | string;
@@ -2087,6 +2218,9 @@ export function createSkillMethods(
     getAuthorSkillByName,
     recordSkillRuns,
     countPublishedForks,
+    recordDeploymentSkillRuns,
+    getDeploymentSkillUsage,
+    getSkillAuthorDepartments,
     updateSkillReview,
     listSkillsByAccess,
     listAlwaysApplySkills,

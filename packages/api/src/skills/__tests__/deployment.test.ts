@@ -159,6 +159,80 @@ describe('loadDeploymentSkillsFromDirectory', () => {
     });
   });
 
+  it('reads market metadata and resolves forkOf to the origin skill id', async () => {
+    const root = await makeTempRoot();
+    const marketSkill = (name: string, metadata: string[]) =>
+      writeDeploymentSkill(root, {
+        name,
+        frontmatter: [
+          '---',
+          `name: ${name}`,
+          `description: ${DESCRIPTION}`,
+          'title: "주간보고 작성"',
+          'category: 문서작성',
+          'examples: ["이번 주 팀원 주간보고를 취합해줘"]',
+          'metadata:',
+          ...metadata.map((line) => `  ${line}`),
+          '---',
+          '',
+          '# 주간보고',
+        ].join('\n'),
+      });
+    await marketSkill('weekly-report', [
+      'icon: "📅"',
+      'kind: 공유',
+      'owner: "박지원"',
+      'department: "운영지원팀"',
+      'scope: 전 부서',
+      'version: v1',
+      'triggers: ["주간보고"]',
+      'pipeline: "전수 · 문서별 추출 → 양식 채움 → HWP 생성"',
+      'output: "HWP 문서"',
+      'sources: ["공유 폴더", "Google Workspace"]',
+      'base: report',
+      'manualMinutes: 26',
+      'seedMetrics: { runs: 3120, forks: 41, runSeconds: 40 }',
+    ]);
+    await marketSkill('weekly-report-exchange-coop', ['forkOf: weekly-report', 'icon: "🧭"']);
+    await marketSkill('orphan-fork', ['forkOf: missing-origin']);
+    await marketSkill('polish', ['sources: []', 'icon: "✨"']);
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
+
+    const registry = await loadDeploymentSkillsFromDirectory(path.join(root, 'skill'), {
+      projectRoot: root,
+    });
+    const byName = new Map(registry.list().map((skill) => [skill.name, skill]));
+    const origin = byName.get('weekly-report');
+
+    expect(origin).toMatchObject({
+      displayTitle: '주간보고 작성',
+      category: '문서작성',
+      icon: '📅',
+      authorName: '박지원',
+      authorDepartment: '운영지원팀',
+      manualMinutes: 26,
+      seedMetrics: { runs: 3120, forks: 41, runSeconds: 40 },
+      marketProfile: {
+        kind: '공유',
+        scope: '전 부서',
+        version: 'v1',
+        triggers: ['주간보고'],
+        pipeline: '전수 · 문서별 추출 → 양식 채움 → HWP 생성',
+        output: 'HWP 문서',
+        sources: ['공유 폴더', 'Google Workspace'],
+        base: 'report',
+      },
+    });
+    expect(byName.get('weekly-report-exchange-coop')?.forkOf?.toString()).toBe(
+      origin?._id.toString(),
+    );
+    expect(byName.get('orphan-fork')?.forkOf).toBeUndefined();
+    expect(byName.get('polish')?.marketProfile).toBeUndefined();
+    expect(byName.get('orphan-fork')?.authorName).toBe('Deployment');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('missing-origin'));
+    warn.mockRestore();
+  });
+
   it('loads a skill with an unrecognized frontmatter key and warns about it', async () => {
     const root = await makeTempRoot();
     await writeDeploymentSkill(root, {
