@@ -7,7 +7,9 @@ import { Constants } from 'librechat-data-provider';
 import { Spinner, useToastContext, useMediaQuery } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
 import type { ConversationDragItem } from './dnd';
+import type { TranslationKeys } from '~/hooks';
 import {
+  useActiveJobStatus,
   useGetStartupConfig,
   usePinConversationMutation,
   useUpdateConversationMutation,
@@ -25,6 +27,10 @@ import UnpinButton from './UnpinButton';
 import RenameForm from './RenameForm';
 import ConvoLink from './ConvoLink';
 import store from '~/store';
+
+/* The task-mode strings are added to translation.json in one batch; this cast goes
+   once the key is there. */
+const AWAITING_APPROVAL_KEY = 'com_ui_convo_awaiting_approval' as string as TranslationKeys;
 
 interface ConversationProps {
   conversation: TConversation;
@@ -68,6 +74,11 @@ function Conversation({
      serving them, so the row must not advertise one that no longer resolves. */
   const { data: startupConfig } = useGetStartupConfig();
   const sharedLinksEnabled = startupConfig?.sharedLinksEnabled === true;
+  /* Read here rather than passed down: the row's memo compares `isGenerating` only,
+     and a paused run turning back into a running one keeps that flag true. */
+  const activeJobStatus = useActiveJobStatus(conversation.conversationId);
+  /* A paused run needs the user, whatever mode the chat is in, so every row shows it. */
+  const awaitingApproval = isGenerating && activeJobStatus === 'requires_action';
   const isSharedBadgeVisible = conversation.isShared === true && sharedLinksEnabled;
   const isShiftHeld = useShiftKey();
   const { conversationId, title = '' } = conversation;
@@ -281,6 +292,13 @@ function Conversation({
     </span>
   );
 
+  const awaitingApprovalBadge = (
+    <span className="flex items-center gap-1.5 whitespace-nowrap pr-1 text-xs text-text-muted">
+      <span aria-hidden="true" className="size-[7px] rounded-full bg-status-error-strong" />
+      {localize(AWAITING_APPROVAL_KEY)}
+    </span>
+  );
+
   /* The slot takes its width from the row's hover, not from its content. The
    * overflow menu mounts a tick after the pointer arrives (see `ConvoActions`),
    * and a content-sized slot grew at that moment, pulling the unpin badge a
@@ -292,7 +310,10 @@ function Conversation({
   let actionWidthClassName = isSmallScreen
     ? 'group-focus-within:w-9 group-hover:w-9'
     : 'group-focus-within:w-7 group-hover:w-7';
-  if (isGenerating) {
+  if (awaitingApproval) {
+    actionVisibilityClassName = 'pointer-events-none scale-x-100 opacity-100';
+    actionWidthClassName = '';
+  } else if (isGenerating) {
     actionVisibilityClassName = 'pointer-events-none w-5 scale-x-100 opacity-100';
     actionWidthClassName = '';
   } else if (isPopoverActive || isActiveConvo || isSmallScreen) {
@@ -307,7 +328,9 @@ function Conversation({
   }
 
   let actionContent: React.ReactNode = null;
-  if (editActions) {
+  if (awaitingApproval) {
+    actionContent = awaitingApprovalBadge;
+  } else if (editActions) {
     if (isGenerating) {
       actionVisibilityClassName = 'pointer-events-none scale-x-100 opacity-100';
       actionWidthClassName = '';
