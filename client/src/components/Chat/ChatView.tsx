@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
+import { Trans } from 'react-i18next';
 import { useRecoilValue } from 'recoil';
 import { useForm } from 'react-hook-form';
 import { Spinner } from '@librechat/client';
@@ -23,10 +24,10 @@ import { pendingApprovalActionFamily } from './approval/state';
 import { useGetMessagesByConvoId } from '~/data-provider';
 import { AskAnswerHostProvider } from './ask/state';
 import MessagesView from './Messages/MessagesView';
-import LandingSkills from './LandingSkills';
 import Presentation from './Presentation';
 import ChatForm from './Input/ChatForm';
 import { TraceSurface } from './Trace';
+import i18n from '~/locales/i18n';
 import Landing from './Landing';
 import Header from './Header';
 import { cn } from '~/utils';
@@ -217,15 +218,20 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                           />
                         )}
                         {isLandingPage && !isSubagentThreadReadOnly && (
-                          <LandingSkills
-                            conversationId={
-                              chatHelpers.conversation?.conversationId ?? Constants.NEW_CONVO
-                            }
-                            agentId={chatHelpers.conversation?.agent_id}
-                            /* ChatForm keeps a clearance band under the landing composer
-                               (sm:mb-28 centred, sm:mb-10 otherwise); the chips sit inside it. */
-                            className={cn('pt-4', centerFormOnLanding ? 'sm:-mt-24' : 'sm:-mt-6')}
-                          />
+                          /* ChatForm keeps a clearance band under the landing composer
+                             (sm:mb-28 centred, sm:mb-10 otherwise); the hint sits inside it. */
+                          <p
+                            className={cn(
+                              'px-4 pt-4 text-center text-sm text-text-tertiary',
+                              centerFormOnLanding ? 'sm:-mt-24' : 'sm:-mt-6',
+                            )}
+                          >
+                            <Trans
+                              i18n={i18n}
+                              i18nKey="com_ui_landing_hint"
+                              components={{ strong: <strong className="font-semibold" /> }}
+                            />
+                          </p>
                         )}
                       </div>
                     </div>

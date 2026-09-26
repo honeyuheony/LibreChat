@@ -125,10 +125,11 @@ describe('ChatView landing suggestions', () => {
     mockConversation.mockReturnValue(null);
   });
 
-  test('offers the suggested skill row as the only suggestion row on the landing page', () => {
+  test('shows the one-line hint instead of suggestion rows on the landing page', () => {
     render(<ChatView />);
 
-    expect(screen.getByTestId('landing-skills')).toBeInTheDocument();
+    expect(screen.getByText(/com_ui_landing_hint|Drop documents here/)).toBeInTheDocument();
+    expect(screen.queryByTestId('landing-skills')).not.toBeInTheDocument();
     expect(screen.queryByTestId('conversation-starters')).not.toBeInTheDocument();
   });
 });

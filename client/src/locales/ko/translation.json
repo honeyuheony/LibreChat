@@ -1898,6 +1898,7 @@
   "com_ui_landing_greeting_evening_named": "좋은 저녁이에요, {{name}} 님",
   "com_ui_landing_greeting_morning": "좋은 아침이에요",
   "com_ui_landing_greeting_morning_named": "좋은 아침이에요, {{name}} 님",
+  "com_ui_landing_hint": "문서를 끌어다 놓거나 + 에서 추가하세요. <strong>/</strong> 로 agent를 부르거나, 업무를 그냥 입력하면 맞는 agent를 추천합니다.",
   "com_ui_landing_suggested_skills": "추천 agent",
   "com_ui_latest": "최신",
   "com_ui_latest_activity": "마지막 활동",
