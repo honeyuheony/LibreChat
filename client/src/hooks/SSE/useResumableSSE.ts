@@ -86,6 +86,7 @@ import useEventHandlers, {
   keepLocalCodeApprovalMode,
 } from './useEventHandlers';
 import { pendingApprovalActionFamily } from '~/components/Chat/approval/state';
+import { withActiveJob, withoutActiveJob } from '~/data-provider/SSE/queries';
 import useSteerConvert from '~/hooks/Chat/useSteerConvert';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useFileMapContext } from '~/Providers';
@@ -808,9 +809,9 @@ export default function useResumableSSE(
    */
   const addActiveJob = useCallback(
     (jobId: string) => {
-      queryClient.setQueryData<ActiveJobsResponse>([QueryKeys.activeJobs], (old) => ({
-        activeJobIds: [...new Set([...(old?.activeJobIds ?? []), jobId])],
-      }));
+      queryClient.setQueryData<ActiveJobsResponse>([QueryKeys.activeJobs], (old) =>
+        withActiveJob(old, jobId),
+      );
     },
     [queryClient],
   );
@@ -821,9 +822,9 @@ export default function useResumableSSE(
    */
   const removeActiveJob = useCallback(
     (jobId: string) => {
-      queryClient.setQueryData<ActiveJobsResponse>([QueryKeys.activeJobs], (old) => ({
-        activeJobIds: (old?.activeJobIds ?? []).filter((id) => id !== jobId),
-      }));
+      queryClient.setQueryData<ActiveJobsResponse>([QueryKeys.activeJobs], (old) =>
+        withoutActiveJob(old, jobId),
+      );
     },
     [queryClient],
   );

@@ -63,9 +63,35 @@ export interface ActiveJob {
 /** Response type for active jobs query */
 export interface ActiveJobsResponse {
   activeJobIds: string[];
-  /** Absent from servers that predate it and from the optimistic entries the
-   *  stream writes into this cache, which know ids only. */
+  /** Absent from servers that predate it. */
   jobs?: ActiveJob[];
+}
+
+/**
+ * The cache after a stream starts or resumes: its id is listed and its job runs.
+ * Other jobs keep their status, so a conversation paused for approval stays
+ * 「승인 대기」 in the sidebar while another one streams.
+ */
+export function withActiveJob(
+  old: ActiveJobsResponse | undefined,
+  jobId: string,
+): ActiveJobsResponse {
+  const jobs = (old?.jobs ?? []).filter((job) => job.id !== jobId);
+  return {
+    activeJobIds: [...new Set([...(old?.activeJobIds ?? []), jobId])],
+    jobs: [...jobs, { id: jobId, status: 'running' }],
+  };
+}
+
+/** The cache after a stream ends: its id and job are dropped, the others kept. */
+export function withoutActiveJob(
+  old: ActiveJobsResponse | undefined,
+  jobId: string,
+): ActiveJobsResponse {
+  return {
+    activeJobIds: (old?.activeJobIds ?? []).filter((id) => id !== jobId),
+    jobs: (old?.jobs ?? []).filter((job) => job.id !== jobId),
+  };
 }
 
 /** Module-level queue for title generation (survives re-renders).
