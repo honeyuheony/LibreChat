@@ -13,6 +13,7 @@ import {
   useSkillCategoriesQuery,
 } from '~/data-provider';
 import ConversationsSection from '~/components/UnifiedSidebar/ConversationsSection';
+import usePendingConnectorCount from '~/hooks/Nav/usePendingConnectorCount';
 import { DATA_HUB_PATH } from '~/components/Connectors/status';
 import useSideNavLinks from '~/hooks/Nav/useSideNavLinks';
 import { useAuthContext } from '~/hooks';
@@ -21,8 +22,9 @@ import store from '~/store';
 const defaultInterface = getConfigDefaults().interface;
 const SKILLS_MARKET_PATH = '/skills-market';
 
-/** The files panel is managed from settings under Data. */
-const panelsReplacedElsewhere = new Set(['files']);
+/** The files panel is managed from settings under Data, and the agent panel by the market's
+ *  「내 agent」 tab. */
+const panelsReplacedElsewhere = new Set(['files', 'skills']);
 
 export default function useUnifiedSidebarLinks() {
   const navigate = useNavigate();
@@ -77,6 +79,7 @@ export default function useUnifiedSidebarLinks() {
   const { data: skillCategories } = useSkillCategoriesQuery({ enabled: hasSkillsPanel });
   /** The marketplace's own "all" count: the sum of its category counts. */
   const marketCount = skillCategories?.categories.reduce((sum, entry) => sum + entry.count, 0);
+  const pendingConnectorCount = usePendingConnectorCount();
 
   const links = useMemo(() => {
     const conversationLink: NavLink = {
@@ -92,7 +95,10 @@ export default function useUnifiedSidebarLinks() {
       icon: Plug,
       id: 'connectors',
       activePath: DATA_HUB_PATH,
-      trailing: 'MCP',
+      glyph: '⇄',
+      sub: 'MCP',
+      badge: pendingConnectorCount,
+      badgeLabel: 'com_ui_data_hub_status_needs_connection',
       onClick: () => navigate(DATA_HUB_PATH),
     };
     const marketLinks: NavLink[] = hasSkillsPanel
@@ -103,24 +109,15 @@ export default function useUnifiedSidebarLinks() {
             icon: Store,
             id: 'skills-market',
             activePath: SKILLS_MARKET_PATH,
+            glyph: '/',
             trailing: marketCount != null ? String(marketCount) : undefined,
             onClick: () => navigate(SKILLS_MARKET_PATH),
           },
         ]
       : [];
 
-    const skillsLinks: NavLink[] = [];
-    const otherLinks: NavLink[] = [];
-    for (const link of sideNavLinks) {
-      if (link.id === 'skills') {
-        /* Temporary: the market has no 「내 agent」 tab or create entry yet, so the old agent
-           panel stays as its own row. Drop this push once the market carries both. */
-        skillsLinks.push({ ...link, title: 'com_ui_sidebar_my_agents' });
-      } else if (!panelsReplacedElsewhere.has(link.id)) {
-        otherLinks.push(link);
-      }
-    }
-    const leadingLinks = [conversationLink, ...marketLinks, connectorsLink, ...skillsLinks];
+    const otherLinks = sideNavLinks.filter((link) => !panelsReplacedElsewhere.has(link.id));
+    const leadingLinks = [conversationLink, ...marketLinks, connectorsLink];
 
     if (
       !insightsFeatureEnabled ||
@@ -151,6 +148,7 @@ export default function useUnifiedSidebarLinks() {
     location.pathname,
     hasSkillsPanel,
     marketCount,
+    pendingConnectorCount,
     navigate,
     sideNavLinks,
   ]);

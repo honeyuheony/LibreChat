@@ -24,7 +24,7 @@ const AccountSettings = lazy(() => import('~/components/Nav/AccountSettings'));
 const SEARCH_INPUT_SELECTOR = 'input[data-testid="nav-search-input"]';
 
 const rowClassName =
-  'flex h-10 w-full items-center gap-2.5 rounded-theme-control px-2.5 text-[15px] transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
+  'flex h-9 w-full items-center gap-2.5 rounded-theme-control px-2.5 text-[15px] transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
 const railButtonClassName =
   'flex size-9 items-center justify-center rounded-theme-control transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
 
@@ -64,6 +64,8 @@ const NewChatRow = memo(function NewChatRow({
   }, [switchToHistory, setActive]);
 
   const { handleNewChatClick } = useNewChat({ onNewChat: handlePanelSwitch });
+  /** The wireframe lights this row up while the empty new-chat screen is showing. */
+  const isOnNewChat = useLocation().pathname === '/c/new';
 
   return (
     <RowTooltip expanded={expanded} label={tooltipDescription}>
@@ -72,14 +74,21 @@ const NewChatRow = memo(function NewChatRow({
         data-testid="new-chat-button"
         aria-label={label}
         aria-keyshortcuts={ariaKey}
+        aria-current={isOnNewChat ? 'page' : undefined}
         className={cn(
           expanded ? rowClassName : railButtonClassName,
-          'font-semibold text-accent-primary',
+          'font-semibold',
+          isOnNewChat ? 'bg-surface-active text-text-primary' : 'text-accent-primary',
         )}
         onClick={handleNewChatClick}
       >
-        <span className="flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-surface-submit text-white">
-          <Plus className="size-3.5" strokeWidth={2.6} aria-hidden="true" />
+        <span
+          className={cn(
+            'flex size-5 flex-shrink-0 items-center justify-center rounded-full',
+            isOnNewChat ? 'bg-surface-submit text-white' : 'bg-accent-primary/20',
+          )}
+        >
+          <Plus className="size-3" strokeWidth={2.6} aria-hidden="true" />
         </span>
         {expanded && <span className="truncate">{label}</span>}
       </a>
@@ -161,6 +170,7 @@ const NavRow = memo(function NavRow({
 }) {
   const localize = useLocalize();
   const label = localize(link.title);
+  const badge = link.badge != null && link.badge > 0 ? link.badge : null;
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -191,18 +201,44 @@ const NavRow = memo(function NavRow({
         data-testid={`nav-panel-${link.id}`}
         className={cn(
           expanded ? cn(rowClassName, 'justify-start') : cn(railButtonClassName, 'px-0'),
-          section && 'h-8 text-[13px] font-semibold text-text-secondary',
+          section && 'h-8 px-2.5 text-[12.5px] font-normal text-text-muted',
           !section &&
             (isActive
-              ? 'bg-surface-active font-medium text-text-primary'
+              ? 'bg-surface-active font-normal text-text-primary'
               : 'font-normal text-text-secondary'),
         )}
         onClick={handleClick}
       >
-        {!section && <link.icon className="size-[18px] flex-shrink-0" aria-hidden="true" />}
+        {!section &&
+          (expanded && link.glyph ? (
+            <span
+              aria-hidden="true"
+              className="w-4 flex-shrink-0 text-center font-mono text-[13px] text-text-muted"
+            >
+              {link.glyph}
+            </span>
+          ) : (
+            <link.icon className="size-[18px] flex-shrink-0" aria-hidden="true" />
+          ))}
         {expanded && <span className="truncate">{label}</span>}
+        {expanded && link.sub && (
+          <span className="whitespace-nowrap text-[11.5px] text-text-muted">{link.sub}</span>
+        )}
         {expanded && link.trailing && (
-          <span className="ml-auto text-xs font-normal text-text-tertiary">{link.trailing}</span>
+          <span className="ml-auto text-[13px] font-normal tabular-nums text-text-muted">
+            {link.trailing}
+          </span>
+        )}
+        {expanded && badge != null && (
+          <span
+            className={cn(
+              'rounded-full bg-amber-100 px-[7px] font-mono text-[11px] leading-[18px] text-amber-700',
+              !link.trailing && 'ml-auto',
+            )}
+            aria-label={link.badgeLabel ? `${localize(link.badgeLabel)} ${badge}` : String(badge)}
+          >
+            {badge}
+          </span>
         )}
       </Button>
     </RowTooltip>

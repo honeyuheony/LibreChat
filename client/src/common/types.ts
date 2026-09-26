@@ -116,6 +116,14 @@ export type NavLink = {
   activePath?: string;
   /** Short muted text at the row's end, such as a count. */
   trailing?: string;
+  /** A one-character mark drawn in place of the icon while the sidebar is expanded, such as `/`. */
+  glyph?: string;
+  /** Small muted text right after the label, such as `MCP`. */
+  sub?: string;
+  /** A count waiting on the user, drawn as a pill at the row's end; hidden at zero. */
+  badge?: number;
+  /** Read out with the badge, since a bare number does not say what it counts. */
+  badgeLabel?: TranslationKeys;
 };
 
 export interface DataColumnMeta {
