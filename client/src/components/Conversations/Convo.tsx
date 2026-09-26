@@ -7,7 +7,6 @@ import { Constants } from 'librechat-data-provider';
 import { Spinner, useToastContext, useMediaQuery } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
 import type { ConversationDragItem } from './dnd';
-import type { TranslationKeys } from '~/hooks';
 import {
   useActiveJobStatus,
   useGetStartupConfig,
@@ -27,10 +26,6 @@ import UnpinButton from './UnpinButton';
 import RenameForm from './RenameForm';
 import ConvoLink from './ConvoLink';
 import store from '~/store';
-
-/* The task-mode strings are added to translation.json in one batch; this cast goes
-   once the key is there. */
-const AWAITING_APPROVAL_KEY = 'com_ui_convo_awaiting_approval' as string as TranslationKeys;
 
 interface ConversationProps {
   conversation: TConversation;
@@ -295,7 +290,7 @@ function Conversation({
   const awaitingApprovalBadge = (
     <span className="flex items-center gap-1.5 whitespace-nowrap pr-1 text-xs text-text-muted">
       <span aria-hidden="true" className="size-[7px] rounded-full bg-status-error-strong" />
-      {localize(AWAITING_APPROVAL_KEY)}
+      {localize('com_ui_convo_awaiting_approval')}
     </span>
   );
 
