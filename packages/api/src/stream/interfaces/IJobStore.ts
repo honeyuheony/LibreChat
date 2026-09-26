@@ -99,6 +99,12 @@ export const PROVIDER_DRAIN_TIMEOUT_MS = 30_000;
  */
 export type JobStatus = 'running' | 'complete' | 'error' | 'aborted' | 'requires_action';
 
+/** A job listed in an owner's index, with the status that put it there. */
+export interface UserJobSummary {
+  id: string;
+  status: JobStatus;
+}
+
 /** Immutable wire/storage contract selected when a generation is created.
  * Missing markers on pre-rollout records are interpreted as protocol v1. */
 export type GenerationProtocolVersion = 1 | 2;
