@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-
+import { DEFAULT_LANGUAGE } from './defaultLanguage';
 import translationEn from './en/translation.json';
 
 export const defaultNS = 'translation';
@@ -214,13 +214,6 @@ export function normalizeLocale(locale?: string | null): SupportedLocale {
   const base = normalized.split('-')[0];
   return localeByLowercase[base] ?? localeAliases[base] ?? 'en';
 }
-
-/**
- * The language a browser gets before its user picks one. The service is for a Korean
- * organization, so an English-language browser still opens in Korean; choosing 「자동 감지」
- * in settings brings the browser's own language back.
- */
-export const DEFAULT_LANGUAGE = 'ko-KR';
 
 export function detectInitialLanguage() {
   const cookieLang = readCookie('lang');

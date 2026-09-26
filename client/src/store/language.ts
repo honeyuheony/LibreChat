@@ -1,6 +1,6 @@
 import { atom } from 'recoil';
 import Cookies from 'js-cookie';
-import { DEFAULT_LANGUAGE } from '~/locales/i18n';
+import { DEFAULT_LANGUAGE } from '~/locales/defaultLanguage';
 import { atomWithLocalStorage } from './utils';
 
 const readStoredLang = () => {
