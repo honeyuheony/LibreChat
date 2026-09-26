@@ -1,12 +1,14 @@
+import fs from 'fs';
+import path from 'path';
 import { ContentTypes, TaskTools } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
 import {
-  TASK_STAGES,
   collectConversationFiles,
   collectTaskOutputs,
   findLatestTaskToolCall,
   resolveTaskSteps,
 } from '../taskState';
+import { TASK_STAGES } from '~/components/Chat/Messages/Content/Task/stages';
 
 const toolCallMessage = (
   toolCall: Record<string, unknown>,
@@ -61,28 +63,32 @@ describe('resolveTaskSteps', () => {
     finished: false,
   };
 
-  it('uses the plan list of each tool kind', () => {
-    expect(TASK_STAGES.extract_table.map((stage) => stage.id)).toEqual([
-      'prepare',
-      'fields',
-      'extract',
-      'aggregate',
-      'save',
-    ]);
-    expect(TASK_STAGES.summarize_documents.map((stage) => stage.id)).toEqual([
-      'prepare',
-      'view',
-      'summarize',
-      'merge',
-      'save',
-    ]);
-    expect(TASK_STAGES.write_report.map((stage) => stage.id)).toEqual([
-      'prepare',
-      'extract',
-      'fill',
-      'render',
-      'save',
-    ]);
+  /** Walks up from this test to the repository root, the folder that holds `packages/api`. */
+  const serverToolsSource = () => {
+    let dir = __dirname;
+    while (!fs.existsSync(path.join(dir, 'packages', 'api'))) {
+      const parent = path.dirname(dir);
+      if (parent === dir) {
+        throw new Error('packages/api not found above the test');
+      }
+      dir = parent;
+    }
+    return fs.readFileSync(path.join(dir, 'packages', 'api', 'src', 'tasks', 'tools.ts'), 'utf8');
+  };
+
+  /** Stage ids per tool as written in the server's `TASK_STAGES`, read from its source. */
+  const serverStageIds = (source: string, tool: string) => {
+    const block = source.match(new RegExp(`\\[TaskTools\\.${tool}\\]: \\[([^\\]]*)\\]`));
+    return [...(block?.[1] ?? '').matchAll(/id: '([^']+)'/g)].map((match) => match[1]);
+  };
+
+  it('uses the stage ids the server sends for every task tool', () => {
+    const source = serverToolsSource();
+    for (const tool of Object.values(TaskTools)) {
+      const ids = serverStageIds(source, tool);
+      expect(ids).toHaveLength(5);
+      expect(TASK_STAGES[tool].map((stage) => stage.id)).toEqual(ids);
+    }
   });
 
   it('puts the step named by the progress event in front', () => {

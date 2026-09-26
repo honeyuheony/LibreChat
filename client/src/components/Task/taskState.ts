@@ -7,35 +7,7 @@ import type {
   TaskProgressEvent,
 } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
-
-/**
- * The plan steps each task tool walks through, in order. `id` is the `stage`
- * the server sends in `on_task_progress`, so the tool processors and this list
- * must agree on the same ids.
- */
-export const TASK_STAGES: Record<TaskToolName, { id: string; label: TranslationKeys }[]> = {
-  [TaskTools.extract_table]: [
-    { id: 'prepare', label: 'com_ui_task_stage_prepare' },
-    { id: 'fields', label: 'com_ui_task_stage_confirm_fields' },
-    { id: 'extract', label: 'com_ui_task_stage_extract_all' },
-    { id: 'aggregate', label: 'com_ui_task_stage_aggregate' },
-    { id: 'save', label: 'com_ui_task_stage_save' },
-  ],
-  [TaskTools.summarize_documents]: [
-    { id: 'prepare', label: 'com_ui_task_stage_prepare' },
-    { id: 'view', label: 'com_ui_task_stage_confirm_view' },
-    { id: 'summarize', label: 'com_ui_task_stage_summarize' },
-    { id: 'merge', label: 'com_ui_task_stage_merge' },
-    { id: 'save', label: 'com_ui_task_stage_save' },
-  ],
-  [TaskTools.write_report]: [
-    { id: 'prepare', label: 'com_ui_task_stage_prepare' },
-    { id: 'extract', label: 'com_ui_task_stage_extract' },
-    { id: 'fill', label: 'com_ui_task_stage_compose' },
-    { id: 'render', label: 'com_ui_task_stage_render' },
-    { id: 'save', label: 'com_ui_task_stage_save' },
-  ],
-};
+import { TASK_STAGES } from '~/components/Chat/Messages/Content/Task/stages';
 
 const TASK_TOOL_NAMES = new Set<string>(Object.values(TaskTools));
 
@@ -85,6 +57,7 @@ export function resolveTaskSteps(
   call: TaskToolCallState,
   progress: TaskProgressEvent | null,
 ): TaskStepView[] {
+  /** The message card's plan list, so both follow the stage ids the server sends. */
   const stages = TASK_STAGES[call.name];
   let current = 0;
   if (call.finished) {
