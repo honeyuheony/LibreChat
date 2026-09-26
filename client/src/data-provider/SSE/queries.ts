@@ -53,9 +53,19 @@ export function useStreamStatus(conversationId: string | undefined, enabled = tr
 
 export const genTitleQueryKey = (conversationId: string) => ['genTitle', conversationId] as const;
 
+/** An active job and the status that keeps it active. */
+export interface ActiveJob {
+  id: string;
+  /** `requires_action`: the run is paused until the user answers an approval. */
+  status: 'running' | 'requires_action';
+}
+
 /** Response type for active jobs query */
 export interface ActiveJobsResponse {
   activeJobIds: string[];
+  /** Absent from servers that predate it and from the optimistic entries the
+   *  stream writes into this cache, which know ids only. */
+  jobs?: ActiveJob[];
 }
 
 /** Module-level queue for title generation (survives re-renders).
@@ -298,4 +308,32 @@ export function useActiveJobs(enabled = true, expectsSuccessor = false) {
       getActiveJobsRefetchInterval(data, expectsSuccessor),
     retry: false,
   });
+}
+
+/** The listed status of one conversation's job, or `undefined` when the list does
+ *  not say. A job the list names only by id is treated as running. */
+export function selectActiveJobStatus(
+  data: ActiveJobsResponse | undefined,
+  conversationId: string | null | undefined,
+): ActiveJob['status'] | undefined {
+  if (!conversationId || !data?.activeJobIds.includes(conversationId)) {
+    return undefined;
+  }
+  return data.jobs?.find((job) => job.id === conversationId)?.status ?? 'running';
+}
+
+/**
+ * One conversation's status from the active jobs list, for a sidebar row.
+ * The observer never fetches or polls on its own: the list that renders the rows
+ * keeps `useActiveJobs` mounted, and a row only re-renders when its own status
+ * changes.
+ */
+export function useActiveJobStatus(conversationId: string | null | undefined) {
+  const { data } = useQuery({
+    queryKey: [QueryKeys.activeJobs],
+    queryFn: () => dataService.getActiveJobs() as Promise<ActiveJobsResponse>,
+    enabled: false,
+    select: (response: ActiveJobsResponse) => selectActiveJobStatus(response, conversationId),
+  });
+  return data;
 }

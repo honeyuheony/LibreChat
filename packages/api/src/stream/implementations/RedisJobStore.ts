@@ -25,6 +25,7 @@ import type {
   SteerReceipt,
   SteerReceiptInput,
   ParkedSteerClaim,
+  UserJobSummary,
 } from '~/stream/interfaces/IJobStore';
 import type { EarlyBufferOverflowState } from '../../types/earlyBufferRecovery';
 import type { ResolvedAskUserQuestion } from '~/agents/hitl/resume';
@@ -3624,16 +3625,20 @@ export class RedisJobStore implements IJobStoreV2 {
    * @returns Array of conversation IDs with active jobs
    */
   async getActiveJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
-    return this.getJobIdsByUser(userId, tenantId, false);
+    return (await this.getJobsByUser(userId, tenantId, false)).map((job) => job.id);
+  }
+
+  async getActiveJobsByUser(userId: string, tenantId?: string): Promise<UserJobSummary[]> {
+    return this.getJobsByUser(userId, tenantId, false);
   }
 
   async getCleanupBlockingJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
-    return this.getJobIdsByUser(userId, tenantId, true);
+    return (await this.getJobsByUser(userId, tenantId, true)).map((job) => job.id);
   }
 
   async getCleanupJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
     await this.ensureCleanupMembership();
-    return this.getJobIdsByUser(userId, tenantId, true);
+    return (await this.getJobsByUser(userId, tenantId, true)).map((job) => job.id);
   }
 
   async getRetainedJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
@@ -3649,11 +3654,11 @@ export class RedisJobStore implements IJobStoreV2 {
     });
   }
 
-  private async getJobIdsByUser(
+  private async getJobsByUser(
     userId: string,
     tenantId: string | undefined,
     includeUndrained: boolean,
-  ): Promise<string[]> {
+  ): Promise<UserJobSummary[]> {
     const userJobsKey = KEYS.userJobs(userId, tenantId);
     const trackedIds = await this.redis.smembers(userJobsKey);
 
@@ -3661,7 +3666,7 @@ export class RedisJobStore implements IJobStoreV2 {
       return [];
     }
 
-    const activeIds: string[] = [];
+    const activeJobs: UserJobSummary[] = [];
     let healed = 0;
 
     for (const streamId of trackedIds) {
@@ -3695,7 +3700,7 @@ export class RedisJobStore implements IJobStoreV2 {
         ) {
           continue;
         }
-        activeIds.push(streamId);
+        activeJobs.push({ id: streamId, status: job.status });
       } else {
         // Self-heal from durable state instead of a raw SREM, which could remove
         // a replacement's membership after the read.
@@ -3729,7 +3734,7 @@ export class RedisJobStore implements IJobStoreV2 {
             )
           )
         ) {
-          activeIds.push(streamId);
+          activeJobs.push({ id: streamId, status: currentJob.status });
         }
         healed++;
       }
@@ -3739,7 +3744,7 @@ export class RedisJobStore implements IJobStoreV2 {
       logger.debug(`[RedisJobStore] Self-healed ${healed} stale job entries for user ${userId}`);
     }
 
-    return activeIds;
+    return activeJobs;
   }
 
   async destroy(): Promise<void> {

@@ -9,6 +9,7 @@ const mockGenerationJobManager = {
   markSyncSent: jest.fn(),
   abortJob: jest.fn(),
   getActiveJobIdsForUser: jest.fn().mockResolvedValue([]),
+  getActiveJobsForUser: jest.fn().mockResolvedValue([]),
   steering: {
     claim: jest.fn().mockResolvedValue([]),
     claimDetailed: jest.fn().mockResolvedValue({ generationProtocolVersion: 1, steers: [] }),
@@ -95,6 +96,31 @@ describe('SSE stream tenant isolation', () => {
     mockGenerationJobManager.steering.claimDetailed.mockResolvedValue({
       generationProtocolVersion: 1,
       steers: [],
+    });
+  });
+
+  describe('GET /chat/active', () => {
+    it("lists the caller's tenant jobs with their status next to the legacy ids", async () => {
+      mockTenantId = 'tenant-a';
+      mockGenerationJobManager.getActiveJobsForUser.mockResolvedValue([
+        { id: 'run-a', status: 'running' },
+        { id: 'paused-b', status: 'requires_action' },
+      ]);
+
+      const res = await request(app).get('/agents/chat/active');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        activeJobIds: ['run-a', 'paused-b'],
+        jobs: [
+          { id: 'run-a', status: 'running' },
+          { id: 'paused-b', status: 'requires_action' },
+        ],
+      });
+      expect(mockGenerationJobManager.getActiveJobsForUser).toHaveBeenCalledWith(
+        'user-123',
+        'tenant-a',
+      );
     });
   });
 

@@ -1376,6 +1376,59 @@ describe('ApprovalLifecycle via GenerationJobManager.approvals (in-memory)', () 
         now.mockRestore();
       }
     });
+
+    test('getActiveJobsByUser lists a paused approval as requires_action', async () => {
+      await manager.createJob('s-running', 'user-status');
+      await manager.createJob('s-paused', 'user-status');
+      await manager.createJob('s-done', 'user-status');
+
+      await manager.approvals.pause('s-paused', buildAction('s-paused'));
+      await manager.completeJob('s-done');
+
+      const byId = (jobs: Array<{ id: string }>) =>
+        [...jobs].sort((a, b) => a.id.localeCompare(b.id));
+      const expected = [
+        { id: 's-paused', status: 'requires_action' },
+        { id: 's-running', status: 'running' },
+      ];
+      expect(byId(await jobStore.getActiveJobsByUser('user-status'))).toEqual(expected);
+      expect(byId(await manager.getActiveJobsForUser('user-status'))).toEqual(expected);
+      expect((await manager.getActiveJobIdsForUser('user-status')).sort()).toEqual(
+        expected.map((job) => job.id),
+      );
+    });
+
+    test('getActiveJobsByUser drops a paused approval once its prompt expires', async () => {
+      const streamId = 'stream-expired-status';
+      await manager.createJob(streamId, 'user-exp-status');
+      const expiresAt = Date.now() + 1000;
+      await manager.approvals.pause(streamId, buildAction(streamId, { expiresAt }));
+
+      const now = jest.spyOn(Date, 'now').mockReturnValue(expiresAt + 1);
+      try {
+        expect(await manager.getActiveJobsForUser('user-exp-status')).toEqual([]);
+      } finally {
+        now.mockRestore();
+      }
+    });
+
+    test('getActiveJobsByUser falls back to per-job status for a store without it', async () => {
+      await manager.createJob('s-legacy-paused', 'user-legacy');
+      await manager.approvals.pause('s-legacy-paused', buildAction('s-legacy-paused'));
+
+      // An own `undefined` shadows the prototype method, as an older store would lack it.
+      Object.defineProperty(jobStore, 'getActiveJobsByUser', {
+        value: undefined,
+        configurable: true,
+      });
+      try {
+        await expect(manager.getActiveJobsForUser('user-legacy')).resolves.toEqual([
+          { id: 's-legacy-paused', status: 'requires_action' },
+        ]);
+      } finally {
+        delete (jobStore as { getActiveJobsByUser?: unknown }).getActiveJobsByUser;
+      }
+    });
   });
 });
 

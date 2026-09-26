@@ -34,6 +34,7 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
+  useActiveJobStatus: () => undefined,
   useGetStartupConfig: () => ({ data: { sharedLinksEnabled: false } }),
   useUpdateConversationMutation: () => ({ mutateAsync: jest.fn() }),
   usePinConversationMutation: () => ({

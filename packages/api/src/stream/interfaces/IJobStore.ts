@@ -99,6 +99,12 @@ export const PROVIDER_DRAIN_TIMEOUT_MS = 30_000;
  */
 export type JobStatus = 'running' | 'complete' | 'error' | 'aborted' | 'requires_action';
 
+/** A job listed in an owner's index, with the status that put it there. */
+export interface UserJobSummary {
+  id: string;
+  status: JobStatus;
+}
+
 /** Immutable wire/storage contract selected when a generation is created.
  * Missing markers on pre-rollout records are interpreted as protocol v1. */
 export type GenerationProtocolVersion = 1 | 2;
@@ -956,6 +962,11 @@ export interface IJobStore {
   getJobCountByStatus(status: JobStatus): Promise<number>;
   destroy(): Promise<void>;
   getActiveJobIdsByUser(userId: string, tenantId?: string): Promise<string[]>;
+
+  /** Same jobs as `getActiveJobIdsByUser`, with the status that keeps each one
+   * active, so a caller can tell a run paused for approval from a running one.
+   * Managers fall back to per-job lookups for older third-party stores. */
+  getActiveJobsByUser?(userId: string, tenantId?: string): Promise<UserJobSummary[]>;
 
   /** Complete owner cleanup query, including terminal host work and legacy-index recovery.
    * Managers retain the global-index fallback for older third-party stores. */
