@@ -218,6 +218,11 @@ const BaseOptionsSchema = z.object({
     .optional(),
   /** Heading the data hub groups this connector under; connectors without one share an "other" group. */
   category: z.string().optional(),
+  /**
+   * Whether a new chat starts with this connector switched on, until the user sets their own
+   * choice in the data hub. Unset means off, so the composer shows only what was chosen.
+   */
+  defaultOn: z.boolean().optional(),
   timeout: z.number().int().nonnegative().optional(),
   /** Timeout (ms) for the long-lived SSE GET stream body before undici aborts it. Default: 300_000 (5 min). */
   sseReadTimeout: z.number().int().positive().optional(),

@@ -165,6 +165,12 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
           enum: STATEFUL_CODE_ENVIRONMENTS,
           default: 'user',
         },
+        /** Per-connector "use in new chats" switch. Key = MCP server name. */
+        connectorDefaults: {
+          type: Map,
+          of: Boolean,
+          default: undefined,
+        },
       },
       default: {},
     },

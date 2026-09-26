@@ -72,3 +72,75 @@ export function createUserPreferencesHandler(
     }
   };
 }
+
+/** Enough for every connector a deployment lists; a larger body is not a real switch. */
+const MAX_CONNECTOR_DEFAULTS_PER_REQUEST = 100;
+
+/**
+ * Server names become Mongo path segments (`personalization.connectorDefaults.<name>`), so a
+ * name must not split the path (`.`) or read as an operator (leading `$`).
+ */
+function isConnectorName(name: string): boolean {
+  return name.length > 0 && name.length <= 200 && !name.includes('.') && !name.startsWith('$');
+}
+
+type ConnectorDefaultsRequest = Omit<ServerRequest, 'body' | 'user'> & {
+  body: { connectorDefaults?: unknown };
+  user?: IUser;
+};
+
+export interface ConnectorDefaultsHandlerDeps {
+  updateConnectorDefaults: (
+    userId: string,
+    defaults: Record<string, boolean>,
+  ) => Promise<IUser | null>;
+}
+
+/**
+ * Saves which connectors a new chat starts with switched on, per user. The body names only
+ * the connectors being switched; the others keep their stored value or the config default.
+ */
+export function createConnectorDefaultsHandler(
+  deps: ConnectorDefaultsHandlerDeps,
+): (req: ConnectorDefaultsRequest, res: Response) => Promise<Response> {
+  return async (req: ConnectorDefaultsRequest, res: Response): Promise<Response> => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const input = req.body?.connectorDefaults;
+    const entries =
+      input != null && typeof input === 'object' && !Array.isArray(input)
+        ? Object.entries(input)
+        : [];
+    const valid =
+      entries.length > 0 &&
+      entries.length <= MAX_CONNECTOR_DEFAULTS_PER_REQUEST &&
+      entries.every(([name, on]) => isConnectorName(name) && typeof on === 'boolean');
+    if (!valid) {
+      return res.status(400).json({
+        message: 'connectorDefaults must map connector names to true or false',
+      });
+    }
+
+    try {
+      const updatedUser = await deps.updateConnectorDefaults(
+        userId,
+        Object.fromEntries(entries) as Record<string, boolean>,
+      );
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      return res.status(200).json({
+        updated: true,
+        preferences: {
+          connectorDefaults: updatedUser.personalization?.connectorDefaults ?? {},
+        },
+      });
+    } catch (error) {
+      logger.error('[UserPreferences] Error updating connector defaults:', error);
+      return res.status(500).json({ message: 'Failed to update connector defaults' });
+    }
+  };
+}

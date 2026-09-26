@@ -118,6 +118,7 @@ const ADMIN_CONFIGURABLE_FIELDS = [
   'iconPath',
   'overview',
   'category',
+  'defaultOn',
   'startup',
   'chatMenu',
   'serverInstructions',

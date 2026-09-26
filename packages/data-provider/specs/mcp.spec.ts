@@ -96,6 +96,28 @@ describe('MCPOptionsSchema', () => {
     });
   });
 
+  describe('defaultOn', () => {
+    it('accepts a boolean and leaves it unset when omitted', () => {
+      const on = MCPOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://x.com/sse',
+        defaultOn: true,
+      });
+      const omitted = MCPOptionsSchema.safeParse({ type: 'sse', url: 'https://x.com/sse' });
+      expect(on.success && on.data.defaultOn).toBe(true);
+      expect(omitted.success && omitted.data.defaultOn).toBeUndefined();
+    });
+
+    it('rejects a non-boolean value', () => {
+      const result = MCPOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://x.com/sse',
+        defaultOn: 'yes',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('OBO transport support', () => {
     it('should accept obo on SSE transport', () => {
       const result = MCPOptionsSchema.safeParse({

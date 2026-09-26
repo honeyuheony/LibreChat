@@ -65,6 +65,8 @@ export interface IUser extends Document {
   personalization?: {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
+    /** Per-connector "use in new chats" switch. Key = MCP server name. */
+    connectorDefaults?: Record<string, boolean>;
   };
   favorites?: TUserFavorite[];
   /** Display order for the sidebar's Pinned section: favorite and pinned-chat
@@ -116,6 +118,8 @@ export interface UpdateUserRequest {
   personalization?: {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
+    /** Per-connector "use in new chats" switch. Key = MCP server name. */
+    connectorDefaults?: Record<string, boolean>;
   };
   skillStates?: Record<string, boolean>;
 }

@@ -1268,6 +1268,34 @@ describe('User Methods - Database Tests', () => {
     });
   });
 
+  describe('updateUserConnectorDefaults', () => {
+    test('sets the given switches and keeps the rest and other preferences', async () => {
+      const user = await User.create({
+        email: 'connector-defaults@example.com',
+        provider: 'local',
+        personalization: { memories: false, connectorDefaults: { law: true, slack: true } },
+      });
+      const userId = user._id?.toString() ?? '';
+
+      const updated = await methods.updateUserConnectorDefaults(userId, {
+        slack: false,
+        'google-workspace': true,
+      });
+
+      expect(updated?.personalization?.memories).toBe(false);
+      expect(updated?.personalization?.connectorDefaults).toEqual({
+        law: true,
+        slack: false,
+        'google-workspace': true,
+      });
+    });
+
+    test('returns null for a missing user', async () => {
+      const userId = new mongoose.Types.ObjectId().toString();
+      await expect(methods.updateUserConnectorDefaults(userId, { law: true })).resolves.toBeNull();
+    });
+  });
+
   describe('Email Normalization Edge Cases', () => {
     test('should handle email with multiple spaces', async () => {
       await User.create({

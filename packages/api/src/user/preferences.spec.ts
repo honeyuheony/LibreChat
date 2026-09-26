@@ -1,6 +1,6 @@
 import type { IUser } from '@librechat/data-schemas';
 import type { Request, Response } from 'express';
-import { createUserPreferencesHandler } from './preferences';
+import { createConnectorDefaultsHandler, createUserPreferencesHandler } from './preferences';
 
 interface MockResponse extends Partial<Response> {
   statusCode: number;
@@ -111,6 +111,77 @@ describe('createUserPreferencesHandler', () => {
 
     await handler(
       createRequest({ statefulCodeEnvironment: 'user' }) as Parameters<typeof handler>[0],
+      response as Response,
+    );
+
+    expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('createConnectorDefaultsHandler', () => {
+  it('saves the switched connectors and returns every stored switch', async () => {
+    const updateConnectorDefaults = jest.fn().mockResolvedValue({
+      personalization: { connectorDefaults: { law: true, slack: false } },
+    });
+    const handler = createConnectorDefaultsHandler({ updateConnectorDefaults });
+    const response = createResponse();
+
+    await handler(
+      createRequest({ connectorDefaults: { slack: false } }) as Parameters<typeof handler>[0],
+      response as Response,
+    );
+
+    expect(updateConnectorDefaults).toHaveBeenCalledWith('user-1', { slack: false });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({
+      updated: true,
+      preferences: { connectorDefaults: { law: true, slack: false } },
+    });
+  });
+
+  it.each([
+    ['no switches', {}],
+    ['a list', ['law']],
+    ['a non-boolean value', { law: 'yes' }],
+    ['a name that splits the stored path', { 'a.b': true }],
+    ['a name that reads as an operator', { $set: true }],
+    ['an empty name', { '': true }],
+  ])('rejects %s', async (_label, connectorDefaults) => {
+    const updateConnectorDefaults = jest.fn();
+    const handler = createConnectorDefaultsHandler({ updateConnectorDefaults });
+    const response = createResponse();
+
+    await handler(
+      createRequest({ connectorDefaults }) as Parameters<typeof handler>[0],
+      response as Response,
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(updateConnectorDefaults).not.toHaveBeenCalled();
+  });
+
+  it('requires a signed-in user', async () => {
+    const updateConnectorDefaults = jest.fn();
+    const handler = createConnectorDefaultsHandler({ updateConnectorDefaults });
+    const response = createResponse();
+
+    await handler(
+      createRequest({ connectorDefaults: { law: true } }, false) as Parameters<typeof handler>[0],
+      response as Response,
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(updateConnectorDefaults).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 when the user is gone', async () => {
+    const handler = createConnectorDefaultsHandler({
+      updateConnectorDefaults: jest.fn().mockResolvedValue(null),
+    });
+    const response = createResponse();
+
+    await handler(
+      createRequest({ connectorDefaults: { law: true } }) as Parameters<typeof handler>[0],
       response as Response,
     );
 

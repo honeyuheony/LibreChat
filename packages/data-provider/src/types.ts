@@ -336,6 +336,8 @@ export type TUser = {
   personalization?: {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
+    /** Per-connector "use in new chats" switch. Key = MCP server name. */
+    connectorDefaults?: Record<string, boolean>;
   };
   createdAt: string;
   updatedAt: string;
@@ -348,6 +350,17 @@ export type TUpdateUserPreferencesRequest = {
 export type TUpdateUserPreferencesResponse = {
   updated: boolean;
   preferences: TUpdateUserPreferencesRequest;
+};
+
+/** Connectors to switch for new chats; names left out keep their current value. */
+export type TUpdateConnectorDefaultsRequest = {
+  connectorDefaults: Record<string, boolean>;
+};
+
+export type TUpdateConnectorDefaultsResponse = {
+  updated: boolean;
+  /** Every switch the user has set, after the update. */
+  preferences: Required<TUpdateConnectorDefaultsRequest>;
 };
 
 export type TGetConversationsResponse = {

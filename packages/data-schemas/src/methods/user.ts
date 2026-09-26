@@ -152,6 +152,10 @@ export function createUserMethods(
     userId: string,
     environment: StatefulCodeEnvironment,
   ) => Promise<IUser | null>;
+  updateUserConnectorDefaults: (
+    userId: string,
+    defaults: Record<string, boolean>,
+  ) => Promise<IUser | null>;
 } {
   /**
    * Normalizes email fields in search criteria to lowercase and trimmed.
@@ -658,6 +662,32 @@ export function createUserMethods(
   }
 
   /**
+   * Sets the given connectors' "use in new chats" switches and leaves the others as they
+   * were. Server names become path segments, so callers must reject `.` and a leading `$`.
+   */
+  async function updateUserConnectorDefaults(
+    userId: string,
+    defaults: Record<string, boolean>,
+  ): Promise<IUser | null> {
+    const User = mongoose.models.User;
+    const $set = Object.fromEntries(
+      Object.entries(defaults).map(([serverName, on]) => [
+        `personalization.connectorDefaults.${serverName}`,
+        on,
+      ]),
+    );
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      { $set },
+      { new: true, runValidators: true },
+    ).lean<IUser>();
+    if (updated) {
+      await invalidateAuthUserDocCache(userId);
+    }
+    return updated;
+  }
+
+  /**
    * Search for users by pattern matching on name, email, or username (case-insensitive)
    * @param searchPattern - The pattern to search for
    * @param limit - Maximum number of results to return
@@ -848,6 +878,7 @@ export function createUserMethods(
     updateUserPlugins,
     toggleUserMemories,
     updateUserStatefulCodeEnvironment,
+    updateUserConnectorDefaults,
   };
 }
 

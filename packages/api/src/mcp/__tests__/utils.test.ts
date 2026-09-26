@@ -278,6 +278,15 @@ describe('redactServerSecrets', () => {
     expect(redactServerSecrets(config).category).toBe('분석 데이터');
   });
 
+  it('passes the new-chat default through to clients', () => {
+    const config: ParsedServerConfig = {
+      type: 'sse',
+      url: 'https://example.com/mcp',
+      defaultOn: true,
+    };
+    expect(redactServerSecrets(config).defaultOn).toBe(true);
+  });
+
   it('should strip apiKey.key from admin-sourced keys', () => {
     const config: ParsedServerConfig = {
       type: 'sse',

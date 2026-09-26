@@ -288,6 +288,12 @@ export function updateUserPreferences(
   return request.patch(endpoints.userPreferences(), preferences);
 }
 
+export function updateUserConnectorDefaults(
+  body: t.TUpdateConnectorDefaultsRequest,
+): Promise<t.TUpdateConnectorDefaultsResponse> {
+  return request.patch(endpoints.userConnectorDefaults(), body);
+}
+
 export function getUserBalance(): Promise<t.TBalanceResponse> {
   return request.get(endpoints.balance());
 }
