@@ -114,16 +114,21 @@ export async function loadConversationDocuments({
       continue;
     }
     if (file.type === 'application/pdf' && readPdf) {
-      try {
-        docs.push(prepareDocument({ ...file, pages: await readPdf(file) }));
-        continue;
-      } catch (error) {
-        logger.warn(
-          `[tasks] Could not re-read PDF pages for file ${file.file_id}; using stored text without page numbers: ${(error as Error)?.message}`,
+      let loaded: Promise<TaskDocument> | undefined;
+      const loadPages = () => {
+        loaded ??= readPdf(file).then(
+          (pages) => prepareDocument({ ...file, pages }),
+          (error: Error) => {
+            logger.warn(
+              `[tasks] Could not re-read PDF pages for file ${file.file_id}; using stored text without page numbers: ${error?.message}`,
+            );
+            return prepareDocument({ ...file, parse: 'text_only' });
+          },
         );
-        docs.push(prepareDocument({ ...file, parse: 'text_only' }));
-        continue;
-      }
+        return loaded;
+      };
+      docs.push({ ...prepareDocument(file), loadPages });
+      continue;
     }
     docs.push(prepareDocument(file));
   }

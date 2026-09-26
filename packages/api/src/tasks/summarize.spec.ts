@@ -6,6 +6,7 @@ import {
   UNREAD_DOCUMENT_LINE,
 } from './summarize';
 import { documentName, fakeLLM, makeDoc, memoryCache } from './__tests__/fakes.helper';
+import { prepareDocument } from './documents';
 
 function makeDocs(count: number) {
   return Array.from({ length: count }, (_, i) =>
@@ -80,6 +81,34 @@ describe('summarize documents', () => {
     });
     expect(again.prompts).toHaveLength(0);
     expect(summaries.every((entry) => entry.fromCache)).toBe(true);
+  });
+
+  it('re-reads pages even for cached summaries so evidence keeps its page', async () => {
+    const stored = makeDoc('f1', '문서 1 본문. 위험 요인 1번이 확인되었다.', 'f1.txt');
+    const loadPages = jest.fn(async () =>
+      prepareDocument({
+        file_id: 'f1',
+        filename: 'f1.txt',
+        text: stored.text,
+        pages: ['표지', '문서 1 본문. 위험 요인 1번이 확인되었다.'],
+      }),
+    );
+    const cache = memoryCache();
+    await summarizeDocuments({
+      docs: [{ ...stored, loadPages }],
+      view: '위험',
+      llm: summaryModel().llm,
+      cache,
+    });
+    const [entry] = await summarizeDocuments({
+      docs: [{ ...stored, loadPages }],
+      view: '위험',
+      llm: summaryModel().llm,
+      cache,
+    });
+    expect(entry.fromCache).toBe(true);
+    expect(loadPages).toHaveBeenCalledTimes(2);
+    expect(entry.doc.pageStarts).toEqual([0, 3]);
   });
 
   it('lists every document in 문서별 한 줄, including unreadable ones, in input order', async () => {

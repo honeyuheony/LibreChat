@@ -5,8 +5,8 @@ import type { TaskCache } from './cache';
 import type { TaskLLM } from './llm';
 import { runPerDocument, type RunPerDocumentOptions } from './perDocument';
 import { EXTRACT_PROMPT_VERSION, normalizeKey } from './cache';
+import { hasText, mayHaveText, withPages } from './documents';
 import { locateQuote } from './verify';
-import { hasText } from './documents';
 import { invokeJson } from './llm';
 
 /** 추정값: 모델 입력 한도에 맞춘 문서당 글자 수 상한이며 측정하지 않았다. */
@@ -80,19 +80,31 @@ export async function extractFields({
   const normalized = normalizeFields(fields);
   const outcomes = await runPerDocument(
     docs,
-    async (doc): Promise<ExtractedRow> => {
-      if (!hasText(doc)) {
-        return { doc, cells: normalized.map(() => NONE_CELL), reflected: false, fromCache: false };
+    async (stored): Promise<ExtractedRow> => {
+      const unreflected = (doc: TaskDocument): ExtractedRow => ({
+        doc,
+        cells: normalized.map(() => NONE_CELL),
+        reflected: false,
+        fromCache: false,
+      });
+      if (!mayHaveText(stored)) {
+        return unreflected(stored);
       }
       const key = {
-        fileId: doc.file_id,
-        textHash: doc.textHash,
+        fileId: stored.file_id,
+        textHash: stored.textHash,
         promptVersion: EXTRACT_PROMPT_VERSION,
         model: llm.model,
       };
       const cached = await cache.getCells({ ...key, fields: normalized });
       const missing = normalized.filter((field) => !cached.has(field));
+      // Cached cells already carry their page evidence, so pages are read only for a miss
+      let doc = stored;
       if (missing.length > 0) {
+        doc = await withPages(stored);
+        if (!hasText(doc)) {
+          return unreflected(doc);
+        }
         const reply = await invokeJson(llm, buildExtractionPrompt(doc, missing), signal);
         const fresh = new Map(missing.map((field) => [field, toVerifiedCell(doc, reply[field])]));
         await cache.saveCells({ ...key, cells: fresh });

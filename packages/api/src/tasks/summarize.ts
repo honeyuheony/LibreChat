@@ -7,8 +7,8 @@ import type { TaskLLM } from './llm';
 import { runPerDocument, type RunPerDocumentOptions } from './perDocument';
 import { SUMMARY_PROMPT_VERSION, normalizeKey } from './cache';
 import { locateQuote, numberFootnotes } from './verify';
+import { hasText, withPages } from './documents';
 import { MAX_DOCUMENT_CHARS } from './extract';
-import { hasText } from './documents';
 import { toStats } from './aggregate';
 import { invokeJson } from './llm';
 
@@ -84,7 +84,9 @@ export async function summarizeDocuments({
   const normalizedView = normalizeKey(view);
   const outcomes = await runPerDocument(
     docs,
-    async (doc): Promise<DocumentSummary> => {
+    async (stored): Promise<DocumentSummary> => {
+      // Always the paged text: cached summaries keep only quotes, located again at merge time
+      const doc = await withPages(stored);
       if (!hasText(doc)) {
         return { doc, summary: null, fromCache: false };
       }

@@ -1,6 +1,7 @@
 import { documentName, fakeLLM, makeDoc, memoryCache } from './__tests__/fakes.helper';
 import { countExtractionStats, countTopValues, buildTableResult } from './aggregate';
 import { extractFields, normalizeFields } from './extract';
+import { prepareDocument } from './documents';
 
 const docs = [
   makeDoc('f1', '정세 전망: 긴장 완화가 예상된다.\n전월 대비 12% 증가.'),
@@ -50,6 +51,48 @@ describe('extractFields', () => {
     const rows = await extractFields({ docs, fields: ['전월 대비'], llm: second.llm, cache });
     expect(second.prompts).toHaveLength(0);
     expect(rows.slice(0, 2).map((row) => row.fromCache)).toEqual([true, true]);
+  });
+
+  it('re-reads a document with pages only when a field is missing from the cache', async () => {
+    const stored = makeDoc('p1', '정세 전망: 긴장 완화가 예상된다.', 'p1.pdf');
+    const loadPages = jest.fn(async () =>
+      prepareDocument({
+        file_id: 'p1',
+        filename: 'p1.pdf',
+        text: stored.text,
+        pages: ['표지', '정세 전망: 긴장 완화가 예상된다.'],
+      }),
+    );
+    const pdf = { ...stored, loadPages };
+    const reply = () => ({
+      '정세 전망': { value: '긴장 완화', quote: '긴장 완화가 예상된다' },
+      위험도: { value: null, quote: null },
+    });
+    const cache = memoryCache();
+    const first = fakeLLM(reply);
+    const [row] = await extractFields({
+      docs: [pdf],
+      fields: ['정세 전망'],
+      llm: first.llm,
+      cache,
+    });
+    expect(loadPages).toHaveBeenCalledTimes(1);
+    expect(first.prompts[0]).toContain('표지');
+    expect(row.cells[0]).toMatchObject({ status: 'ok', evidence: { page: 2 } });
+
+    const second = fakeLLM(reply);
+    const [cached] = await extractFields({
+      docs: [{ ...stored, loadPages }],
+      fields: ['정세 전망'],
+      llm: second.llm,
+      cache,
+    });
+    expect(loadPages).toHaveBeenCalledTimes(1);
+    expect(cached).toMatchObject({ fromCache: true, reflected: true });
+    expect(cached.cells[0]).toMatchObject({ evidence: { page: 2 } });
+
+    await extractFields({ docs: [pdf], fields: ['정세 전망', '위험도'], llm: second.llm, cache });
+    expect(loadPages).toHaveBeenCalledTimes(2);
   });
 
   it('asks the model only for fields missing from the cache', async () => {

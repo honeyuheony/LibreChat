@@ -10,6 +10,11 @@ export interface TaskDocument {
   parse: 'ok' | 'text_only';
   /** Start offset of each page in `text`; only PDFs have it. */
   pageStarts?: number[];
+  /**
+   * Re-reads the source with page structure (PDFs). Until called, `text` is the stored text,
+   * so a document whose results are all cached is never downloaded.
+   */
+  loadPages?: () => Promise<TaskDocument>;
 }
 
 export interface PrepareDocumentInput {
@@ -63,4 +68,13 @@ export function prepareDocument(input: PrepareDocumentInput): TaskDocument {
 
 export function hasText(doc: TaskDocument): boolean {
   return doc.text.trim().length > 0;
+}
+
+/** The stored text can be empty while the re-read pages are not, so both count as readable. */
+export function mayHaveText(doc: TaskDocument): boolean {
+  return hasText(doc) || doc.loadPages != null;
+}
+
+export async function withPages(doc: TaskDocument): Promise<TaskDocument> {
+  return doc.loadPages ? doc.loadPages() : doc;
 }

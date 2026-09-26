@@ -42,7 +42,21 @@ describe('loadConversationDocuments', () => {
     });
     expect(docs.map((doc) => doc.file_id)).toEqual(['b', 'a', 'new']);
     expect(env.queries).toEqual([{ conversationId: 'c1', user: 'u1' }]);
-    expect(docs[0].pageStarts).toEqual([0, 3]);
+    expect((await docs[0].loadPages?.())?.pageStarts).toEqual([0, 3]);
+  });
+
+  it('does not download a PDF until its pages are asked for, and then only once', async () => {
+    const readPdf = jest.fn(async () => ['1쪽', '2쪽']);
+    const [pdf] = await loadConversationDocuments({
+      userId: 'u1',
+      conversationId: 'c1',
+      fileIds: ['b'],
+      ...deps(readPdf),
+    });
+    expect(readPdf).not.toHaveBeenCalled();
+    expect(pdf.text).toBe('나');
+    await Promise.all([pdf.loadPages?.(), pdf.loadPages?.()]);
+    expect(readPdf).toHaveBeenCalledTimes(1);
   });
 
   it('lets file_ids narrow the conversation files but never add others', async () => {
@@ -56,12 +70,13 @@ describe('loadConversationDocuments', () => {
   });
 
   it('hashes a PDF the same way whether or not its pages are re-read', async () => {
-    const [withPages] = await loadConversationDocuments({
+    const [deferred] = await loadConversationDocuments({
       userId: 'u1',
       conversationId: 'c1',
       fileIds: ['b'],
       ...deps(async () => ['1쪽', '2쪽']),
     });
+    const withPages = (await deferred.loadPages?.()) ?? deferred;
     const [storedOnly] = await loadConversationDocuments({
       userId: 'u1',
       conversationId: 'c1',
@@ -80,7 +95,8 @@ describe('loadConversationDocuments', () => {
         throw new Error('broken pdf');
       }),
     });
-    expect(docs[0]).toMatchObject({ file_id: 'b', text: '나', parse: 'text_only' });
-    expect(docs[0].pageStarts).toBeUndefined();
+    const loaded = await docs[0].loadPages?.();
+    expect(loaded).toMatchObject({ file_id: 'b', text: '나', parse: 'text_only' });
+    expect(loaded?.pageStarts).toBeUndefined();
   });
 });
