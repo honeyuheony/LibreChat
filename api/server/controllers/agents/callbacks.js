@@ -32,6 +32,7 @@ const {
   getToolInputValidationDetails,
   captureSubagentIdentity,
   collectToolCallIds,
+  TASK_RESULT_ARTIFACT,
 } = require('@librechat/api');
 const { processFileCitations } = require('~/server/services/Files/Citations');
 const { processCodeOutput, runPreviewFinalize } = require('~/server/services/Files/Code/process');
@@ -1065,6 +1066,29 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       );
     }
 
+    if (output.artifact[TASK_RESULT_ARTIFACT]) {
+      artifactPromises.push(
+        (async () => {
+          const attachment = {
+            type: TASK_RESULT_ARTIFACT,
+            ...getAttachmentOwnership(metadata),
+            messageId: metadata.run_id,
+            toolCallId: output.tool_call_id,
+            conversationId: metadata.thread_id,
+            [TASK_RESULT_ARTIFACT]: output.artifact[TASK_RESULT_ARTIFACT],
+          };
+          if (!streamId && !res.headersSent) {
+            return attachment;
+          }
+          writeAttachment(res, streamId, attachment, jobCreatedAt);
+          return attachment;
+        })().catch((error) => {
+          logger.error('Error processing task result artifact:', error);
+          return null;
+        }),
+      );
+    }
+
     if (output.artifact.content) {
       /** @type {FormattedContent[]} */
       const content = output.artifact.content;
@@ -1419,6 +1443,26 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
           return attachment;
         })().catch((error) => {
           logger.error('Error processing memory artifact content:', error);
+          return null;
+        }),
+      );
+    }
+
+    if (output.artifact[TASK_RESULT_ARTIFACT]) {
+      artifactPromises.push(
+        (async () => {
+          const attachment = {
+            type: TASK_RESULT_ARTIFACT,
+            toolCallId: output.tool_call_id,
+            ...getAttachmentOwnership(metadata),
+            [TASK_RESULT_ARTIFACT]: output.artifact[TASK_RESULT_ARTIFACT],
+          };
+          if (res.headersSent && !res.writableEnded) {
+            writeResponsesAttachment(res, tracker, attachment, metadata);
+          }
+          return attachment;
+        })().catch((error) => {
+          logger.error('Error processing task result artifact:', error);
           return null;
         }),
       );

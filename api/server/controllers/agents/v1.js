@@ -47,6 +47,7 @@ const {
 const {
   Time,
   Tools,
+  TaskTools,
   SkillsScope,
   CacheKeys,
   Constants,
@@ -94,6 +95,7 @@ const systemTools = {
   [Tools.file_search]: true,
   [Tools.web_search]: true,
   [Tools.memory]: true,
+  ...Object.fromEntries(Object.values(TaskTools).map((name) => [name, true])),
 };
 
 const MAX_SEARCH_LEN = 100;

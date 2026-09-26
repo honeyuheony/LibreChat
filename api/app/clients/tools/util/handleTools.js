@@ -1,3 +1,4 @@
+const { v4 } = require('uuid');
 const { logger, getTenantId } = require('@librechat/data-schemas');
 const { Calculator, createSearchTool, createCodeExecutionTool } = require('@librechat/agents');
 const {
@@ -26,15 +27,23 @@ const {
   buildWebSearchDynamicContext,
   codeExecutionAuthHeaders,
   resolveCodeExecutionContext,
+  sendEvent,
+  isTaskToolName,
+  createTaskTool,
+  getStorageMetadata,
+  createTaskToolDeps,
+  GenerationJobManager,
 } = require('@librechat/api');
 const {
   AuthType,
   Tools,
   Constants,
   Permissions,
+  FileContext,
   EToolResources,
   PermissionTypes,
   AgentCapabilities,
+  TASK_PROGRESS_EVENT,
 } = require('librechat-data-provider');
 const {
   availableTools,
@@ -68,7 +77,80 @@ const { getUserPluginAuthValue } = require('~/server/services/PluginService');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { getMCPServerTools, checkCapability } = require('~/server/services/Config');
 const { getMCPServersRegistry } = require('~/config');
-const { getRoleByName, setMemory, deleteMemory, getFormattedMemories } = require('~/models');
+const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { getRetentionExpiry } = require('~/server/services/Files/retention');
+const { getFileStrategy } = require('~/server/utils/getFileStrategy');
+const {
+  getFiles,
+  createFile,
+  getUserKey,
+  getMessages,
+  getRoleByName,
+  setMemory,
+  deleteMemory,
+  getUserKeyValues,
+  getFormattedMemories,
+} = require('~/models');
+const { TaskExtraction, TaskSummary, TaskResult } = require('~/db/models');
+
+/**
+ * Stores a task output file (the report HWPX) as a message attachment the download route serves.
+ * @param {ServerRequest} req
+ * @param {{ buffer: Buffer, filename: string, type: string }} file
+ * @returns {Promise<{ file_id: string, filename: string }>}
+ */
+const saveTaskFile = async (req, { buffer, filename, type }) => {
+  const file_id = v4();
+  const source = getFileStrategy(req.config, { isImage: false });
+  const { saveBuffer } = getStrategyFunctions(source);
+  const filepath = await saveBuffer({
+    userId: req.user.id,
+    fileName: `${file_id}__${filename}`,
+    buffer,
+    basePath: 'uploads',
+    tenantId: req.user.tenantId,
+  });
+  const file = await createFile(
+    {
+      user: req.user.id,
+      file_id,
+      bytes: buffer.length,
+      filepath,
+      ...getStorageMetadata({ filepath, source }),
+      filename,
+      context: FileContext.message_attachment,
+      source,
+      type,
+      conversationId: req.body?.conversationId,
+      ...(await getRetentionExpiry(req)),
+      tenantId: req.user.tenantId,
+    },
+    true,
+  );
+  return { file_id: file.file_id, filename: file.filename };
+};
+
+/**
+ * Streams task progress to the client like other tool events; a failed emit never fails the task.
+ * @param {LoadToolOptions} options
+ */
+const createTaskProgressEmitter = (options) => {
+  const streamId = options.req?._resumableStreamId || null;
+  return async (data) => {
+    const event = { event: TASK_PROGRESS_EVENT, data };
+    try {
+      if (streamId) {
+        await GenerationJobManager.emitChunk(streamId, event, {
+          expectedCreatedAt: options.jobCreatedAt,
+        });
+      } else if (options.res && !options.res.writableEnded) {
+        sendEvent(options.res, event);
+      }
+    } catch (error) {
+      logger.warn('[handleTools] Failed to emit task progress:', error?.message ?? error);
+    }
+  };
+};
 
 /**
  * Validates the availability and authentication of tools for a user based on environment variables or user-specific plugin authentication values.
@@ -479,6 +561,22 @@ const loadTools = async ({
       continue;
     } else if (tool === ASK_USER_QUESTION_TOOL_NAME) {
       requestedTools[tool] = async () => createAskUserQuestionTool();
+      continue;
+    } else if (isTaskToolName(tool)) {
+      requestedTools[tool] = async () =>
+        createTaskTool(
+          tool,
+          createTaskToolDeps({
+            req: options.req,
+            agent: agent ?? { endpoint, model },
+            db: { getFiles, getMessages, getUserKey, getUserKeyValues },
+            models: { TaskExtraction, TaskSummary, TaskResult },
+            getDownloadStream: (file) =>
+              getStrategyFunctions(file.source).getDownloadStream(options.req, file.filepath),
+            saveFile: (file) => saveTaskFile(options.req, file),
+            emitProgress: createTaskProgressEmitter(options),
+          }),
+        );
       continue;
     } else if (tool === SET_MEMORY_TOOL_NAME || tool === DELETE_MEMORY_TOOL_NAME) {
       requestedTools[tool] = () =>

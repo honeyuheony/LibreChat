@@ -67,6 +67,7 @@ const {
 const {
   Time,
   Tools,
+  TaskTools,
   Constants,
   CacheKeys,
   ErrorTypes,
@@ -741,6 +742,7 @@ const nativeTools = new Set([
   Tools.file_search,
   Tools.web_search,
   Tools.memory,
+  ...Object.values(TaskTools),
 ]);
 
 const mcpServerPinPrefix = `${Constants.mcp_server}${Constants.mcp_delimiter}`;
