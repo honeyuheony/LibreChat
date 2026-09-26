@@ -47,8 +47,6 @@ module.exports = {
   resolver: '<rootDir>/jest.resolver.cjs',
   transform: {
     '\\.[jt]sx?$': 'babel-jest',
-    /** The one ESM-only `.mjs` package in the markdown pipeline (via remark-cjk-friendly). */
-    'mdast-util-to-markdown-cjk-friendly/.+\\.mjs$': 'babel-jest',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       'jest-file-loader',
   },

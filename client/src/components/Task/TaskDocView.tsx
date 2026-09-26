@@ -2,12 +2,12 @@ import { useCallback, useMemo, useState } from 'react';
 import remarkGfm from 'remark-gfm';
 import copy from 'copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
-import remarkCjkFriendly from 'remark-cjk-friendly';
 import { useToastContext } from '@librechat/client';
 import type { TaskDocResult } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import { downloadTaskReportFile } from '~/data-provider/Tasks/queries';
 import { countTaskFootnotes, formatTaskTime } from './taskState';
+import { remarkCjkEmphasis } from '~/utils/cjkEmphasis';
 import { useAuthContext, useLocalize } from '~/hooks';
 import TaskFootnote from './TaskFootnote';
 
@@ -104,7 +104,7 @@ export default function TaskDocView({ result }: { result: TaskDocResult }) {
         )}
       </div>
       <div className="markdown prose dark:prose-invert min-h-0 flex-1 overflow-auto text-sm">
-        <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]} components={components}>
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkEmphasis]} components={components}>
           {linkFootnotes(result.body)}
         </ReactMarkdown>
       </div>

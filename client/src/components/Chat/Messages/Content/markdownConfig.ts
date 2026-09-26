@@ -5,7 +5,6 @@ import supersub from 'remark-supersub';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import remarkDirective from 'remark-directive';
-import remarkCjkFriendly from 'remark-cjk-friendly';
 import type { PluggableList } from 'unified';
 import type { ElementType } from 'react';
 import {
@@ -13,8 +12,8 @@ import {
   MCPUIResource,
   MCPUIResourceCarousel,
 } from '~/components/MCPUIResource';
+import { langSubset, remarkApproxTilde, remarkCjkEmphasis, remarkSingleDollarMath } from '~/utils';
 import { Citation, CompositeCitation, HighlightedText } from '~/components/Web/Citation';
-import { langSubset, remarkApproxTilde, remarkSingleDollarMath } from '~/utils';
 import { Artifact, artifactPlugin } from '~/components/Artifacts/Artifact';
 import { code, a, p, img, table } from './MarkdownComponents';
 import { unicodeCitation } from '~/components/Web';
@@ -41,9 +40,7 @@ export const getRemarkPlugins = (latexParsing = true): PluggableList => [
   remarkApproxTilde,
   supersub,
   remarkGfm,
-  /** Lets `**` close after a bracket or period when a Korean particle follows
-   *  (`**3년(2+1년)**이며`), which CommonMark's flanking rule refuses. */
-  remarkCjkFriendly,
+  remarkCjkEmphasis,
   remarkDirective,
   artifactPlugin,
   [remarkMath, { singleDollarTextMath: false }],
