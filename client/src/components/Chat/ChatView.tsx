@@ -21,7 +21,6 @@ import { ChatContext, AddedChatContext, ChatFormProvider, useFileMapContext } fr
 import ApprovalProvider from './Messages/Content/ApprovalContext';
 import { pendingApprovalActionFamily } from './approval/state';
 import { useGetMessagesByConvoId } from '~/data-provider';
-import Footer, { useConfiguredFooter } from './Footer';
 import { AskAnswerHostProvider } from './ask/state';
 import MessagesView from './Messages/MessagesView';
 import LandingSkills from './LandingSkills';
@@ -57,11 +56,6 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
   /** The welcome screen reserves the message column's scrollbar band before any
    *  column exists to measure it (see the column's class list below). */
   useScrollbarGutterSeed();
-
-  /** A conversation carries a footer only for configured content, and the
-   *  composer's clearance has to account for the bar when it does — including
-   *  before the config answers, so a cold load does not jump. */
-  const configuredFooter = useConfiguredFooter();
 
   const methods = useForm<ChatFormValues>({
     defaultValues: { text: '' },
@@ -118,11 +112,9 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
     (!messagesTree || messagesTree.length === 0) &&
     (conversationId === Constants.NEW_CONVO || !conversationId);
 
-  /** A footer bar renders beneath the composer on the welcome screen always, and
-   *  in a conversation when the deployment configured one. The shell already
-   *  carried that answer, so this is the same value before and after the config
-   *  resolves. */
-  const footerBelow = isLandingPage || configuredFooter;
+  /** The AgentHub wireframe has no footer line under the composer on any screen, so
+   *  neither the welcome screen's disclaimer nor a configured footer is drawn. */
+  const footerBelow = false;
   const isNavigating = (!messagesTree || messagesTree.length === 0) && conversationId != null;
   const isProjectLandingPage = isLandingPage && project != null;
 
@@ -226,13 +218,8 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                             className={cn('pt-4', centerFormOnLanding ? 'sm:-mt-24' : 'sm:-mt-6')}
                           />
                         )}
-                        {/* The generic disclaimer is the welcome screen's; a
-                            deployment's own footer, privacy policy and terms
-                            stay with the conversation that always showed them. */}
-                        {!isLandingPage && configuredFooter && <Footer configuredOnly />}
                       </div>
                     </div>
-                    {isLandingPage && <Footer />}
                   </>
                 </TraceSurface>
               </Presentation>
