@@ -63,6 +63,13 @@ describe('TaskDocView', () => {
     expect(screen.queryByText('[^1]', { exact: false })).not.toBeInTheDocument();
   });
 
+  it('bolds a phrase that ends in a bracket right before a Korean particle', () => {
+    const { container } = render(
+      <TaskDocView result={{ ...summary, body: '사업기간은 **3년(2+1년)**이며 연장한다.' }} />,
+    );
+    expect(container.querySelector('strong')?.textContent).toBe('3년(2+1년)');
+  });
+
   /** The footnotes are the evidence; `stats.reflected` counts documents. */
   it('shows the footnote count and time in the footer', () => {
     render(<TaskDocView result={summary} />);

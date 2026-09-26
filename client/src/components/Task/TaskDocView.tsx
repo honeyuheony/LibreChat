@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import remarkGfm from 'remark-gfm';
 import copy from 'copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
+import remarkCjkFriendly from 'remark-cjk-friendly';
 import { useToastContext } from '@librechat/client';
 import type { TaskDocResult } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
@@ -103,7 +104,7 @@ export default function TaskDocView({ result }: { result: TaskDocResult }) {
         )}
       </div>
       <div className="markdown prose dark:prose-invert min-h-0 flex-1 overflow-auto text-sm">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkFriendly]} components={components}>
           {linkFootnotes(result.body)}
         </ReactMarkdown>
       </div>
