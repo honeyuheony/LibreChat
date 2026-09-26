@@ -138,7 +138,7 @@ function serializeSourceMetadata(
 }
 
 /** Converts a skill document to the wire format returned by the API. */
-function serializeSkill(
+export function serializeSkill(
   skill: ISkill & { _id: Types.ObjectId },
   isPublic: boolean | Set<string>,
 ): TSkill {

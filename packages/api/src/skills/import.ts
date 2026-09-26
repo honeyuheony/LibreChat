@@ -633,19 +633,20 @@ function preflightArchiveNames(
   return false;
 }
 
-interface ArchivePersistenceContext {
+export interface SkillFilePersistenceContext {
   readonly userId: string;
   readonly skillId: Types.ObjectId;
   readonly authorId: Types.ObjectId;
   readonly tenantId?: string;
 }
 
-async function persistArchiveFile(
-  req: ServerRequest,
-  deps: ImportSkillDeps,
-  file: ArchiveFileDescriptor,
+/** Saves one bundled file's bytes to storage and records it on the skill; drops the blob if the record fails. */
+export async function persistSkillFile(
+  req: Request,
+  deps: Pick<ImportSkillDeps, 'saveBuffer' | 'upsertSkillFile' | 'deleteFile'>,
+  file: { readonly relativePath: string; readonly filename: string; readonly mimeType: string },
   buffer: Buffer,
-  context: ArchivePersistenceContext,
+  context: SkillFilePersistenceContext,
 ): Promise<void> {
   const fileId = crypto.randomUUID();
   const storageFileName = `${fileId}__${file.filename}`;
@@ -699,7 +700,7 @@ async function persistPreflightedArchiveFiles(
   zip: JSZip,
   files: readonly ArchiveFileDescriptor[],
   limits: ImportLimits,
-  context: ArchivePersistenceContext,
+  context: SkillFilePersistenceContext,
   initialDecompressedBytes = 0,
 ): Promise<ImportFileResult[]> {
   const results: ImportFileResult[] = [];
@@ -734,7 +735,7 @@ async function persistPreflightedArchiveFiles(
       if (buffer.length !== file.bytes) {
         throw new Error('Archive entry changed after content inspection');
       }
-      await persistArchiveFile(req, deps, file, buffer, context);
+      await persistSkillFile(req, deps, file, buffer, context);
       results.push({ path: file.relativePath, status: 'ok' });
     } catch (error) {
       logger.error(`[importSkill] Failed to process file ${file.relativePath}:`, error);
@@ -950,7 +951,7 @@ async function handleZip(
     return res.status(500).json({ error: grant.error });
   }
 
-  const persistenceContext: ArchivePersistenceContext = {
+  const persistenceContext: SkillFilePersistenceContext = {
     userId,
     skillId: skill._id,
     authorId,
@@ -964,7 +965,7 @@ async function handleZip(
       limits,
       {
         onFile: async (archiveFile, buffer) => {
-          await persistArchiveFile(req, deps, archiveFile, buffer, persistenceContext);
+          await persistSkillFile(req, deps, archiveFile, buffer, persistenceContext);
           return false;
         },
       },
