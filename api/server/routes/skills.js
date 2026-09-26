@@ -124,6 +124,26 @@ function resolveSkillStorage(req, { isImage = false } = {}) {
   return { saveBuffer: strategy.saveBuffer, source };
 }
 
+function saveSkillBuffer(req, { userId, buffer, fileName, basePath, isImage, tenantId }) {
+  const requestTenantId = tenantId ?? resolveRequestTenantId(req);
+  const storage = resolveSkillStorage(req, { isImage });
+  return storage
+    .saveBuffer({ userId, buffer, fileName, basePath, tenantId: requestTenantId })
+    .then((filepath) => ({
+      filepath,
+      source: storage.source,
+      ...getStorageMetadata({ filepath, source: storage.source }),
+    }));
+}
+
+function deleteSkillBlob(req, file) {
+  const { deleteFile } = getStrategyFunctions(file.source);
+  if (deleteFile) {
+    return deleteFile(req, file);
+  }
+  return Promise.resolve();
+}
+
 // ---------------------------------------------------------------------------
 // Import handler (zip/md/skill → create skill + files)
 // ---------------------------------------------------------------------------
@@ -135,24 +155,8 @@ const importHandler = createImportHandler({
   getSkillById,
   deleteSkill,
   upsertSkillFile,
-  saveBuffer: (req, { userId, buffer, fileName, basePath, isImage, tenantId }) => {
-    const requestTenantId = tenantId ?? resolveRequestTenantId(req);
-    const storage = resolveSkillStorage(req, { isImage });
-    return storage
-      .saveBuffer({ userId, buffer, fileName, basePath, tenantId: requestTenantId })
-      .then((filepath) => ({
-        filepath,
-        source: storage.source,
-        ...getStorageMetadata({ filepath, source: storage.source }),
-      }));
-  },
-  deleteFile: (req, file) => {
-    const { deleteFile } = getStrategyFunctions(file.source);
-    if (deleteFile) {
-      return deleteFile(req, file);
-    }
-    return Promise.resolve();
-  },
+  saveBuffer: saveSkillBuffer,
+  deleteFile: deleteSkillBlob,
   grantPermission,
 });
 
@@ -300,7 +304,10 @@ router.get('/categories', categoriesHandler);
 // 없어 대상이 아니다(docs/agent-market-plan.md 4.2절의 검수 항목을 통과한 뒤 누른다).
 router.post('/:id/review', checkAdmin, async (req, res) => {
   try {
-    await markSkillReviewed({ skillId: req.params.id, reviewerId: req.user.id }, { updateSkillReview });
+    await markSkillReviewed(
+      { skillId: req.params.id, reviewerId: req.user.id },
+      { updateSkillReview },
+    );
     res.status(200).json({ reviewed: true });
   } catch (error) {
     logger.error('[skills] review failed', error);
