@@ -132,7 +132,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         <Menu.MenuItem onClick={() => setShowFiles(true)} className={itemClassName}>
           <MenuGlyph glyph={GLYPHS.files} />
           <span className="flex-1">{localize('com_nav_my_files')}</span>
-          {usedBytes != null && (
+          {usedBytes != null && usedBytes > 0 && (
             <span className="text-xs text-text-muted">{formatUsedSize(usedBytes)}</span>
           )}
         </Menu.MenuItem>
