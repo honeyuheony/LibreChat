@@ -41,13 +41,13 @@ export function formatConnectedAt(connectedAt: string, now: number, localize: Lo
   });
 }
 
-interface DeskView {
+export interface DeskView {
   labelKey: TranslationKeys;
   tone: PillTone;
   summary: string;
 }
 
-function describeDesk(
+export function describeDesk(
   status: DeskStatusResponse | undefined,
   isError: boolean,
   localize: Localize,

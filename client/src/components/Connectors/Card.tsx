@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Button, Spinner } from '@librechat/client';
-import type { MouseEvent } from 'react';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
-import type { ConnectorAction } from './status';
-import CustomIcon from '~/components/ui/CustomIcon';
+import { actionLabelKeys, primaryActions, runConnectorAction } from './actions';
 import { getConnectorState } from './status';
 import { useLocalize } from '~/hooks';
 import ConnectorFrame from './Frame';
 import ConnectorTools from './Tools';
+import ConnectorIcon from './Icon';
 import StatusPill from './Pill';
 
 export interface ConnectorCardProps {
@@ -16,24 +15,6 @@ export interface ConnectorCardProps {
   statusProps: MCPServerStatusIconProps;
   onConnect: (serverName: string) => void;
   onDisconnect: (serverName: string) => void;
-}
-
-const actionLabelKeys = {
-  connect: 'com_ui_connect',
-  reconnect: 'com_ui_connectors_reconnect',
-  disconnect: 'com_ui_connectors_disconnect',
-  configure: 'com_ui_configure',
-  cancel: 'com_ui_cancel',
-} as const;
-
-const primaryActions = new Set<ConnectorAction>(['connect', 'reconnect']);
-
-export function ConnectorIcon({ server }: { server: MCPServerDefinition }) {
-  const displayName = server.config.title || server.serverName;
-  if (server.config.iconPath) {
-    return <CustomIcon src={server.config.iconPath} className="size-6 object-contain" alt="" />;
-  }
-  return <>{displayName.slice(0, 1).toUpperCase()}</>;
 }
 
 export default function ConnectorCard({
@@ -50,30 +31,6 @@ export default function ConnectorCard({
   const description = server.config.description?.trim();
   const isConnected =
     serverStatus?.connectionState === 'connected' || serverStatus?.requestScoped === true;
-
-  const runAction = (event: MouseEvent<HTMLButtonElement>) => {
-    switch (state.action) {
-      case 'connect':
-      case 'reconnect':
-        if (hasCustomUserVars && !isConnected) {
-          statusProps.onConfigClick(event);
-          return;
-        }
-        onConnect(server.serverName);
-        return;
-      case 'disconnect':
-        onDisconnect(server.serverName);
-        return;
-      case 'configure':
-        statusProps.onConfigClick(event);
-        return;
-      case 'cancel':
-        statusProps.onCancel(event);
-        return;
-      case 'details':
-        setExpanded((open) => !open);
-    }
-  };
 
   const actionLabel =
     state.action === 'details'
@@ -94,7 +51,17 @@ export default function ConnectorCard({
           shape="theme"
           variant={primaryActions.has(state.action) ? 'submit' : 'outline'}
           aria-label={`${displayName} ${actionLabel}`}
-          onClick={runAction}
+          onClick={(event) =>
+            runConnectorAction(event, {
+              action: state.action,
+              serverName: server.serverName,
+              statusProps,
+              isConnected,
+              onConnect,
+              onDisconnect,
+              onDetails: () => setExpanded((open) => !open),
+            })
+          }
         >
           {state.action === 'cancel' && <Spinner className="size-3.5" aria-hidden="true" />}
           {actionLabel}
