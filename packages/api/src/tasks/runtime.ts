@@ -6,7 +6,7 @@ import type { EndpointDbMethods, ServerRequest } from '~/types';
 import type { TaskAgentModel, TaskLLM } from './llm';
 import type { TaskDocument } from './documents';
 import type { TaskToolDeps } from './tools';
-import { resolveDeploymentSkillDirectory } from '~/skills/deployment';
+import { getDeploymentSkillRegistry } from '~/skills/deployment';
 import { createHwpService } from './hwpService';
 import { createMongoTaskCache } from './cache';
 import { prepareDocument } from './documents';
@@ -162,6 +162,18 @@ export interface TaskRuntimeParams {
   emitProgress?: (event: TaskProgressEvent) => void | Promise<void>;
 }
 
+/**
+ * The directory the server loaded deployment skills from at startup. Resolving it again
+ * here would use the process cwd (`/app/api` in the container) instead of the project root.
+ */
+function deploymentSkillDirectory(): string {
+  const directory = getDeploymentSkillRegistry().getDirectory();
+  if (directory == null) {
+    throw new Error('Deployment skills are not loaded, so report templates are unavailable.');
+  }
+  return directory;
+}
+
 /** Wires the task tools to the request: user-scoped files, cache, model and storage. */
 export function createTaskToolDeps(params: TaskRuntimeParams): TaskToolDeps {
   const { req, agent, db, models } = params;
@@ -206,8 +218,7 @@ export function createTaskToolDeps(params: TaskRuntimeParams): TaskToolDeps {
         result,
       });
     },
-    loadTemplate: (templateId) =>
-      loadReportTemplate(templateId, resolveDeploymentSkillDirectory().directory),
+    loadTemplate: (templateId) => loadReportTemplate(templateId, deploymentSkillDirectory()),
     hwp: createHwpService(),
     saveReportFile: ({ buffer, filename }) =>
       params.saveFile({ buffer, filename, type: HWPX_MIME_TYPE }),

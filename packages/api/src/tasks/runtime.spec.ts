@@ -1,5 +1,9 @@
-import type { StoredFile } from './runtime';
-import { loadConversationDocuments } from './runtime';
+import os from 'os';
+import path from 'path';
+import { promises as fs } from 'fs';
+import type { StoredFile, TaskRuntimeParams } from './runtime';
+import { createTaskToolDeps, loadConversationDocuments } from './runtime';
+import { initializeDeploymentSkills } from '~/skills/deployment';
 import { hashText } from './documents';
 
 const files: Array<StoredFile & { user: string }> = [
@@ -98,5 +102,39 @@ describe('loadConversationDocuments', () => {
     const loaded = await docs[0].loadPages?.();
     expect(loaded).toMatchObject({ file_id: 'b', text: '나', parse: 'text_only' });
     expect(loaded?.pageStarts).toBeUndefined();
+  });
+});
+
+describe('createTaskToolDeps loadTemplate', () => {
+  let projectRoot: string;
+
+  beforeEach(async () => {
+    projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'task-runtime-'));
+    const assets = path.join(projectRoot, 'skill', 'hwp-report', 'assets');
+    await fs.mkdir(assets, { recursive: true });
+    await fs.mkdir(path.join(projectRoot, 'api'));
+    await fs.writeFile(
+      path.join(assets, 'slots.json'),
+      JSON.stringify({ title: '보고서', fields: [], slots: [] }),
+    );
+  });
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  });
+
+  it('reads templates from the directory the deployment skills were loaded from, not the cwd', async () => {
+    await initializeDeploymentSkills({ projectRoot, env: {} });
+    // The container starts the server from <root>/api, while skills live in <root>/skill
+    jest.spyOn(process, 'cwd').mockReturnValue(path.join(projectRoot, 'api'));
+    const deps = createTaskToolDeps({
+      req: { user: { id: 'u1' }, body: {} },
+      models: {},
+    } as unknown as TaskRuntimeParams);
+    await expect(deps.loadTemplate('hwp-report')).resolves.toMatchObject({
+      templateId: 'hwp-report',
+      title: '보고서',
+    });
   });
 });
