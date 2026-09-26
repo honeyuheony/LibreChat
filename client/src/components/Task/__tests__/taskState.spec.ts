@@ -76,6 +76,26 @@ describe('findLatestTaskToolCall', () => {
     ).toBe(false);
   });
 
+  /** A finished call carries no `approval` any more, so a reload only has the
+   *  answer the SDK gave in place of running the tool. */
+  it('knows a saved call was stopped at its confirmation from the blocked answer', () => {
+    const call = findLatestTaskToolCall([
+      toolCallMessage({
+        id: 'a',
+        name: 'summarize_documents',
+        output: 'Blocked: Rejected by user',
+      }),
+    ]);
+    expect(call).toMatchObject({ finished: true, hasResult: false, hadApproval: true });
+    expect(resolveTaskSteps(call!, null).map((step) => step.state)).toEqual([
+      'done',
+      'stopped',
+      'todo',
+      'todo',
+      'todo',
+    ]);
+  });
+
   it('returns null when the conversation never called a task tool', () => {
     expect(findLatestTaskToolCall([toolCallMessage({ id: 'a', name: 'web_search' })])).toBeNull();
     expect(findLatestTaskToolCall(undefined)).toBeNull();

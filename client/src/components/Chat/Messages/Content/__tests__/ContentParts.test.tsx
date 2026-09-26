@@ -584,6 +584,35 @@ describe('ContentParts — activity phase state', () => {
     expect(finalPart).toHaveAttribute('data-index', '2');
   });
 
+  it('lifts a task call out of a phase card so its result card stays visible', () => {
+    const skill = {
+      type: ContentTypes.TOOL_CALL,
+      [ContentTypes.TOOL_CALL]: { id: 'skill-1', name: 'load_skill', args: {}, output: 'ok' },
+    } as unknown as TMessageContentParts;
+    const task = {
+      type: ContentTypes.TOOL_CALL,
+      [ContentTypes.TOOL_CALL]: { id: 'task-1', name: 'extract_table', args: {}, output: 'saved' },
+    } as unknown as TMessageContentParts;
+    const phase = {
+      type: ContentTypes.ACTIVITY_LABEL,
+      [ContentTypes.ACTIVITY_LABEL]: 'Built the comparison table',
+      activity_label_type: 'phase',
+      activity_start_index: 0,
+      activity_end_index: 2,
+      activity_count: 2,
+      pending: false,
+    } as unknown as TMessageContentParts;
+
+    render(<ContentParts {...baseProps} content={[skill, task, phase]} />);
+
+    const parent = screen.getByTestId('activity-phase-group');
+    const [skillPart, taskPart] = screen.getAllByTestId(`real-part-${ContentTypes.TOOL_CALL}`);
+    expect(parent).toContainElement(skillPart);
+    expect(parent).not.toContainElement(taskPart);
+    expect(taskPart).toHaveAttribute('data-index', '1');
+    expect(parent.compareDocumentPosition(taskPart)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('keeps a streaming cursor when a completed phase marker is the visible tail', () => {
     const phase = {
       type: ContentTypes.ACTIVITY_LABEL,

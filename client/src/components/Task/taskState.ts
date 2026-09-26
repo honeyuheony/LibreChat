@@ -4,6 +4,7 @@ import type {
   TMessage,
   TaskStats,
   TaskToolName,
+  TaskDocResult,
   TaskProgressEvent,
 } from 'librechat-data-provider';
 import type { TaskStage } from '~/components/Chat/Messages/Content/Task/stages';
@@ -43,6 +44,15 @@ function resultToolCallIds(messages: TMessage[] | undefined): Set<string> {
   return ids;
 }
 
+/**
+ * The SDK answers a rejected call (or one a policy stopped) with `Blocked: <reason>`
+ * instead of running it. A finished call no longer carries its `approval`, so after a
+ * reload this is what says it stopped at its confirmation.
+ */
+export function isBlockedTaskOutput(output: string | null | undefined): boolean {
+  return typeof output === 'string' && /^(?:Error: )?Blocked:/.test(output.trim());
+}
+
 /** The last task tool call in the conversation; the progress section follows only that one. */
 export function findLatestTaskToolCall(messages: TMessage[] | undefined): TaskToolCallState | null {
   let latest: TaskToolCallState | null = null;
@@ -64,7 +74,7 @@ export function findLatestTaskToolCall(messages: TMessage[] | undefined): TaskTo
         awaitingApproval: toolCall.approval != null && !finished,
         finished,
         hasResult: withResult.has(toolCallId),
-        hadApproval: toolCall.approval != null,
+        hadApproval: toolCall.approval != null || isBlockedTaskOutput(toolCall.output),
       };
     }
   }
@@ -93,6 +103,39 @@ export function stoppedStepIndex(
   return Math.max(0, confirmIndex);
 }
 
+/** What a plan list needs to know about its call. */
+export type TaskPlanFacts = Pick<
+  TaskToolCallState,
+  'awaitingApproval' | 'finished' | 'hasResult' | 'hadApproval'
+>;
+
+/**
+ * The step a call's plan stands on and whether it is running or stopped there. A
+ * call that saved its result is past every step; one that returned without a result
+ * (rejected, failed, nothing to work on) stops on the step it reached; otherwise the
+ * furthest of the latest progress event and, while paused, the confirmation step.
+ */
+export function taskPlanPosition(
+  stages: readonly TaskStage[],
+  call: TaskPlanFacts,
+  progress: TaskProgressEvent | null,
+): { current: number; currentState: 'now' | 'stopped' } {
+  if (call.finished && call.hasResult) {
+    return { current: stages.length, currentState: 'now' };
+  }
+  if (call.finished) {
+    return {
+      current: stoppedStepIndex(stages, progress, call.hadApproval),
+      currentState: 'stopped',
+    };
+  }
+  const progressIndex = stages.findIndex((stage) => stage.id === progress?.stage);
+  const confirmIndex = call.awaitingApproval
+    ? stages.findIndex((stage) => stage.id === 'confirm')
+    : -1;
+  return { current: Math.max(0, progressIndex, confirmIndex), currentState: 'now' };
+}
+
 /** States for the plan list: steps before `current` done, `current` in `currentState`. */
 export function stepStates(
   count: number,
@@ -107,34 +150,34 @@ export function stepStates(
   });
 }
 
-/**
- * Where the plan stands. A call that saved its result has every step done; one
- * that returned without a result (rejected, failed, nothing to work on) stops
- * on the step it reached; a call paused on its approval card sits on the second
- * step (field or view confirmation); otherwise the latest progress event names
- * the step, and before any event the first step is current.
- */
+/** The plan list for the panel, placed by the same rule as the message's plan card. */
 export function resolveTaskSteps(
   call: TaskToolCallState,
   progress: TaskProgressEvent | null,
 ): TaskStepView[] {
-  /** The message card's plan list, so both follow the stage ids the server sends. */
   const stages = TASK_STAGES[call.name];
-  let current = 0;
-  let currentState: 'now' | 'stopped' = 'now';
-  if (call.finished && call.hasResult) {
-    current = stages.length;
-  } else if (call.finished) {
-    current = stoppedStepIndex(stages, progress, call.hadApproval);
-    currentState = 'stopped';
-  } else if (call.awaitingApproval) {
-    current = 1;
-  } else if (progress != null) {
-    const index = stages.findIndex((stage) => stage.id === progress.stage);
-    current = index >= 0 ? index : 0;
-  }
+  const { current, currentState } = taskPlanPosition(stages, call, progress);
   const states = stepStates(stages.length, current, currentState);
   return stages.map((stage, index) => ({ ...stage, state: states[index] }));
+}
+
+/**
+ * Whether the call still waits on its confirmation card. Its `approval` stays until
+ * it returns, so a sent decision, or progress already past the confirmation step,
+ * means the run went on.
+ */
+export function isAwaitingTaskApproval(
+  call: TaskToolCallState,
+  progress: TaskProgressEvent | null,
+  decided: boolean,
+): boolean {
+  if (!call.awaitingApproval || decided) {
+    return false;
+  }
+  const stages = TASK_STAGES[call.name];
+  const progressIndex = stages.findIndex((stage) => stage.id === progress?.stage);
+  const confirmIndex = stages.findIndex((stage) => stage.id === 'confirm');
+  return progressIndex <= confirmIndex;
 }
 
 export type TaskOutputKind = 'table' | 'summary' | 'report';
@@ -195,6 +238,11 @@ export function collectTaskOutputs(messages: TMessage[] | undefined): TaskOutput
     }
   }
   return outputs;
+}
+
+/** How many footnotes — the quoted evidence — a summary or report cites. */
+export function countTaskFootnotes(result: Pick<TaskDocResult, 'footnotes'>): number {
+  return new Set(result.footnotes.map((footnote) => footnote.n)).size;
 }
 
 export type TaskFile = { file_id: string; filename: string };

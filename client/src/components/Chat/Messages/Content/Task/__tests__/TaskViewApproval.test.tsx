@@ -1,7 +1,9 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { createStore } from 'jotai';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
 import { createTaskWrapper } from 'test/task-test-utils';
+import { taskDecisionByToolCallId } from '~/store/task';
 import TaskViewApproval from '../TaskViewApproval';
 
 const mockApprovalMutate = jest.fn();
@@ -122,6 +124,21 @@ describe('TaskViewApproval', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
 
     expect(submittedDecision()).toEqual({ tool_call_id: 'call-1', decision: 'reject' });
+  });
+
+  test('records the accepted decision where the task panel reads it', () => {
+    const jotaiStore = createStore();
+    render(<TaskViewApproval approval={approval} toolCallId="call-1" args={{ views }} />, {
+      wrapper: createTaskWrapper({ jotaiStore }),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
+    expect(jotaiStore.get(taskDecisionByToolCallId('call-1'))).toBeNull();
+    act(() => {
+      (mockApprovalMutate.mock.calls[0][1] as { onSuccess: () => void }).onSuccess();
+    });
+
+    expect(jotaiStore.get(taskDecisionByToolCallId('call-1'))).toBe('reject');
   });
 
   test('approves the proposed perspective when the policy does not allow edits', () => {

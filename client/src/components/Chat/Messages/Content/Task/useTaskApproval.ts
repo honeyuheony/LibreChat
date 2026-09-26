@@ -1,6 +1,8 @@
 import { useCallback, useEffect } from 'react';
+import { useSetAtom } from 'jotai';
 import type { Agents } from 'librechat-data-provider';
 import { useApprovalContext, useResumeSubmit } from '../ApprovalContext';
+import { taskDecisionByToolCallId } from '~/store/task';
 
 /**
  * What 「실행」 sends under the server's `allowed_decisions`: an approve when the card
@@ -52,6 +54,14 @@ export default function useTaskApproval(
   const status = getStatus(actionId);
   const locked = status === 'submitting' || status === 'submitted' || status === 'expired';
   const decision = getDecision(actionId, toolCallId)?.decision;
+  const setSentDecision = useSetAtom(taskDecisionByToolCallId(toolCallId));
+
+  /** The task panel reads this to stop saying the call waits for approval. */
+  useEffect(() => {
+    if (status === 'submitted' && decision != null) {
+      setSentDecision(decision);
+    }
+  }, [status, decision, setSentDecision]);
   /** Other calls paused in the same batch that nobody has decided yet. The server takes
    *  the batch whole, so this card's choice is only sent once they are decided too. */
   const decidedIds = new Set(getDecisions(actionId).map((item) => item.tool_call_id));

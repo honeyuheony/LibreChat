@@ -6,8 +6,9 @@ import { useToastContext } from '@librechat/client';
 import type { TaskDocResult } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import { downloadTaskReportFile } from '~/data-provider/Tasks/queries';
+import { countTaskFootnotes, formatTaskTime } from './taskState';
+import { remarkCjkEmphasis } from '~/utils/cjkEmphasis';
 import { useAuthContext, useLocalize } from '~/hooks';
-import { formatTaskTime } from './taskState';
 import TaskFootnote from './TaskFootnote';
 
 const FOOTNOTE_HREF = '#task-fn-';
@@ -103,12 +104,12 @@ export default function TaskDocView({ result }: { result: TaskDocResult }) {
         )}
       </div>
       <div className="markdown prose dark:prose-invert min-h-0 flex-1 overflow-auto text-sm">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkCjkEmphasis]} components={components}>
           {linkFootnotes(result.body)}
         </ReactMarkdown>
       </div>
       <div className="mt-2 flex flex-wrap gap-2.5 text-xs text-text-muted">
-        <span>{localize('com_ui_task_evidence_count', { count: result.stats.reflected })}</span>
+        <span>{localize('com_ui_task_evidence_count', { count: countTaskFootnotes(result) })}</span>
         <span className="ml-auto">{formatTaskTime(result.createdAt)}</span>
       </div>
     </div>

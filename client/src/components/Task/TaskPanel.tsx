@@ -5,43 +5,26 @@ import { useAtom, useAtomValue } from 'jotai';
 import type { TMessage, TaskProgressEvent } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import type { TaskOutput, TaskStepView, TaskToolCallState } from './taskState';
-import type { TranslationKeys } from '~/hooks';
 import {
   collectConversationFiles,
   collectTaskOutputs,
-  findLatestTaskToolCall,
+  countTaskFootnotes,
   formatTaskTime,
-  resolveTaskSteps,
 } from './taskState';
-import { useActiveJobStatus, useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
 import { getAgentServerNames } from '~/components/Chat/Input/useAgentConnectorSelection';
+import useTaskRunState, { TASK_STATUS_DOT, TASK_STATUS_LABEL } from './useTaskRunState';
+import { useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
-import { taskPanelState, taskProgressByToolCallId } from '~/store/task';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { ephemeralAgentByConvoId } from '~/store/agents';
 import { mcpValuesAtomFamily } from '~/store/mcp';
+import { taskPanelState } from '~/store/task';
 import { isEphemeralAgent } from '~/common';
 import TaskDocView from './TaskDocView';
 import { useLocalize } from '~/hooks';
 import TaskTable from './TaskTable';
 import { cn } from '~/utils';
 import store from '~/store';
-
-type PanelStatus = 'wait' | 'run' | 'ok' | 'stopped';
-
-const STATUS_LABEL: Record<PanelStatus, TranslationKeys> = {
-  wait: 'com_ui_convo_awaiting_approval',
-  run: 'com_ui_task_status_running',
-  ok: 'com_ui_task_status_done',
-  stopped: 'com_ui_task_status_stopped',
-};
-
-const STATUS_DOT: Record<PanelStatus, string> = {
-  wait: 'bg-status-error-strong',
-  run: 'bg-status-warning-strong',
-  ok: 'bg-status-success',
-  stopped: 'bg-border-heavy',
-};
 
 /** `doc` and `hwp` are file-kind tags shown as is; only the table tag is a word to translate. */
 const OUTPUT_ICON: Record<TaskOutput['kind'], { label?: string; className: string }> = {
@@ -88,12 +71,15 @@ function Section({
 
 function ProgressSection({
   call,
+  awaiting,
   steps,
   progress,
   open,
   onToggle,
 }: {
   call: TaskToolCallState;
+  /** From `isAwaitingTaskApproval`, not the call's own flag. */
+  awaiting: boolean;
   steps: TaskStepView[];
   progress: TaskProgressEvent | null;
   open: boolean;
@@ -101,7 +87,7 @@ function ProgressSection({
 }) {
   const localize = useLocalize();
   const doneSteps = steps.filter((step) => step.state === 'done').length;
-  const liveProgress = !call.finished && !call.awaitingApproval ? progress : null;
+  const liveProgress = !call.finished && !awaiting ? progress : null;
   const percent =
     liveProgress != null
       ? Math.round((100 * liveProgress.done) / Math.max(1, liveProgress.total))
@@ -153,12 +139,12 @@ function ProgressSection({
             </span>
             <span>
               {localize(step.label)}
-              {step.state === 'now' && liveProgress != null && (
+              {step.state === 'now' && liveProgress?.stage === step.id && (
                 <span className="mt-0.5 block text-xs font-normal text-text-muted">
                   {liveProgress.label} · {liveProgress.done}/{liveProgress.total}
                 </span>
               )}
-              {step.state === 'now' && call.awaitingApproval && (
+              {step.state === 'now' && awaiting && (
                 <span className="mt-0.5 block text-xs font-normal text-text-muted">
                   {localize('com_ui_task_waiting_approval')}
                 </span>
@@ -171,16 +157,27 @@ function ProgressSection({
   );
 }
 
-function outputMeta(output: TaskOutput, localize: ReturnType<typeof useLocalize>) {
-  const meta =
-    output.kind === 'table'
-      ? localize('com_ui_task_output_table_meta', {
-          rows: output.stats?.docs ?? 0,
-          none: output.stats?.none ?? 0,
-        })
-      : localize('com_ui_task_output_doc_meta', { count: output.stats?.reflected ?? 0 });
+/**
+ * The row's detail line. A document's evidence is its footnotes, which only the saved
+ * result holds (its `stats.reflected` counts documents), so that count shows once the
+ * result has loaded — the same fetch the result screen and the message card use.
+ */
+function OutputMeta({ output }: { output: TaskOutput }) {
+  const localize = useLocalize();
+  const { data: result } = useTaskResultQuery(output.kind === 'table' ? null : output.resultId);
+  let meta: string;
+  if (output.kind === 'table') {
+    meta = localize('com_ui_task_output_table_meta', {
+      rows: output.stats?.docs ?? 0,
+      none: output.stats?.none ?? 0,
+    });
+  } else if (result != null && result.kind !== 'table') {
+    meta = localize('com_ui_task_output_doc_meta', { count: countTaskFootnotes(result) });
+  } else {
+    meta = localize('com_ui_task_output_doc');
+  }
   const time = formatTaskTime(output.createdAt);
-  return time ? `${meta} · ${time}` : meta;
+  return <span className="text-xs text-text-muted">{time ? `${meta} · ${time}` : meta}</span>;
 }
 
 function OutputsSection({
@@ -226,7 +223,7 @@ function OutputsSection({
                   </span>
                   <span className="min-w-0 flex-1">
                     <b className="block truncate font-semibold text-text-primary">{output.title}</b>
-                    <span className="text-xs text-text-muted">{outputMeta(output, localize)}</span>
+                    <OutputMeta output={output} />
                   </span>
                   <span className="text-xs text-text-muted">{localize('com_ui_task_open')} ›</span>
                 </button>
@@ -415,26 +412,12 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   const [panel, setPanel] = useAtom(taskPanelState);
   const [sections, setSections] = useState({ progress: true, outputs: true, context: true });
   const conversation = useRecoilValue(store.conversationByIndex(0));
-  const isSubmitting = useRecoilValue(store.isSubmittingFamily(0));
-  const jobStatus = useActiveJobStatus(conversationId);
   const { data: messages } = useGetMessagesByConvoId(conversationId, {
     enabled: false,
     select: selectMessages,
   });
-
-  const call = useMemo(() => findLatestTaskToolCall(messages), [messages]);
+  const { call, progress, steps, awaiting, status } = useTaskRunState(conversationId);
   const outputs = useMemo(() => collectTaskOutputs(messages), [messages]);
-  const progress = useAtomValue(taskProgressByToolCallId(call?.toolCallId ?? ''));
-  const steps = useMemo(() => (call ? resolveTaskSteps(call, progress) : []), [call, progress]);
-
-  let status: PanelStatus = 'ok';
-  if (jobStatus === 'requires_action' || call?.awaitingApproval === true) {
-    status = 'wait';
-  } else if (jobStatus === 'running' || isSubmitting) {
-    status = 'run';
-  } else if (call?.finished === true && !call.hasResult) {
-    status = 'stopped';
-  }
 
   const toggle = (name: keyof typeof sections) => () =>
     setSections((current) => ({ ...current, [name]: !current[name] }));
@@ -451,8 +434,11 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
           {conversation?.title ?? ''}
         </span>
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border-light px-2.5 py-[3px] text-xs font-medium text-text-muted">
-          <span aria-hidden="true" className={cn('size-[7px] rounded-full', STATUS_DOT[status])} />
-          {localize(STATUS_LABEL[status])}
+          <span
+            aria-hidden="true"
+            className={cn('size-[7px] rounded-full', TASK_STATUS_DOT[status])}
+          />
+          {localize(TASK_STATUS_LABEL[status])}
         </span>
         <button
           type="button"
@@ -473,6 +459,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
           {call && (
             <ProgressSection
               call={call}
+              awaiting={awaiting}
               steps={steps}
               progress={progress}
               open={sections.progress}

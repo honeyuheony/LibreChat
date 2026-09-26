@@ -18,6 +18,7 @@ import {
   groupSequentialToolCalls,
 } from '~/utils';
 import {
+  splitTaskToolParts,
   groupActivityPhases,
   lastCursorContentIdx,
   getActivityLabelText,
@@ -902,7 +903,15 @@ const ContentPartsBody = memo(function ContentPartsBody({
              *  further makes the card safe for exactly that content, and
              *  agent runs that produce files are the ones with the longest
              *  lists to fold. */
-            const phaseAttachments = collectPhaseAttachments(segment.content);
+            /** Task calls leave the fold for the same reason files do: their
+             *  card carries the result the run was for. They render right under
+             *  the card, still in the span's order among themselves. */
+            const { kept, hoisted: taskParts } = splitTaskToolParts(
+              segment.content,
+              segment.contentIndices,
+            );
+            const keptIndices = kept.contentIndices.map(absoluteIndexAt);
+            const phaseAttachments = collectPhaseAttachments(kept.content);
             /** A fold summarizes work that is DONE. An unresolved approval is
              *  the run asking the reader for something and blocking until it
              *  gets it — never put that behind a disclosure they have to find.
@@ -919,11 +928,19 @@ const ContentPartsBody = memo(function ContentPartsBody({
                 `phase-awaiting-${cardKey}`,
               );
             }
-            return (
+            const taskCards =
+              taskParts.contentIndices.length > 0
+                ? renderSegment(
+                    taskParts.content,
+                    absoluteIndexAt(taskParts.contentIndices[0]),
+                    taskParts.contentIndices.map(absoluteIndexAt),
+                    `phase-task-${cardKey}`,
+                  )
+                : null;
+            const phaseCard = (
               <ActivityPhaseGroup
-                key={`activity-phase-${cardKey}`}
                 labelPart={segment.labelPart}
-                hasContent={segment.hasContent}
+                hasContent={segment.hasContent && kept.content.some((part) => part != null)}
                 attachments={phaseAttachments}
                 hasPendingApproval={hasPendingApproval}
                 animateEntrance={
@@ -951,15 +968,23 @@ const ContentPartsBody = memo(function ContentPartsBody({
                 }
               >
                 {renderSegment(
-                  segment.content,
+                  kept.content,
                   absoluteIndexAt(segment.startIndex),
-                  segmentIndices,
+                  keptIndices,
                   `phase-content-${cardKey}`,
                   true,
                   ownsCursor,
                   true,
                 )}
               </ActivityPhaseGroup>
+            );
+            /** One element type whether or not a task call has arrived yet, so
+             *  the card is not remounted (and its disclosure reset) when one does. */
+            return (
+              <Fragment key={`activity-phase-${cardKey}`}>
+                {phaseCard}
+                {taskCards}
+              </Fragment>
             );
           })}
           <WorkspaceChanges attachments={workspaceChanges} />

@@ -160,6 +160,25 @@ describe('TaskPlanCard', () => {
     ]);
   });
 
+  test('keeps a cancelled call as a read-only card on the step it was cancelled at', () => {
+    renderPlan({
+      toolName: TaskTools.summarize_documents,
+      args: { views: ['부서장 보고용', '실무 공유용'] },
+      output: 'Blocked: Rejected by user',
+    });
+
+    expect(stepStates().map((state) => state.split(' ')[0])).toEqual([
+      'done',
+      'stopped',
+      'todo',
+      'todo',
+      'todo',
+    ]);
+    const card = screen.getByTestId('task-view-ran');
+    expect(card).toHaveTextContent('com_ui_task_cancelled');
+    expect(card).not.toHaveTextContent('com_ui_task_ran');
+  });
+
   test('stops on the step the progress reached when the call returned without a result', () => {
     const jotaiStore = createStore();
     jotaiStore.set(taskProgressByToolCallId('call-1'), {

@@ -1,7 +1,11 @@
 import { Constants, ContentTypes, ToolCallTypes } from 'librechat-data-provider';
 import type { TMessageContentParts, Agents } from 'librechat-data-provider';
 import type { PartWithIndex } from '~/components/Chat/Messages/Content/ParallelContent';
-import { getBatchActivityLabelPart, getActivityLabelText } from '~/utils/activityLabels';
+import {
+  getBatchActivityLabelPart,
+  getActivityLabelText,
+  isTaskToolCallPart,
+} from '~/utils/activityLabels';
 
 export type GroupedPart =
   | { type: 'single'; part: PartWithIndex }
@@ -73,7 +77,7 @@ function isCommentaryPart(part: TMessageContentParts): boolean {
 function countToolCalls(parts: PartWithIndex[]): number {
   let count = 0;
   for (const { part } of parts) {
-    if (isGroupableToolCall(part)) {
+    if (isGroupableToolCall(part) && !isTaskToolCallPart(part)) {
       count += 1;
     }
   }
@@ -105,6 +109,20 @@ function coversTransferCall(labelPart: TMessageContentParts, allParts: PartWithI
   );
 }
 
+/** Task calls ride after the group their run forms: a completed group collapses,
+ *  and a task card carries the plan, the confirmation and the result. */
+function splitTaskCalls(parts: PartWithIndex[]): {
+  grouped: PartWithIndex[];
+  lifted: PartWithIndex[];
+} {
+  const grouped: PartWithIndex[] = [];
+  const lifted: PartWithIndex[] = [];
+  for (const p of parts) {
+    (isTaskToolCallPart(p.part) ? lifted : grouped).push(p);
+  }
+  return { grouped, lifted };
+}
+
 /**
  * Groups message content for rendering.
  *
@@ -131,10 +149,14 @@ export function groupSequentialToolCalls(parts: PartWithIndex[]): GroupedPart[] 
   const flushWithoutLabel = () => {
     let run: PartWithIndex[] = [];
     const emitRun = () => {
-      const toolCallCount = countToolCalls(run);
-      const hasReasoning = run.some((p) => isReasoningPart(p.part));
+      const { grouped, lifted } = splitTaskCalls(run);
+      const toolCallCount = countToolCalls(grouped);
+      const hasReasoning = grouped.some((p) => isReasoningPart(p.part));
       if (toolCallCount >= 2 || (toolCallCount >= 1 && hasReasoning)) {
-        result.push({ type: 'tool-group', parts: run });
+        result.push({ type: 'tool-group', parts: grouped });
+        for (const p of lifted) {
+          result.push({ type: 'single', part: p });
+        }
       } else {
         for (const p of run) {
           result.push({ type: 'single', part: p });
@@ -190,7 +212,18 @@ export function groupSequentialToolCalls(parts: PartWithIndex[]): GroupedPart[] 
        *  this label's group. */
       currentBlock = currentBlock.slice(0, claimStart);
       flushWithoutLabel();
-      if (claimed.length > 0) {
+      const { grouped, lifted } = splitTaskCalls(claimed);
+      if (lifted.length > 0) {
+        /** The label heads the other calls of its batch; a batch of nothing
+         *  but the task call leaves it nothing to head, and the card itself
+         *  already says what ran. */
+        if (countToolCalls(grouped) > 0) {
+          result.push({ type: 'tool-group', parts: grouped, labelPart: item });
+        } else {
+          grouped.forEach((p) => result.push({ type: 'single', part: p }));
+        }
+        lifted.forEach((p) => result.push({ type: 'single', part: p }));
+      } else if (claimed.length > 0) {
         result.push({ type: 'tool-group', parts: claimed, labelPart: item });
       } else if (!coversTransferCall(item.part, parts)) {
         /** Orphan label (block parts hidden/filtered): renders standalone —

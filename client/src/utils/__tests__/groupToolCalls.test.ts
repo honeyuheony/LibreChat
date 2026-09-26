@@ -307,3 +307,45 @@ describe('groupSequentialToolCalls reasoning transparency', () => {
     expect(result.map((g) => g.type)).toEqual(['single', 'single']);
   });
 });
+
+describe('groupSequentialToolCalls with task tools', () => {
+  const taskCall = (id: string, name = 'extract_table'): TMessageContentParts =>
+    ({
+      type: ContentTypes.TOOL_CALL,
+      [ContentTypes.TOOL_CALL]: { id, name, args: '{}', output: 'saved' },
+    }) as unknown as TMessageContentParts;
+
+  const groupedIndices = (grouped: ReturnType<typeof groupSequentialToolCalls>) =>
+    grouped.map((group) =>
+      group.type === 'single' ? group.part.idx : group.parts.map((part) => part.idx),
+    );
+
+  /** A task call's card carries the result the reader asked for, and a completed
+   *  group collapses — so the card rides after the group it would have joined. */
+  it('keeps a task call out of the labeled group its batch forms', () => {
+    const grouped = groupSequentialToolCalls(
+      withIndex([toolCall('skill'), taskCall('task'), label('Ran 2 actions')]),
+    );
+
+    expect(groupedIndices(grouped)).toEqual([[0], 1]);
+    expect(grouped[0]).toMatchObject({ type: 'tool-group', labelPart: { idx: 2 } });
+  });
+
+  it('keeps a task call out of an unlabeled group', () => {
+    const grouped = groupSequentialToolCalls(
+      withIndex([
+        think('picking a skill'),
+        toolCall('skill'),
+        taskCall('task', 'summarize_documents'),
+      ]),
+    );
+
+    expect(groupedIndices(grouped)).toEqual([[0, 1], 2]);
+  });
+
+  it('drops a label that covered only the task call', () => {
+    const grouped = groupSequentialToolCalls(withIndex([taskCall('task'), label('Ran 1 action')]));
+
+    expect(groupedIndices(grouped)).toEqual([0]);
+  });
+});

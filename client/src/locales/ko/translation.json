@@ -3302,6 +3302,7 @@
   "com_ui_task_more_rows": "… {{count}}행",
   "com_ui_task_needs_review": "확인 필요",
   "com_ui_task_none_count": "값 없음 {{count}}",
+  "com_ui_task_output_doc": "문서",
   "com_ui_task_output_doc_meta": "문서 · 근거 {{count}}개",
   "com_ui_task_output_table_meta": "표 · {{rows}}행 · 값 없음 {{none}}",
   "com_ui_task_outputs": "산출물",

@@ -8,6 +8,7 @@ import {
   lastVisibleContentIdx,
   offsetActivityPhaseBoundary,
   findActivityLabelMessageIndex,
+  splitTaskToolParts,
 } from '../activityLabels';
 
 const buildMessage = (content: TMessage['content']): TMessage =>
@@ -822,6 +823,23 @@ describe('groupActivityPhases — what a fold may not swallow', () => {
     expect(groupActivityPhases([...batch(1), ...batch(2)])).toBeUndefined();
   });
 
+  it('ends the fold at a task call, whose card carries the result', () => {
+    const segments = groupActivityPhases([
+      toolPart('t1'),
+      childLabel('Read the config'),
+      toolPart('t2'),
+      childLabel('Checked the callers'),
+      toolPart('task', 'extract_table'),
+      childLabel('Built the table'),
+    ]);
+
+    expect(foldOf(segments)?.contentIndices).toEqual([0, 1, 2, 3]);
+    const folded = segments?.flatMap((segment) =>
+      segment.type === 'phase' ? segment.contentIndices : [],
+    );
+    expect(folded).not.toContain(4);
+  });
+
   it('resets the claim at a blank reservation, as the grouping does', () => {
     /** The blank label closes the first batch's claim, so the filled label
      *  after it claims nothing and heads no group. */
@@ -858,5 +876,33 @@ describe('findActivityLabelMessageIndex', () => {
 
   it('ignores a placeholder id that names a user message', () => {
     expect(findActivityLabelMessageIndex([user, older], event, ['user-1'])).toBe(-1);
+  });
+});
+
+describe('splitTaskToolParts', () => {
+  const call = (id: string, name: string): TMessageContentParts =>
+    ({
+      type: ContentTypes.TOOL_CALL,
+      tool_call: { id, name, args: '{}', output: 'ok' },
+    }) as unknown as TMessageContentParts;
+
+  /** A phase card folds shut once it settles; the task card inside it holds the
+   *  result, so it is lifted out and rendered under the card instead. */
+  it('lifts task calls out of a phase span and keeps the rest in order', () => {
+    const split = splitTaskToolParts(
+      [call('skill', 'load_skill'), call('task', 'summarize_documents'), undefined],
+      [4, 5, 6],
+    );
+
+    expect(split.kept.contentIndices).toEqual([4, 6]);
+    expect(split.hoisted.contentIndices).toEqual([5]);
+    expect(split.hoisted.content[0]).toMatchObject({ tool_call: { id: 'task' } });
+  });
+
+  it('hoists nothing from a span without task calls', () => {
+    const split = splitTaskToolParts([call('a', 'web_search')], [0]);
+
+    expect(split.kept.contentIndices).toEqual([0]);
+    expect(split.hoisted.contentIndices).toEqual([]);
   });
 });

@@ -8,6 +8,11 @@ import {
   Permissions,
 } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
+import useTaskRunState, {
+  TASK_STATUS_DOT,
+  TASK_STATUS_LABEL,
+} from '~/components/Task/useTaskRunState';
 import { useGetMessagesByConvoId, useGetStartupConfig } from '~/data-provider';
 import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
 import ConversationTitleMenu from './Menus/ConversationTitleMenu';
@@ -57,6 +62,16 @@ function Header({
     enabled: false,
     select: countAttachedFiles,
   });
+
+  /** A conversation that ran a task tool shows the task panel's status, so the two
+   *  never disagree (a cancelled task read 「완료」 here and 「중단됨」 there). */
+  const task = useTaskRunState(isNewChat ? '' : routeConversationId);
+  let statusDot = isSubmitting ? 'bg-amber-500' : 'bg-green-600';
+  let statusLabel: TranslationKeys = isSubmitting ? 'com_ui_convo_generating' : 'com_ui_convo_done';
+  if (task.call != null) {
+    statusDot = TASK_STATUS_DOT[task.status];
+    statusLabel = TASK_STATUS_LABEL[task.status];
+  }
 
   const interfaceConfig = useMemo(
     () => startupConfig?.interface ?? defaultInterface,
@@ -116,14 +131,8 @@ function Header({
         )}
         {!isNewChat && (
           <span className="hidden items-center gap-1.5 text-text-tertiary md:flex">
-            <span
-              aria-hidden="true"
-              className={cn(
-                'size-[7px] rounded-full',
-                isSubmitting ? 'bg-amber-500' : 'bg-green-600',
-              )}
-            />
-            {localize(isSubmitting ? 'com_ui_convo_generating' : 'com_ui_convo_done')}
+            <span aria-hidden="true" className={cn('size-[7px] rounded-full', statusDot)} />
+            {localize(statusLabel)}
           </span>
         )}
         <div className="hidden items-center gap-2 md:flex">

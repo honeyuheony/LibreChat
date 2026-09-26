@@ -30,9 +30,16 @@ export function viewLabel(view: string, localize: ReturnType<typeof useLocalize>
  * `args` come from the saved tool call, rewritten on completion with the arguments
  * the tool actually got, so `view` is the user's pick rather than the model's.
  */
-export function TaskViewRan({ args }: { args: Record<string, unknown> }) {
+export function TaskViewRan({
+  args,
+  cancelled = false,
+}: {
+  args: Record<string, unknown>;
+  /** Cancelled at this card: nothing was picked to run with. */
+  cancelled?: boolean;
+}) {
   const localize = useLocalize();
-  const picked = typeof args.view === 'string' ? args.view : null;
+  const picked = !cancelled && typeof args.view === 'string' ? args.view : null;
   const offered = stringList(args.views);
   const views = offered.length > 0 ? offered : [...DEFAULT_VIEW_VALUES];
   if (picked != null && !views.includes(picked)) {
@@ -47,7 +54,9 @@ export function TaskViewRan({ args }: { args: Record<string, unknown> }) {
             <TaskChip key={view} label={viewLabel(view, localize)} on={view === picked} disabled />
           ))}
         </div>
-        <p className="mt-2.5 text-sm text-text-secondary">{localize('com_ui_task_ran')}</p>
+        <p className="mt-2.5 text-sm text-text-secondary">
+          {localize(cancelled ? 'com_ui_task_cancelled' : 'com_ui_task_ran')}
+        </p>
       </div>
     </div>
   );

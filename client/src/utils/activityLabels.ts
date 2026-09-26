@@ -1,4 +1,4 @@
-import { Constants, ContentTypes } from 'librechat-data-provider';
+import { Constants, ContentTypes, TaskTools } from 'librechat-data-provider';
 import type { TMessage, TActivityLabelEvent, TMessageContentParts } from 'librechat-data-provider';
 import { findResponseMessageIndex } from '~/utils/steer';
 import { hasParallelLanes } from '~/utils/lanes';
@@ -177,6 +177,18 @@ const ACTIVITY_BLOCK_TYPES = new Set<string>([
   ContentTypes.AGENT_UPDATE,
 ]);
 
+const TASK_TOOL_NAMES = new Set<string>(Object.values(TaskTools));
+
+/** True for an `extract_table`, `summarize_documents` or `write_report` call. Their
+ *  card holds the plan, the confirmation and the result, so no fold may hide it. */
+export function isTaskToolCallPart(part: TMessageContentParts | undefined): boolean {
+  if (part?.type !== ContentTypes.TOOL_CALL) {
+    return false;
+  }
+  const name = (part[ContentTypes.TOOL_CALL] as { name?: string } | undefined)?.name;
+  return name != null && TASK_TOOL_NAMES.has(name);
+}
+
 /**
  * True at a hard UI boundary — where a fold has to stop.
  *
@@ -187,12 +199,16 @@ const ACTIVITY_BLOCK_TYPES = new Set<string>([
  * the server's own 200-character rule would let through. Long commentary ends
  * a fold too, matching `SUBSTANTIAL_TEXT_CHARS`, so a card cannot swallow an
  * essay. Steers and existing phase markers end one because the server says so.
+ * A task call ends one too: its card holds the result the run was for.
  */
 function isFoldBoundaryPart(part: TMessageContentParts | undefined): boolean {
   if (part == null) {
     return false;
   }
   if (isPhaseActivityLabel(getActivityLabelPart(part))) {
+    return true;
+  }
+  if (isTaskToolCallPart(part)) {
     return true;
   }
   if (part.type === ContentTypes.TEXT) {
@@ -405,6 +421,31 @@ function synthesizeActivityFolds(
   flushRun();
   flushPending();
   return folded ? segments : [segment];
+}
+
+type PartSlice = {
+  content: Array<TMessageContentParts | undefined>;
+  contentIndices: number[];
+};
+
+/**
+ * Splits a phase span into what its card folds and the task calls lifted out of it.
+ * A phase card collapses once it settles, and a task card inside it would take the
+ * result the reader asked for along with it; like the span's attachments, those
+ * cards render under the header instead.
+ */
+export function splitTaskToolParts(
+  content: Array<TMessageContentParts | undefined>,
+  contentIndices: number[],
+): { kept: PartSlice; hoisted: PartSlice } {
+  const kept: PartSlice = { content: [], contentIndices: [] };
+  const hoisted: PartSlice = { content: [], contentIndices: [] };
+  content.forEach((part, position) => {
+    const target = isTaskToolCallPart(part) ? hoisted : kept;
+    target.content.push(part);
+    target.contentIndices.push(contentIndices[position]);
+  });
+  return { kept, hoisted };
 }
 
 /**

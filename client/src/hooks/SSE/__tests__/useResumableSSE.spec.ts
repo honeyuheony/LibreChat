@@ -712,6 +712,34 @@ describe('useResumableSSE', () => {
     unmount();
   });
 
+  it('marks its job as waiting for approval when the run pauses', async () => {
+    const chatHelpers = buildChatHelpers();
+    const { unmount } = renderHook(() => useResumableSSE(buildSubmission(), chatHelpers));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const sse = getLastSSE();
+    await act(async () => {
+      sse._emit('message', {
+        data: JSON.stringify({
+          event: 'on_pending_action',
+          data: {
+            actionId: 'action-1',
+            payload: { type: 'tool_approval', action_requests: [] },
+          },
+        }),
+      });
+    });
+
+    const writes = activeJobsWrites();
+    expect(writes[writes.length - 1].jobs).toEqual([
+      { id: 'other-convo', status: 'requires_action' },
+      { id: 'stream-123', status: 'requires_action' },
+    ]);
+    unmount();
+  });
+
   it('claims parked steers and writes a non-completed run end on 404', async () => {
     const parked = [{ steerId: 'p1', text: 'parked words', createdAt: 1 }];
     mockFetchStreamStatus.mockResolvedValue({ active: false, unrecoveredSteers: parked });
