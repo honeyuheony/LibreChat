@@ -5,44 +5,21 @@ import { useAtom, useAtomValue } from 'jotai';
 import type { TMessage, TaskProgressEvent } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import type { TaskOutput, TaskStepView, TaskToolCallState } from './taskState';
-import type { TranslationKeys } from '~/hooks';
-import {
-  collectConversationFiles,
-  collectTaskOutputs,
-  findLatestTaskToolCall,
-  formatTaskTime,
-  resolveTaskSteps,
-  isAwaitingTaskApproval,
-} from './taskState';
-import { useActiveJobStatus, useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
-import { taskDecisionByToolCallId, taskPanelState, taskProgressByToolCallId } from '~/store/task';
+import { collectConversationFiles, collectTaskOutputs, formatTaskTime } from './taskState';
 import { getAgentServerNames } from '~/components/Chat/Input/useAgentConnectorSelection';
+import useTaskRunState, { TASK_STATUS_DOT, TASK_STATUS_LABEL } from './useTaskRunState';
+import { useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { ephemeralAgentByConvoId } from '~/store/agents';
 import { mcpValuesAtomFamily } from '~/store/mcp';
+import { taskPanelState } from '~/store/task';
 import { isEphemeralAgent } from '~/common';
 import TaskDocView from './TaskDocView';
 import { useLocalize } from '~/hooks';
 import TaskTable from './TaskTable';
 import { cn } from '~/utils';
 import store from '~/store';
-
-type PanelStatus = 'wait' | 'run' | 'ok' | 'stopped';
-
-const STATUS_LABEL: Record<PanelStatus, TranslationKeys> = {
-  wait: 'com_ui_convo_awaiting_approval',
-  run: 'com_ui_task_status_running',
-  ok: 'com_ui_task_status_done',
-  stopped: 'com_ui_task_status_stopped',
-};
-
-const STATUS_DOT: Record<PanelStatus, string> = {
-  wait: 'bg-status-error-strong',
-  run: 'bg-status-warning-strong',
-  ok: 'bg-status-success',
-  stopped: 'bg-border-heavy',
-};
 
 /** `doc` and `hwp` are file-kind tags shown as is; only the table tag is a word to translate. */
 const OUTPUT_ICON: Record<TaskOutput['kind'], { label?: string; className: string }> = {
@@ -419,37 +396,12 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   const [panel, setPanel] = useAtom(taskPanelState);
   const [sections, setSections] = useState({ progress: true, outputs: true, context: true });
   const conversation = useRecoilValue(store.conversationByIndex(0));
-  const isSubmitting = useRecoilValue(store.isSubmittingFamily(0));
-  const jobStatus = useActiveJobStatus(conversationId);
   const { data: messages } = useGetMessagesByConvoId(conversationId, {
     enabled: false,
     select: selectMessages,
   });
-
-  const call = useMemo(() => findLatestTaskToolCall(messages), [messages]);
+  const { call, progress, steps, awaiting, status } = useTaskRunState(conversationId);
   const outputs = useMemo(() => collectTaskOutputs(messages), [messages]);
-  const progress = useAtomValue(taskProgressByToolCallId(call?.toolCallId ?? ''));
-  const decision = useAtomValue(taskDecisionByToolCallId(call?.toolCallId ?? ''));
-  /** A cancel the server took stops the plan at the confirmation, as on the card. */
-  const steps = useMemo(
-    () =>
-      call
-        ? resolveTaskSteps(decision === 'reject' ? { ...call, hadApproval: true } : call, progress)
-        : [],
-    [call, decision, progress],
-  );
-  const awaiting = call != null && isAwaitingTaskApproval(call, progress, decision != null);
-
-  let status: PanelStatus = 'ok';
-  /** A live task call says itself whether it waits; the polled job list can still
-   *  report the pause for a few seconds after the run went on. */
-  if (awaiting || (jobStatus === 'requires_action' && (call == null || call.finished))) {
-    status = 'wait';
-  } else if (jobStatus != null || isSubmitting) {
-    status = 'run';
-  } else if (call?.finished === true && !call.hasResult) {
-    status = 'stopped';
-  }
 
   const toggle = (name: keyof typeof sections) => () =>
     setSections((current) => ({ ...current, [name]: !current[name] }));
@@ -466,8 +418,11 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
           {conversation?.title ?? ''}
         </span>
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border-light px-2.5 py-[3px] text-xs font-medium text-text-muted">
-          <span aria-hidden="true" className={cn('size-[7px] rounded-full', STATUS_DOT[status])} />
-          {localize(STATUS_LABEL[status])}
+          <span
+            aria-hidden="true"
+            className={cn('size-[7px] rounded-full', TASK_STATUS_DOT[status])}
+          />
+          {localize(TASK_STATUS_LABEL[status])}
         </span>
         <button
           type="button"
