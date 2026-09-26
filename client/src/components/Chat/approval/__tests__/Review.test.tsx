@@ -150,17 +150,17 @@ describe('PendingToolApproval', () => {
     return jotaiStore;
   };
 
-  const taskRequest = (name: string, id: string) => ({
-    request: { name, source: 'librechat', tool_call_id: id, arguments: { fields: ['위험도'] } },
+  type BatchEntry = {
+    request: Agents.ToolApprovalRequest;
+    config: Agents.ToolReviewConfig;
+  };
+
+  const taskRequest = (name: string, id: string): BatchEntry => ({
+    request: { name, tool_call_id: id, arguments: { fields: ['위험도'] } },
     config: { action_name: name, tool_call_id: id, allowed_decisions: ['approve', 'edit'] },
   });
 
-  const withRequests = (
-    entries: {
-      request: Agents.ToolApprovalRequest;
-      config: Agents.ToolApprovalInterruptPayload['review_configs'][number];
-    }[],
-  ): Agents.PendingAction => ({
+  const withRequests = (entries: BatchEntry[]): Agents.PendingAction => ({
     ...pendingAction,
     payload: {
       type: 'tool_approval',
