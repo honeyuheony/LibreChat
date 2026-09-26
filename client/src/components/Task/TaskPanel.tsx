@@ -5,7 +5,12 @@ import { useAtom, useAtomValue } from 'jotai';
 import type { TMessage, TaskProgressEvent } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import type { TaskOutput, TaskStepView, TaskToolCallState } from './taskState';
-import { collectConversationFiles, collectTaskOutputs, formatTaskTime } from './taskState';
+import {
+  collectConversationFiles,
+  collectTaskOutputs,
+  countTaskFootnotes,
+  formatTaskTime,
+} from './taskState';
 import { getAgentServerNames } from '~/components/Chat/Input/useAgentConnectorSelection';
 import useTaskRunState, { TASK_STATUS_DOT, TASK_STATUS_LABEL } from './useTaskRunState';
 import { useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
@@ -152,16 +157,27 @@ function ProgressSection({
   );
 }
 
-function outputMeta(output: TaskOutput, localize: ReturnType<typeof useLocalize>) {
-  const meta =
-    output.kind === 'table'
-      ? localize('com_ui_task_output_table_meta', {
-          rows: output.stats?.docs ?? 0,
-          none: output.stats?.none ?? 0,
-        })
-      : localize('com_ui_task_output_doc_meta', { count: output.stats?.reflected ?? 0 });
+/**
+ * The row's detail line. A document's evidence is its footnotes, which only the saved
+ * result holds (its `stats.reflected` counts documents), so that count shows once the
+ * result has loaded — the same fetch the result screen and the message card use.
+ */
+function OutputMeta({ output }: { output: TaskOutput }) {
+  const localize = useLocalize();
+  const { data: result } = useTaskResultQuery(output.kind === 'table' ? null : output.resultId);
+  let meta: string;
+  if (output.kind === 'table') {
+    meta = localize('com_ui_task_output_table_meta', {
+      rows: output.stats?.docs ?? 0,
+      none: output.stats?.none ?? 0,
+    });
+  } else if (result != null && result.kind !== 'table') {
+    meta = localize('com_ui_task_output_doc_meta', { count: countTaskFootnotes(result) });
+  } else {
+    meta = localize('com_ui_task_output_doc');
+  }
   const time = formatTaskTime(output.createdAt);
-  return time ? `${meta} · ${time}` : meta;
+  return <span className="text-xs text-text-muted">{time ? `${meta} · ${time}` : meta}</span>;
 }
 
 function OutputsSection({
@@ -207,7 +223,7 @@ function OutputsSection({
                   </span>
                   <span className="min-w-0 flex-1">
                     <b className="block truncate font-semibold text-text-primary">{output.title}</b>
-                    <span className="text-xs text-text-muted">{outputMeta(output, localize)}</span>
+                    <OutputMeta output={output} />
                   </span>
                   <span className="text-xs text-text-muted">{localize('com_ui_task_open')} ›</span>
                 </button>

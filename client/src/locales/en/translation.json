@@ -3297,6 +3297,7 @@
   "com_ui_task_more_rows": "… {{count}} more rows",
   "com_ui_task_needs_review": "Needs review",
   "com_ui_task_none_count": "No value {{count}}",
+  "com_ui_task_output_doc": "Document",
   "com_ui_task_output_doc_meta": "Document · {{count}} sources",
   "com_ui_task_output_table_meta": "Table · {{rows}} rows · {{none}} without value",
   "com_ui_task_outputs": "Outputs",

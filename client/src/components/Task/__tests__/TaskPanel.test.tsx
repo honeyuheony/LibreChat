@@ -311,6 +311,14 @@ describe('TaskPanel', () => {
 
   it('lists three outputs with their kind icon and details', () => {
     mockMessages = [toolCall('t1', 'write_report', { output: 'ok' }), withOutputs()];
+    /** Evidence is the footnotes of the saved result, not the reflected document count. */
+    const footnotes = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({ n: index + 1 }));
+    mockTaskResult.mockImplementation((resultId: string) => ({
+      data: resultId === 'r-summary' ? { kind: 'summary', footnotes: footnotes(26) } : undefined,
+      isLoading: resultId === 'r-report',
+      isError: false,
+    }));
     renderPanel();
     const rows = screen.getAllByTestId('task-output-row');
     expect(rows).toHaveLength(3);
@@ -320,8 +328,9 @@ describe('TaskPanel', () => {
       'hwp',
     ]);
     expect(rows[0]).toHaveTextContent('com_ui_task_output_table_meta {"rows":12,"none":3} · 09:03');
-    expect(rows[1]).toHaveTextContent('com_ui_task_output_doc_meta {"count":12} · 09:03');
-    expect(rows[2]).toHaveTextContent('com_ui_task_output_doc_meta {"count":11} · 09:03');
+    expect(rows[1]).toHaveTextContent('com_ui_task_output_doc_meta {"count":26} · 09:03');
+    expect(rows[2]).toHaveTextContent('com_ui_task_output_doc · 09:03');
+    expect(rows[2]).not.toHaveTextContent('"count"');
   });
 
   it('explains the empty outputs list', () => {

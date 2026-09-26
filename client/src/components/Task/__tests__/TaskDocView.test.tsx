@@ -63,9 +63,10 @@ describe('TaskDocView', () => {
     expect(screen.queryByText('[^1]', { exact: false })).not.toBeInTheDocument();
   });
 
-  it('shows the evidence count and time in the footer', () => {
+  /** The footnotes are the evidence; `stats.reflected` counts documents. */
+  it('shows the footnote count and time in the footer', () => {
     render(<TaskDocView result={summary} />);
-    expect(screen.getByText('com_ui_task_evidence_count {"count":12}')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_task_evidence_count {"count":2}')).toBeInTheDocument();
     expect(screen.getByText('09:03')).toBeInTheDocument();
   });
 

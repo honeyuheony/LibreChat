@@ -4,6 +4,7 @@ import type {
   TMessage,
   TaskStats,
   TaskToolName,
+  TaskDocResult,
   TaskProgressEvent,
 } from 'librechat-data-provider';
 import type { TaskStage } from '~/components/Chat/Messages/Content/Task/stages';
@@ -237,6 +238,11 @@ export function collectTaskOutputs(messages: TMessage[] | undefined): TaskOutput
     }
   }
   return outputs;
+}
+
+/** How many footnotes — the quoted evidence — a summary or report cites. */
+export function countTaskFootnotes(result: Pick<TaskDocResult, 'footnotes'>): number {
+  return new Set(result.footnotes.map((footnote) => footnote.n)).size;
 }
 
 export type TaskFile = { file_id: string; filename: string };
