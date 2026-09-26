@@ -106,6 +106,10 @@ export enum QueryKeys {
   agentQueuedTurns = 'agentQueuedTurns',
   /* Combined Pinned-section display order (favorites + pinned chats) */
   pinnedOrder = 'pinnedOrder',
+  /* Saved task tool result (table, summary or report) by result id */
+  taskResult = 'taskResult',
+  /* Document count and time estimate for a table's selected fields */
+  taskEstimate = 'taskEstimate',
 }
 
 // Dynamic query keys that require parameters

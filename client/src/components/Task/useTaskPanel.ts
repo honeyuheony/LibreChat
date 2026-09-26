@@ -16,8 +16,11 @@ const selectMessages = (messages: TMessage[]) => messages;
  *   new-chat → saved-id hop, which is the same conversation getting its id;
  * - the first task tool call in a conversation opens it (not on small screens,
  *   where the panel would cover the chat);
- * - a result that arrives while a reply is streaming opens that result; results
- *   that were already there when the conversation loaded do not.
+ * - a result that arrives while a reply is streaming opens that result (again not
+ *   on small screens); results already there when the conversation's messages first
+ *   loaded do not, even when a paused reply resumes as they load.
+ * This is the only place that opens the panel on its own; the result card in the
+ * message opens it only when pressed.
  * Returns whether the panel should be offered for this conversation at all.
  */
 export default function useTaskPanel(
@@ -31,13 +34,14 @@ export default function useTaskPanel(
   });
   const hasTaskCall = useMemo(() => findLatestTaskToolCall(messages) != null, [messages]);
   const outputIds = useMemo(
-    () => collectTaskOutputs(messages).map((output) => output.resultId),
+    () => (messages == null ? null : collectTaskOutputs(messages).map((output) => output.resultId)),
     [messages],
   );
 
   const previousConversationRef = useRef<string | null | undefined>(undefined);
   const autoOpenedForRef = useRef<string | null>(null);
-  const seenOutputsRef = useRef(new Set<string>());
+  /** Null until this conversation's messages have loaded once. */
+  const seenOutputsRef = useRef<Set<string> | null>(null);
 
   const current = conversationId ?? null;
 
@@ -50,7 +54,7 @@ export default function useTaskPanel(
     }
     setPanel(INITIAL_PANEL);
     autoOpenedForRef.current = null;
-    seenOutputsRef.current = new Set();
+    seenOutputsRef.current = null;
   }, [current, setPanel]);
 
   useEffect(() => {
@@ -62,14 +66,21 @@ export default function useTaskPanel(
   }, [autoOpen, current, hasTaskCall, setPanel]);
 
   useEffect(() => {
+    if (outputIds == null) {
+      return;
+    }
+    if (seenOutputsRef.current == null) {
+      seenOutputsRef.current = new Set(outputIds);
+      return;
+    }
     const seen = seenOutputsRef.current;
     const arrived = outputIds.filter((id) => !seen.has(id));
     arrived.forEach((id) => seen.add(id));
-    if (arrived.length === 0 || !isSubmitting) {
+    if (arrived.length === 0 || !isSubmitting || !autoOpen) {
       return;
     }
     setPanel({ open: true, view: 'result', resultId: arrived[arrived.length - 1] });
-  }, [isSubmitting, outputIds, setPanel]);
+  }, [autoOpen, isSubmitting, outputIds, setPanel]);
 
   return { hasTaskCall, open: panel.open };
 }

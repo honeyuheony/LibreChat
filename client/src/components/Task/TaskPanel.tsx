@@ -27,18 +27,20 @@ import TaskTable from './TaskTable';
 import { cn } from '~/utils';
 import store from '~/store';
 
-type PanelStatus = 'wait' | 'run' | 'ok';
+type PanelStatus = 'wait' | 'run' | 'ok' | 'stopped';
 
 const STATUS_LABEL: Record<PanelStatus, TranslationKeys> = {
   wait: 'com_ui_convo_awaiting_approval',
   run: 'com_ui_task_status_running',
   ok: 'com_ui_task_status_done',
+  stopped: 'com_ui_task_status_stopped',
 };
 
 const STATUS_DOT: Record<PanelStatus, string> = {
   wait: 'bg-status-error-strong',
   run: 'bg-status-warning-strong',
   ok: 'bg-status-success',
+  stopped: 'bg-border-heavy',
 };
 
 /** `doc` and `hwp` are file-kind tags shown as is; only the table tag is a word to translate. */
@@ -142,9 +144,12 @@ function ProgressSection({
                 step.state === 'done' && 'border-status-success bg-status-success text-white',
                 step.state === 'now' && 'border-accent-primary bg-accent-primary text-white',
                 step.state === 'todo' && 'border-border-medium text-text-muted',
+                step.state === 'stopped' && 'border-border-heavy text-text-secondary',
               )}
             >
-              {step.state === 'done' ? '✓' : index + 1}
+              {step.state === 'done' && '✓'}
+              {step.state === 'stopped' && '✕'}
+              {(step.state === 'now' || step.state === 'todo') && index + 1}
             </span>
             <span>
               {localize(step.label)}
@@ -427,6 +432,8 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
     status = 'wait';
   } else if (jobStatus === 'running' || isSubmitting) {
     status = 'run';
+  } else if (call?.finished === true && !call.hasResult) {
+    status = 'stopped';
   }
 
   const toggle = (name: keyof typeof sections) => () =>

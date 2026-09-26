@@ -100,6 +100,20 @@ const userFiles = () =>
     ],
   }) as unknown as TMessage;
 
+/** The `task_result` attachment a call leaves when it saved its result. */
+const resultOf = (toolCallId: string) =>
+  ({
+    messageId: `m-result-${toolCallId}`,
+    isCreatedByUser: false,
+    attachments: [
+      {
+        type: 'task_result',
+        toolCallId,
+        task_result: { resultId: `r-${toolCallId}`, kind: 'table', title: 't', stats: {} },
+      },
+    ],
+  }) as unknown as TMessage;
+
 type Setup = { agentId?: string; disabledMcp?: string[]; chatSelection?: string[] };
 
 function renderPanel(
@@ -140,7 +154,7 @@ describe('TaskPanel', () => {
   });
 
   it('heads the panel with the conversation title and the finished state', () => {
-    mockMessages = [toolCall('t1', 'extract_table', { output: 'ok' })];
+    mockMessages = [toolCall('t1', 'extract_table', { output: 'ok' }), resultOf('t1')];
     renderPanel();
     expect(screen.getByText('9월 2주 주간보고 취합')).toBeInTheDocument();
     expect(screen.getByText('com_ui_task_status_done')).toBeInTheDocument();
@@ -159,6 +173,24 @@ describe('TaskPanel', () => {
       .find((item) => item.getAttribute('data-state') === 'now');
     expect(now).toHaveTextContent('com_ui_task_stage_confirm_fields');
     expect(now).toHaveTextContent('com_ui_task_waiting_approval');
+  });
+
+  it('does not show a call that ended without a result as done', () => {
+    mockMessages = [
+      toolCall('t1', 'extract_table', {
+        output: '사용자가 실행을 거절했습니다.',
+        approval: { actionId: 'a', allowed_decisions: ['approve', 'reject'] },
+      }),
+    ];
+    renderPanel();
+    expect(screen.queryByText('com_ui_task_status_done')).not.toBeInTheDocument();
+    expect(screen.getByText('com_ui_task_status_stopped')).toBeInTheDocument();
+    expect(screen.getByText('1/5')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '20');
+    const stopped = screen
+      .getAllByRole('listitem')
+      .find((item) => item.getAttribute('data-state') === 'stopped');
+    expect(stopped).toHaveTextContent('com_ui_task_stage_confirm_fields');
   });
 
   it('shows running while the job list reports the conversation running', () => {
@@ -200,7 +232,7 @@ describe('TaskPanel', () => {
       ],
     ],
   ])('lists the plan steps of %s', (name, labels) => {
-    mockMessages = [toolCall('t1', name, { output: 'ok' })];
+    mockMessages = [toolCall('t1', name, { output: 'ok' }), resultOf('t1')];
     renderPanel();
     const items = screen.getAllByRole('listitem').filter((item) => item.hasAttribute('data-state'));
     expect(items.map((item) => item.lastElementChild?.textContent)).toEqual(labels);

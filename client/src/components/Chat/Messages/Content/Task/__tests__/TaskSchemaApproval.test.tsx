@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { dataService } from 'librechat-data-provider';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
+import { useApprovalContext, useResumeSubmit } from '../../ApprovalContext';
 import { CONVERSATION_ID, createTaskWrapper } from 'test/task-test-utils';
 import TaskSchemaApproval from '../TaskSchemaApproval';
 
@@ -35,8 +36,11 @@ const args = {
   suggested_fields: ['출처 매체', '관련 지표'],
 };
 
-const renderCard = (cardArgs: Record<string, unknown> = args) =>
-  render(<TaskSchemaApproval approval={approval()} toolCallId="call-1" args={cardArgs} />, {
+const renderCard = (
+  cardArgs: Record<string, unknown> = args,
+  allowed?: Agents.ToolApprovalDecisionType[],
+) =>
+  render(<TaskSchemaApproval approval={approval(allowed)} toolCallId="call-1" args={cardArgs} />, {
     wrapper: createTaskWrapper(),
   });
 
@@ -128,6 +132,40 @@ describe('TaskSchemaApproval', () => {
     expect(mockEstimate).toHaveBeenCalledWith(CONVERSATION_ID, args.fields);
   });
 
+  test('asks for a new estimate once the chips settle and keeps the last one meanwhile', async () => {
+    jest.useFakeTimers();
+    try {
+      renderCard();
+      expect(
+        await screen.findByText('com_ui_task_schema_intro:12', { exact: false }),
+      ).toBeVisible();
+      expect(mockEstimate).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole('button', { name: '위험도' }));
+      fireEvent.click(screen.getByRole('button', { name: '출처 매체' }));
+      fireEvent.click(screen.getByRole('button', { name: '관련 지표' }));
+
+      expect(mockEstimate).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('com_ui_task_schema_intro:12', { exact: false })).toBeVisible();
+      expect(
+        screen.getByText('com_ui_task_estimate:1|1 · com_ui_task_estimate_first'),
+      ).toBeVisible();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(mockEstimate).toHaveBeenCalledTimes(2);
+      expect(mockEstimate).toHaveBeenLastCalledWith(CONVERSATION_ID, [
+        '정세 전망',
+        '전월 대비',
+        '출처 매체',
+        '관련 지표',
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('keeps the card usable without a count when the estimate request fails', async () => {
     mockEstimate.mockRejectedValue(new Error('404'));
     renderCard();
@@ -148,5 +186,64 @@ describe('TaskSchemaApproval', () => {
     expect(await screen.findByText('com_ui_task_ran')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '정세 전망' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'com_ui_task_run' })).not.toBeInTheDocument();
+  });
+
+  test('cancels the call with a reject and says so once it is sent', async () => {
+    mockApprovalMutate.mockImplementation((_payload, options: { onSuccess: () => void }) =>
+      options.onSuccess(),
+    );
+    renderCard();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
+
+    expect(submittedDecisions()).toEqual([{ tool_call_id: 'call-1', decision: 'reject' }]);
+    expect(await screen.findByText('com_ui_task_cancelled')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_task_ran')).not.toBeInTheDocument();
+  });
+
+  test('offers no cancel when the policy does not allow a reject', () => {
+    renderCard(args, ['approve', 'edit']);
+
+    expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
+  });
+
+  /** Another call paused in the same batch, decided the way the composer panel does it. */
+  function OtherCall() {
+    const { registerToolCall, setDecision } = useApprovalContext();
+    const { submitToolApproval } = useResumeSubmit();
+    useEffect(() => registerToolCall('action-1', 'call-2'), [registerToolCall]);
+    return (
+      <button
+        type="button"
+        aria-label="decide-other"
+        onClick={() => {
+          setDecision('action-1', 'call-2', { tool_call_id: 'call-2', decision: 'approve' });
+          submitToolApproval('action-1');
+        }}
+      />
+    );
+  }
+
+  test('says other approvals remain and sends the batch once the last one is decided', () => {
+    render(
+      <>
+        <TaskSchemaApproval approval={approval()} toolCallId="call-1" args={args} />
+        <OtherCall />
+      </>,
+      { wrapper: createTaskWrapper() },
+    );
+
+    expect(screen.getByText('com_ui_task_other_approvals_pending:1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_run' }));
+    expect(mockApprovalMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_task_decision_saved_waiting:1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'decide-other' }));
+    expect(mockApprovalMutate).toHaveBeenCalledTimes(1);
+    expect(submittedDecisions()).toEqual([
+      { tool_call_id: 'call-1', decision: 'approve' },
+      { tool_call_id: 'call-2', decision: 'approve' },
+    ]);
   });
 });

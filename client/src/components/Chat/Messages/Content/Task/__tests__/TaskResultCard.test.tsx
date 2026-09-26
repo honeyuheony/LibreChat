@@ -9,9 +9,7 @@ import TaskResultCard from '../TaskResultCard';
 import { taskPanelState } from '~/store/task';
 
 const mockSubmitMessage = jest.fn();
-const mockRefetchDownload = jest.fn();
 const mockShowToast = jest.fn();
-const mockTriggerDownload = jest.fn();
 const mockCopy = jest.fn((_text: string, _options?: unknown) => true);
 
 jest.mock('~/hooks', () => ({
@@ -23,16 +21,11 @@ jest.mock('~/hooks', () => ({
 jest.mock('~/data-provider', () => ({
   useSubmitToolApprovalMutation: () => ({ mutate: jest.fn() }),
   useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
-  useFileDownload: () => ({ refetch: mockRefetchDownload }),
 }));
 jest.mock('~/store/agents', () => ({ useGetEphemeralAgent: () => () => undefined }));
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
   useToastContext: () => ({ showToast: mockShowToast }),
-}));
-jest.mock('~/utils', () => ({
-  ...jest.requireActual('~/utils'),
-  triggerDownload: (target: string, filename: string) => mockTriggerDownload(target, filename),
 }));
 jest.mock('copy-to-clipboard', () => ({
   __esModule: true,
@@ -46,12 +39,23 @@ jest.mock('librechat-data-provider', () => {
       ...actual.dataService,
       getTaskResult: jest.fn(),
       getTaskResultExport: jest.fn(),
+      getFileDownload: jest.fn(),
     },
   };
 });
 
 const mockFetchResult = jest.mocked(dataService.getTaskResult);
 const mockFetchExcel = jest.mocked(dataService.getTaskResultExport);
+const mockFetchFile = jest.mocked(dataService.getFileDownload);
+
+/** Stubs the object URL calls jsdom lacks and returns them for assertions. */
+function stubObjectUrls(url: string) {
+  const createObjectURL = jest.fn((_blob: Blob) => url);
+  const revokeObjectURL = jest.fn((_url: string) => undefined);
+  Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, configurable: true });
+  Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, configurable: true });
+  return { createObjectURL, revokeObjectURL };
+}
 
 const stats = (overrides: Partial<TaskStats> = {}): TaskStats => ({
   docs: 12,
@@ -107,9 +111,9 @@ const summaryResult: TaskDocResult = {
 
 function renderCard(
   result: TaskResultAttachment,
-  { autoOpen = false, inChat = true, jotaiStore = createStore() } = {},
+  { inChat = true, jotaiStore = createStore() } = {},
 ) {
-  render(<TaskResultCard result={result} autoOpen={autoOpen} />, {
+  render(<TaskResultCard result={result} />, {
     wrapper: createTaskWrapper({ jotaiStore, inChat }),
   });
   return jotaiStore;
@@ -169,14 +173,8 @@ describe('TaskResultCard', () => {
     });
   });
 
-  test('opens the task panel on its own for a result that arrived live', () => {
-    const jotaiStore = renderCard(attachment(), { autoOpen: true });
-
-    expect(jotaiStore.get(taskPanelState).resultId).toBe('result-1');
-  });
-
-  test('leaves the task panel closed for a result loaded from history', () => {
-    const jotaiStore = renderCard(attachment(), { autoOpen: false });
+  test('leaves the task panel closed until the card is pressed', () => {
+    const jotaiStore = renderCard(attachment());
 
     expect(jotaiStore.get(taskPanelState).open).toBe(false);
   });
@@ -201,20 +199,17 @@ describe('TaskResultCard', () => {
     mockFetchExcel.mockResolvedValue({ data: blob } as Awaited<
       ReturnType<typeof dataService.getTaskResultExport>
     >);
-    const createObjectURL = jest.fn(() => 'blob:excel');
-    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, configurable: true });
+    const { createObjectURL, revokeObjectURL } = stubObjectUrls('blob:excel');
     renderCard(attachment());
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_excel' }));
 
-    await waitFor(() =>
-      expect(mockTriggerDownload).toHaveBeenCalledWith('blob:excel', '비교표 · 3건.xlsx'),
-    );
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:excel'));
     expect(mockFetchExcel).toHaveBeenCalledWith('result-1');
     expect(createObjectURL).toHaveBeenCalledWith(blob);
   });
 
-  test('copies the summary body with footnote sources and locations', async () => {
+  test('copies the summary in the same form as the task panel', async () => {
     mockFetchResult.mockResolvedValue(summaryResult);
     renderCard(attachment({ kind: 'summary', resultId: 'result-2', title: summaryResult.title }));
 
@@ -227,8 +222,8 @@ describe('TaskResultCard', () => {
         '1. 전체 경향',
         '- 긴장 고조[^1]',
         '',
-        '[^1]: a.pdf › com_ui_task_page:3 — "긴장이 높아졌다"',
-        '[^2]: b.hwp › com_ui_task_paragraph:7 — "완화 조짐"',
+        '[^1]: a.pdf (p.3) — "긴장이 높아졌다"',
+        '[^2]: b.hwp (¶7) — "완화 조짐"',
       ].join('\n'),
     );
     expect(mockShowToast).toHaveBeenCalledWith({
@@ -237,8 +232,12 @@ describe('TaskResultCard', () => {
     });
   });
 
-  test('downloads the HWPX file of a report through the file download route', async () => {
-    mockRefetchDownload.mockResolvedValue({ data: 'blob:hwpx' });
+  test('downloads the HWPX file of a report the same way the task panel does', async () => {
+    const blob = new Blob(['hwpx']);
+    mockFetchFile.mockResolvedValue({ data: blob } as Awaited<
+      ReturnType<typeof dataService.getFileDownload>
+    >);
+    const { createObjectURL, revokeObjectURL } = stubObjectUrls('blob:hwpx');
     const file = { file_id: 'file-7', filename: '부처 표준 보고서 초안.hwpx' };
     renderCard(attachment({ kind: 'report', file }));
 
@@ -246,15 +245,37 @@ describe('TaskResultCard', () => {
     expect(screen.getByText('com_ui_task_result_report_note:3')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_hwp_download' }));
 
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:hwpx'));
+    expect(mockFetchFile).toHaveBeenCalledWith('user-1', 'file-7');
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
+  });
+
+  test('says so when the HWPX file cannot be downloaded', async () => {
+    mockFetchFile.mockRejectedValue(new Error('404'));
+    renderCard(attachment({ kind: 'report', file: { file_id: 'file-7', filename: '초안.hwpx' } }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_hwp_download' }));
+
     await waitFor(() =>
-      expect(mockTriggerDownload).toHaveBeenCalledWith('blob:hwpx', '부처 표준 보고서 초안.hwpx'),
+      expect(mockShowToast).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'com_ui_task_download_error',
+      }),
     );
   });
 
-  test('explains the missing file and hides HWP download when the report has no file', () => {
-    renderCard(attachment({ kind: 'report', notice: 'hwp-mcp down' }));
+  test('shows the server notice and hides HWP download when the report has no file', () => {
+    const notice = '보고서 양식이 등록되어 있지 않아 HWP 파일을 만들지 못했습니다.';
+    renderCard(attachment({ kind: 'report', notice }));
+
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_task_result_report_no_file')).not.toBeInTheDocument();
+    expect(buttonNames()).toEqual(['com_ui_task_open']);
+  });
+
+  test('falls back to the stock text when a report without a file carries no notice', () => {
+    renderCard(attachment({ kind: 'report' }));
 
     expect(screen.getByText('com_ui_task_result_report_no_file')).toBeInTheDocument();
-    expect(buttonNames()).toEqual(['com_ui_task_open']);
   });
 });

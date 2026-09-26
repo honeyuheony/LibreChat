@@ -1,18 +1,22 @@
-import { useContext, useEffect, useMemo, useRef } from 'react';
+import { useContext, useMemo } from 'react';
 import { useSetAtom } from 'jotai';
 import copy from 'copy-to-clipboard';
 import { useSetRecoilState } from 'recoil';
-import { dataService } from 'librechat-data-provider';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, useToastContext } from '@librechat/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { TaskDocResult, TaskEvidence, TaskTableResult } from 'librechat-data-provider';
+import type { TaskTableResult } from 'librechat-data-provider';
 import type { TaskResultAttachment } from './api';
+import {
+  downloadTaskReportFile,
+  downloadTaskResultWorkbook,
+  taskResultQuery,
+  useTaskResultQuery,
+} from '~/data-provider/Tasks/queries';
 import { useAuthContext, useLocalize, useSubmitMessage } from '~/hooks';
-import { taskResultQueryKey } from '~/data-provider/Tasks/queries';
+import { taskDocToMarkdown } from '~/components/Task/TaskDocView';
 import { ChatContext } from '~/Providers/ChatContext';
-import { useFileDownload } from '~/data-provider';
 import { taskPanelState } from '~/store/task';
-import { cn, triggerDownload } from '~/utils';
+import { cn } from '~/utils';
 import store from '~/store';
 
 type Localize = ReturnType<typeof useLocalize>;
@@ -31,26 +35,6 @@ export function topValueCounts(result: TaskTableResult, localize: Localize): str
       .map(([value, count]) => `${value} ${localize('com_ui_task_count', { 0: count })}`)
       .join(', ')}`;
   });
-}
-
-function evidenceLocation(evidence: TaskEvidence, localize: Localize): string {
-  if (evidence.page != null) {
-    return localize('com_ui_task_page', { 0: evidence.page });
-  }
-  if (evidence.paragraph != null) {
-    return localize('com_ui_task_paragraph', { 0: evidence.paragraph });
-  }
-  return '';
-}
-
-/** Markdown body plus `[^n]:` footnote definitions, for the 「복사」 button. */
-export function docResultMarkdown(result: TaskDocResult, localize: Localize): string {
-  const notes = result.footnotes.map((note) => {
-    const location = evidenceLocation(note.evidence, localize);
-    const where = [note.filename, location].filter(Boolean).join(' › ');
-    return `[^${note.n}]: ${where} — "${note.evidence.quote}"`;
-  });
-  return notes.length > 0 ? `${result.body}\n\n${notes.join('\n')}` : result.body;
 }
 
 function ActionButton({ label, onClick }: { label: string; onClick: () => void }) {
@@ -76,29 +60,26 @@ function HwpDownloadButton({ file }: { file: { file_id: string; filename: string
   const localize = useLocalize();
   const { user } = useAuthContext();
   const { showToast } = useToastContext();
-  const { refetch } = useFileDownload(user?.id ?? '', file.file_id, { direct: false });
+  /** The same route and file handling as the task panel's HWP button. */
   const download = async () => {
-    const response = await refetch();
-    if (response.data == null || response.data === '') {
-      showToast({ status: 'error', message: localize('com_ui_download_error') });
-      return;
+    try {
+      if (!user?.id) {
+        throw new Error('not signed in');
+      }
+      await downloadTaskReportFile(user.id, file);
+    } catch {
+      showToast({ status: 'error', message: localize('com_ui_task_download_error') });
     }
-    triggerDownload(response.data, file.filename);
   };
   return <ActionButton label={localize('com_ui_task_hwp_download')} onClick={download} />;
 }
 
 /**
  * Result message for a finished task tool: coverage line, code-counted notes and the
- * open/export buttons. Opens the task panel on its own when the result arrives live.
+ * open/export buttons. The task panel opens for a live result on its own
+ * (`useTaskPanel`); this card opens it only when pressed.
  */
-export default function TaskResultCard({
-  result,
-  autoOpen = false,
-}: {
-  result: TaskResultAttachment;
-  autoOpen?: boolean;
-}) {
+export default function TaskResultCard({ result }: { result: TaskResultAttachment }) {
   const localize = useLocalize();
   const queryClient = useQueryClient();
   const { showToast } = useToastContext();
@@ -107,15 +88,7 @@ export default function TaskResultCard({
   const setArtifactsVisible = useSetRecoilState(store.artifactsVisibility);
   const { resultId, kind, stats } = result;
 
-  const tableQuery = useQuery(
-    taskResultQueryKey(resultId),
-    () => dataService.getTaskResult(resultId),
-    {
-      enabled: kind === 'table',
-      retry: false,
-      refetchOnWindowFocus: false,
-    },
-  );
+  const tableQuery = useTaskResultQuery(kind === 'table' ? resultId : null);
   const valueCounts = useMemo(
     () => (tableQuery.data?.kind === 'table' ? topValueCounts(tableQuery.data, localize) : []),
     [tableQuery.data, localize],
@@ -126,25 +99,11 @@ export default function TaskResultCard({
     setTaskPanel({ open: true, view: 'result', resultId });
   };
 
-  const openedRef = useRef(false);
-  useEffect(() => {
-    if (autoOpen && !openedRef.current) {
-      openedRef.current = true;
-      openResult();
-    }
-    // Opens once per mounted live result; later renders must not reopen a closed panel.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpen]);
-
   const copyResult = async () => {
     try {
-      const doc = await queryClient.fetchQuery(taskResultQueryKey(resultId), () =>
-        dataService.getTaskResult(resultId),
-      );
-      if (
-        doc.kind === 'table' ||
-        !copy(docResultMarkdown(doc, localize), { format: 'text/plain' })
-      ) {
+      const doc = await queryClient.fetchQuery(taskResultQuery(resultId));
+      /** Same text as the task panel's copy button. */
+      if (doc.kind === 'table' || !copy(taskDocToMarkdown(doc), { format: 'text/plain' })) {
         throw new Error('copy failed');
       }
       showToast({ status: 'success', message: localize('com_ui_task_copied') });
@@ -155,8 +114,7 @@ export default function TaskResultCard({
 
   const downloadExcel = async () => {
     try {
-      const response = await dataService.getTaskResultExport(resultId);
-      triggerDownload(URL.createObjectURL(response.data as Blob), `${result.title}.xlsx`);
+      await downloadTaskResultWorkbook(resultId, `${result.title}.xlsx`);
     } catch {
       showToast({ status: 'error', message: localize('com_ui_task_excel_error') });
     }
@@ -184,7 +142,9 @@ export default function TaskResultCard({
     message = localize('com_ui_task_result_report');
     note = localize('com_ui_task_result_report_note', { 0: stats.none }) + textOnly;
   } else {
-    message = localize('com_ui_task_result_report_no_file');
+    /** The server says why the HWPX file is missing (unreachable or timed out, unknown
+     *  template, format mismatch, fill failure); the stock text covers older results. */
+    message = result.notice?.trim() || localize('com_ui_task_result_report_no_file');
     note = localize('com_ui_task_result_report_note', { 0: stats.none }) + textOnly;
   }
 

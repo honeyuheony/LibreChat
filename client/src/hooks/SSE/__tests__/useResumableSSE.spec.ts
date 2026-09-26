@@ -666,6 +666,52 @@ describe('useResumableSSE', () => {
     unmount();
   });
 
+  /** Every optimistic write to the active jobs cache, applied to a cache whose other
+   *  conversation is paused for approval. */
+  const activeJobsWrites = () => {
+    const old = {
+      activeJobIds: ['other-convo', 'stream-123'],
+      jobs: [
+        { id: 'other-convo', status: 'requires_action' as const },
+        { id: 'stream-123', status: 'requires_action' as const },
+      ],
+    };
+    return mockSetQueryData.mock.calls
+      .filter(([key]) => Array.isArray(key) && key[0] === QueryKeys.activeJobs)
+      .map(([, updater]) => (updater as (value: typeof old) => typeof old)(old));
+  };
+
+  it('keeps other jobs and their statuses when a stream adds itself to the active jobs', async () => {
+    const chatHelpers = buildChatHelpers();
+    const { unmount } = renderHook(() => useResumableSSE(buildSubmission(), chatHelpers));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const writes = activeJobsWrites();
+    expect(writes.length).toBeGreaterThan(0);
+    expect(writes[0].jobs).toEqual([
+      { id: 'other-convo', status: 'requires_action' },
+      { id: 'stream-123', status: 'running' },
+    ]);
+    unmount();
+  });
+
+  it('keeps other jobs and their statuses when a stream removes itself from the active jobs', async () => {
+    mockFetchStreamStatus.mockResolvedValue({ active: false });
+    const { unmount } = await render404Scenario(CONV_ID);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const removal = activeJobsWrites().find((write) => !write.activeJobIds.includes('stream-123'));
+    expect(removal).toEqual({
+      activeJobIds: ['other-convo'],
+      jobs: [{ id: 'other-convo', status: 'requires_action' }],
+    });
+    unmount();
+  });
+
   it('claims parked steers and writes a non-completed run end on 404', async () => {
     const parked = [{ steerId: 'p1', text: 'parked words', createdAt: 1 }];
     mockFetchStreamStatus.mockResolvedValue({ active: false, unrecoveredSteers: parked });

@@ -1,15 +1,18 @@
 import { useContext, useMemo, useState } from 'react';
-import { Button } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
-import { Constants, dataService } from 'librechat-data-provider';
+import { Constants, QueryKeys, dataService } from 'librechat-data-provider';
 import type { Agents } from 'librechat-data-provider';
-import { TaskApprovalStatus, TaskChip } from './TaskChip';
+import { TaskApprovalActions, TaskChip } from './TaskChip';
 import { ChatContext } from '~/Providers/ChatContext';
+import useDebounce from '~/hooks/Input/useDebounce';
 import useTaskApproval from './useTaskApproval';
 import { stringList } from './stages';
 import { useLocalize } from '~/hooks';
 
 type FieldChip = { name: string; on: boolean };
+
+/** Chip clicks within this window share one estimate request. */
+const ESTIMATE_DEBOUNCE_MS = 400;
 
 function initialChips(args: Record<string, unknown>): FieldChip[] {
   const fields = stringList(args.fields);
@@ -65,19 +68,34 @@ export default function TaskSchemaApproval({
 }) {
   const localize = useLocalize();
   const conversationId = useContext(ChatContext)?.conversation?.conversationId ?? '';
-  const { status, locked, submit } = useTaskApproval(approval.actionId, toolCallId);
+  const {
+    status,
+    locked,
+    decision,
+    othersPending,
+    canEdit,
+    canReject,
+    resolveRun,
+    decide,
+    reject,
+  } = useTaskApproval(approval, toolCallId);
   const [chips, setChips] = useState<FieldChip[]>(() => initialChips(args));
   const [adding, setAdding] = useState(false);
   const [draftField, setDraftField] = useState('');
-  const canEdit = approval.allowed_decisions.includes('edit');
   const selected = useMemo(() => chips.filter((chip) => chip.on).map((chip) => chip.name), [chips]);
+  /** The estimate follows the chips once they settle; the last one stays shown meanwhile. */
+  const settledKey = useDebounce(JSON.stringify(selected), ESTIMATE_DEBOUNCE_MS);
+  const estimateFields = useMemo(() => JSON.parse(settledKey) as string[], [settledKey]);
 
   const estimate = useQuery(
-    ['taskEstimate', conversationId, selected],
-    () => dataService.getTaskEstimate(conversationId, selected),
+    [QueryKeys.taskEstimate, conversationId, estimateFields],
+    () => dataService.getTaskEstimate(conversationId, estimateFields),
     {
       enabled:
-        conversationId.length > 0 && conversationId !== Constants.NEW_CONVO && selected.length > 0,
+        conversationId.length > 0 &&
+        conversationId !== Constants.NEW_CONVO &&
+        estimateFields.length > 0,
+      keepPreviousData: true,
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -102,10 +120,8 @@ export default function TaskSchemaApproval({
     setAdding(false);
   };
 
-  const run = () => {
-    const unchanged = sameList(selected, stringList(args.fields));
-    submit(unchanged ? null : { ...args, fields: selected });
-  };
+  const changed = !sameList(selected, stringList(args.fields));
+  const resolution = resolveRun({ ...args, fields: selected }, changed);
 
   return (
     <div className="mt-3 flex flex-col gap-2" data-testid="task-schema-approval">
@@ -159,35 +175,33 @@ export default function TaskSchemaApproval({
           )}
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-          {status === 'submitted' ? (
-            <span className="text-sm text-text-secondary">{localize('com_ui_task_ran')}</span>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                variant="submit"
-                disabled={locked || selected.length === 0}
-                onClick={run}
-              >
-                {localize('com_ui_task_run')}
-              </Button>
-              {estimate.data != null && (
-                <span className="text-sm text-text-secondary">
-                  {localize('com_ui_task_estimate', {
-                    0: estimate.data.minutes.min,
-                    1: estimate.data.minutes.max,
-                  })}
-                  {' · '}
-                  {localize(
-                    estimate.data.cached > 0
-                      ? 'com_ui_task_estimate_cached'
-                      : 'com_ui_task_estimate_first',
-                  )}
-                </span>
-              )}
-              <TaskApprovalStatus status={status} />
-            </>
-          )}
+          <TaskApprovalActions
+            status={status}
+            locked={locked}
+            decision={decision}
+            othersPending={othersPending}
+            runDisabled={selected.length === 0 || resolution == null}
+            onRun={() => resolution != null && decide(resolution)}
+            onReject={canReject ? reject : undefined}
+            blockedReason={
+              changed && resolution == null ? localize('com_ui_task_edit_not_allowed') : undefined
+            }
+          >
+            {estimate.data != null && (
+              <span className="text-sm text-text-secondary">
+                {localize('com_ui_task_estimate', {
+                  0: estimate.data.minutes.min,
+                  1: estimate.data.minutes.max,
+                })}
+                {' · '}
+                {localize(
+                  estimate.data.cached > 0
+                    ? 'com_ui_task_estimate_cached'
+                    : 'com_ui_task_estimate_first',
+                )}
+              </span>
+            )}
+          </TaskApprovalActions>
         </div>
       </div>
     </div>

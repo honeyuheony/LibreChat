@@ -28,7 +28,10 @@ const IN_MESSAGE_APPROVAL_TOOLS = new Set<string>([
   TaskTools.summarize_documents,
 ]);
 
-/** The pending batch and the calls in it this panel reviews; null when none are left. */
+/**
+ * The pending batch, the calls in it this panel reviews, and the ids left to the
+ * message cards; null when the panel has nothing to review.
+ */
 function usePendingToolApproval(conversationId: string) {
   const pendingAction = useAtomValue(pendingApprovalActionFamily(conversationId));
   return useMemo(() => {
@@ -41,7 +44,10 @@ function usePendingToolApproval(conversationId: string) {
     const requests = action.payload.action_requests.filter(
       (request) => !IN_MESSAGE_APPROVAL_TOOLS.has(request.name),
     );
-    return requests.length > 0 ? { action, requests } : null;
+    const cardToolCallIds = action.payload.action_requests
+      .filter((request) => IN_MESSAGE_APPROVAL_TOOLS.has(request.name))
+      .map((request) => request.tool_call_id);
+    return requests.length > 0 ? { action, requests, cardToolCallIds } : null;
   }, [pendingAction]);
 }
 
@@ -109,9 +115,11 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
   }
 
   const reviewedIds = new Set(reviews.map(({ request }) => request.tool_call_id));
-  const decisions = getDecisions(pendingAction.actionId).filter((decision) =>
-    reviewedIds.has(decision.tool_call_id),
-  );
+  const allDecisions = getDecisions(pendingAction.actionId);
+  const decisions = allDecisions.filter((decision) => reviewedIds.has(decision.tool_call_id));
+  /** The batch is sent whole, so continue also waits on the cards in the message. */
+  const decidedIds = new Set(allDecisions.map((decision) => decision.tool_call_id));
+  const cardsPending = (pending?.cardToolCallIds ?? []).filter((id) => !decidedIds.has(id)).length;
   const status = getStatus(pendingAction.actionId);
   const locked = status === 'submitting' || status === 'submitted' || status === 'expired';
 
@@ -193,11 +201,18 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
           ))}
         </div>
         <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border-light px-3 py-2">
-          <span className="text-xs text-text-secondary">
-            {localize('com_ui_decisions_selected', {
-              0: decisions.length,
-              1: reviews.length,
-            })}
+          <span className="flex flex-col text-xs text-text-secondary">
+            <span>
+              {localize('com_ui_decisions_selected', {
+                0: decisions.length,
+                1: reviews.length,
+              })}
+            </span>
+            {cardsPending > 0 && (
+              <span role="status">
+                {localize('com_ui_task_card_approvals_pending', { 0: cardsPending })}
+              </span>
+            )}
           </span>
           <div className="flex items-center gap-2">
             {(status === 'expired' || status === 'error') && (

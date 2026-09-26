@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Button } from '@librechat/client';
 import type { Agents } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
-import { TaskApprovalStatus, TaskChip } from './TaskChip';
+import { TaskApprovalActions, TaskChip } from './TaskChip';
 import useTaskApproval from './useTaskApproval';
 import { stringList } from './stages';
 import { useLocalize } from '~/hooks';
@@ -68,7 +67,17 @@ export default function TaskViewApproval({
   args: Record<string, unknown>;
 }) {
   const localize = useLocalize();
-  const { status, locked, submit } = useTaskApproval(approval.actionId, toolCallId);
+  const {
+    status,
+    locked,
+    decision,
+    othersPending,
+    canEdit,
+    canReject,
+    resolveRun,
+    decide,
+    reject,
+  } = useTaskApproval(approval, toolCallId);
   const offered = useMemo(() => {
     const views = stringList(args.views);
     return views.length > 0 ? views : DEFAULT_VIEW_VALUES;
@@ -78,6 +87,9 @@ export default function TaskViewApproval({
   const [adding, setAdding] = useState(false);
   const [draftView, setDraftView] = useState('');
   const views = [...offered, ...custom.filter((view) => !offered.includes(view))];
+  /** Picking the model's own `view` with nothing typed in leaves the call as proposed. */
+  const changed = !(custom.length === 0 && typeof args.view === 'string' && picked === args.view);
+  const resolution = picked == null ? null : resolveRun({ ...args, views, view: picked }, changed);
 
   const addView = () => {
     const view = draftView.trim();
@@ -103,7 +115,7 @@ export default function TaskViewApproval({
               onClick={() => setPicked(view)}
             />
           ))}
-          {!locked && !adding && (
+          {!locked && canEdit && !adding && (
             <TaskChip
               label={localize('com_ui_task_view_custom')}
               dashed
@@ -134,21 +146,20 @@ export default function TaskViewApproval({
           )}
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-          {status === 'submitted' ? (
-            <span className="text-sm text-text-secondary">{localize('com_ui_task_ran')}</span>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                variant="submit"
-                disabled={locked || picked == null}
-                onClick={() => picked != null && submit({ ...args, views, view: picked })}
-              >
-                {localize('com_ui_task_run')}
-              </Button>
-              <TaskApprovalStatus status={status} />
-            </>
-          )}
+          <TaskApprovalActions
+            status={status}
+            locked={locked}
+            decision={decision}
+            othersPending={othersPending}
+            runDisabled={resolution == null}
+            onRun={() => resolution != null && decide(resolution)}
+            onReject={canReject ? reject : undefined}
+            blockedReason={
+              picked != null && resolution == null
+                ? localize('com_ui_task_edit_not_allowed')
+                : undefined
+            }
+          />
         </div>
       </div>
     </div>
