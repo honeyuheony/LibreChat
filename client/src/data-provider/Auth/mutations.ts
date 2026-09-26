@@ -129,6 +129,54 @@ export const useUpdateUserPreferencesMutation = (
   );
 };
 
+/**
+ * Saves a connector's "use in new chats" switch. The switch flips at once and rolls back if
+ * the server refuses, so the data hub never waits on the round trip.
+ */
+export const useUpdateConnectorDefaultsMutation = (): UseMutationResult<
+  t.TUpdateConnectorDefaultsResponse,
+  Error,
+  t.TUpdateConnectorDefaultsRequest,
+  { previous?: t.TUser }
+> => {
+  const queryClient = useQueryClient();
+  const mergeDefaults = (defaults: Record<string, boolean>) =>
+    queryClient.setQueryData<t.TUser>([QueryKeys.user], (user) =>
+      user
+        ? {
+            ...user,
+            personalization: {
+              ...user.personalization,
+              connectorDefaults: { ...user.personalization?.connectorDefaults, ...defaults },
+            },
+          }
+        : user,
+    );
+  return useMutation<
+    t.TUpdateConnectorDefaultsResponse,
+    Error,
+    t.TUpdateConnectorDefaultsRequest,
+    { previous?: t.TUser }
+  >(
+    [MutationKeys.updateConnectorDefaults],
+    (body) => dataService.updateUserConnectorDefaults(body),
+    {
+      onMutate: async ({ connectorDefaults }) => {
+        await queryClient.cancelQueries([QueryKeys.user]);
+        const previous = queryClient.getQueryData<t.TUser>([QueryKeys.user]);
+        mergeDefaults(connectorDefaults);
+        return { previous };
+      },
+      onError: (_error, _body, context) => {
+        if (context?.previous) {
+          queryClient.setQueryData([QueryKeys.user], context.previous);
+        }
+      },
+      onSuccess: (data) => mergeDefaults(data.preferences.connectorDefaults),
+    },
+  );
+};
+
 export const useEnableTwoFactorMutation = (): UseMutationResult<
   t.TEnable2FAResponse,
   unknown,

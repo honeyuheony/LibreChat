@@ -1,16 +1,18 @@
 import { Monitor } from 'lucide-react';
 import { useSetRecoilState } from 'recoil';
-import { Button, Spinner } from '@librechat/client';
 import { Constants, SystemRoles } from 'librechat-data-provider';
+import { Button, Spinner, Switch, useToastContext } from '@librechat/client';
 import type { DeskStatusResponse, MCPOptions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition, TranslationKeys } from '~/hooks';
 import type { HubStatus } from '../status';
 import { actionLabelKeys, primaryActions, runConnectorAction } from '../actions';
 import { DESK_DOWNLOAD_PATH, getConnectorState, hubStatusView } from '../status';
+import { useUpdateConnectorDefaultsMutation } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
 import { ephemeralAgentByConvoId } from '~/store';
 import useNewChat from '~/hooks/Chat/useNewChat';
+import { isNewChatDefaultOn } from '../newChat';
 import { describeDesk } from '../Desk';
 import ConnectorTools from '../Tools';
 import ConnectorIcon from '../Icon';
@@ -27,6 +29,8 @@ interface DetailProps {
   deskError?: boolean;
   onConnect: (serverName: string) => void;
   onDisconnect: (serverName: string) => void;
+  /** Connectors a new chat starts with off, from the user's switches and the config. */
+  newChatOff?: readonly string[];
 }
 
 const overviewRows: Array<[keyof NonNullable<MCPOptions['overview']>, TranslationKeys]> = [
@@ -96,9 +100,13 @@ export default function ConnectorDetail({
   deskError = false,
   onConnect,
   onDisconnect,
+  newChatOff,
 }: DetailProps) {
   const localize = useLocalize();
   const { user } = useAuthContext();
+  const { showToast } = useToastContext();
+  const updateDefaults = useUpdateConnectorDefaultsMutation();
+  const defaultOn = isNewChatDefaultOn(server, user);
   const { startNewChat } = useNewChat();
   const setNewChatAgent = useSetRecoilState(ephemeralAgentByConvoId(Constants.NEW_CONVO));
   const { serverStatus, isInitializing, canCancel, hasCustomUserVars = false } = statusProps;
@@ -156,10 +164,11 @@ export default function ConnectorDetail({
             data-testid="data-hub-new-chat"
             onClick={() => {
               startNewChat();
-              /* The chat's connector switch (ToolsMenu) is on unless listed in disabled_mcp. */
+              /* The chat's connector switch (ToolsMenu) is on unless listed in disabled_mcp:
+                 the new-chat defaults, with this connector on whatever its own default. */
               setNewChatAgent((prev) => ({
                 ...(prev ?? {}),
-                disabled_mcp: (prev?.disabled_mcp ?? []).filter(
+                disabled_mcp: (newChatOff ?? prev?.disabled_mcp ?? []).filter(
                   (name) => name !== server.serverName,
                 ),
               }));
@@ -196,6 +205,34 @@ export default function ConnectorDetail({
             </a>
           </Button>
         )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3 rounded-theme-control border border-border-light px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span id="data-hub-new-chat-default" className="text-sm font-semibold text-text-primary">
+            {localize('com_ui_data_hub_new_chat_default')}
+          </span>
+          <span className="text-xs text-text-secondary">
+            {localize('com_ui_data_hub_new_chat_default_hint')}
+          </span>
+        </div>
+        <Switch
+          aria-labelledby="data-hub-new-chat-default"
+          data-testid="data-hub-new-chat-default"
+          checked={defaultOn}
+          onCheckedChange={(checked) =>
+            updateDefaults.mutate(
+              { connectorDefaults: { [server.serverName]: checked } },
+              {
+                onError: () =>
+                  showToast({
+                    message: localize('com_ui_data_hub_new_chat_default_error'),
+                    status: 'error',
+                  }),
+              },
+            )
+          }
+        />
       </div>
 
       <SectionHeading>{localize('com_ui_data_hub_scope')}</SectionHeading>

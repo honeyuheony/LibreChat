@@ -16,6 +16,7 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import { getNewChatConnectorsOff } from '~/components/Connectors/newChat';
 import useAgentConnectorSelection from './useAgentConnectorSelection';
 import { useBadgeRowContext } from '~/Providers';
 
@@ -87,10 +88,12 @@ export default function useComposerTools({
     [canUseMcp, showConnectors, manager?.selectableServers],
   );
   const catalogServerNames = useMemo(() => servers.map((server) => server.serverName), [servers]);
+  const newChatOff = useMemo(() => getNewChatConnectorsOff(servers, user), [servers, user]);
   const agentConnectors = useAgentConnectorSelection({
     conversationId: context?.conversationId,
     agentId,
     catalogServerNames,
+    newChatOff,
   });
 
   const { skills, memory, webSearch, artifacts, fileSearch, codeInterpreter, searchApiKeyForm } =

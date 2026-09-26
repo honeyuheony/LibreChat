@@ -22,6 +22,7 @@ import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
+import { getNewChatConnectorsOff } from '../newChat';
 import RecentActivity from './RecentActivity';
 import ConnectorDetail from './Detail';
 import ConnectorIcon from '../Icon';
@@ -150,6 +151,7 @@ export default function DataHub() {
     );
   };
   const groups = groupByCategory(visible);
+  const newChatOff = getNewChatConnectorsOff(availableMCPServers, user);
   const showHeadings = servers.some((server) => server.config.category?.trim());
 
   let content = (
@@ -200,6 +202,7 @@ export default function DataHub() {
           deskError={deskError}
           onConnect={initializeServer}
           onDisconnect={revokeOAuthForServer}
+          newChatOff={newChatOff}
         />
       )}
     </div>

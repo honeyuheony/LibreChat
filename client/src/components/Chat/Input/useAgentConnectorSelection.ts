@@ -64,18 +64,22 @@ export function getAgentServerNames(
 }
 
 /**
- * The chat's connector switches for a saved agent. Every connector the agent
- * carries starts on; switching one off records it in `ephemeralAgent.disabled_mcp`,
- * which the server uses to leave that connector's tools out of the run.
+ * The chat's connector switches for a saved agent. A new chat starts with the connectors
+ * the user keeps on for new chats (`newChatOff` lists the rest); switching one off records
+ * it in `ephemeralAgent.disabled_mcp`, which the server uses to leave that connector's tools
+ * out of the run. A switch changes only its own conversation.
  */
 export default function useAgentConnectorSelection({
   conversationId,
   agentId,
   catalogServerNames,
+  newChatOff,
 }: {
   conversationId?: string | null;
   agentId?: string | null;
   catalogServerNames: readonly string[];
+  /** Connectors a new chat starts with off; undefined until the user and catalog load. */
+  newChatOff?: readonly string[];
 }): AgentConnectorSelection {
   const convoKey = conversationId ?? Constants.NEW_CONVO;
   const isSavedAgent = agentId != null && agentId !== '' && !isEphemeralAgent(agentId);
@@ -89,28 +93,44 @@ export default function useAgentConnectorSelection({
 
   const storageKey = `${LocalStorageKeys.LAST_MCP_DISABLED_}${convoKey}`;
   const disabledList = ephemeralAgent?.disabled_mcp;
+  const isNewChat = convoKey === Constants.NEW_CONVO;
+
+  /* Every new chat gets a fresh ephemeral agent, so the new-chat defaults are laid on each
+     time; the chat's own switches then take over and move with it to its real id. */
+  useEffect(() => {
+    if (!isSavedAgent || !isNewChat || disabledList !== undefined || newChatOff === undefined) {
+      return;
+    }
+    setEphemeralAgent((prev) =>
+      prev?.disabled_mcp !== undefined ? prev : { ...(prev ?? {}), disabled_mcp: [...newChatOff] },
+    );
+  }, [isSavedAgent, isNewChat, disabledList, newChatOff, setEphemeralAgent]);
 
   /* A conversation loaded again rebuilds its ephemeral agent from the model spec,
      which knows nothing of these switches, so the stored choice is laid back on. */
   useEffect(() => {
-    if (!isSavedAgent || convoKey === Constants.NEW_CONVO || disabledList !== undefined) {
+    if (!isSavedAgent || isNewChat || disabledList !== undefined) {
       return;
     }
     const stored = readStoredDisabled(storageKey);
     if (stored !== undefined) {
       setEphemeralAgent((prev) => ({ ...(prev ?? {}), disabled_mcp: stored }));
     }
-  }, [isSavedAgent, convoKey, disabledList, storageKey, setEphemeralAgent]);
+  }, [isSavedAgent, isNewChat, disabledList, storageKey, setEphemeralAgent]);
 
   /* A new chat's choice moves to its real id with the ephemeral agent, and is stored from there. */
   useEffect(() => {
-    if (convoKey === Constants.NEW_CONVO || !Array.isArray(disabledList)) {
+    if (isNewChat || !Array.isArray(disabledList)) {
       return;
     }
     localStorage.setItem(storageKey, JSON.stringify(disabledList));
-  }, [convoKey, disabledList, storageKey]);
+  }, [isNewChat, disabledList, storageKey]);
 
-  const disabled = useMemo(() => new Set(disabledList ?? []), [disabledList]);
+  /* Until the defaults are laid on, read them directly so the chips never flash all on. */
+  const disabled = useMemo(
+    () => new Set(disabledList ?? (isNewChat ? newChatOff : undefined) ?? []),
+    [disabledList, isNewChat, newChatOff],
+  );
 
   const isEnabled = useCallback(
     (serverName: string) => agentServerNames.has(serverName) && !disabled.has(serverName),
@@ -123,7 +143,7 @@ export default function useAgentConnectorSelection({
         return;
       }
       setEphemeralAgent((prev) => {
-        const current = new Set(prev?.disabled_mcp ?? []);
+        const current = new Set(prev?.disabled_mcp ?? (isNewChat ? newChatOff : undefined) ?? []);
         if (current.has(serverName)) {
           current.delete(serverName);
         } else {
@@ -132,7 +152,7 @@ export default function useAgentConnectorSelection({
         return { ...(prev ?? {}), disabled_mcp: [...current] };
       });
     },
-    [agentServerNames, setEphemeralAgent],
+    [agentServerNames, isNewChat, newChatOff, setEphemeralAgent],
   );
 
   return { isSavedAgent, agentServerNames, isEnabled, toggle };

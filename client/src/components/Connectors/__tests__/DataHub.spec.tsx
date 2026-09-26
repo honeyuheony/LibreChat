@@ -9,6 +9,9 @@ import type { MCPServerDefinition } from '~/hooks';
 import DataHub from '../Hub/DataHub';
 
 const mockStartNewChat = jest.fn();
+const mockShowToast = jest.fn();
+const mockUpdateDefaults = jest.fn();
+const mockPersonalization: { current: object } = { current: {} };
 const mockInitializeServer = jest.fn();
 const mockRevokeOAuth = jest.fn();
 const mockTools: { current: Record<string, { tools: object[] }> } = { current: {} };
@@ -32,7 +35,13 @@ jest.mock('~/hooks', () => {
     useDocumentTitle: jest.fn(),
     activateCatalog: jest.fn(),
     useAuthContext: () => ({
-      user: { id: 'user-a', role: mockRole.current, name: 'Hong', department: 'Analysis' },
+      user: {
+        id: 'user-a',
+        role: mockRole.current,
+        name: 'Hong',
+        department: 'Analysis',
+        personalization: mockPersonalization.current,
+      },
     }),
     useMCPServerManager: () => ({
       availableMCPServers: mockServers.current,
@@ -57,6 +66,10 @@ jest.mock('~/hooks', () => {
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
   useMediaQuery: () => false,
+  useToastContext: () => ({ showToast: mockShowToast }),
+}));
+jest.mock('~/data-provider', () => ({
+  useUpdateConnectorDefaultsMutation: () => ({ mutate: mockUpdateDefaults }),
 }));
 jest.mock('~/hooks/MCP/useMCPRefresh', () => ({ useMCPRefresh: jest.fn() }));
 jest.mock('~/hooks/Chat/useNewChat', () => () => ({ startNewChat: mockStartNewChat }));
@@ -109,6 +122,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockRole.current = 'USER';
   mockStartedHere.current = new Set();
+  mockPersonalization.current = {};
   mockDesk.current = {
     state: 'offline',
     deviceName: null,
@@ -381,6 +395,38 @@ describe('DataHub', () => {
     renderHub('/connectors/filesystem');
     await user.click(screen.getByTestId('data-hub-new-chat'));
     expect(mockStartNewChat).toHaveBeenCalledTimes(1);
+  });
+
+  describe('use in new chats', () => {
+    const newChatSwitch = () => screen.getByRole('switch', { name: 'Use in new chats by default' });
+
+    it('is off unless the config sets defaultOn', () => {
+      renderHub('/connectors/filesystem');
+      expect(newChatSwitch()).not.toBeChecked();
+    });
+
+    it('follows the config defaultOn until the user chooses', () => {
+      mockServers.current[0] = server('filesystem', { title: 'Shared folder', defaultOn: true });
+      renderHub('/connectors/filesystem');
+      expect(newChatSwitch()).toBeChecked();
+    });
+
+    it("shows the user's own choice over the config", () => {
+      mockServers.current[0] = server('filesystem', { title: 'Shared folder', defaultOn: true });
+      mockPersonalization.current = { connectorDefaults: { filesystem: false } };
+      renderHub('/connectors/filesystem');
+      expect(newChatSwitch()).not.toBeChecked();
+    });
+
+    it('saves the switch for this connector', async () => {
+      const user = userEvent.setup();
+      renderHub('/connectors/filesystem');
+      await user.click(newChatSwitch());
+      expect(mockUpdateDefaults).toHaveBeenCalledWith(
+        { connectorDefaults: { filesystem: true } },
+        expect.any(Object),
+      );
+    });
   });
 
   it('hides connection details from non-admins', () => {

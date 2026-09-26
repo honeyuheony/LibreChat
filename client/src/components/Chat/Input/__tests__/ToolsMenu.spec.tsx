@@ -66,6 +66,7 @@ jest.mock('~/hooks/Agents/useAgentToolPermissions', () => ({
   default: () => ({ tools: mockAgentTools }),
 }));
 let mockContextTools: Record<string, unknown> = {};
+let mockUser: Record<string, unknown> = { personalization: {} };
 
 jest.mock('librechat-data-provider', () => {
   const actual =
@@ -92,7 +93,7 @@ jest.mock('~/hooks', () => ({
     values ? `${key}:${values[0]}` : key,
   useHasAccess: () => true,
   useHasMemoryAccess: () => false,
-  useAuthContext: () => ({ user: { personalization: {} } }),
+  useAuthContext: () => ({ user: mockUser }),
   useAgentCapabilities: () => ({
     codeEnabled: false,
     memoryEnabled: false,
@@ -135,6 +136,7 @@ describe('ToolsMenu', () => {
     mockManager = { ...defaultManager };
     mockContextTools = { webSearch: toggle(true, mockWebSearchChange) };
     mockAgentTools = undefined;
+    mockUser = { personalization: {} };
     localStorage.clear();
   });
 
@@ -336,6 +338,60 @@ describe('ToolsMenu', () => {
         'files',
       ]);
       expect(mockToggleServerSelection).not.toHaveBeenCalled();
+    });
+
+    describe('in a new chat', () => {
+      const withConfig = (defaultOn?: boolean) => {
+        mockManager = {
+          ...mockManager,
+          selectableServers: [
+            { serverName: 'files', config: { title: 'Shared files', defaultOn } },
+            { serverName: 'calendar', config: { title: 'Calendar' } },
+          ],
+        } as typeof mockManager;
+      };
+
+      beforeEach(() => {
+        mockContextTools = { ...mockContextTools, conversationId: null };
+      });
+
+      it('starts a connector off when neither the user nor the config turns it on', async () => {
+        withConfig(undefined);
+        const user = userEvent.setup();
+        render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+        expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
+        await user.click(screen.getByTestId('tools-menu-button'));
+        expect(
+          await screen.findByRole('menuitemcheckbox', { name: 'Shared files', checked: false }),
+        ).toBeInTheDocument();
+      });
+
+      it('starts a connector on when the config sets defaultOn', () => {
+        withConfig(true);
+        render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+        expect(screen.getByTestId('tools-menu-count')).toHaveTextContent('1');
+      });
+
+      it("follows the user's own switch over the config", () => {
+        withConfig(true);
+        mockUser = { personalization: { connectorDefaults: { files: false } } };
+        render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+        expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
+      });
+
+      it('turns a default-off connector on for this chat only', async () => {
+        withConfig(undefined);
+        const user = userEvent.setup();
+        render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+
+        await user.click(screen.getByTestId('tools-menu-button'));
+        await user.click(screen.getByRole('menuitemcheckbox', { name: 'Shared files' }));
+        expect(
+          await screen.findByRole('menuitemcheckbox', { name: 'Shared files', checked: true }),
+        ).toBeInTheDocument();
+        expect(mockUser).toEqual({ personalization: {} });
+      });
     });
 
     it('lays a stored choice back on when the conversation is opened again', async () => {
