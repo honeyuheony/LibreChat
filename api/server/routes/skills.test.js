@@ -1075,6 +1075,87 @@ describe('Skill routes', () => {
     });
   });
 
+  describe('POST /api/skills/:id/fork', () => {
+    async function createSharedSkillWithFile() {
+      const created = await createSkillAsOwner({ body: '# Weekly report\n\nSummarize the week.' });
+      await Skill.updateOne({ _id: created.body._id }, { $set: { manualMinutes: 40 } });
+      const upload = await request(app)
+        .post(`/api/skills/${created.body._id}/files`)
+        .field('relativePath', 'references/guide.md')
+        .attach('file', Buffer.from('guide'), {
+          filename: 'guide.md',
+          contentType: 'text/markdown',
+        });
+      expect(upload.status).toBe(200);
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: testUsers.editor._id,
+        resourceType: ResourceType.SKILL,
+        resourceId: created.body._id,
+        accessRoleId: AccessRoleIds.SKILL_VIEWER,
+        grantedBy: testUsers.owner._id,
+      });
+      return created.body;
+    }
+
+    it('copies the body and files into a skill owned by the caller', async () => {
+      const original = await createSharedSkillWithFile();
+
+      setTestUser(testUsers.editor);
+      const res = await request(app).post(`/api/skills/${original._id}/fork`).send({});
+
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({
+        name: 'demo-skill',
+        body: '# Weekly report\n\nSummarize the week.',
+        author: testUsers.editor._id.toString(),
+        forkOf: original._id,
+        forkCount: 0,
+        useCount: 0,
+        manualMinutes: 40,
+        fileCount: 1,
+        _forkSummary: { filesProcessed: 1, filesSucceeded: 1, filesFailed: 0, errors: [] },
+      });
+      const copiedFiles = await SkillFile.find({ skillId: res.body._id }).lean();
+      expect(copiedFiles.map((file) => file.relativePath)).toEqual(['references/guide.md']);
+      const ownerAcl = await AclEntry.findOne({
+        resourceType: ResourceType.SKILL,
+        resourceId: res.body._id,
+        principalType: PrincipalType.USER,
+        principalId: testUsers.editor._id,
+      });
+      expect(ownerAcl.roleId.toString()).toBe(testRoles.owner._id.toString());
+      const persistedOriginal = await Skill.findById(original._id).lean();
+      expect(persistedOriginal.forkCount).toBe(1);
+    });
+
+    it('adds a -fork suffix when the caller already owns the name', async () => {
+      const original = await createSharedSkillWithFile();
+      const res = await request(app).post(`/api/skills/${original._id}/fork`).send({});
+      expect(res.status).toBe(201);
+      expect(res.body.name).toBe('demo-skill-fork');
+      expect(res.body.author).toBe(testUsers.owner._id.toString());
+    });
+
+    it('returns 409 when the requested name is already taken by the caller', async () => {
+      const original = await createSharedSkillWithFile();
+      const res = await request(app)
+        .post(`/api/skills/${original._id}/fork`)
+        .send({ name: 'demo-skill' });
+      expect(res.status).toBe(409);
+      const persistedOriginal = await Skill.findById(original._id).lean();
+      expect(persistedOriginal.forkCount).toBe(0);
+    });
+
+    it('returns 403 to a user who cannot view the original', async () => {
+      const original = await createSharedSkillWithFile();
+      setTestUser(testUsers.noAccess);
+      const res = await request(app).post(`/api/skills/${original._id}/fork`).send({});
+      expect(res.status).toBe(403);
+      expect(await Skill.countDocuments({ forkOf: original._id })).toBe(0);
+    });
+  });
+
   describe('Sharing via ACL (editor grant)', () => {
     it('allows an editor to patch a shared skill', async () => {
       const created = await createSkillAsOwner();

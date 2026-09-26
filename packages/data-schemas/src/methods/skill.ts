@@ -1119,6 +1119,7 @@ export function createSkillMethods(
     skillIds: Array<Types.ObjectId | string>,
     durationSeconds: number,
   ) => Promise<{ matchedCount: number }>;
+  incrementSkillForkCount: (skillId: Types.ObjectId | string) => Promise<{ matchedCount: number }>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
       skillId: Types.ObjectId | string;
@@ -2011,6 +2012,18 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount };
   }
 
+  /** 응용(fork)으로 새 스킬이 생길 때 원본의 응용 수를 1 올린다. */
+  async function incrementSkillForkCount(
+    skillId: Types.ObjectId | string,
+  ): Promise<{ matchedCount: number }> {
+    if (typeof skillId === 'string' && !isValidObjectIdString(skillId)) {
+      return { matchedCount: 0 };
+    }
+    const Skill = mongoose.models.Skill as Model<ISkill>;
+    const result = await Skill.updateOne({ _id: skillId }, { $inc: { forkCount: 1 } });
+    return { matchedCount: result.matchedCount };
+  }
+
   /** 검수 통과 표시를 켜거나(날짜·검수자) 끈다(null). 마켓 카드의 "검수됨" 배지가 이 값을 본다. */
   async function updateSkillReview(params: {
     skillId: Types.ObjectId | string;
@@ -2032,6 +2045,7 @@ export function createSkillMethods(
     getSkillByName,
     getAuthorSkillByName,
     recordSkillRuns,
+    incrementSkillForkCount,
     updateSkillReview,
     listSkillsByAccess,
     listAlwaysApplySkills,

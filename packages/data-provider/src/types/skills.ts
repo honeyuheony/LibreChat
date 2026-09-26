@@ -355,6 +355,21 @@ export type TUpdateSkillPayload = {
   manualMinutes?: number;
 };
 
+/** POST `/api/skills/:id/fork` 요청 본문. 이름을 비우면 원본 이름을 쓰고, 겹치면 `-fork` 꼬리를 붙인다. */
+export type TForkSkillRequest = {
+  name?: string;
+};
+
+/** 응용(fork)으로 만든 새 스킬과 파일 복사 결과. */
+export type TForkSkillResponse = TSkill & {
+  _forkSummary: {
+    filesProcessed: number;
+    filesSucceeded: number;
+    filesFailed: number;
+    errors: Array<{ path: string; status: 'ok' | 'error'; error?: string }>;
+  };
+};
+
 /** Variables passed into the update mutation: id + expectedVersion + partial payload. */
 export type TUpdateSkillVariables = {
   id: string;

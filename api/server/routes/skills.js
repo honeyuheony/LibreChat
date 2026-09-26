@@ -4,6 +4,7 @@ const multer = require('multer');
 const express = require('express');
 const {
   createImportHandler,
+  createForkSkillHandler,
   blockFilteredSkillFile,
   generateCheckAccess,
   getStorageMetadata,
@@ -30,6 +31,7 @@ const {
   getRoleByName,
   listSkillsByAccess,
   updateSkillReview,
+  incrementSkillForkCount,
 } = require('~/models');
 const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
@@ -41,6 +43,10 @@ const {
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const { maybeRunGitHubSkillSyncForRequest } = require('~/server/services/Skills/sync');
+const {
+  getSkillDbMethods,
+  getSkillStrategyFunctions,
+} = require('~/server/services/Endpoints/agents/skillDeps');
 const configMiddleware = require('~/server/middleware/config/app');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
 
@@ -158,6 +164,23 @@ const importHandler = createImportHandler({
   saveBuffer: saveSkillBuffer,
   deleteFile: deleteSkillBlob,
   grantPermission,
+});
+
+// ---------------------------------------------------------------------------
+// Fork handler (응용: 남의 스킬을 복사해 호출자 소유로 만든다)
+// ---------------------------------------------------------------------------
+const skillDbMethods = getSkillDbMethods();
+const forkHandler = createForkSkillHandler({
+  getSkillById: skillDbMethods.getSkillById,
+  listSkillFiles: skillDbMethods.listSkillFiles,
+  getStrategyFunctions: getSkillStrategyFunctions,
+  createSkill,
+  deleteSkill,
+  upsertSkillFile,
+  saveBuffer: saveSkillBuffer,
+  deleteFile: deleteSkillBlob,
+  grantPermission,
+  incrementSkillForkCount,
 });
 
 // ---------------------------------------------------------------------------
@@ -331,6 +354,17 @@ router.get(
   '/:id',
   canAccessSkillResource({ requiredPermission: PermissionBits.VIEW }),
   handlers.get,
+);
+
+// 원본을 볼 수 있는 사용자라면 응용할 수 있다. 파일을 복사하므로 업로드 제한을 함께 건다.
+router.post(
+  '/:id/fork',
+  checkSkillCreate,
+  canAccessSkillResource({ requiredPermission: PermissionBits.VIEW }),
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  restoreTenantContextFromReq,
+  forkHandler,
 );
 
 router.patch(
