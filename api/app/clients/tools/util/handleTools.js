@@ -29,6 +29,7 @@ const {
   resolveCodeExecutionContext,
   sendEvent,
   isTaskToolName,
+  emitTaskProgress,
   createTaskTool,
   getStorageMetadata,
   createTaskToolDeps,
@@ -43,7 +44,6 @@ const {
   EToolResources,
   PermissionTypes,
   AgentCapabilities,
-  TASK_PROGRESS_EVENT,
 } = require('librechat-data-provider');
 const {
   availableTools,
@@ -136,16 +136,18 @@ const saveTaskFile = async (req, { buffer, filename, type }) => {
  */
 const createTaskProgressEmitter = (options) => {
   const streamId = options.req?._resumableStreamId || null;
+  const publish = async (event) => {
+    if (streamId) {
+      await GenerationJobManager.emitChunk(streamId, event, {
+        expectedCreatedAt: options.jobCreatedAt,
+      });
+    } else if (options.res && !options.res.writableEnded) {
+      sendEvent(options.res, event);
+    }
+  };
   return async (data) => {
-    const event = { event: TASK_PROGRESS_EVENT, data };
     try {
-      if (streamId) {
-        await GenerationJobManager.emitChunk(streamId, event, {
-          expectedCreatedAt: options.jobCreatedAt,
-        });
-      } else if (options.res && !options.res.writableEnded) {
-        sendEvent(options.res, event);
-      }
+      await emitTaskProgress(publish, data);
     } catch (error) {
       logger.warn('[handleTools] Failed to emit task progress:', error?.message ?? error);
     }
