@@ -142,6 +142,50 @@ describe('TaskPlanCard', () => {
     expect(screen.getByTestId('result-card')).toHaveAttribute('data-auto-open', 'true');
   });
 
+  test('stops on the confirmation step when the paused call was rejected', () => {
+    renderPlan({
+      toolName: TaskTools.extract_table,
+      args: { fields: ['정세 전망'] },
+      approval,
+      output: '사용자가 실행을 거절했습니다.',
+    });
+
+    expect(stepStates()).toEqual([
+      'done ✓1. com_ui_task_stage_prepare',
+      'stopped ✕2. com_ui_task_stage_confirm_fields',
+      'todo ○3. com_ui_task_stage_extract_all',
+      'todo ○4. com_ui_task_stage_aggregate',
+      'todo ○5. com_ui_task_stage_save',
+    ]);
+  });
+
+  test('stops on the step the progress reached when the call returned without a result', () => {
+    const jotaiStore = createStore();
+    jotaiStore.set(taskProgressByToolCallId('call-1'), {
+      toolCallId: 'call-1',
+      stage: 'compose',
+      done: 0,
+      total: 1,
+      label: '',
+    });
+    renderPlan(
+      {
+        toolName: TaskTools.write_report,
+        args: {},
+        output: '문서가 없습니다. 먼저 파일을 올려 주세요.',
+      },
+      jotaiStore,
+    );
+
+    expect(stepStates().map((state) => state.split(' ')[0])).toEqual([
+      'done',
+      'done',
+      'stopped',
+      'todo',
+      'todo',
+    ]);
+  });
+
   test('hides the pickers once the paused call has an output', () => {
     renderPlan({
       toolName: TaskTools.extract_table,

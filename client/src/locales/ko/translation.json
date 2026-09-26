@@ -3317,5 +3317,6 @@
   "com_ui_task_on": "켜짐",
   "com_ui_task_off": "꺼짐",
   "com_ui_task_mode_task": "작업",
-  "com_ui_task_mode_chat": "대화"
+  "com_ui_task_mode_chat": "대화",
+  "com_ui_task_status_stopped": "중단됨"
 }

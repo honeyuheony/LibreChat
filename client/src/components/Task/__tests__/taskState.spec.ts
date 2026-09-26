@@ -33,7 +33,34 @@ describe('findLatestTaskToolCall', () => {
       name: 'summarize_documents',
       awaitingApproval: false,
       finished: false,
+      hasResult: false,
+      hadApproval: false,
     });
+  });
+
+  it('knows whether the finished call saved a result', () => {
+    const approval = { actionId: 'x', allowed_decisions: ['approve'] };
+    const rejected = [
+      toolCallMessage({ id: 'a', name: 'extract_table', approval, output: '거절되었습니다' }),
+    ];
+    expect(findLatestTaskToolCall(rejected)).toMatchObject({
+      finished: true,
+      hasResult: false,
+      hadApproval: true,
+    });
+
+    const saved = [
+      toolCallMessage({ id: 'a', name: 'extract_table', output: 'done' }, {
+        attachments: [
+          {
+            type: 'task_result',
+            toolCallId: 'a',
+            task_result: { resultId: 'r1', kind: 'table', title: 't', stats: {} },
+          },
+        ],
+      } as unknown as Partial<TMessage>),
+    ];
+    expect(findLatestTaskToolCall(saved)).toMatchObject({ finished: true, hasResult: true });
   });
 
   it('reports a pending approval until the call has output', () => {
@@ -61,6 +88,8 @@ describe('resolveTaskSteps', () => {
     name: TaskTools.extract_table,
     awaitingApproval: false,
     finished: false,
+    hasResult: false,
+    hadApproval: false,
   };
 
   /** Walks up from this test to the repository root, the folder that holds `packages/api`. */
@@ -107,9 +136,27 @@ describe('resolveTaskSteps', () => {
     expect(steps.map((step) => step.state)).toEqual(['done', 'now', 'todo', 'todo', 'todo']);
   });
 
-  it('marks every step done once the call has finished', () => {
-    const steps = resolveTaskSteps({ ...call, finished: true }, null);
+  it('marks every step done once the call has finished with a saved result', () => {
+    const steps = resolveTaskSteps({ ...call, finished: true, hasResult: true }, null);
     expect(steps.every((step) => step.state === 'done')).toBe(true);
+  });
+
+  it('stops on the confirmation step when a confirmed call ended without a result', () => {
+    const steps = resolveTaskSteps({ ...call, finished: true, hadApproval: true }, null);
+    expect(steps.map((step) => step.state)).toEqual(['done', 'stopped', 'todo', 'todo', 'todo']);
+  });
+
+  it('stops on the last reported step when the call failed midway', () => {
+    const steps = resolveTaskSteps(
+      { ...call, finished: true, hadApproval: true },
+      { toolCallId: 't', stage: 'extract', done: 3, total: 12, label: '' },
+    );
+    expect(steps.map((step) => step.state)).toEqual(['done', 'done', 'stopped', 'todo', 'todo']);
+  });
+
+  it('stops on the first step when a call without confirmation returned nothing', () => {
+    const steps = resolveTaskSteps({ ...call, name: TaskTools.write_report, finished: true }, null);
+    expect(steps.map((step) => step.state)).toEqual(['stopped', 'todo', 'todo', 'todo', 'todo']);
   });
 
   it('starts on the first step before any event and on unknown stage ids', () => {

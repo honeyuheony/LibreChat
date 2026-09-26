@@ -2,8 +2,10 @@ import { useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { TaskTools } from 'librechat-data-provider';
 import type { Agents, TAttachment, TaskToolName } from 'librechat-data-provider';
+import type { TaskStepState } from '~/components/Task/taskState';
 import type { TaskResultAttachment } from './api';
 import TaskViewApproval, { TaskViewRan, viewLabel } from './TaskViewApproval';
+import { stepStates, stoppedStepIndex } from '~/components/Task/taskState';
 import TaskSchemaApproval, { TaskSchemaRan } from './TaskSchemaApproval';
 import { taskProgressByToolCallId } from '~/store/task';
 import { TASK_STAGES, parseTaskArgs } from './stages';
@@ -13,8 +15,7 @@ import { cn } from '~/utils';
 
 const TASK_RESULT_ATTACHMENT = 'task_result';
 
-type StepState = 'done' | 'now' | 'todo';
-const STEP_ICON: Record<StepState, string> = { done: '✓', now: '▶', todo: '○' };
+const STEP_ICON: Record<TaskStepState, string> = { done: '✓', now: '▶', stopped: '✕', todo: '○' };
 
 function taskResultsOf(attachments: TAttachment[] | undefined): TaskResultAttachment[] {
   const results: TaskResultAttachment[] = [];
@@ -61,9 +62,18 @@ export default function TaskPlanCard({
    *  failed one has no result, so no "ran" card claims otherwise. */
   const ran = finished && results.length > 0;
 
+  /** Returned without a saved result: rejected, failed, or nothing to work on. */
+  const stopped = finished && results.length === 0;
+
   const progressIndex = stages.findIndex((stage) => stage.id === progress?.stage);
   const confirmIndex = awaitingApproval ? stages.findIndex((stage) => stage.id === 'confirm') : -1;
-  const current = finished ? stages.length : Math.max(0, progressIndex, confirmIndex);
+  let current = Math.max(0, progressIndex, confirmIndex);
+  if (ran) {
+    current = stages.length;
+  } else if (stopped) {
+    current = stoppedStepIndex(stages, progress, approval != null);
+  }
+  const states = stepStates(stages.length, current, stopped ? 'stopped' : 'now');
 
   const stepLabel = (index: number) => {
     const label = localize(stages[index].label);
@@ -86,12 +96,7 @@ export default function TaskPlanCard({
         </h4>
         <ol className="flex flex-col">
           {stages.map((stage, index) => {
-            let state: StepState = 'todo';
-            if (index < current) {
-              state = 'done';
-            } else if (index === current) {
-              state = 'now';
-            }
+            const state = states[index];
             const now = state === 'now';
             return (
               <li
