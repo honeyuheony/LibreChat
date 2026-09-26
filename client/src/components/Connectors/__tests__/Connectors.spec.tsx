@@ -165,12 +165,12 @@ describe('ConnectorCard', () => {
 });
 
 describe('DeskConnectorCard', () => {
-  it('shows the allowed folder and PC name while the app is on, without a download link', async () => {
+  it('shows the switched-on folders and PC name while the app is on, without a download link', async () => {
     mockTools('my-pc', []);
     mockDesk({
       state: 'online',
       deviceName: 'KIM-MINJI-PC',
-      folderName: 'Work files',
+      folders: ['Work files', 'Documents', 'Desktop'],
       connectedAt: new Date().toISOString(),
       installerUrl: 'https://relay.example/app/desk-app-setup-0.1.0.exe',
     });
@@ -183,9 +183,46 @@ describe('DeskConnectorCard', () => {
 
     expect(await screen.findByText('Desktop app connected')).toBeInTheDocument();
     expect(
-      screen.getByText('Allowed folder “Work files” · KIM-MINJI-PC · Connected just now'),
+      screen.getByText(
+        'Folders (3): Work files, Documents and 1 more · KIM-MINJI-PC · Connected just now',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
+  });
+
+  it('lists two folders in full and says so when none is switched on', async () => {
+    mockTools('my-pc', []);
+    mockDesk({
+      state: 'online',
+      deviceName: 'KIM-MINJI-PC',
+      folders: ['Work files', 'Documents'],
+      connectedAt: null,
+      installerUrl: null,
+    });
+
+    const { unmount } = renderWithQueries(
+      <div role="list">
+        <DeskConnectorCard server={deskServer} />
+      </div>,
+    );
+    expect(
+      await screen.findByText('Folders (2): Work files, Documents · KIM-MINJI-PC'),
+    ).toBeInTheDocument();
+    unmount();
+
+    mockDesk({
+      state: 'online',
+      deviceName: 'KIM-MINJI-PC',
+      folders: [],
+      connectedAt: null,
+      installerUrl: null,
+    });
+    renderWithQueries(
+      <div role="list">
+        <DeskConnectorCard server={deskServer} />
+      </div>,
+    );
+    expect(await screen.findByText('No folders turned on · KIM-MINJI-PC')).toBeInTheDocument();
   });
 
   it('offers the installer while the app is off', async () => {
@@ -193,7 +230,7 @@ describe('DeskConnectorCard', () => {
     mockDesk({
       state: 'offline',
       deviceName: null,
-      folderName: null,
+      folders: [],
       connectedAt: null,
       installerUrl: 'https://relay.example/app/desk-app-setup-0.1.0.exe',
     });
@@ -216,7 +253,7 @@ describe('DeskConnectorCard', () => {
     mockDesk({
       state: 'unknown',
       deviceName: null,
-      folderName: null,
+      folders: [],
       connectedAt: null,
       installerUrl: null,
     });

@@ -259,6 +259,9 @@ export function summarizeToolOutput(
   return null;
 }
 
+/** The desktop app's answer when the user refused or let the permission prompt expire (desk-app `DENIED_MESSAGE`). */
+const DESK_PERMISSION_DENIED = '사용자가 이 폴더 읽기를 허락하지 않았습니다.';
+
 /** The readable failure message of a step, without the transport prefixes. */
 export function getToolErrorMessage(output: string | null | undefined): string | null {
   if (typeof output !== 'string') {
@@ -266,6 +269,18 @@ export function getToolErrorMessage(output: string | null | undefined): string |
   }
   const trimmed = output.trim();
   return isError(trimmed) ? cleanToolError(trimmed) : null;
+}
+
+/** The failure line under a step; a refused PC permission reads as a short label rather than the app's sentence. */
+export function describeToolError(
+  output: string | null | undefined,
+  localize: Localize,
+): string | null {
+  const message = getToolErrorMessage(output);
+  if (message != null && message.includes(DESK_PERMISSION_DENIED)) {
+    return localize('com_ui_tool_step_permission_denied');
+  }
+  return message;
 }
 
 const ARG_SUMMARY_LIMIT = 3;

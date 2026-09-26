@@ -16,6 +16,23 @@ export const useDeskStatusQuery = (
   });
 };
 
+/** Reads outside the switched-on folders the user's app is waiting on; polled while a PC-folder tool runs. */
+export const useDeskPermissionsQuery = (
+  config?: UseQueryOptions<t.DeskPermission[]>,
+): QueryObserverResult<t.DeskPermission[]> => {
+  return useQuery<t.DeskPermission[]>(
+    [QueryKeys.deskPermissions],
+    () => dataService.getDeskPermissions(),
+    {
+      refetchInterval: 2000,
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+      retry: false,
+      ...config,
+    },
+  );
+};
+
 /** The installer the relay currently serves; public, so the download page works before sign-in. */
 export const useDeskAppReleaseQuery = (
   config?: UseQueryOptions<t.DeskAppReleaseResponse>,

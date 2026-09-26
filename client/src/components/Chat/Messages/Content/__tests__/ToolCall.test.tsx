@@ -25,6 +25,7 @@ jest.mock('~/hooks', () => ({
       com_ui_tool_step_unknown: `Ran ${values?.[0]}`,
       com_ui_tool_step_read_file: `Read ${values?.[0]}`,
       com_ui_tool_step_count: `${values?.[0]} items`,
+      com_ui_tool_step_permission_denied: 'Not allowed by the user',
     };
     return translations[key] || key;
   },
@@ -47,6 +48,11 @@ jest.mock('~/hooks/MCP', () => {
     useMCPServerNames: () => mcpServerNames,
   };
 });
+
+jest.mock('../DeskPermission', () => ({
+  __esModule: true,
+  default: () => <div data-testid="desk-permission" />,
+}));
 
 jest.mock('../connectors', () => ({
   useConnectorTitles: () => new Map([['my-pc', '내 PC 폴더']]),
@@ -707,6 +713,50 @@ describe('ToolCall', () => {
         screen.getByText('PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.'),
       ).toHaveClass('text-status-error');
       expect(screen.queryByText(/Error executing tool/)).not.toBeInTheDocument();
+    });
+
+    it('shows a refused PC permission as a short label', () => {
+      renderWithRecoil(
+        <ToolCall
+          {...mockProps}
+          name={mcpName}
+          args='{"path":"D:\\\\a.txt"}'
+          output="Error executing tool read_file: 사용자가 이 폴더 읽기를 허락하지 않았습니다."
+          runStepStatus="completed"
+        />,
+      );
+      expect(screen.getByText('Not allowed by the user')).toHaveClass('text-status-error');
+    });
+
+    it('offers the permission cards only while a PC-folder step is running', () => {
+      const running = { initialProgress: 0.1, isSubmitting: true, output: '' };
+      const { unmount } = renderWithRecoil(
+        <ToolCall {...mockProps} {...running} name={mcpName} args='{"path":"D:\\\\a.txt"}' />,
+      );
+      expect(screen.getByTestId('desk-permission')).toBeInTheDocument();
+      unmount();
+
+      const other = renderWithRecoil(
+        <ToolCall
+          {...mockProps}
+          {...running}
+          name={`read_file${Constants.mcp_delimiter}google-workspace`}
+          args="{}"
+        />,
+      );
+      expect(screen.queryByTestId('desk-permission')).not.toBeInTheDocument();
+      other.unmount();
+
+      renderWithRecoil(
+        <ToolCall
+          {...mockProps}
+          name={mcpName}
+          args="{}"
+          output="본문"
+          runStepStatus="completed"
+        />,
+      );
+      expect(screen.queryByTestId('desk-permission')).not.toBeInTheDocument();
     });
   });
 });

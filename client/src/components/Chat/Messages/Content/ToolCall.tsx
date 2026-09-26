@@ -10,14 +10,16 @@ import {
 } from 'librechat-data-provider';
 import type { TAttachment, PartMetadata } from 'librechat-data-provider';
 import { useLocalize, useProgress, useExpandCollapse, useLazyCollapseBody } from '~/hooks';
-import { describeToolStep, getToolErrorMessage, summarizeToolOutput } from './steps';
+import { describeToolError, describeToolStep, summarizeToolOutput } from './steps';
 import { getConnectorTitle, useConnectorTitles } from './connectors';
 import { ToolIcon, getToolIconType, isError } from './ToolOutput';
+import { DESK_SERVER_NAME } from '~/components/Connectors/status';
 import { useMCPIconMap, useMCPServerNames } from '~/hooks/MCP';
 import { resolveToolCallPhase } from '~/utils/toolCallPhase';
 import { GroupedRowContext, TOOL_ROW_CLASSES } from './rows';
 import { cn, getToolDisplayLabel, logger } from '~/utils';
 import { toolPanelSpacingClassName } from './disclosure';
+import DeskPermissionPrompt from './DeskPermission';
 import { useToolCallIntent } from './Parts/intent';
 import { AttachmentGroup } from './Parts';
 import ToolCallInfo from './ToolCallInfo';
@@ -280,7 +282,7 @@ export default function ToolCall({
     return stepLabel;
   };
 
-  const errorMessage = phase === 'failed' ? getToolErrorMessage(output) : null;
+  const errorMessage = phase === 'failed' ? describeToolError(output, localize) : null;
   const resultSummary =
     phase === 'completed'
       ? (summarizeToolOutput(function_name, output, localize) ?? undefined)
@@ -337,6 +339,9 @@ export default function ToolCall({
           isExpanded={showInfo}
         />
       </div>
+      {isMCPToolCall && mcpServerName === DESK_SERVER_NAME && phase === 'running' && (
+        <DeskPermissionPrompt />
+      )}
       {errorMessage && (
         <p className="mb-1.5 ml-8 whitespace-pre-wrap break-words text-sm text-status-error">
           {errorMessage}

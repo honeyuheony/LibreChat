@@ -201,7 +201,7 @@ describe('ToolsMenu', () => {
     const deskStatus = (state: 'online' | 'offline') => ({
       state,
       deviceName: null,
-      folderName: null,
+      folders: [],
       connectedAt: null,
       installerUrl: 'https://relay.example/app/desk-app-setup-0.1.2.exe',
     });

@@ -255,11 +255,27 @@ export interface MCPServerStatus {
 export interface DeskStatusResponse {
   state: 'online' | 'offline' | 'unknown';
   deviceName: string | null;
-  folderName: string | null;
+  /** Names of the folders switched on in the app, in the app's order. */
+  folders: string[];
   connectedAt: string | null;
   /** Public installer link, or `null` when no public relay address or release is known. */
   installerUrl: string | null;
 }
+
+/** A read outside the switched-on folders that the desktop app is waiting for the user to allow. */
+export interface DeskPermission {
+  requestId: number;
+  /** The path as the model sent it. */
+  path: string;
+  /** Port of the app's 127.0.0.1 endpoint; only a browser on that same PC reaches it. */
+  localPort: number;
+  /** One-time token the app accepts once for this request. */
+  approveToken: string;
+  /** ISO 8601 */
+  expiresAt: string;
+}
+
+export type DeskPermissionDecision = 'once' | 'always' | 'deny';
 
 /** The desktop app installer the relay serves; every field is `null` when no release is known. */
 export interface DeskAppReleaseResponse {
