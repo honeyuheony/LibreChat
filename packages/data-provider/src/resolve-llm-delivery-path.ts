@@ -101,6 +101,7 @@ const TEXT_RECOVERABLE_MIME_TYPES: RegExp[] = [
   /^image\//,
   /^audio\//,
   /^application\/(json|javascript|xml|sql|yaml|x-yaml|csv|typescript|x-sh|vnd\.coffeescript)$/,
+  /^application\/(x-hwp|hwp\+zip)$/,
   /^application\/pdf$/,
   /* Only the formats the built-in document parser handles. Presentations and graphics
    * are absent from documentParserMimeTypes, so on a deployment without OCR they would

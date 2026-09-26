@@ -524,6 +524,23 @@ describe('resolveUploadErrorMessage', () => {
     expect(resolveUploadErrorMessage({})).toBe('Error processing file');
   });
 
+  test.each([
+    [
+      '한글 문서 변환 서버에 연결하지 못해 다시 요청해 주세요.',
+      '한글 문서 변환 서버에 연결하지 못해 이 파일을 올리지 못했습니다. 잠시 뒤 다시 올려 주세요. 계속되면 관리자에게 알려 주세요.',
+    ],
+    [
+      '배포용(보호) 한글 문서라 본문이 없습니다.',
+      '배포용(보호) 한글 문서라 내용을 읽을 수 없습니다. 한글에서 일반 문서로 저장한 뒤 다시 올려 주세요.',
+    ],
+    [
+      '한글 문서를 읽지 못했습니다. 잘못된 형식입니다.',
+      '한글 문서를 읽지 못했습니다. 파일이 손상되지 않았는지 확인해 주세요.',
+    ],
+  ])('keeps the HWP upload guidance exact with redaction enabled', (message, expected) => {
+    expect(resolveUploadErrorMessage({ message }, undefined, true)).toBe(expected);
+  });
+
   test('returns default message for unrecognized error', () => {
     expect(resolveUploadErrorMessage({ message: 'ENOENT: no such file or directory' })).toBe(
       'Error processing file',

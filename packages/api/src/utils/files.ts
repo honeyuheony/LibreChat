@@ -5,6 +5,18 @@ import { readFile, stat } from 'fs/promises';
 import { UnsupportedProviderAudioError } from '~/files/upload/errors';
 
 const USER_FACING_UPLOAD_ERRORS = [
+  [
+    '한글 문서 변환 서버에 연결하지 못해',
+    '한글 문서 변환 서버에 연결하지 못해 이 파일을 올리지 못했습니다. 잠시 뒤 다시 올려 주세요. 계속되면 관리자에게 알려 주세요.',
+  ],
+  [
+    '배포용(보호) 한글 문서라',
+    '배포용(보호) 한글 문서라 내용을 읽을 수 없습니다. 한글에서 일반 문서로 저장한 뒤 다시 올려 주세요.',
+  ],
+  [
+    '한글 문서를 읽지 못했습니다.',
+    '한글 문서를 읽지 못했습니다. 파일이 손상되지 않았는지 확인해 주세요.',
+  ],
   ['Invalid file format', 'Invalid file format'],
   ['exceeds token limit', 'File content exceeds token limit'],
   ['Unable to extract text from', 'Unable to extract text from file'],
