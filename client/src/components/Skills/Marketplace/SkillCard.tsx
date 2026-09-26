@@ -69,7 +69,7 @@ export default function SkillCard({ skill }: SkillCardProps) {
               {summary}
             </p>
             <p className="mt-1 text-xs text-text-secondary">
-              {`$${skill.name}`}
+              {`/${skill.name}`}
               {(skill.useCount ?? 0) > 0 &&
                 ` · ${localize('com_skills_use_count', { count: skill.useCount ?? 0 })}`}
             </p>

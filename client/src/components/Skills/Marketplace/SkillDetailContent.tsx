@@ -1,9 +1,9 @@
 import React from 'react';
 import { ScrollText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useSetRecoilState } from 'recoil';
-import { Button, OGDialogContent } from '@librechat/client';
+import { useNavigate } from 'react-router-dom';
 import { Constants } from 'librechat-data-provider';
+import { Button, OGDialogContent } from '@librechat/client';
 import type { TSkillSummary } from 'librechat-data-provider';
 import { getCategoryLabel, getSkillSummary, getSkillTitle } from './skillCategories';
 import { ephemeralAgentByConvoId } from '~/store';
@@ -48,7 +48,7 @@ export default function SkillDetailContent({ skill }: SkillDetailContentProps) {
       <div className="mt-3 text-center">
         <h2 className="text-2xl font-bold text-text-primary">{getSkillTitle(skill)}</h2>
         <p className="mt-1 text-sm text-text-secondary">
-          {`$${skill.name}`}
+          {`/${skill.name}`}
           {categoryLabel && ` · ${categoryLabel}`}
         </p>
         <p className="mt-1 text-sm text-text-secondary">
