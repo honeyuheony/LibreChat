@@ -7,18 +7,24 @@ import {
   PermissionTypes,
   Permissions,
 } from 'librechat-data-provider';
+import type { TMessage } from 'librechat-data-provider';
+import { useGetMessagesByConvoId, useGetStartupConfig } from '~/data-provider';
+import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
 import ConversationTitleMenu from './Menus/ConversationTitleMenu';
 import { OpenSidebar, NewChat, HeaderMenu } from './Menus';
 import { TemporaryChatIndicator } from './TemporaryChat';
-import { useGetStartupConfig } from '~/data-provider';
 import ExportAndShareMenu from './ExportAndShareMenu';
 import SubagentThreadLink from './SubagentThreadLink';
 import { useTraceControl } from './Trace';
-import { useHasAccess } from '~/hooks';
 import { cn } from '~/utils';
 import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
+
+/** Distinct files attached anywhere in the conversation, for the header's 「문서 N」. */
+const countAttachedFiles = (messages: TMessage[]) =>
+  new Set(messages.flatMap((message) => (message.files ?? []).map((file) => file.file_id ?? '')))
+    .size;
 
 /**
  * The conversation's title on the left and sharing on the right. The model
@@ -34,6 +40,8 @@ function Header({
   parentConversationId?: string;
   readOnly?: boolean;
 }) {
+  const localize = useLocalize();
+  const { user } = useAuthContext();
   const { data: startupConfig } = useGetStartupConfig();
   const navVisible = useRecoilValue(store.sidebarExpanded);
   const isSubmitting = useRecoilValue(store.isSubmittingFamily(0));
@@ -44,6 +52,11 @@ function Header({
    *  conversation has no id in the route yet, so absence counts as new too. */
   const { conversationId: routeConversationId } = useParams();
   const isNewChat = routeConversationId == null || routeConversationId === Constants.NEW_CONVO;
+  /** Reads what the conversation view already loaded rather than asking again. */
+  const { data: documentCount = 0 } = useGetMessagesByConvoId<number>(routeConversationId ?? '', {
+    enabled: false,
+    select: countAttachedFiles,
+  });
 
   const interfaceConfig = useMemo(
     () => startupConfig?.interface ?? defaultInterface,
@@ -67,7 +80,7 @@ function Header({
   const hiddenBehindNav = navVisible === true && 'max-md:hidden';
 
   return (
-    <div className="absolute top-0 z-10 flex h-[52px] w-full items-center gap-2 bg-gradient-to-b from-presentation via-presentation/70 to-transparent p-2 font-semibold text-text-primary md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 2xl:via-transparent">
+    <div className="absolute top-0 z-10 flex h-12 w-full items-center gap-2 border-b border-border-light bg-presentation/70 p-2 text-[14.5px] text-text-secondary backdrop-blur-md md:px-4">
       <div className="flex flex-shrink-0 items-center md:hidden">
         <OpenSidebar testId="header-open-sidebar-button" />
       </div>
@@ -82,12 +95,37 @@ function Header({
           <SubagentThreadLink threadId={parentConversationId} labelClassName="hidden lg:inline" />
         )}
         {!isNewChat && !readOnly && <ConversationTitleMenu />}
+        {!isNewChat && documentCount > 0 && (
+          <span className="hidden flex-shrink-0 items-center gap-2 md:flex">
+            <span aria-hidden="true">·</span>
+            {localize('com_ui_header_documents', { 0: documentCount })}
+          </span>
+        )}
       </div>
 
       <div className={cn('flex flex-shrink-0 items-center gap-2', hiddenBehindNav)}>
         {hasAccessToTemporaryChat === true && <TemporaryChatIndicator />}
         {!isNewChat && <NewChat className="md:hidden" />}
         <HeaderMenu startupConfig={startupConfig} trace={trace} className="md:hidden" />
+        {isNewChat && (
+          <span className="hidden text-text-tertiary md:inline">
+            {user?.organization
+              ? `${user.organization} · ${localize('com_ui_home_notice')}`
+              : localize('com_ui_home_notice')}
+          </span>
+        )}
+        {!isNewChat && (
+          <span className="hidden items-center gap-1.5 text-text-tertiary md:flex">
+            <span
+              aria-hidden="true"
+              className={cn(
+                'size-[7px] rounded-full',
+                isSubmitting ? 'bg-amber-500' : 'bg-green-600',
+              )}
+            />
+            {localize(isSubmitting ? 'com_ui_convo_generating' : 'com_ui_convo_done')}
+          </span>
+        )}
         <div className="hidden items-center gap-2 md:flex">
           <ExportAndShareMenu isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false} />
         </div>
