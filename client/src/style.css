@@ -2891,3 +2891,13 @@ button:active:not(:disabled) {
     border: 1px solid rgb(var(--border-xheavy));
   }
 }
+
+/* Wireframe --grad (brand-500 #8b5cf6 → pink #db2777) on the send button. The white glyph is a
+ * graphic, so the 3:1 floor applies: 4.23:1 at the violet end, 4.60:1 at the pink end
+ * (script-computed). `surface-submit` stays the solid fallback, and high contrast keeps it. */
+html:not(.high-contrast) #send-button:not(:disabled) {
+  background-image: linear-gradient(135deg, rgb(139 92 246), rgb(219 39 119));
+}
+html:not(.high-contrast) #send-button:not(:disabled):hover {
+  filter: brightness(1.06);
+}
