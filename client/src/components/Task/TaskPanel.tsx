@@ -27,14 +27,12 @@ import TaskTable from './TaskTable';
 import { cn } from '~/utils';
 import store from '~/store';
 
-const key = (value: string) => value as string as TranslationKeys;
-
 type PanelStatus = 'wait' | 'run' | 'ok';
 
 const STATUS_LABEL: Record<PanelStatus, TranslationKeys> = {
-  wait: key('com_ui_convo_awaiting_approval'),
-  run: key('com_ui_task_status_running'),
-  ok: key('com_ui_task_status_done'),
+  wait: 'com_ui_convo_awaiting_approval',
+  run: 'com_ui_task_status_running',
+  ok: 'com_ui_task_status_done',
 };
 
 const STATUS_DOT: Record<PanelStatus, string> = {
@@ -44,11 +42,8 @@ const STATUS_DOT: Record<PanelStatus, string> = {
 };
 
 /** `doc` and `hwp` are file-kind tags shown as is; only the table tag is a word to translate. */
-const OUTPUT_ICON: Record<TaskOutput['kind'], { label: string; className: string }> = {
-  table: {
-    label: 'com_ui_task_icon_table',
-    className: 'bg-surface-brand-subtle text-accent-primary',
-  },
+const OUTPUT_ICON: Record<TaskOutput['kind'], { label?: string; className: string }> = {
+  table: { className: 'bg-surface-brand-subtle text-accent-primary' },
   summary: { label: 'doc', className: 'bg-status-success-subtle text-status-success' },
   report: { label: 'hwp', className: 'bg-status-warning-subtle text-status-warning-strong' },
 };
@@ -112,7 +107,7 @@ function ProgressSection({
 
   return (
     <Section
-      title={localize(key('com_ui_task_progress'))}
+      title={localize('com_ui_task_progress')}
       count={`${doneSteps}/${steps.length}`}
       open={open}
       onToggle={onToggle}
@@ -160,7 +155,7 @@ function ProgressSection({
               )}
               {step.state === 'now' && call.awaitingApproval && (
                 <span className="mt-0.5 block text-xs font-normal text-text-muted">
-                  {localize(key('com_ui_task_waiting_approval'))}
+                  {localize('com_ui_task_waiting_approval')}
                 </span>
               )}
             </span>
@@ -174,11 +169,11 @@ function ProgressSection({
 function outputMeta(output: TaskOutput, localize: ReturnType<typeof useLocalize>) {
   const meta =
     output.kind === 'table'
-      ? localize(key('com_ui_task_output_table_meta'), {
+      ? localize('com_ui_task_output_table_meta', {
           rows: output.stats?.docs ?? 0,
           none: output.stats?.none ?? 0,
         })
-      : localize(key('com_ui_task_output_doc_meta'), { count: output.stats?.reflected ?? 0 });
+      : localize('com_ui_task_output_doc_meta', { count: output.stats?.reflected ?? 0 });
   const time = formatTaskTime(output.createdAt);
   return time ? `${meta} · ${time}` : meta;
 }
@@ -197,15 +192,13 @@ function OutputsSection({
   const localize = useLocalize();
   return (
     <Section
-      title={localize(key('com_ui_task_outputs'))}
+      title={localize('com_ui_task_outputs')}
       count={outputs.length}
       open={open}
       onToggle={onToggle}
     >
       {outputs.length === 0 ? (
-        <p className="text-[12.5px] text-text-muted">
-          {localize(key('com_ui_task_outputs_empty'))}
-        </p>
+        <p className="text-[12.5px] text-text-muted">{localize('com_ui_task_outputs_empty')}</p>
       ) : (
         <ul>
           {outputs.map((output) => {
@@ -224,15 +217,13 @@ function OutputsSection({
                       icon.className,
                     )}
                   >
-                    {output.kind === 'table' ? localize(key(icon.label)) : icon.label}
+                    {icon.label ?? localize('com_ui_task_icon_table')}
                   </span>
                   <span className="min-w-0 flex-1">
                     <b className="block truncate font-semibold text-text-primary">{output.title}</b>
                     <span className="text-xs text-text-muted">{outputMeta(output, localize)}</span>
                   </span>
-                  <span className="text-xs text-text-muted">
-                    {localize(key('com_ui_task_open'))} ›
-                  </span>
+                  <span className="text-xs text-text-muted">{localize('com_ui_task_open')} ›</span>
                 </button>
               </li>
             );
@@ -323,10 +314,10 @@ function ContextSection({
   }, [chatSelection, ephemeralAgent?.disabled_mcp, isSavedAgent, servers, tools]);
 
   return (
-    <Section title={localize(key('com_ui_task_context'))} open={open} onToggle={onToggle}>
-      <SubHeading>{localize(key('com_ui_task_files'))}</SubHeading>
+    <Section title={localize('com_ui_task_context')} open={open} onToggle={onToggle}>
+      <SubHeading>{localize('com_ui_task_files')}</SubHeading>
       {files.length === 0 ? (
-        <ContextRow icon="↑" text={localize(key('com_ui_task_files_none'))} muted />
+        <ContextRow icon="↑" text={localize('com_ui_task_files_none')} muted />
       ) : (
         <>
           <button
@@ -337,8 +328,8 @@ function ContextSection({
           >
             <ContextRow
               icon="▦"
-              text={localize(key('com_ui_task_files_mine'), { count: files.length })}
-              status={localize(key('com_ui_task_files_all_used'))}
+              text={localize('com_ui_task_files_mine', { count: files.length })}
+              status={localize('com_ui_task_files_all_used')}
             />
           </button>
           {filesOpen && (
@@ -348,7 +339,7 @@ function ContextSection({
                   <ContextRow
                     icon="·"
                     text={file.filename}
-                    status={localize(key('com_ui_task_file_ready'))}
+                    status={localize('com_ui_task_file_ready')}
                   />
                 </li>
               ))}
@@ -358,25 +349,25 @@ function ContextSection({
       )}
       {serverRows.length > 0 && (
         <>
-          <SubHeading>{localize(key('com_ui_task_mcp_servers'))}</SubHeading>
+          <SubHeading>{localize('com_ui_task_mcp_servers')}</SubHeading>
           {serverRows.map(({ server, on }) => {
             return (
               <ContextRow
                 key={server.serverName}
                 icon="▤"
                 text={server.title ?? server.serverName}
-                status={localize(key(on ? 'com_ui_task_on' : 'com_ui_task_off'))}
+                status={localize(on ? 'com_ui_task_on' : 'com_ui_task_off')}
                 muted={!on}
               />
             );
           })}
         </>
       )}
-      <SubHeading>{localize(key('com_ui_task_model'))}</SubHeading>
+      <SubHeading>{localize('com_ui_task_model')}</SubHeading>
       <ContextRow
         icon="◇"
         text={modelName}
-        status={localize(key(isTaskMode ? 'com_ui_task_mode_task' : 'com_ui_task_mode_chat'))}
+        status={localize(isTaskMode ? 'com_ui_task_mode_task' : 'com_ui_task_mode_chat')}
       />
     </Section>
   );
@@ -393,7 +384,7 @@ function ResultView({ resultId, onBack }: { resultId: string; onBack: () => void
           onClick={onBack}
           className="text-[12.5px] text-text-secondary hover:text-text-primary"
         >
-          ‹ {localize(key('com_ui_task_overview'))}
+          ‹ {localize('com_ui_task_overview')}
         </button>
         {result && (
           <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-text-primary">
@@ -404,7 +395,7 @@ function ResultView({ resultId, onBack }: { resultId: string; onBack: () => void
       {isLoading && <p className="text-sm text-text-muted">{localize('com_ui_loading')}</p>}
       {isError && (
         <p role="alert" className="text-sm text-status-error">
-          {localize(key('com_ui_task_result_error'))}
+          {localize('com_ui_task_result_error')}
         </p>
       )}
       {result?.kind === 'table' && <TaskTable result={result} />}
@@ -445,7 +436,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
 
   return (
     <aside
-      aria-label={localize(key('com_ui_task_panel'))}
+      aria-label={localize('com_ui_task_panel')}
       className="flex h-full flex-col overflow-hidden border-l border-border-light bg-surface-primary"
     >
       <header className="flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border-light px-[18px] py-2.5 text-[14.5px] font-semibold leading-[1.35]">

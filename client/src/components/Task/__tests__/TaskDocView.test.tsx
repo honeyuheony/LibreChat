@@ -64,7 +64,7 @@ describe('TaskDocView', () => {
     expect(markers.map((marker) => marker.textContent)).toEqual(['1', '2']);
     expect(markers[0]).toHaveAttribute(
       'aria-label',
-      '긴장 고조 — 문서1.pdf › com_ui_task_footnote_page {"page":2}',
+      '긴장 고조 — 문서1.pdf › com_ui_task_page {"0":2}',
     );
     expect(screen.queryByText('[^1]', { exact: false })).not.toBeInTheDocument();
   });

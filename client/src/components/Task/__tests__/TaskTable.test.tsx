@@ -61,7 +61,7 @@ describe('TaskTable', () => {
     const firstRow = screen.getAllByRole('row')[1];
     const cells = within(firstRow).getAllByRole('cell');
     expect(cells[0]).toHaveTextContent('문서0');
-    expect(cells[2]).toHaveTextContent('com_ui_task_cell_none');
+    expect(cells[2]).toHaveTextContent('com_ui_task_value_none');
   });
 
   it('numbers footnotes across filled cells in reading order with the quote and location', () => {
@@ -70,11 +70,11 @@ describe('TaskTable', () => {
     expect(markers.map((marker) => marker.textContent)).toEqual(['1', '2', '3']);
     expect(markers[0]).toHaveAttribute(
       'aria-label',
-      '인용0 — 문서0.hwp › com_ui_task_footnote_page {"page":3}',
+      '인용0 — 문서0.hwp › com_ui_task_page {"0":3}',
     );
     expect(markers[2]).toHaveAttribute(
       'aria-label',
-      '위험 — 문서1.hwp › com_ui_task_footnote_paragraph {"paragraph":4}',
+      '위험 — 문서1.hwp › com_ui_task_paragraph {"0":4}',
     );
   });
 
@@ -124,7 +124,7 @@ describe('TaskTable', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_excel' }));
     await waitFor(() =>
       expect(mockShowToast).toHaveBeenCalledWith({
-        message: 'com_ui_task_export_error',
+        message: 'com_ui_task_excel_error',
         status: 'error',
       }),
     );

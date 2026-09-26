@@ -6,13 +6,10 @@ import { useToastContext } from '@librechat/client';
 import { dataService } from 'librechat-data-provider';
 import type { TaskDocResult } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
-import type { TranslationKeys } from '~/hooks';
 import { saveBlob } from '~/data-provider/Tasks/queries';
 import { useAuthContext, useLocalize } from '~/hooks';
 import { formatTaskTime } from './taskState';
 import TaskFootnote from './TaskFootnote';
-
-const key = (value: string) => value as string as TranslationKeys;
 
 const FOOTNOTE_HREF = '#task-fn-';
 const FOOTNOTE_MARKER = /\[\^(\d+)\]/g;
@@ -81,7 +78,7 @@ export default function TaskDocView({ result }: { result: TaskDocResult }) {
       const response = await dataService.getFileDownload(user.id, reportFile.file_id);
       saveBlob(response.data as Blob, reportFile.filename);
     } catch {
-      showToast({ message: localize(key('com_ui_task_download_error')), status: 'error' });
+      showToast({ message: localize('com_ui_task_download_error'), status: 'error' });
     } finally {
       setDownloading(false);
     }
@@ -113,9 +110,7 @@ export default function TaskDocView({ result }: { result: TaskDocResult }) {
         </ReactMarkdown>
       </div>
       <div className="mt-2 flex flex-wrap gap-2.5 text-xs text-text-muted">
-        <span>
-          {localize(key('com_ui_task_evidence_count'), { count: result.stats.reflected })}
-        </span>
+        <span>{localize('com_ui_task_evidence_count', { count: result.stats.reflected })}</span>
         <span className="ml-auto">{formatTaskTime(result.createdAt)}</span>
       </div>
     </div>

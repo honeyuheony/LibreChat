@@ -8,9 +8,6 @@ import type {
 } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 
-/** A key the translation files do not carry yet; the message-card work adds them. */
-const key = (value: string) => value as string as TranslationKeys;
-
 /**
  * The plan steps each task tool walks through, in order. `id` is the `stage`
  * the server sends in `on_task_progress`, so the tool processors and this list
@@ -18,25 +15,25 @@ const key = (value: string) => value as string as TranslationKeys;
  */
 export const TASK_STAGES: Record<TaskToolName, { id: string; label: TranslationKeys }[]> = {
   [TaskTools.extract_table]: [
-    { id: 'prepare', label: key('com_ui_task_stage_prepare') },
-    { id: 'fields', label: key('com_ui_task_stage_fields') },
-    { id: 'extract', label: key('com_ui_task_stage_extract_all') },
-    { id: 'aggregate', label: key('com_ui_task_stage_aggregate') },
-    { id: 'save', label: key('com_ui_task_stage_save') },
+    { id: 'prepare', label: 'com_ui_task_stage_prepare' },
+    { id: 'fields', label: 'com_ui_task_stage_confirm_fields' },
+    { id: 'extract', label: 'com_ui_task_stage_extract_all' },
+    { id: 'aggregate', label: 'com_ui_task_stage_aggregate' },
+    { id: 'save', label: 'com_ui_task_stage_save' },
   ],
   [TaskTools.summarize_documents]: [
-    { id: 'prepare', label: key('com_ui_task_stage_prepare') },
-    { id: 'view', label: key('com_ui_task_stage_view') },
-    { id: 'summarize', label: key('com_ui_task_stage_summarize') },
-    { id: 'merge', label: key('com_ui_task_stage_merge') },
-    { id: 'save', label: key('com_ui_task_stage_save') },
+    { id: 'prepare', label: 'com_ui_task_stage_prepare' },
+    { id: 'view', label: 'com_ui_task_stage_confirm_view' },
+    { id: 'summarize', label: 'com_ui_task_stage_summarize' },
+    { id: 'merge', label: 'com_ui_task_stage_merge' },
+    { id: 'save', label: 'com_ui_task_stage_save' },
   ],
   [TaskTools.write_report]: [
-    { id: 'prepare', label: key('com_ui_task_stage_prepare') },
-    { id: 'extract', label: key('com_ui_task_stage_extract') },
-    { id: 'fill', label: key('com_ui_task_stage_fill') },
-    { id: 'render', label: key('com_ui_task_stage_render') },
-    { id: 'save', label: key('com_ui_task_stage_save') },
+    { id: 'prepare', label: 'com_ui_task_stage_prepare' },
+    { id: 'extract', label: 'com_ui_task_stage_extract' },
+    { id: 'fill', label: 'com_ui_task_stage_compose' },
+    { id: 'render', label: 'com_ui_task_stage_render' },
+    { id: 'save', label: 'com_ui_task_stage_save' },
   ],
 };
 

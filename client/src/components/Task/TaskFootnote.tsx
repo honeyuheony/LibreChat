@@ -1,9 +1,5 @@
 import type { TaskEvidence } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import { useLocalize } from '~/hooks';
-
-const PAGE_KEY = 'com_ui_task_footnote_page' as string as TranslationKeys;
-const PARAGRAPH_KEY = 'com_ui_task_footnote_paragraph' as string as TranslationKeys;
 
 /** A numbered marker whose hover or focus card shows the quoted source text and where it sits. */
 export default function TaskFootnote({
@@ -18,9 +14,9 @@ export default function TaskFootnote({
   const localize = useLocalize();
   const location = [
     filename,
-    evidence?.page != null ? localize(PAGE_KEY, { page: evidence.page }) : null,
+    evidence?.page != null ? localize('com_ui_task_page', { 0: evidence.page }) : null,
     evidence?.page == null && evidence?.paragraph != null
-      ? localize(PARAGRAPH_KEY, { paragraph: evidence.paragraph })
+      ? localize('com_ui_task_paragraph', { 0: evidence.paragraph })
       : null,
   ]
     .filter(Boolean)

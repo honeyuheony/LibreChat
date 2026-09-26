@@ -2,13 +2,10 @@ import { useCallback, useState } from 'react';
 import { useToastContext } from '@librechat/client';
 import type { TaskTableResult } from 'librechat-data-provider';
 import type { UIEvent } from 'react';
-import type { TranslationKeys } from '~/hooks';
 import { downloadTaskResultWorkbook } from '~/data-provider/Tasks/queries';
 import { formatTaskTime } from './taskState';
 import TaskFootnote from './TaskFootnote';
 import { useLocalize } from '~/hooks';
-
-const key = (value: string) => value as string as TranslationKeys;
 
 /** Rows drawn per step; more are added as the reader scrolls near the bottom. */
 export const TASK_TABLE_PAGE = 40;
@@ -38,7 +35,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
     try {
       await downloadTaskResultWorkbook(result.resultId, `${result.title}.xlsx`);
     } catch {
-      showToast({ message: localize(key('com_ui_task_export_error')), status: 'error' });
+      showToast({ message: localize('com_ui_task_excel_error'), status: 'error' });
     } finally {
       setExporting(false);
     }
@@ -56,7 +53,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
           disabled={exporting}
           className="rounded-md border border-border-medium px-2.5 py-1 text-xs text-text-secondary hover:bg-surface-hover disabled:opacity-50"
         >
-          {localize(key('com_ui_task_excel'))}
+          {localize('com_ui_task_excel')}
         </button>
       </div>
       <div
@@ -68,7 +65,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
           <thead className="sticky top-0 bg-surface-primary">
             <tr>
               <th className="border-b border-border-light px-2 py-1.5 text-left font-semibold text-text-secondary">
-                {localize(key('com_ui_task_col_document'))}
+                {localize('com_ui_task_col_document')}
               </th>
               {result.fields.map((field) => (
                 <th
@@ -93,7 +90,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
                         key={index}
                         className="border-b border-border-light px-2 py-1.5 text-text-muted"
                       >
-                        {localize(key('com_ui_task_cell_none'))}
+                        {localize('com_ui_task_value_none')}
                       </td>
                     );
                   }
@@ -107,7 +104,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
                       <TaskFootnote n={footnote} filename={row.filename} evidence={cell.evidence} />
                       {cell.status === 'low' && (
                         <span className="ml-1 rounded bg-status-warning-subtle px-1 text-[11px] text-status-warning-strong">
-                          {localize(key('com_ui_task_needs_review'))}
+                          {localize('com_ui_task_needs_review')}
                         </span>
                       )}
                     </td>
@@ -121,7 +118,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
                   colSpan={result.fields.length + 1}
                   className="px-2 py-1.5 text-center text-text-muted"
                 >
-                  {localize(key('com_ui_task_more_rows'), { count: hiddenRows })}
+                  {localize('com_ui_task_more_rows', { count: hiddenRows })}
                 </td>
               </tr>
             )}
@@ -129,11 +126,12 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
         </table>
       </div>
       <div className="mt-2 flex flex-wrap gap-2.5 text-xs text-text-muted">
-        <span>{localize(key('com_ui_task_none_count'), { count: result.stats.none })}</span>
-        <span>{localize(key('com_ui_task_low_count'), { count: result.stats.low })}</span>
+        <span>{localize('com_ui_task_none_count', { count: result.stats.none })}</span>
+        <span>{localize('com_ui_task_low_count', { count: result.stats.low })}</span>
         <span className="ml-auto">
-          {localize(key('com_ui_task_extract_version'), {
-            version: result.extractor.promptVersion,
+          {localize('com_ui_task_extract_version', {
+            /** The server tags it `extract-v1`; the label already says extraction, so only `v1` is shown. */
+            version: result.extractor.promptVersion.replace(/^extract-/, ''),
           })}{' '}
           · {formatTaskTime(result.createdAt)}
         </span>

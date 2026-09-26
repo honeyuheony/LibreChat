@@ -157,7 +157,7 @@ describe('TaskPanel', () => {
     const now = screen
       .getAllByRole('listitem')
       .find((item) => item.getAttribute('data-state') === 'now');
-    expect(now).toHaveTextContent('com_ui_task_stage_fields');
+    expect(now).toHaveTextContent('com_ui_task_stage_confirm_fields');
     expect(now).toHaveTextContent('com_ui_task_waiting_approval');
   });
 
@@ -173,7 +173,7 @@ describe('TaskPanel', () => {
       'extract_table',
       [
         'com_ui_task_stage_prepare',
-        'com_ui_task_stage_fields',
+        'com_ui_task_stage_confirm_fields',
         'com_ui_task_stage_extract_all',
         'com_ui_task_stage_aggregate',
         'com_ui_task_stage_save',
@@ -183,7 +183,7 @@ describe('TaskPanel', () => {
       'summarize_documents',
       [
         'com_ui_task_stage_prepare',
-        'com_ui_task_stage_view',
+        'com_ui_task_stage_confirm_view',
         'com_ui_task_stage_summarize',
         'com_ui_task_stage_merge',
         'com_ui_task_stage_save',
@@ -194,7 +194,7 @@ describe('TaskPanel', () => {
       [
         'com_ui_task_stage_prepare',
         'com_ui_task_stage_extract',
-        'com_ui_task_stage_fill',
+        'com_ui_task_stage_compose',
         'com_ui_task_stage_render',
         'com_ui_task_stage_save',
       ],
