@@ -7,6 +7,7 @@ import {
   StepEvents,
   ContentTypes,
   ToolCallTypes,
+  TASK_PROGRESS_EVENT,
   getNonEmptyValue,
   getRunStepDurationMs,
 } from 'librechat-data-provider';
@@ -21,6 +22,8 @@ import type {
   SubagentUpdateEvent,
   SandboxStartingEvent,
   PtcToolCallEvent,
+  TaskProgressEvent,
+  TaskProgressEventName,
 } from 'librechat-data-provider';
 import type { SetterOrUpdater } from 'recoil';
 import type { AnnounceOptions } from '~/common';
@@ -42,6 +45,7 @@ import {
   ptcTraceKey,
 } from '~/store';
 import { isAskUserQuestionPart, isAnsweredAskUserQuestionPart } from '~/utils/approval';
+import { taskProgressByToolCallId } from '~/store/task';
 import { MESSAGE_UPDATE_INTERVAL } from '~/common';
 
 type TUseStepHandler = {
@@ -72,7 +76,8 @@ type TStepEvent =
   | { event: StepEvents.ON_SUMMARIZE_COMPLETE; data: Agents.SummarizeCompleteEvent }
   | { event: StepEvents.ON_SUBAGENT_UPDATE; data: SubagentUpdateEvent }
   | { event: StepEvents.ON_SANDBOX_STARTING; data: SandboxStartingEvent }
-  | { event: StepEvents.ON_PTC_TOOL_CALL; data: PtcToolCallEvent };
+  | { event: StepEvents.ON_PTC_TOOL_CALL; data: PtcToolCallEvent }
+  | { event: TaskProgressEventName; data: TaskProgressEvent };
 
 type MessageDeltaUpdate = {
   type: ContentTypes.TEXT;
@@ -1367,6 +1372,8 @@ export default function useStepHandler({
         );
       } else if (stepEvent.event === StepEvents.ON_SANDBOX_STARTING) {
         setSandboxStarting(stepEvent.data.tool_call_id);
+      } else if (stepEvent.event === TASK_PROGRESS_EVENT) {
+        subagentStore.set(taskProgressByToolCallId(stepEvent.data.toolCallId), stepEvent.data);
       } else if (stepEvent.event === StepEvents.ON_PTC_TOOL_CALL) {
         /** `runId` is the response message id (the run configurable's
          *  `run_id`), the same correlation the subagent path uses. */
@@ -1496,6 +1503,7 @@ export default function useStepHandler({
       lastAnnouncementTimeRef,
       announcePolite,
       setMessages,
+      subagentStore,
       calculateContentIndex,
       getCurrentMessages,
       applySubagentUpdate,

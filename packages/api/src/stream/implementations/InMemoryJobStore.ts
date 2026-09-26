@@ -22,6 +22,7 @@ import type {
   IdempotencyClaimValue,
   IdempotencyClaimResult,
   ParkedSteerClaim,
+  UserJobSummary,
 } from '~/stream/interfaces/IJobStore';
 import type { EarlyBufferOverflowState } from '../../types/earlyBufferRecovery';
 import type { RecoveredSteerPayload } from '~/stream/SteerRecovery';
@@ -1361,15 +1362,19 @@ export class InMemoryJobStore implements IJobStoreV2 {
    * Also performs self-healing cleanup: removes stale entries for jobs that no longer exist.
    */
   async getActiveJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
-    return this.getJobIdsByUser(userId, tenantId, false);
+    return this.getJobsByUser(userId, tenantId, false).map((job) => job.id);
+  }
+
+  async getActiveJobsByUser(userId: string, tenantId?: string): Promise<UserJobSummary[]> {
+    return this.getJobsByUser(userId, tenantId, false);
   }
 
   async getCleanupBlockingJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
-    return this.getJobIdsByUser(userId, tenantId, true);
+    return this.getJobsByUser(userId, tenantId, true).map((job) => job.id);
   }
 
   async getCleanupJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
-    return this.getJobIdsByUser(userId, tenantId, true);
+    return this.getJobsByUser(userId, tenantId, true).map((job) => job.id);
   }
 
   async getRetainedJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
@@ -1381,18 +1386,18 @@ export class InMemoryJobStore implements IJobStoreV2 {
     });
   }
 
-  private getJobIdsByUser(
+  private getJobsByUser(
     userId: string,
     tenantId: string | undefined,
     includeUndrained: boolean,
-  ): string[] {
+  ): UserJobSummary[] {
     const userKey = tenantId ? `${tenantId}:${userId}` : userId;
     const trackedIds = this.userJobMap.get(userKey);
     if (!trackedIds || trackedIds.size === 0) {
       return [];
     }
 
-    const activeIds: string[] = [];
+    const activeJobs: UserJobSummary[] = [];
 
     for (const streamId of trackedIds) {
       const job = this.jobs.get(streamId);
@@ -1428,7 +1433,7 @@ export class InMemoryJobStore implements IJobStoreV2 {
         ) {
           continue;
         }
-        activeIds.push(streamId);
+        activeJobs.push({ id: streamId, status: job.status });
       } else if (
         job.providerDrained !== false &&
         job.terminalPersistencePending !== true &&
@@ -1444,7 +1449,7 @@ export class InMemoryJobStore implements IJobStoreV2 {
       this.userJobMap.delete(userKey);
     }
 
-    return activeIds;
+    return activeJobs;
   }
 
   // ===== Content State Methods =====

@@ -42,6 +42,8 @@ import {
   genTitleQueryKey,
   queueTitleGeneration,
   useActiveJobs,
+  useActiveJobStatus,
+  selectActiveJobStatus,
   resetActiveJobsGrace,
   extendActiveJobsGrace,
   getActiveJobsRefetchInterval,
@@ -71,6 +73,53 @@ function makeAxiosError(status: number): Error {
   err.response = { status };
   return err;
 }
+
+describe('selectActiveJobStatus', () => {
+  it('reports a paused run as requires_action and a running one as running', () => {
+    const data = {
+      activeJobIds: ['run-1', 'paused-1'],
+      jobs: [
+        { id: 'run-1', status: 'running' as const },
+        { id: 'paused-1', status: 'requires_action' as const },
+      ],
+    };
+    expect(selectActiveJobStatus(data, 'paused-1')).toBe('requires_action');
+    expect(selectActiveJobStatus(data, 'run-1')).toBe('running');
+    expect(selectActiveJobStatus(data, 'idle-1')).toBeUndefined();
+    expect(selectActiveJobStatus(data, undefined)).toBeUndefined();
+  });
+
+  it('treats an id-only entry as running, as the optimistic stream updates write it', () => {
+    expect(selectActiveJobStatus({ activeJobIds: ['run-1'] }, 'run-1')).toBe('running');
+  });
+
+  it('ignores a stale status once the id has left the list', () => {
+    const data = {
+      activeJobIds: [],
+      jobs: [{ id: 'paused-1', status: 'requires_action' as const }],
+    };
+    expect(selectActiveJobStatus(data, 'paused-1')).toBeUndefined();
+  });
+});
+
+describe('useActiveJobStatus', () => {
+  it('reads the shared list without fetching or polling on its own', () => {
+    (useQuery as jest.Mock).mockClear();
+
+    useActiveJobStatus('paused-1');
+
+    const options = (useQuery as jest.Mock).mock.calls[0][0];
+    expect(options.queryKey).toEqual(['activeJobs']);
+    expect(options.enabled).toBe(false);
+    expect(options.refetchInterval).toBeUndefined();
+    expect(
+      options.select({
+        activeJobIds: ['paused-1'],
+        jobs: [{ id: 'paused-1', status: 'requires_action' }],
+      }),
+    ).toBe('requires_action');
+  });
+});
 
 describe('useActiveJobs focus behaviour', () => {
   it('refetches on focus unconditionally rather than only when stale', () => {

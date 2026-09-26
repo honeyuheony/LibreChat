@@ -31,6 +31,8 @@ export const fullMimeTypesList = [
   'text/x-c',
   'text/x-c++',
   'application/csv',
+  'application/x-hwp',
+  'application/hwp+zip',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/html',
   'text/x-java',
@@ -294,9 +296,10 @@ export const defaultOCRMimeTypes = [
   /^application\/vnd\.oasis\.opendocument\.(text|spreadsheet|presentation|graphics)$/,
 ];
 
-/** MIME types handled by the built-in document parser (pdf, docx, excel variants, ods/odt) */
+/** MIME types handled by the built-in document parser, including HWP and HWPX through hwp-mcp. */
 export const documentParserMimeTypes = [
   excelMimeTypes,
+  /^application\/(x-hwp|hwp\+zip)$/,
   /^application\/pdf$/,
   /^application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document$/,
   /^application\/vnd\.oasis\.opendocument\.spreadsheet$/,
@@ -311,6 +314,7 @@ export const supportedMimeTypes = [
   textMimeTypes,
   excelMimeTypes,
   applicationMimeTypes,
+  /^application\/(x-hwp|hwp\+zip)$/,
   imageMimeTypes,
   videoMimeTypes,
   audioMimeTypes,
@@ -448,6 +452,8 @@ export const codeTypeMapping: { [key: string]: string } = {
   odg: 'application/vnd.oasis.opendocument.graphics', // .odg - OpenDocument Graphics
   doc: 'application/msword', // .doc - Word (legacy)
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx - Word
+  hwp: 'application/x-hwp', // .hwp - Hangul Word Processor
+  hwpx: 'application/hwp+zip', // .hwpx - Hangul Word Processor XML
   xls: 'application/vnd.ms-excel', // .xls - Excel (legacy)
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx - Excel
   ppt: 'application/vnd.ms-powerpoint', // .ppt - PowerPoint (legacy)
@@ -474,6 +480,8 @@ export const mimeTypeAliases: Readonly<Record<string, string>> = {
   'application/x-shellscript': 'application/x-sh',
   /** libmagic, i.e. `file --mime-type` */
   'text/x-shellscript': 'application/x-sh',
+  'application/haansofthwp': 'application/x-hwp',
+  'application/vnd.hancom.hwpx': 'application/hwp+zip',
 };
 
 /**
@@ -484,11 +492,15 @@ export const mimeTypeAliases: Readonly<Record<string, string>> = {
  * @returns The normalized or inferred MIME type; empty string if unresolvable
  */
 export function inferMimeType(fileName: string, currentType: string): string {
+  const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+  if (extension === 'hwp' || extension === 'hwpx') {
+    return codeTypeMapping[extension];
+  }
+
   if (currentType) {
     return mimeTypeAliases[currentType] ?? currentType;
   }
 
-  const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
   return codeTypeMapping[extension] || imageTypeMapping[extension] || currentType;
 }
 
@@ -768,6 +780,8 @@ const mimeAcceptCategories: ReadonlyArray<{
 /** Document/text MIME types paired with the extension(s) browsers filter on in the file picker. */
 const documentMimeExtensions: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['application/pdf', ['.pdf']],
+  ['application/x-hwp', ['.hwp']],
+  ['application/hwp+zip', ['.hwpx']],
   ['application/msword', ['.doc']],
   ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', ['.docx']],
   ['application/vnd.ms-excel', ['.xls']],

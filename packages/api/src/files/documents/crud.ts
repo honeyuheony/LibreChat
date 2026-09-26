@@ -4,6 +4,7 @@ import { megabyte, excelMimeTypes, FileSources } from 'librechat-data-provider';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { MistralOCRUploadResult } from '~/types';
 import { assertSafeZipSize } from './zipSafety';
+import { hwpToText } from './hwp';
 
 type FileParseFn = (file: Express.Multer.File) => Promise<string>;
 
@@ -52,6 +53,9 @@ export async function parseDocument({
 
 /** Maps a MIME type to its document parser function, or `undefined` if unsupported. */
 function getParserForMimeType(mimetype: string): FileParseFn | undefined {
+  if (mimetype === 'application/x-hwp' || mimetype === 'application/hwp+zip') {
+    return hwpToText;
+  }
   if (mimetype === 'application/pdf') {
     return pdfToText;
   }
