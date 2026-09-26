@@ -6,7 +6,7 @@ const {
   loadConversationDocuments,
   normalizeKey,
 } = require('@librechat/api');
-const { TaskExtraction, TaskResult } = require('~/db');
+const { TaskExtraction, TaskResult } = require('~/db/models');
 const { getAgent, getConvo, getFiles, getMessages } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 

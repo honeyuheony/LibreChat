@@ -1,8 +1,6 @@
 const express = require('express');
 const request = require('supertest');
 
-const mockFindTaskResult = jest.fn();
-const mockFindTaskExtraction = jest.fn();
 const mockGetAgent = jest.fn();
 const mockGetConvo = jest.fn();
 const mockLoadConversationDocuments = jest.fn();
@@ -13,11 +11,6 @@ jest.mock('~/server/middleware', () => ({
     req.user = { id: 'authenticated-user' };
     next();
   },
-}));
-
-jest.mock('~/db', () => ({
-  TaskResult: { findOne: (...args) => mockFindTaskResult(...args) },
-  TaskExtraction: { find: (...args) => mockFindTaskExtraction(...args) },
 }));
 
 jest.mock('~/models', () => ({
@@ -35,13 +28,29 @@ jest.mock('@librechat/api', () => ({
   loadConversationDocuments: (...args) => mockLoadConversationDocuments(...args),
 }));
 
+// The real model module, not a stand-in: the route must read its models from where they are defined.
+const { TaskExtraction, TaskResult } = require('~/db/models');
 const router = require('./tasks');
 const app = express();
 app.use('/api/tasks', router);
 
 describe('task result routes', () => {
+  let mockFindTaskResult;
+  let mockFindTaskExtraction;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFindTaskResult = jest.spyOn(TaskResult, 'findOne');
+    mockFindTaskExtraction = jest.spyOn(TaskExtraction, 'find');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('reads the task models from the model module', () => {
+    expect(typeof TaskResult.findOne).toBe('function');
+    expect(typeof TaskExtraction.find).toBe('function');
   });
 
   test('does not return a result owned by another user', async () => {
