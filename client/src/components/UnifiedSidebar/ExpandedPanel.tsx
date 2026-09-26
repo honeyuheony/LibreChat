@@ -9,6 +9,7 @@ import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
+import { DEFAULT_APP_TITLE } from '~/utils/documentTitle';
 import SidePanelNav from '~/components/SidePanel/Nav';
 import { useGetStartupConfig } from '~/data-provider';
 import SearchBar from '~/components/Nav/SearchBar';
@@ -249,18 +250,17 @@ function BrandHeader({
     return <div className="flex flex-col items-center gap-1 pb-2">{toggle}</div>;
   }
 
+  /* The wireframe has no collapse button beside the brand; the sidebar shortcut still
+     collapses it, and the rail above keeps the button that brings it back. */
   return (
-    <div className="flex items-center justify-between gap-2 pb-3 pl-2">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <BrandMark className="size-7" />
-        <span className="truncate text-base font-bold tracking-tight text-text-primary">
-          {startupConfig?.appTitle}
+    <div className="flex items-center justify-between gap-2 pb-3 pl-2 pt-1">
+      <div className="flex min-w-0 items-center gap-2">
+        <BrandMark className="size-[26px]" />
+        <span className="truncate text-lg font-bold tracking-[-0.02em] text-text-primary">
+          {startupConfig?.appTitle || DEFAULT_APP_TITLE}
         </span>
       </div>
-      <div className="flex items-center gap-1">
-        <AgentMarketplaceButton />
-        {toggle}
-      </div>
+      <AgentMarketplaceButton />
     </div>
   );
 }

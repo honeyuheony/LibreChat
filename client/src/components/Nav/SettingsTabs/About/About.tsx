@@ -27,7 +27,7 @@ function buildDiagnosticsBlob(
   buildInfo: TStartupConfig['buildInfo'] | undefined,
 ): string {
   const lines: string[] = [
-    `업무 에이전트 플랫폼 version: ${version}`,
+    `AgentHub version: ${version}`,
     `Commit: ${buildInfo?.commit ?? UNKNOWN_PLACEHOLDER}`,
     `Branch: ${buildInfo?.branch ?? UNKNOWN_PLACEHOLDER}`,
     `Build date: ${formatBuildDate(buildInfo?.buildDate)}`,

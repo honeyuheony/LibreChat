@@ -1,6 +1,7 @@
 import { ThemeSelector } from '@librechat/client';
 import { TStartupConfig } from 'librechat-data-provider';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
+import { DEFAULT_APP_TITLE } from '~/utils/documentTitle';
 import { TranslationKeys, useLocalize } from '~/hooks';
 import SocialLoginRender from './SocialLoginRender';
 import { BlinkAnimation } from './BlinkAnimation';
@@ -75,7 +76,7 @@ function AuthLayout({
             <div className="flex justify-center">
               <BrandMark className="size-12" />
               <span className="sr-only">
-                {localize('com_ui_logo', { 0: startupConfig?.appTitle ?? '업무 에이전트 플랫폼' })}
+                {localize('com_ui_logo', { 0: startupConfig?.appTitle ?? DEFAULT_APP_TITLE })}
               </span>
             </div>
           </BlinkAnimation>
