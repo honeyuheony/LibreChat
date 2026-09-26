@@ -300,6 +300,15 @@ describe('TaskPanel', () => {
     expect(screen.queryByText('com_ui_convo_awaiting_approval')).not.toBeInTheDocument();
   });
 
+  it('stops on the confirmation step the user cancelled at', () => {
+    mockMessages = [toolCall('t1', 'summarize_documents', { output: 'cancelled' })];
+    renderPanel((jotai) => jotai.set(taskDecisionByToolCallId('t1'), 'reject'));
+    const stopped = screen
+      .getAllByRole('listitem')
+      .find((item) => item.getAttribute('data-state') === 'stopped');
+    expect(stopped).toHaveTextContent('com_ui_task_stage_confirm_view');
+  });
+
   it('lists three outputs with their kind icon and details', () => {
     mockMessages = [toolCall('t1', 'write_report', { output: 'ok' }), withOutputs()];
     renderPanel();

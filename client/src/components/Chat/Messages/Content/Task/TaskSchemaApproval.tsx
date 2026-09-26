@@ -33,7 +33,14 @@ function sameList(a: string[], b: string[]) {
  * which the completion step rewrites with the arguments the tool actually got, so
  * fields the user edited on the card show here.
  */
-export function TaskSchemaRan({ args }: { args: Record<string, unknown> }) {
+export function TaskSchemaRan({
+  args,
+  cancelled = false,
+}: {
+  args: Record<string, unknown>;
+  /** Cancelled at this card, so the fields shown were never run. */
+  cancelled?: boolean;
+}) {
   const localize = useLocalize();
   const chips = initialChips(args);
   return (
@@ -50,7 +57,9 @@ export function TaskSchemaRan({ args }: { args: Record<string, unknown> }) {
             <TaskChip key={chip.name} label={chip.name} on={chip.on} disabled />
           ))}
         </div>
-        <p className="mt-2.5 text-sm text-text-secondary">{localize('com_ui_task_ran')}</p>
+        <p className="mt-2.5 text-sm text-text-secondary">
+          {localize(cancelled ? 'com_ui_task_cancelled' : 'com_ui_task_ran')}
+        </p>
       </div>
     </div>
   );

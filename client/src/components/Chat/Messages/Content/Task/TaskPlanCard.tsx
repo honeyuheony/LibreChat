@@ -4,10 +4,10 @@ import { TaskTools } from 'librechat-data-provider';
 import type { Agents, TAttachment, TaskToolName } from 'librechat-data-provider';
 import type { TaskStepState } from '~/components/Task/taskState';
 import type { TaskResultAttachment } from './api';
+import { isBlockedTaskOutput, stepStates, taskPlanPosition } from '~/components/Task/taskState';
+import { taskDecisionByToolCallId, taskProgressByToolCallId } from '~/store/task';
 import TaskViewApproval, { TaskViewRan, viewLabel } from './TaskViewApproval';
-import { stepStates, taskPlanPosition } from '~/components/Task/taskState';
 import TaskSchemaApproval, { TaskSchemaRan } from './TaskSchemaApproval';
-import { taskProgressByToolCallId } from '~/store/task';
 import { TASK_STAGES, parseTaskArgs } from './stages';
 import TaskResultCard from './TaskResultCard';
 import { useLocalize } from '~/hooks';
@@ -61,10 +61,15 @@ export default function TaskPlanCard({
   /** A returned call with a saved result ran past its confirmation; a rejected or
    *  failed one has no result, so no "ran" card claims otherwise. */
   const ran = finished && results.length > 0;
+  /** Returned without running: the user cancelled at the confirmation card. The
+   *  returned call no longer carries `approval`, so the sent decision says so live
+   *  and the SDK's blocked answer says so after a reload. */
+  const decision = useAtomValue(taskDecisionByToolCallId(toolCallId));
+  const cancelled = finished && !ran && (decision === 'reject' || isBlockedTaskOutput(output));
 
   const { current, currentState } = taskPlanPosition(
     stages,
-    { finished, hasResult: ran, awaitingApproval, hadApproval: approval != null },
+    { finished, hasResult: ran, awaitingApproval, hadApproval: approval != null || cancelled },
     progress,
   );
   const states = stepStates(stages.length, current, currentState);
@@ -123,8 +128,12 @@ export default function TaskPlanCard({
       {awaitingApproval && toolName === TaskTools.summarize_documents && (
         <TaskViewApproval approval={approval} toolCallId={toolCallId} args={args} />
       )}
-      {ran && toolName === TaskTools.extract_table && <TaskSchemaRan args={args} />}
-      {ran && toolName === TaskTools.summarize_documents && <TaskViewRan args={args} />}
+      {(ran || cancelled) && toolName === TaskTools.extract_table && (
+        <TaskSchemaRan args={args} cancelled={cancelled} />
+      )}
+      {(ran || cancelled) && toolName === TaskTools.summarize_documents && (
+        <TaskViewRan args={args} cancelled={cancelled} />
+      )}
       {results.map((result) => (
         <TaskResultCard key={result.resultId} result={result} />
       ))}

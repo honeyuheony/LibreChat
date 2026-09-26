@@ -430,7 +430,14 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   const outputs = useMemo(() => collectTaskOutputs(messages), [messages]);
   const progress = useAtomValue(taskProgressByToolCallId(call?.toolCallId ?? ''));
   const decision = useAtomValue(taskDecisionByToolCallId(call?.toolCallId ?? ''));
-  const steps = useMemo(() => (call ? resolveTaskSteps(call, progress) : []), [call, progress]);
+  /** A cancel the server took stops the plan at the confirmation, as on the card. */
+  const steps = useMemo(
+    () =>
+      call
+        ? resolveTaskSteps(decision === 'reject' ? { ...call, hadApproval: true } : call, progress)
+        : [],
+    [call, decision, progress],
+  );
   const awaiting = call != null && isAwaitingTaskApproval(call, progress, decision != null);
 
   let status: PanelStatus = 'ok';

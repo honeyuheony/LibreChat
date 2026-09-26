@@ -43,6 +43,15 @@ function resultToolCallIds(messages: TMessage[] | undefined): Set<string> {
   return ids;
 }
 
+/**
+ * The SDK answers a rejected call (or one a policy stopped) with `Blocked: <reason>`
+ * instead of running it. A finished call no longer carries its `approval`, so after a
+ * reload this is what says it stopped at its confirmation.
+ */
+export function isBlockedTaskOutput(output: string | null | undefined): boolean {
+  return typeof output === 'string' && /^(?:Error: )?Blocked:/.test(output.trim());
+}
+
 /** The last task tool call in the conversation; the progress section follows only that one. */
 export function findLatestTaskToolCall(messages: TMessage[] | undefined): TaskToolCallState | null {
   let latest: TaskToolCallState | null = null;
@@ -64,7 +73,7 @@ export function findLatestTaskToolCall(messages: TMessage[] | undefined): TaskTo
         awaitingApproval: toolCall.approval != null && !finished,
         finished,
         hasResult: withResult.has(toolCallId),
-        hadApproval: toolCall.approval != null,
+        hadApproval: toolCall.approval != null || isBlockedTaskOutput(toolCall.output),
       };
     }
   }
