@@ -4,7 +4,7 @@ module.exports = {
     extend: {
       fontFamily: {
         'theme-ui': [
-          "var(--theme-font-family, 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif)",
+          "var(--theme-font-family, 'SUIT Variable', SUIT, 'Spoqa Han Sans Neo', 'Noto Sans KR', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif)",
         ],
       },
       height: {
