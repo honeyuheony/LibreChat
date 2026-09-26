@@ -31,6 +31,7 @@ import type {
   PreemptMessage,
   SteerQueueItem,
   DetachedAgentEventActionStoreMode,
+  UserJobSummary,
 } from './interfaces/IJobStore';
 import type {
   EarlyBufferOverflowState,
@@ -9309,6 +9310,20 @@ class GenerationJobManagerClass {
    */
   async getActiveJobIdsForUser(userId: string, tenantId?: string): Promise<string[]> {
     return this.jobStore.getActiveJobIdsByUser(userId, tenantId);
+  }
+
+  /**
+   * Active jobs for a user with their status. `requires_action` marks a run paused
+   * for human review (e.g. tool approval), which the sidebar shows apart from a
+   * running one.
+   */
+  async getActiveJobsForUser(userId: string, tenantId?: string): Promise<UserJobSummary[]> {
+    if (this.jobStore.getActiveJobsByUser) {
+      return this.jobStore.getActiveJobsByUser(userId, tenantId);
+    }
+    const ids = await this.jobStore.getActiveJobIdsByUser(userId, tenantId);
+    const jobs = await Promise.all(ids.map((id) => this.jobStore.getJob(id)));
+    return ids.map((id, index) => ({ id, status: jobs[index]?.status ?? 'running' }));
   }
 
   /** Returns every generation whose provider can still mutate user-owned data,

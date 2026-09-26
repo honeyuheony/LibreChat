@@ -963,6 +963,11 @@ export interface IJobStore {
   destroy(): Promise<void>;
   getActiveJobIdsByUser(userId: string, tenantId?: string): Promise<string[]>;
 
+  /** Same jobs as `getActiveJobIdsByUser`, with the status that keeps each one
+   * active, so a caller can tell a run paused for approval from a running one.
+   * Managers fall back to per-job lookups for older third-party stores. */
+  getActiveJobsByUser?(userId: string, tenantId?: string): Promise<UserJobSummary[]>;
+
   /** Complete owner cleanup query, including terminal host work and legacy-index recovery.
    * Managers retain the global-index fallback for older third-party stores. */
   getCleanupJobIdsByUser?(userId: string, tenantId?: string): Promise<string[]>;

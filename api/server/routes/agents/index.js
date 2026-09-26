@@ -422,16 +422,16 @@ router.get('/chat/stream/:streamId', async (req, res) => {
 
 /**
  * @route GET /chat/active
- * @desc Get all active generation job IDs for the current user
+ * @desc Get all active generation jobs for the current user. `jobs` carries each
+ *   job's status so the sidebar can show a run paused for approval
+ *   (`requires_action`) apart from a running one; `activeJobIds` stays for
+ *   callers that only need the ids.
  * @access Private
- * @returns { activeJobIds: string[] }
+ * @returns { activeJobIds: string[], jobs: { id: string, status: 'running' | 'requires_action' }[] }
  */
 router.get('/chat/active', async (req, res) => {
-  const activeJobIds = await GenerationJobManager.getActiveJobIdsForUser(
-    req.user.id,
-    req.user.tenantId,
-  );
-  res.json({ activeJobIds });
+  const jobs = await GenerationJobManager.getActiveJobsForUser(req.user.id, req.user.tenantId);
+  res.json({ activeJobIds: jobs.map((job) => job.id), jobs });
 });
 
 /**

@@ -3628,6 +3628,10 @@ export class RedisJobStore implements IJobStoreV2 {
     return (await this.getJobsByUser(userId, tenantId, false)).map((job) => job.id);
   }
 
+  async getActiveJobsByUser(userId: string, tenantId?: string): Promise<UserJobSummary[]> {
+    return this.getJobsByUser(userId, tenantId, false);
+  }
+
   async getCleanupBlockingJobIdsByUser(userId: string, tenantId?: string): Promise<string[]> {
     return (await this.getJobsByUser(userId, tenantId, true)).map((job) => job.id);
   }
