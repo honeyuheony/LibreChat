@@ -257,17 +257,14 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
         message: 'manualMinutes must be an integer',
       },
     },
-    /** 이 스킬이 응용(fork)으로 만들어졌을 때 원본 스킬. 원본이 지워져도 값은 남는다. */
+    /**
+     * 이 스킬이 응용(fork)으로 만들어졌을 때 원본 스킬. 원본이 지워져도 값은 남는다. 원본의 응용 수는
+     * 저장하지 않고 `countPublishedForks`가 조회할 때 센다.
+     */
     forkOf: {
       type: Schema.Types.ObjectId,
       ref: 'Skill',
       index: true,
-    },
-    /** 이 스킬을 원본으로 응용해 만든 스킬 수. 응용한 스킬이 지워져도 줄이지 않는다. */
-    forkCount: {
-      type: Number,
-      default: 0,
-      min: 0,
     },
   },
   {

@@ -106,8 +106,6 @@ export interface ISkill {
   manualMinutes?: number;
   /** 응용(fork) 원본 스킬. */
   forkOf?: Types.ObjectId;
-  /** 이 스킬을 원본으로 응용해 만든 스킬 수. */
-  forkCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */

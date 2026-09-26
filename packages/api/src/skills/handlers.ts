@@ -113,6 +113,11 @@ export interface SkillsHandlersDeps {
 
   /** ObjectId validation helper from data-schemas. */
   isValidObjectIdString: (value: unknown) => boolean;
+
+  /** 원본별 게시된 응용 수. 없으면 응답에 `forkCount`를 싣지 않는다. */
+  countPublishedForks?: (
+    originalIds: Array<string | Types.ObjectId>,
+  ) => Promise<Record<string, number>>;
 }
 
 /**
@@ -142,12 +147,7 @@ function serializeSourceMetadata(
 function serializeUsage(
   skill: Pick<
     ISkill,
-    | 'useCount'
-    | 'runTimeTotalSeconds'
-    | 'runTimeSampleCount'
-    | 'manualMinutes'
-    | 'forkOf'
-    | 'forkCount'
+    'useCount' | 'runTimeTotalSeconds' | 'runTimeSampleCount' | 'manualMinutes' | 'forkOf'
   >,
 ): Pick<
   TSkill,
@@ -156,7 +156,6 @@ function serializeUsage(
   | 'runTimeSampleCount'
   | 'manualMinutes'
   | 'forkOf'
-  | 'forkCount'
   | 'usageMetrics'
 > {
   return {
@@ -165,7 +164,6 @@ function serializeUsage(
     runTimeSampleCount: skill.runTimeSampleCount,
     manualMinutes: skill.manualMinutes,
     forkOf: skill.forkOf ? skill.forkOf.toString() : undefined,
-    forkCount: skill.forkCount,
     usageMetrics: computeSkillUsageMetrics(skill),
   };
 }
@@ -377,7 +375,16 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     hasPublicPermission,
     grantPermission,
     isValidObjectIdString,
+    countPublishedForks,
   } = deps;
+
+  async function withForkCounts<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
+    if (!countPublishedForks || skills.length === 0) {
+      return skills;
+    }
+    const counts = await countPublishedForks(skills.map((skill) => skill._id));
+    return skills.map((skill) => ({ ...skill, forkCount: counts[skill._id] ?? 0 }));
+  }
 
   /** O(1) public check for a single skill (avoids fetching all public IDs). */
   async function isSkillPublic(skillId: string | Types.ObjectId): Promise<boolean> {
@@ -436,7 +443,9 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       });
 
       const publicSet = new Set(publicIds.map((id) => id.toString()));
-      const skills = result.skills.map((s) => serializeSkillSummary(s, publicSet));
+      const skills = await withForkCounts(
+        result.skills.map((s) => serializeSkillSummary(s, publicSet)),
+      );
 
       return res.status(200).json({
         skills,
@@ -549,7 +558,8 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         return res.status(404).json({ error: 'Skill not found' });
       }
       const pub = options?.includePublicStatus === false ? false : await isSkillPublic(skill._id);
-      return res.status(200).json(serializeSkill(skill, pub));
+      const [serialized] = await withForkCounts([serializeSkill(skill, pub)]);
+      return res.status(200).json(serialized);
     } catch (error) {
       logger.error('[GET /skills/:id] Error fetching skill', error);
       return res.status(500).json({ error: 'Error fetching skill' });
@@ -625,9 +635,8 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         };
         return res.status(409).json(conflict);
       }
-      return res
-        .status(200)
-        .json(attachWarnings(serializeSkill(result.skill, pub), result.warnings));
+      const [serialized] = await withForkCounts([serializeSkill(result.skill, pub)]);
+      return res.status(200).json(attachWarnings(serialized, result.warnings));
     } catch (error) {
       logger.error('[PATCH /skills/:id] Error updating skill', error);
       return res.status(500).json({ error: 'Error updating skill' });

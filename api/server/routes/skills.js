@@ -31,7 +31,6 @@ const {
   getRoleByName,
   listSkillsByAccess,
   updateSkillReview,
-  incrementSkillForkCount,
 } = require('~/models');
 const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
@@ -180,7 +179,6 @@ const forkHandler = createForkSkillHandler({
   saveBuffer: saveSkillBuffer,
   deleteFile: deleteSkillBlob,
   grantPermission,
-  incrementSkillForkCount,
 });
 
 // ---------------------------------------------------------------------------
@@ -357,6 +355,7 @@ router.get(
 );
 
 // 원본을 볼 수 있는 사용자라면 응용할 수 있다. 파일을 복사하므로 업로드 제한을 함께 건다.
+// 사본은 비공개로 만들어지고, 공유·공개해야 원본의 응용 수에 들어간다.
 router.post(
   '/:id/fork',
   checkSkillCreate,

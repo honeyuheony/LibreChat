@@ -1125,8 +1125,34 @@ describe('Skill routes', () => {
         principalId: testUsers.editor._id,
       });
       expect(ownerAcl.roleId.toString()).toBe(testRoles.owner._id.toString());
-      const persistedOriginal = await Skill.findById(original._id).lean();
-      expect(persistedOriginal.forkCount).toBe(1);
+    });
+
+    it('counts a fork toward the original only while the copy is shared', async () => {
+      const original = await createSharedSkillWithFile();
+      setTestUser(testUsers.editor);
+      const fork = await request(app).post(`/api/skills/${original._id}/fork`).send({});
+      expect(fork.status).toBe(201);
+
+      setTestUser(testUsers.owner);
+      const privateCopy = await request(app).get(`/api/skills/${original._id}`);
+      expect(privateCopy.body.forkCount).toBe(0);
+
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: testUsers.noAccess._id,
+        resourceType: ResourceType.SKILL,
+        resourceId: fork.body._id,
+        accessRoleId: AccessRoleIds.SKILL_VIEWER,
+        grantedBy: testUsers.editor._id,
+      });
+      const sharedCopy = await request(app).get(`/api/skills/${original._id}`);
+      expect(sharedCopy.body.forkCount).toBe(1);
+      const list = await request(app).get('/api/skills');
+      expect(list.body.skills.find((skill) => skill._id === original._id).forkCount).toBe(1);
+
+      await AclEntry.deleteOne({ resourceId: fork.body._id, principalId: testUsers.noAccess._id });
+      const unshared = await request(app).get(`/api/skills/${original._id}`);
+      expect(unshared.body.forkCount).toBe(0);
     });
 
     it('adds a -fork suffix when the caller already owns the name', async () => {
@@ -1143,8 +1169,7 @@ describe('Skill routes', () => {
         .post(`/api/skills/${original._id}/fork`)
         .send({ name: 'demo-skill' });
       expect(res.status).toBe(409);
-      const persistedOriginal = await Skill.findById(original._id).lean();
-      expect(persistedOriginal.forkCount).toBe(0);
+      expect(await Skill.countDocuments({ forkOf: original._id })).toBe(0);
     });
 
     it('returns 403 to a user who cannot view the original', async () => {

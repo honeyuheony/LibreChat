@@ -201,7 +201,7 @@ export type TSkill = {
   manualMinutes?: number;
   /** 응용(fork) 원본 스킬 id. */
   forkOf?: string;
-  /** 이 스킬을 원본으로 응용해 만든 스킬 수. */
+  /** 이 스킬을 원본으로 응용한 스킬 가운데 게시된(작성자 말고도 볼 수 있는) 것의 수. 조회할 때 센다. */
   forkCount?: number;
   /** 원래 값으로 응답을 만들 때 계산한 지표. */
   usageMetrics?: TSkillUsageMetrics;

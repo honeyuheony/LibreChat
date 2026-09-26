@@ -1,7 +1,13 @@
 const { createSkillsHandlers } = require('@librechat/api');
 const { isValidObjectIdString } = require('@librechat/data-schemas');
 const { PermissionBits } = require('librechat-data-provider');
-const { createSkill, updateSkill, deleteSkill, deleteSkillFile } = require('~/models');
+const {
+  createSkill,
+  updateSkill,
+  deleteSkill,
+  deleteSkillFile,
+  countPublishedForks,
+} = require('~/models');
 const {
   findAccessibleResources,
   findPubliclyAccessibleResources,
@@ -42,6 +48,7 @@ function getSkillsHandlers() {
         : hasPublicPermission(params),
     grantPermission,
     isValidObjectIdString,
+    countPublishedForks,
   });
 }
 module.exports = { getSkillsHandlers };

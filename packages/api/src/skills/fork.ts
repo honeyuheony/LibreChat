@@ -33,7 +33,6 @@ export interface ForkSkillDeps
     skillId: string | Types.ObjectId,
   ) => Promise<Array<ISkillFile & { _id: Types.ObjectId }>>;
   getStrategyFunctions: (source: string) => Partial<StrategyFunctions>;
-  incrementSkillForkCount: (skillId: string | Types.ObjectId) => Promise<{ matchedCount: number }>;
 }
 
 type ForkFileResult = { path: string; status: 'ok' | 'error'; error?: string };
@@ -73,7 +72,7 @@ async function readStoredFile(
   return Buffer.concat(chunks);
 }
 
-/** `POST /api/skills/:id/fork`: 원본 SKILL.md 본문과 파일을 복사해 호출자 소유의 새 스킬을 만든다. */
+/** `POST /api/skills/:id/fork`: 원본 본문과 파일을 복사한 비공개 새 스킬을 만든다. 원본 응용 수는 사본을 게시해야 오른다. */
 export function createForkSkillHandler(deps: ForkSkillDeps) {
   return async function forkSkillHandler(req: ServerRequest, res: Response): Promise<Response> {
     try {
@@ -171,17 +170,11 @@ export function createForkSkillHandler(deps: ForkSkillDeps) {
         }
       }
 
-      // 응용 스킬은 이미 만들어졌으므로 원본 응용 수를 못 올려도 요청은 성공으로 끝낸다.
-      await deps
-        .incrementSkillForkCount(original._id)
-        .catch((error) =>
-          logger.error(`[forkSkill] Failed to bump forkCount on ${original._id}:`, error),
-        );
-
       const refreshed = (await deps.getSkillById(forked._id)) ?? forked;
       const errors = fileResults.filter((result) => result.status === 'error');
       const response: TForkSkillResponse = {
         ...serializeSkill(refreshed, false),
+        forkCount: 0,
         _forkSummary: {
           filesProcessed: fileResults.length,
           filesSucceeded: fileResults.length - errors.length,

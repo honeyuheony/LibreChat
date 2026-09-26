@@ -1,5 +1,6 @@
 import {
   ResourceType,
+  PrincipalType,
   SkillsScope,
   SKILL_NAME_MAX_LENGTH,
   SKILL_DESCRIPTION_MAX_LENGTH,
@@ -17,6 +18,7 @@ import type {
   ISkillFileDocument,
   ISkillSummary,
 } from '~/types/skill';
+import type { IAclEntry } from '~/types/aclEntry';
 import type { IAgent } from '~/types/agent';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
 import { isValidObjectIdString } from '~/utils/objectId';
@@ -1119,7 +1121,9 @@ export function createSkillMethods(
     skillIds: Array<Types.ObjectId | string>,
     durationSeconds: number,
   ) => Promise<{ matchedCount: number }>;
-  incrementSkillForkCount: (skillId: Types.ObjectId | string) => Promise<{ matchedCount: number }>;
+  countPublishedForks: (
+    originalIds: Array<Types.ObjectId | string>,
+  ) => Promise<Record<string, number>>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
       skillId: Types.ObjectId | string;
@@ -1409,7 +1413,7 @@ export function createSkillMethods(
          still called below as defensive code; it short-circuits when
          `frontmatter` is undefined. */
       .select(
-        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf forkCount createdAt updatedAt',
+        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf createdAt updatedAt',
       )
       .lean();
 
@@ -2012,16 +2016,53 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount };
   }
 
-  /** 응용(fork)으로 새 스킬이 생길 때 원본의 응용 수를 1 올린다. */
-  async function incrementSkillForkCount(
-    skillId: Types.ObjectId | string,
-  ): Promise<{ matchedCount: number }> {
-    if (typeof skillId === 'string' && !isValidObjectIdString(skillId)) {
-      return { matchedCount: 0 };
+  /**
+   * 원본별 응용 수: `forkOf`가 원본을 가리키는 스킬 가운데 작성자 본인 말고 다른 사용자·그룹·역할·
+   * 전체 공개 ACL이 하나라도 있는(게시된) 것만 센다. 공유 범위가 바뀔 때마다 카운터를 맞추지 않도록
+   * 조회할 때 센다.
+   */
+  async function countPublishedForks(
+    originalIds: Array<Types.ObjectId | string>,
+  ): Promise<Record<string, number>> {
+    const ids = originalIds.filter((id) => typeof id !== 'string' || isValidObjectIdString(id));
+    if (ids.length === 0) {
+      return {};
     }
     const Skill = mongoose.models.Skill as Model<ISkill>;
-    const result = await Skill.updateOne({ _id: skillId }, { $inc: { forkCount: 1 } });
-    return { matchedCount: result.matchedCount };
+    const forks = await Skill.find({ forkOf: { $in: ids } })
+      .select('_id forkOf author')
+      .lean<Array<{ _id: Types.ObjectId; forkOf: Types.ObjectId; author: Types.ObjectId }>>();
+    if (forks.length === 0) {
+      return {};
+    }
+    const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
+    const entries = await AclEntry.find({
+      resourceType: ResourceType.SKILL,
+      resourceId: { $in: forks.map((fork) => fork._id) },
+    })
+      .select('resourceId principalType principalId')
+      .lean<Array<Pick<IAclEntry, 'resourceId' | 'principalType' | 'principalId'>>>();
+    const authorByFork = new Map(
+      forks.map((fork) => [fork._id.toString(), fork.author.toString()]),
+    );
+    const publishedForkIds = new Set<string>();
+    for (const entry of entries) {
+      const forkId = entry.resourceId.toString();
+      const ownerOnly =
+        entry.principalType === PrincipalType.USER &&
+        entry.principalId?.toString() === authorByFork.get(forkId);
+      if (!ownerOnly) {
+        publishedForkIds.add(forkId);
+      }
+    }
+    const counts: Record<string, number> = {};
+    for (const fork of forks) {
+      if (publishedForkIds.has(fork._id.toString())) {
+        const originalId = fork.forkOf.toString();
+        counts[originalId] = (counts[originalId] ?? 0) + 1;
+      }
+    }
+    return counts;
   }
 
   /** 검수 통과 표시를 켜거나(날짜·검수자) 끈다(null). 마켓 카드의 "검수됨" 배지가 이 값을 본다. */
@@ -2045,7 +2086,7 @@ export function createSkillMethods(
     getSkillByName,
     getAuthorSkillByName,
     recordSkillRuns,
-    incrementSkillForkCount,
+    countPublishedForks,
     updateSkillReview,
     listSkillsByAccess,
     listAlwaysApplySkills,

@@ -588,7 +588,6 @@ describe('Skill CRUD methods', () => {
     );
     expect(skill.manualMinutes).toBe(30);
     expect(skill.forkOf?.toString()).toBe(origin.toString());
-    expect(skill.forkCount).toBe(0);
     expect(skill.useCount).toBe(0);
 
     const result = await methods.updateSkill({
@@ -646,11 +645,47 @@ describe('Skill CRUD methods', () => {
     expect(doc).toMatchObject({ useCount: 2, runTimeTotalSeconds: 0, runTimeSampleCount: 0 });
   });
 
+  it('counts only forks that someone besides their author can see', async () => {
+    const { skill: original } = await methods.createSkill(makeSkillInput({ name: 'original' }));
+    const makeFork = async (name: string) =>
+      (
+        await methods.createSkill(
+          makeSkillInput({ name, author: other._id, authorName: 'Other', forkOf: original._id }),
+        )
+      ).skill;
+    const [privateFork, sharedFork, publicFork] = await Promise.all([
+      makeFork('private-fork'),
+      makeFork('shared-fork'),
+      makeFork('public-fork'),
+    ]);
+    const grant = (principalType: string, principalId: unknown, resourceId: unknown) =>
+      AclEntry.create({
+        principalType,
+        principalId,
+        ...(principalType === PrincipalType.USER ? { principalModel: 'User' } : {}),
+        resourceType: ResourceType.SKILL,
+        resourceId,
+        permBits: PermissionBits.VIEW,
+        grantedBy: other._id,
+      });
+    await Promise.all([
+      grant(PrincipalType.USER, other._id, privateFork._id),
+      grant(PrincipalType.USER, other._id, sharedFork._id),
+      grant(PrincipalType.USER, owner._id, sharedFork._id),
+      grant(PrincipalType.USER, other._id, publicFork._id),
+      grant(PrincipalType.PUBLIC, undefined, publicFork._id),
+    ]);
+
+    const counts = await methods.countPublishedForks([original._id, 'not-an-id']);
+
+    expect(counts).toEqual({ [original._id.toString()]: 2 });
+  });
+
   it('includes usage counters in list summaries', async () => {
     const { skill } = await methods.createSkill(makeSkillInput({ manualMinutes: 20 }));
     await Skill.updateOne(
       { _id: skill._id },
-      { $set: { useCount: 4, runTimeTotalSeconds: 90, runTimeSampleCount: 3, forkCount: 2 } },
+      { $set: { useCount: 4, runTimeTotalSeconds: 90, runTimeSampleCount: 3 } },
     );
     const { skills } = await methods.listSkillsByAccess({ accessibleIds: [skill._id], limit: 10 });
     expect(skills[0]).toMatchObject({
@@ -658,7 +693,6 @@ describe('Skill CRUD methods', () => {
       runTimeTotalSeconds: 90,
       runTimeSampleCount: 3,
       manualMinutes: 20,
-      forkCount: 2,
     });
   });
 

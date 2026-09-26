@@ -76,7 +76,6 @@ describe('createForkSkillHandler', () => {
       saveBuffer: jest.fn().mockResolvedValue({ filepath: '/uploads/ok.md', source: 'local' }),
       deleteFile: jest.fn(),
       grantPermission: jest.fn().mockResolvedValue(undefined),
-      incrementSkillForkCount: jest.fn().mockResolvedValue({ matchedCount: 1 }),
     };
     const req = {
       params: { id: originalId.toString() },
@@ -100,6 +99,5 @@ describe('createForkSkillHandler', () => {
       expect.objectContaining({ name: 'weekly-report', forkOf: originalId, manualMinutes: 25 }),
     );
     expect(deps.saveBuffer).toHaveBeenCalledTimes(1);
-    expect(deps.incrementSkillForkCount).toHaveBeenCalledWith(originalId);
   });
 });
