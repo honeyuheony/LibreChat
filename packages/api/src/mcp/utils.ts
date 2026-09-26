@@ -719,6 +719,7 @@ export function redactServerSecrets(
     title: config.title,
     description: config.description,
     iconPath: config.iconPath,
+    overview: config.overview,
     chatMenu: config.chatMenu,
     requiresOAuth: config.requiresOAuth,
     capabilities: config.capabilities,

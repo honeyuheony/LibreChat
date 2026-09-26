@@ -116,6 +116,7 @@ const ADMIN_CONFIGURABLE_FIELDS = [
   'title',
   'description',
   'iconPath',
+  'overview',
   'startup',
   'chatMenu',
   'serverInstructions',

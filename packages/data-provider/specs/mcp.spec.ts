@@ -50,6 +50,32 @@ describe('MCP server title validation', () => {
 });
 
 describe('MCPOptionsSchema', () => {
+  describe('overview', () => {
+    it('keeps the display-only facts an operator writes', () => {
+      const overview = {
+        period: '2020년부터',
+        refresh: '매일 새벽',
+        size: '약 3천 건',
+        contact: '정보팀',
+      };
+      const result = MCPOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://x.com/sse',
+        overview,
+      });
+      expect(result.success && result.data.overview).toEqual(overview);
+    });
+
+    it('rejects a non-text fact', () => {
+      const result = MCPOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://x.com/sse',
+        overview: { size: 3000 },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('OBO transport support', () => {
     it('should accept obo on SSE transport', () => {
       const result = MCPOptionsSchema.safeParse({

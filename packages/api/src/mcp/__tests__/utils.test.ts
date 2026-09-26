@@ -263,6 +263,12 @@ describe('buildOAuthToolCallName', () => {
 });
 
 describe('redactServerSecrets', () => {
+  it('passes the display-only overview through to clients', () => {
+    const overview = { period: '2020년부터', refresh: '매일', contact: '정보팀' };
+    const config: ParsedServerConfig = { type: 'sse', url: 'https://example.com/mcp', overview };
+    expect(redactServerSecrets(config).overview).toEqual(overview);
+  });
+
   it('should strip apiKey.key from admin-sourced keys', () => {
     const config: ParsedServerConfig = {
       type: 'sse',

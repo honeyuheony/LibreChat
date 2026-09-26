@@ -207,6 +207,15 @@ const BaseOptionsSchema = z.object({
    */
   startup: z.boolean().optional(),
   iconPath: z.string().optional(),
+  /** Display-only facts for the data hub's "at a glance" row; a missing entry is hidden. */
+  overview: z
+    .object({
+      period: z.string().optional(),
+      refresh: z.string().optional(),
+      size: z.string().optional(),
+      contact: z.string().optional(),
+    })
+    .optional(),
   timeout: z.number().int().nonnegative().optional(),
   /** Timeout (ms) for the long-lived SSE GET stream body before undici aborts it. Default: 300_000 (5 min). */
   sseReadTimeout: z.number().int().positive().optional(),
