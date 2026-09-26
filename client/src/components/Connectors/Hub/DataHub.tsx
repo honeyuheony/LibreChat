@@ -4,8 +4,14 @@ import { useMediaQuery } from '@librechat/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { MCPServerDefinition } from '~/hooks';
 import type { HubStatus } from '../status';
+import {
+  DATA_HUB_PATH,
+  DESK_SERVER_NAME,
+  getHubStatus,
+  hubStatusView,
+  toHubStatusProps,
+} from '../status';
 import { useLocalize, useMCPServerManager, activateCatalog, useDocumentTitle } from '~/hooks';
-import { DATA_HUB_PATH, DESK_SERVER_NAME, getHubStatus, hubStatusView } from '../status';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
@@ -36,6 +42,7 @@ export default function DataHub() {
     availableMCPServers,
     isLoading,
     initializeServer,
+    isInitializing,
     revokeOAuthForServer,
     getServerStatusIconProps,
     getConfigDialogProps,
@@ -51,8 +58,10 @@ export default function DataHub() {
       : availableMCPServers;
   }, [availableMCPServers]);
 
+  const statusPropsOf = (serverName: string) =>
+    toHubStatusProps(getServerStatusIconProps(serverName), isInitializing(serverName));
   const statusOf = (server: MCPServerDefinition): HubStatus => {
-    const props = getServerStatusIconProps(server.serverName);
+    const props = statusPropsOf(server.serverName);
     return getHubStatus({
       serverStatus: props.serverStatus,
       isInitializing: props.isInitializing,
@@ -149,7 +158,7 @@ export default function DataHub() {
           server={selected}
           isDesk={selected.serverName === DESK_SERVER_NAME}
           status={statuses.get(selected.serverName) ?? 'checking'}
-          statusProps={getServerStatusIconProps(selected.serverName)}
+          statusProps={statusPropsOf(selected.serverName)}
           deskStatus={deskStatus}
           deskError={deskError}
           onConnect={initializeServer}

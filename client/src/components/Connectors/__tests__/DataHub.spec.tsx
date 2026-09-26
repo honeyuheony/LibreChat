@@ -17,6 +17,8 @@ const mockStatuses: { current: Record<string, object | undefined> } = { current:
 const mockDesk: { current: DeskStatusResponse | undefined } = { current: undefined };
 const mockActivity: { current: ConnectorActivityItem[] } = { current: [] };
 const mockRole = { current: 'USER' };
+/** Servers whose sign-in this browser started, as the manager's own `isInitializing` reports. */
+const mockStartedHere: { current: Set<string> } = { current: new Set() };
 
 jest.mock('~/hooks', () => {
   const english = jest.requireActual<Record<string, string>>('~/locales/en/translation.json');
@@ -34,13 +36,14 @@ jest.mock('~/hooks', () => {
       availableMCPServers: mockServers.current,
       isLoading: false,
       initializeServer: mockInitializeServer,
+      isInitializing: (serverName: string) => mockStartedHere.current.has(serverName),
       revokeOAuthForServer: mockRevokeOAuth,
       getConfigDialogProps: () => null,
       getServerStatusIconProps: (serverName: string) => ({
         serverName,
         serverStatus: mockStatuses.current[serverName],
-        isInitializing: false,
-        canCancel: false,
+        isInitializing: mockStartedHere.current.has(serverName),
+        canCancel: mockStartedHere.current.has(serverName),
         hasCustomUserVars: false,
         onConfigClick: jest.fn(),
         onCancel: jest.fn(),
@@ -103,6 +106,7 @@ function renderHub(path = '/connectors') {
 beforeEach(() => {
   jest.clearAllMocks();
   mockRole.current = 'USER';
+  mockStartedHere.current = new Set();
   mockDesk.current = {
     state: 'offline',
     deviceName: null,
@@ -290,6 +294,35 @@ describe('DataHub', () => {
     await user.click(screen.getByRole('button', { name: 'Connect' }));
     expect(mockInitializeServer).toHaveBeenCalledWith('google-workspace');
     expect(mockRevokeOAuth).not.toHaveBeenCalled();
+  });
+
+  it('offers to connect when a chat turn left a sign-in pending on the server', async () => {
+    mockStatuses.current['google-workspace'] = {
+      connectionState: 'connecting',
+      requiresOAuth: true,
+      authorizationState: 'authorizing',
+    };
+    const user = userEvent.setup();
+    renderHub('/connectors/google-workspace');
+    expect(screen.getByTestId('data-hub-item-google-workspace')).toHaveTextContent(
+      'Needs connection',
+    );
+    expect(screen.getByTestId('data-hub-filter-needs_connection')).toHaveTextContent(
+      '2Needs connection',
+    );
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(mockInitializeServer).toHaveBeenCalledWith('google-workspace');
+  });
+
+  it('keeps the cancel button while this browser is signing in', () => {
+    mockStartedHere.current = new Set(['google-workspace']);
+    mockStatuses.current['google-workspace'] = {
+      connectionState: 'connecting',
+      requiresOAuth: true,
+    };
+    renderHub('/connectors/google-workspace');
+    expect(screen.getByTestId('data-hub-item-google-workspace')).toHaveTextContent('Checking');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
   it('revokes the OAuth connection for a connected server', async () => {

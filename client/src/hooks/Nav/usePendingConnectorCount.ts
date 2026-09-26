@@ -1,4 +1,4 @@
-import { DESK_SERVER_NAME, getHubStatus } from '~/components/Connectors/status';
+import { DESK_SERVER_NAME, getHubStatus, toHubStatusProps } from '~/components/Connectors/status';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import { useMCPServerManager } from '~/hooks/MCP/useMCPServerManager';
 
@@ -7,14 +7,17 @@ import { useMCPServerManager } from '~/hooks/MCP/useMCPServerManager';
  * pending badge. It reads the same statuses the hub does, so the badge and the hub agree.
  */
 export default function usePendingConnectorCount(): number {
-  const { availableMCPServers, getServerStatusIconProps } = useMCPServerManager({
+  const { availableMCPServers, getServerStatusIconProps, isInitializing } = useMCPServerManager({
     observeToolAuthorization: true,
   });
   const hasDesk = availableMCPServers.some((server) => server.serverName === DESK_SERVER_NAME);
   const { data: deskStatus, isError: deskError } = useDeskStatusQuery({ enabled: hasDesk });
 
   return availableMCPServers.filter((server) => {
-    const props = getServerStatusIconProps(server.serverName);
+    const props = toHubStatusProps(
+      getServerStatusIconProps(server.serverName),
+      isInitializing(server.serverName),
+    );
     const status = getHubStatus({
       serverStatus: props.serverStatus,
       isInitializing: props.isInitializing,

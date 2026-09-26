@@ -1,5 +1,11 @@
 import type { MCPServerStatus } from 'librechat-data-provider';
-import { getConnectorState, getHubStatus, isWriteTool, summarizeToolAccess } from '../status';
+import {
+  getHubStatus,
+  isWriteTool,
+  toHubStatusProps,
+  getConnectorState,
+  summarizeToolAccess,
+} from '../status';
 
 const status = (overrides: Partial<MCPServerStatus>): MCPServerStatus => ({
   requiresOAuth: false,
@@ -145,5 +151,42 @@ describe('getHubStatus', () => {
         desk: {},
       }),
     ).toBe('checking');
+  });
+});
+
+describe('toHubStatusProps', () => {
+  const props = (serverStatus: MCPServerStatus) => ({
+    serverName: 'google-workspace',
+    serverStatus,
+    isInitializing: true,
+    canCancel: true,
+    onConfigClick: jest.fn(),
+    onCancel: jest.fn(),
+  });
+  const pending = status({
+    requiresOAuth: true,
+    connectionState: 'connecting',
+    authorizationState: 'authorizing',
+  });
+
+  it('reads a sign-in a chat turn opened on the server as still needing a connection', () => {
+    const hub = toHubStatusProps(props(pending), false);
+    expect(hub.serverStatus?.connectionState).toBe('disconnected');
+    expect(hub.isInitializing).toBe(false);
+    expect(hub.canCancel).toBe(false);
+    expect(getHubStatus(hub)).toBe('needs_connection');
+    expect(getConnectorState({ ...hub, hasCustomUserVars: false }).action).toBe('connect');
+  });
+
+  it('keeps a sign-in this browser started as in progress', () => {
+    const hub = toHubStatusProps(props(pending), true);
+    expect(hub.serverStatus).toBe(pending);
+    expect(getHubStatus(hub)).toBe('checking');
+    expect(getConnectorState({ ...hub, hasCustomUserVars: false }).action).toBe('cancel');
+  });
+
+  it('leaves a shared server that is connecting alone', () => {
+    const connecting = status({ connectionState: 'connecting' });
+    expect(toHubStatusProps(props(connecting), false).serverStatus).toBe(connecting);
   });
 });

@@ -1,4 +1,5 @@
 import type { DeskStatusResponse, MCPServerStatus, MCPTool } from 'librechat-data-provider';
+import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { TranslationKeys } from '~/hooks';
 
 export type PillTone = 'success' | 'neutral' | 'error';
@@ -123,6 +124,36 @@ export const hubStatusView: Record<HubStatus, { labelKey: TranslationKeys; tone:
   unavailable: { labelKey: 'com_ui_data_hub_status_unavailable', tone: 'error' },
   checking: { labelKey: 'com_ui_connectors_status_checking', tone: 'neutral' },
 };
+
+/**
+ * A chat turn that reaches an OAuth connector the user has not signed in to opens a sign-in
+ * flow on the server, and the status reads `connecting` for as long as that flow lives
+ * (minutes). Nobody is signing in, so the data hub reads it as the disconnected state it is,
+ * unless this browser started the sign-in itself (`startedHere`, the manager's own
+ * `isInitializing`, which unlike the status icon's flag leaves out server-side flows).
+ */
+export function toHubStatusProps(
+  props: MCPServerStatusIconProps,
+  startedHere: boolean,
+): MCPServerStatusIconProps {
+  const { serverStatus } = props;
+  const unattendedSignIn =
+    !startedHere &&
+    serverStatus?.requiresOAuth === true &&
+    serverStatus.connectionState === 'connecting';
+  return {
+    ...props,
+    serverStatus: unattendedSignIn
+      ? {
+          ...serverStatus,
+          connectionState: 'disconnected',
+          authorizationState: 'needs_authorization',
+        }
+      : serverStatus,
+    isInitializing: startedHere,
+    canCancel: startedHere && props.canCancel,
+  };
+}
 
 interface HubStatusInput {
   serverStatus?: MCPServerStatus;
