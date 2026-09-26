@@ -35,6 +35,10 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// The app opens in Korean when the browser has no saved choice (locales/i18n DEFAULT_LANGUAGE);
+// the tests assert English copy, so they start from a saved English choice.
+localStorage.setItem('lang', 'en-US');
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
