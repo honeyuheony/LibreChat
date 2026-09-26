@@ -288,7 +288,7 @@ export const registry: SettingEntry[] = [
     tab: PERSONALIZATION,
     section: 'commands',
     labelKey: 'com_nav_slash_command_description',
-    show: (ctx) => ctx.hasPrompts,
+    show: (ctx) => ctx.hasPrompts || ctx.hasSkills,
     Component: toggleControl({
       stateAtom: store.slashCommand,
       localizationKey: 'com_nav_slash_command_description',

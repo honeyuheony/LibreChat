@@ -7,7 +7,7 @@ const mockHasMultiConvoAccess = { current: true };
 const mockHasSkillsAccess = { current: true };
 const mockSkillsEnabled = { current: true };
 const mockEndpoint = { current: 'openAI' as string | null };
-const mockCommandToggles = { at: true, plus: true, slash: true, dollar: true };
+const mockCommandToggles = { at: true, plus: true, slash: true };
 
 jest.mock('jotai', () => ({
   ...jest.requireActual('jotai'),
@@ -35,9 +35,6 @@ jest.mock('recoil', () => ({
     if (atom === 'slashCommand') {
       return mockCommandToggles.slash;
     }
-    if (atom === 'dollarCommand') {
-      return mockCommandToggles.dollar;
-    }
     return undefined;
   }),
   useSetRecoilState: jest.fn((atom: string) => {
@@ -62,7 +59,6 @@ jest.mock('~/store', () => ({
   atCommand: 'atCommand',
   plusCommand: 'plusCommand',
   slashCommand: 'slashCommand',
-  dollarCommand: 'dollarCommand',
 }));
 
 jest.mock('~/hooks/Roles/useHasAccess', () =>
@@ -144,7 +140,6 @@ beforeEach(() => {
   mockCommandToggles.at = true;
   mockCommandToggles.plus = true;
   mockCommandToggles.slash = true;
-  mockCommandToggles.dollar = true;
 });
 
 describe('useHandleKeyUp', () => {
@@ -403,8 +398,8 @@ describe('useHandleKeyUp', () => {
       expect(setShowPlusPopover).not.toHaveBeenCalled();
     });
 
-    it('does NOT trigger / skill command when dollarCommand toggle is disabled', () => {
-      mockCommandToggles.dollar = false;
+    it('does NOT open the agent list when the slashCommand toggle is disabled', () => {
+      mockCommandToggles.slash = false;
       const ref = makeTextAreaRef('/', 1);
       const { handleKeyUp, setShowSkillsPopover } = renderUseHandleKeyUp(ref);
 

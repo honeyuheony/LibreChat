@@ -14,6 +14,7 @@ const ctx: SettingsContextValue = {
   hasUserProvidedEndpoints: false,
   hasMultiConvo: false,
   hasPrompts: false,
+  hasSkills: false,
   isLocalProvider: true,
   twoFactorEnabled: false,
   allowAccountDeletion: true,

@@ -82,7 +82,6 @@ const useHandleKeyUp = ({
   const atCommandEnabled = useRecoilValue(store.atCommand);
   const plusCommandEnabled = useRecoilValue(store.plusCommand);
   const slashCommandEnabled = useRecoilValue(store.slashCommand);
-  const dollarCommandEnabled = useRecoilValue(store.dollarCommand);
 
   useEffect(() => {
     if (isAssistantsEndpoint(endpoint)) {
@@ -115,11 +114,12 @@ const useHandleKeyUp = ({
     }
   }, [textAreaRef, hasPromptsAccess, setShowPromptsPopover, slashCommandEnabled]);
 
+  /** `/` opens the agent list too, so the one "/" switch in settings covers it. */
   const handleSkillsCommand = useCallback(() => {
     if (
       !hasSkillsAccess ||
       !skillsEnabled ||
-      !dollarCommandEnabled ||
+      !slashCommandEnabled ||
       isAssistantsEndpoint(endpoint)
     ) {
       return;
@@ -132,7 +132,7 @@ const useHandleKeyUp = ({
     hasSkillsAccess,
     skillsEnabled,
     setShowSkillsPopover,
-    dollarCommandEnabled,
+    slashCommandEnabled,
     endpoint,
   ]);
 

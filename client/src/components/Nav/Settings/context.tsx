@@ -26,6 +26,10 @@ export function useSettingsContext(): SettingsContextValue {
     permissionType: PermissionTypes.PROMPTS,
     permission: Permissions.USE,
   });
+  const hasSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.USE,
+  });
   const hasMemories = useHasAccess({
     permissionType: PermissionTypes.MEMORIES,
     permission: Permissions.USE,
@@ -41,6 +45,7 @@ export function useSettingsContext(): SettingsContextValue {
   const hasRemoteAgentsBool = hasRemoteAgents === true;
   const hasMultiConvoBool = hasMultiConvo === true;
   const hasPromptsBool = hasPrompts === true;
+  const hasSkillsBool = hasSkills === true;
   const engineTTS = useRecoilValue<string>(store.engineTTS);
   const hasUserProvidedEndpoints = useProviderKeys().length > 0;
   const hasStatefulCodeSessions =
@@ -57,6 +62,7 @@ export function useSettingsContext(): SettingsContextValue {
       hasUserProvidedEndpoints,
       hasMultiConvo: hasMultiConvoBool,
       hasPrompts: hasPromptsBool,
+      hasSkills: hasSkillsBool,
       isLocalProvider,
       twoFactorEnabled,
       allowAccountDeletion,
@@ -75,6 +81,7 @@ export function useSettingsContext(): SettingsContextValue {
       hasUserProvidedEndpoints,
       hasMultiConvoBool,
       hasPromptsBool,
+      hasSkillsBool,
       isLocalProvider,
       twoFactorEnabled,
       allowAccountDeletion,

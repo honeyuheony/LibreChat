@@ -17,6 +17,7 @@ const settingsContext: SettingsContextValue = {
   hasUserProvidedEndpoints: false,
   hasMultiConvo: false,
   hasPrompts: false,
+  hasSkills: false,
   isLocalProvider: true,
   twoFactorEnabled: false,
   allowAccountDeletion: true,
@@ -83,6 +84,18 @@ describe('settings registry', () => {
       expect(TABS.find((tab) => tab.id === SettingsTabValues.CONNECTORS)?.Panel).toBe(
         ConnectorsSettings,
       );
+    });
+  });
+
+  describe('slash command switch', () => {
+    const entry = registry.find((e) => e.id === 'slashCommand');
+
+    it('shows where only agents answer "/"', () => {
+      expect(entry?.show?.({ ...settingsContext, hasSkills: true })).toBe(true);
+    });
+
+    it('hides where nothing answers "/"', () => {
+      expect(entry?.show?.(settingsContext)).toBe(false);
     });
   });
 

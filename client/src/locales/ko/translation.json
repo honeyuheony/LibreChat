@@ -739,7 +739,7 @@
   "com_nav_shared_links": "공유 링크",
   "com_nav_show_thinking": "생각 드롭다운 기본 열기",
   "com_nav_slash_command": "슬래시 명령어",
-  "com_nav_slash_command_description": "키보드로 프롬프트를 선택하려면 \"/\" 명령어 토글",
+  "com_nav_slash_command_description": "입력창 맨 앞에 \"/\"를 쳐서 부를 agent 목록 열기",
   "com_nav_smooth_streaming": "스트리밍 텍스트를 부드럽게 표시(새 단어 서서히 나타내기)",
   "com_nav_speech_to_text": "음성을 텍스트로 변환",
   "com_nav_stop_generating": "생성 중단",
