@@ -425,6 +425,38 @@ html {
   --border-xheavy: 217 217 227;
 }
 
+/* Sidebar ink. The AgentHub wireframe keeps the sidebar dark (#17152b "ink") in every mode, so the
+ * sidebar restates the semantic tokens its contents read instead of each row picking new classes.
+ * Values are the wireframe's #side overrides; ratios are against the ink canvas (script-computed):
+ * text-secondary 12.12:1, text-tertiary 8.48:1 (6.30:1 on the ink-3 selection), text-muted 5.52:1.
+ * High contrast keeps its own palette, so the scope stops there. */
+html:not(.high-contrast) .sidebar-ink {
+  --surface-primary-alt: 23 21 43; /* #17152b wireframe ink */
+  --surface-primary: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-secondary: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-tertiary: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-hover: 34 31 61; /* #221f3d wireframe ink-2 */
+  --surface-hover-alt: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --surface-active: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --surface-active-alt: 47 43 82; /* #2f2b52 wireframe ink-3 */
+  --border-light: 44 41 71; /* #2c2947 wireframe #side g20 */
+  --border-medium: 58 54 96; /* #3a3660 wireframe #side g30 */
+  --border-heavy: 111 108 140; /* #6f6c8c wireframe #side g40 */
+  --text-primary: 255 255 255; /* #ffffff wireframe #side g90 */
+  --text-secondary: 213 211 230; /* #d5d3e6 wireframe #side g70 */
+  --text-secondary-alt: 179 176 204; /* #b3b0cc wireframe #side g60 */
+  --text-tertiary: 179 176 204; /* #b3b0cc wireframe #side g60 */
+  --text-muted: 143 140 171; /* #8f8cab wireframe #side g50 */
+  --shimmer-base: 255 255 255;
+  --accent-primary: 196 181 253; /* #c4b5fd wireframe #side orange */
+  --ring-primary: 167 139 250; /* #a78bfa wireframe brand-400 */
+  color: rgb(var(--text-secondary));
+}
+/* Selected panel row: ink-3 fill from the tokens above plus the wireframe's 3px brand-400 rail. */
+html:not(.high-contrast) .sidebar-ink [data-testid^='nav-panel-'][aria-pressed='true'] {
+  box-shadow: inset 3px 0 0 rgb(167 139 250);
+}
+
 /* High contrast appearance modes.
  *
  * Every `IThemeRGB` token is delivered by the theme registry as an inline custom

@@ -79,7 +79,9 @@ describe.each([
       'utf8',
     );
     const property = token.slice(4);
-    const declared = [...appStyles.matchAll(new RegExp(`--${property}:\\s*([^;]+);`, 'g'))].map(
+    /** The sidebar ink scope repaints a subtree on purpose; it is not a theme default. */
+    const themeDefaults = appStyles.replace(/\.sidebar-ink\s*\{[^}]*\}/g, '');
+    const declared = [...themeDefaults.matchAll(new RegExp(`--${property}:\\s*([^;]+);`, 'g'))].map(
       (match) => match[1].trim(),
     );
 
