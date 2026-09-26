@@ -1382,6 +1382,7 @@
   "com_ui_data_hub_description": "AI가 읽을 수 있는 데이터 목록입니다. 권한은 원래 시스템의 권한을 그대로 따르므로, 내가 볼 수 있는 자료만 가져옵니다.",
   "com_ui_data_hub_summary": "상태별 개수",
   "com_ui_data_hub_list": "데이터 목록",
+  "com_ui_data_hub_category_other": "기타",
   "com_ui_data_hub_status_available": "사용 가능",
   "com_ui_data_hub_status_needs_connection": "연결 필요",
   "com_ui_data_hub_status_unavailable": "이용 불가",

@@ -113,6 +113,7 @@
   "com_ui_data_hub_description": "The data the AI can read. Access follows each source system, so only what you can see is fetched.",
   "com_ui_data_hub_summary": "Count by status",
   "com_ui_data_hub_list": "Data sources",
+  "com_ui_data_hub_category_other": "Other",
   "com_ui_data_hub_status_available": "Available",
   "com_ui_data_hub_status_needs_connection": "Needs connection",
   "com_ui_data_hub_status_unavailable": "Unavailable",

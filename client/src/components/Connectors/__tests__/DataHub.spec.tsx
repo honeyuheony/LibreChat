@@ -152,6 +152,35 @@ describe('DataHub', () => {
     ]);
   });
 
+  it('groups connectors under their config category, with the rest under Other', () => {
+    mockServers.current = [
+      server('filesystem', { title: 'Shared folder', category: 'Documents' }),
+      server('google-workspace', { title: 'Google', category: 'Documents' }),
+      server('slack', { title: 'Slack' }),
+      server('my-pc', { title: 'My PC folder', category: 'Analytics' }),
+    ];
+    renderHub();
+    const list = screen.getByRole('list', { name: 'Data sources' });
+    const headings = within(list).getAllByRole('heading', { level: 3 });
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Analytics',
+      'Documents',
+      'Other',
+    ]);
+    const documents = headings[1].nextElementSibling as HTMLElement;
+    expect(
+      within(documents)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('data-testid')),
+    ).toEqual(['data-hub-item-filesystem', 'data-hub-item-google-workspace']);
+  });
+
+  it('shows no headings when no connector sets a category', () => {
+    renderHub();
+    const list = screen.getByRole('list', { name: 'Data sources' });
+    expect(within(list).queryByRole('heading')).not.toBeInTheDocument();
+  });
+
   it('counts each observable status, reading the desktop app rather than its relay', () => {
     renderHub();
     expect(screen.getByTestId('data-hub-filter-available')).toHaveTextContent('1Available');

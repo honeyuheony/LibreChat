@@ -269,6 +269,15 @@ describe('redactServerSecrets', () => {
     expect(redactServerSecrets(config).overview).toEqual(overview);
   });
 
+  it('passes the display-only category through to clients', () => {
+    const config: ParsedServerConfig = {
+      type: 'sse',
+      url: 'https://example.com/mcp',
+      category: '분석 데이터',
+    };
+    expect(redactServerSecrets(config).category).toBe('분석 데이터');
+  });
+
   it('should strip apiKey.key from admin-sourced keys', () => {
     const config: ParsedServerConfig = {
       type: 'sse',

@@ -76,6 +76,26 @@ describe('MCPOptionsSchema', () => {
     });
   });
 
+  describe('category', () => {
+    it('keeps the heading an operator writes', () => {
+      const result = MCPOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://x.com/sse',
+        category: '문서·협업',
+      });
+      expect(result.success && result.data.category).toBe('문서·협업');
+    });
+
+    it('rejects a non-text heading', () => {
+      const result = MCPOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://x.com/sse',
+        category: 3,
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('OBO transport support', () => {
     it('should accept obo on SSE transport', () => {
       const result = MCPOptionsSchema.safeParse({
