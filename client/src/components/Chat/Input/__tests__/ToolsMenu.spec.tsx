@@ -1,11 +1,12 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
-import { Provider as JotaiProvider } from 'jotai';
 import userEvent from '@testing-library/user-event';
 import { dataService } from 'librechat-data-provider';
+import { Provider as JotaiProvider, createStore } from 'jotai';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import { getAgentServerNames } from '../useAgentConnectorSelection';
+import { newChatExtraConnectorAtom } from '~/store';
 import ToolsMenu from '../ToolsMenu';
 
 const mockNavigate = jest.fn();
@@ -377,6 +378,38 @@ describe('ToolsMenu', () => {
         withConfig(true);
         mockUser = { personalization: { connectorDefaults: { files: false } } };
         render(<ToolsMenu showBuiltinTools={false} agentId={savedAgent} />);
+        expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
+      });
+
+      it('also turns on the connector the data hub opened this new chat for', async () => {
+        withConfig(undefined);
+        const store = createStore();
+        store.set(newChatExtraConnectorAtom, { serverName: 'files', at: Date.now() });
+        rtlRender(
+          <QueryClientProvider client={new QueryClient()}>
+            <RecoilRoot>
+              <JotaiProvider store={store}>
+                <ToolsMenu showBuiltinTools={false} agentId={savedAgent} />
+              </JotaiProvider>
+            </RecoilRoot>
+          </QueryClientProvider>,
+        );
+        expect(await screen.findByTestId('tools-menu-count')).toHaveTextContent('1');
+      });
+
+      it('ignores a data hub request that has gone stale', () => {
+        withConfig(undefined);
+        const store = createStore();
+        store.set(newChatExtraConnectorAtom, { serverName: 'files', at: Date.now() - 60_000 });
+        rtlRender(
+          <QueryClientProvider client={new QueryClient()}>
+            <RecoilRoot>
+              <JotaiProvider store={store}>
+                <ToolsMenu showBuiltinTools={false} agentId={savedAgent} />
+              </JotaiProvider>
+            </RecoilRoot>
+          </QueryClientProvider>,
+        );
         expect(screen.queryByTestId('tools-menu-count')).not.toBeInTheDocument();
       });
 

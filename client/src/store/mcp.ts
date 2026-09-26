@@ -22,6 +22,17 @@ export const mcpValuesAtomFamily = atomFamily((conversationId: string | null) =>
 });
 
 /**
+ * A connector the data hub's "new chat with this data" asked to switch on in the next new
+ * chat, on top of the user's new-chat defaults. Starting a new chat resets the chat state more
+ * than once while the route mounts, so the request is kept briefly (`at`) instead of being
+ * consumed by the first reset, and is dropped once the chat is sent.
+ */
+export const newChatExtraConnectorAtom = atom<{ serverName: string; at: number } | null>(null);
+
+/** How long a "new chat with this data" request stays valid while the new chat mounts. */
+export const NEW_CHAT_EXTRA_CONNECTOR_TTL_MS = 5000;
+
+/**
  * Global storage atom for MCP pinned state (shared across all conversations)
  */
 export const mcpPinnedAtom = atomWithStorage<boolean>(LocalStorageKeys.PIN_MCP_, true, undefined, {

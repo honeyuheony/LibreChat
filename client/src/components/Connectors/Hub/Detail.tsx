@@ -1,6 +1,6 @@
+import { useSetAtom } from 'jotai';
 import { Monitor } from 'lucide-react';
-import { useSetRecoilState } from 'recoil';
-import { Constants, SystemRoles } from 'librechat-data-provider';
+import { SystemRoles } from 'librechat-data-provider';
 import { Button, Spinner, Switch, useToastContext } from '@librechat/client';
 import type { DeskStatusResponse, MCPOptions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
@@ -10,7 +10,7 @@ import { actionLabelKeys, primaryActions, runConnectorAction } from '../actions'
 import { DESK_DOWNLOAD_PATH, getConnectorState, hubStatusView } from '../status';
 import { useUpdateConnectorDefaultsMutation } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
-import { ephemeralAgentByConvoId } from '~/store';
+import { newChatExtraConnectorAtom } from '~/store';
 import useNewChat from '~/hooks/Chat/useNewChat';
 import { isNewChatDefaultOn } from '../newChat';
 import { describeDesk } from '../Desk';
@@ -29,8 +29,6 @@ interface DetailProps {
   deskError?: boolean;
   onConnect: (serverName: string) => void;
   onDisconnect: (serverName: string) => void;
-  /** Connectors a new chat starts with off, from the user's switches and the config. */
-  newChatOff?: readonly string[];
 }
 
 const overviewRows: Array<[keyof NonNullable<MCPOptions['overview']>, TranslationKeys]> = [
@@ -100,7 +98,6 @@ export default function ConnectorDetail({
   deskError = false,
   onConnect,
   onDisconnect,
-  newChatOff,
 }: DetailProps) {
   const localize = useLocalize();
   const { user } = useAuthContext();
@@ -108,7 +105,7 @@ export default function ConnectorDetail({
   const updateDefaults = useUpdateConnectorDefaultsMutation();
   const defaultOn = isNewChatDefaultOn(server, user);
   const { startNewChat } = useNewChat();
-  const setNewChatAgent = useSetRecoilState(ephemeralAgentByConvoId(Constants.NEW_CONVO));
+  const setExtraOn = useSetAtom(newChatExtraConnectorAtom);
   const { serverStatus, isInitializing, canCancel, hasCustomUserVars = false } = statusProps;
   const state = getConnectorState({ serverStatus, isInitializing, canCancel, hasCustomUserVars });
   const displayName = server.config.title || server.serverName;
@@ -163,15 +160,10 @@ export default function ConnectorDetail({
             variant="submit"
             data-testid="data-hub-new-chat"
             onClick={() => {
+              /* The new chat starts from the user's defaults with this connector on as well;
+                 the composer lays both on once the new chat has mounted. */
+              setExtraOn({ serverName: server.serverName, at: Date.now() });
               startNewChat();
-              /* The chat's connector switch (ToolsMenu) is on unless listed in disabled_mcp:
-                 the new-chat defaults, with this connector on whatever its own default. */
-              setNewChatAgent((prev) => ({
-                ...(prev ?? {}),
-                disabled_mcp: (newChatOff ?? prev?.disabled_mcp ?? []).filter(
-                  (name) => name !== server.serverName,
-                ),
-              }));
             }}
           >
             {localize('com_ui_data_hub_new_chat')}

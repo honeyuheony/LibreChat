@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useCallback } from 'react';
+import { useAtom } from 'jotai';
 import { useRecoilState } from 'recoil';
 import {
   Constants,
@@ -6,8 +7,12 @@ import {
   splitMCPToolKey,
   normalizeServerName,
 } from 'librechat-data-provider';
+import {
+  ephemeralAgentByConvoId,
+  newChatExtraConnectorAtom,
+  NEW_CHAT_EXTRA_CONNECTOR_TTL_MS,
+} from '~/store';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
-import { ephemeralAgentByConvoId } from '~/store';
 import { isEphemeralAgent } from '~/common';
 
 export interface AgentConnectorSelection {
@@ -95,16 +100,30 @@ export default function useAgentConnectorSelection({
   const disabledList = ephemeralAgent?.disabled_mcp;
   const isNewChat = convoKey === Constants.NEW_CONVO;
 
+  const [extraOn, setExtraOn] = useAtom(newChatExtraConnectorAtom);
+
   /* Every new chat gets a fresh ephemeral agent, so the new-chat defaults are laid on each
      time; the chat's own switches then take over and move with it to its real id. */
   useEffect(() => {
     if (!isSavedAgent || !isNewChat || disabledList !== undefined || newChatOff === undefined) {
       return;
     }
+    const extra =
+      extraOn != null && Date.now() - extraOn.at < NEW_CHAT_EXTRA_CONNECTOR_TTL_MS
+        ? extraOn.serverName
+        : undefined;
     setEphemeralAgent((prev) =>
-      prev?.disabled_mcp !== undefined ? prev : { ...(prev ?? {}), disabled_mcp: [...newChatOff] },
+      prev?.disabled_mcp !== undefined
+        ? prev
+        : { ...(prev ?? {}), disabled_mcp: newChatOff.filter((name) => name !== extra) },
     );
-  }, [isSavedAgent, isNewChat, disabledList, newChatOff, setEphemeralAgent]);
+  }, [isSavedAgent, isNewChat, disabledList, newChatOff, extraOn, setEphemeralAgent]);
+
+  useEffect(() => {
+    if (!isNewChat && extraOn != null) {
+      setExtraOn(null);
+    }
+  }, [isNewChat, extraOn, setExtraOn]);
 
   /* A conversation loaded again rebuilds its ephemeral agent from the model spec,
      which knows nothing of these switches, so the stored choice is laid back on. */
