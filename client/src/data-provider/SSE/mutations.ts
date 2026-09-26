@@ -1,7 +1,9 @@
-import { useMutation } from '@tanstack/react-query';
-import { apiBaseUrl, EModelEndpoint } from 'librechat-data-provider';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiBaseUrl, EModelEndpoint, QueryKeys } from 'librechat-data-provider';
 import type { Agents, TMessage, TEphemeralAgent, TPendingSteer } from 'librechat-data-provider';
+import type { ActiveJobsResponse } from './queries';
 import { postGenerationRequest } from './protocol';
+import { withActiveJob } from './queries';
 
 export interface AbortStreamParams {
   /** The stream ID to abort (if known) */
@@ -121,12 +123,29 @@ export const submitToolApproval = async (
 };
 
 /**
+ * Once the server takes an answer the paused run goes on, so its sidebar row turns
+ * back from 「승인 대기」 now rather than at the next active jobs poll. A run the
+ * list no longer holds is left out.
+ */
+function useMarkResumedJob() {
+  const queryClient = useQueryClient();
+  return (conversationId: string) =>
+    queryClient.setQueryData<ActiveJobsResponse>([QueryKeys.activeJobs], (old) =>
+      old?.activeJobIds.includes(conversationId) === true
+        ? withActiveJob(old, conversationId)
+        : old,
+    );
+}
+
+/**
  * React Query mutation hook for submitting tool-approval decisions.
  * Mirrors {@link useAbortStreamMutation}; the resumed stream arrives on the SSE.
  */
 export function useSubmitToolApprovalMutation() {
+  const markResumed = useMarkResumedJob();
   return useMutation({
     mutationFn: submitToolApproval,
+    onSuccess: (_data, variables) => markResumed(variables.conversationId),
   });
 }
 
@@ -157,8 +176,10 @@ export const submitAskAnswer = async (params: SubmitAskAnswerParams): Promise<Re
  * Mirrors {@link useAbortStreamMutation}; the resumed stream arrives on the SSE.
  */
 export function useSubmitAskAnswerMutation() {
+  const markResumed = useMarkResumedJob();
   return useMutation({
     mutationFn: submitAskAnswer,
+    onSuccess: (_data, variables) => markResumed(variables.conversationId),
   });
 }
 

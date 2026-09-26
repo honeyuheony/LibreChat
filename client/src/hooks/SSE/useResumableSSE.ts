@@ -37,7 +37,7 @@ import type {
   TActivityLabelEvent,
   TReasoningLabelEvent,
 } from 'librechat-data-provider';
-import type { ActiveJobsResponse, StreamStatusResponse } from '~/data-provider';
+import type { ActiveJob, ActiveJobsResponse, StreamStatusResponse } from '~/data-provider';
 import type { DrainAfterAbort, QueuedMessageOrigin } from '~/store/families';
 import type { GenerationProtocolVersion } from '~/data-provider';
 import type { EventHandlerParams } from './useEventHandlers';
@@ -808,9 +808,9 @@ export default function useResumableSSE(
    * Called when generation starts.
    */
   const addActiveJob = useCallback(
-    (jobId: string) => {
+    (jobId: string, status?: ActiveJob['status']) => {
       queryClient.setQueryData<ActiveJobsResponse>([QueryKeys.activeJobs], (old) =>
-        withActiveJob(old, jobId),
+        withActiveJob(old, jobId, status),
       );
     },
     [queryClient],
@@ -1519,6 +1519,12 @@ export default function useResumableSSE(
           currentSubmission.conversation?.conversationId ??
           currentStreamId;
         jotaiStore.set(pendingApprovalActionFamily(pendingConversationId), pendingAction);
+        /** The sidebar row reads the active jobs list, which otherwise says
+         *  `running` until the next poll — or for good, when this pane's own
+         *  start or resume write lands after the poll that saw the pause. */
+        if (attempt === 0) {
+          addActiveJob(currentStreamId, 'requires_action');
+        }
         const retryNextFrame = () => {
           if (attempt < PENDING_ACTION_MAX_RETRY_FRAMES) {
             pendingActionRetryRef.current = requestAnimationFrame(() => {

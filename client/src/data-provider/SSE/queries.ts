@@ -68,18 +68,20 @@ export interface ActiveJobsResponse {
 }
 
 /**
- * The cache after a stream starts or resumes: its id is listed and its job runs.
- * Other jobs keep their status, so a conversation paused for approval stays
- * 「승인 대기」 in the sidebar while another one streams.
+ * The cache after a stream starts or resumes (its job runs), or pauses for an
+ * approval (`requires_action`): its id is listed with that status. Other jobs keep
+ * theirs, so a conversation paused for approval stays 「승인 대기」 in the sidebar
+ * while another one streams.
  */
 export function withActiveJob(
   old: ActiveJobsResponse | undefined,
   jobId: string,
+  status: ActiveJob['status'] = 'running',
 ): ActiveJobsResponse {
   const jobs = (old?.jobs ?? []).filter((job) => job.id !== jobId);
   return {
     activeJobIds: [...new Set([...(old?.activeJobIds ?? []), jobId])],
-    jobs: [...jobs, { id: jobId, status: 'running' }],
+    jobs: [...jobs, { id: jobId, status }],
   };
 }
 

@@ -44,6 +44,7 @@ import {
   useActiveJobs,
   useActiveJobStatus,
   selectActiveJobStatus,
+  withActiveJob,
   resetActiveJobsGrace,
   extendActiveJobsGrace,
   getActiveJobsRefetchInterval,
@@ -73,6 +74,22 @@ function makeAxiosError(status: number): Error {
   err.response = { status };
   return err;
 }
+
+describe('withActiveJob', () => {
+  it('records a paused run as waiting for approval and keeps the other jobs', () => {
+    const old = {
+      activeJobIds: ['run-1', 'paused-1'],
+      jobs: [
+        { id: 'run-1', status: 'running' as const },
+        { id: 'paused-1', status: 'running' as const },
+      ],
+    };
+    const next = withActiveJob(old, 'paused-1', 'requires_action');
+    expect(selectActiveJobStatus(next, 'paused-1')).toBe('requires_action');
+    expect(selectActiveJobStatus(next, 'run-1')).toBe('running');
+    expect(selectActiveJobStatus(withActiveJob(next, 'paused-1'), 'paused-1')).toBe('running');
+  });
+});
 
 describe('selectActiveJobStatus', () => {
   it('reports a paused run as requires_action and a running one as running', () => {
