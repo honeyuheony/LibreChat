@@ -3,8 +3,8 @@ import { RecoilRoot } from 'recoil';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { daypartGreetingSchedule } from '~/utils/greeting';
+import Landing, { greetingName } from '../Landing';
 import temporaryStore from '~/store/temporary';
-import Landing from '../Landing';
 
 const mockUseGreeting = jest.fn();
 
@@ -76,5 +76,16 @@ describe('Landing temporary chat empty state', () => {
     expect(screen.getByText('Good afternoon, Kim')).toBeInTheDocument();
     expect(screen.queryByText('Temporary Chat')).not.toBeInTheDocument();
     expect(screen.getByTestId('brand-mark')).toBeInTheDocument();
+  });
+});
+
+describe('greetingName', () => {
+  it('greets a Korean full name by its given name', () => {
+    expect(greetingName('홍길동')).toBe('길동');
+  });
+
+  it('keeps any other name whole', () => {
+    expect(greetingName('Kim')).toBe('Kim');
+    expect(greetingName('admin')).toBe('admin');
   });
 });

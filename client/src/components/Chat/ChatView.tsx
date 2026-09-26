@@ -32,6 +32,12 @@ import Header from './Header';
 import { cn } from '~/utils';
 import store from '~/store';
 
+/** The wireframe home's violet and pink glow behind the greeting and the composer. */
+const landingGlow = {
+  backgroundImage:
+    'radial-gradient(ellipse 55% 38% at 50% 40%, rgba(124,58,237,.10), transparent 70%), radial-gradient(ellipse 35% 25% at 62% 52%, rgba(219,39,119,.06), transparent 70%)',
+};
+
 function LoadingSpinner() {
   return (
     <div className="relative flex-1 overflow-hidden overflow-y-auto">
@@ -176,6 +182,7 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                             'scrollbar-gutter-spacer flex-1 items-center justify-end sm:justify-center'
                           : 'h-full overflow-y-auto',
                       )}
+                      style={isLandingPage ? landingGlow : undefined}
                     >
                       {content}
                       {/* Named + opaque so a view transition (the ask_user_question
@@ -185,7 +192,9 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                         page, so normal rendering is unchanged. */}
                       <div
                         className={cn(
-                          'w-full bg-presentation [view-transition-name:chat-form]',
+                          'w-full [view-transition-name:chat-form]',
+                          /* The home keeps the glow showing around the composer. */
+                          isLandingPage ? 'bg-transparent' : 'bg-presentation',
                           !isLandingPage && 'scrollbar-gutter-spacer',
                           isLandingPage && 'max-w-[48.5rem] transition-all duration-200',
                         )}
