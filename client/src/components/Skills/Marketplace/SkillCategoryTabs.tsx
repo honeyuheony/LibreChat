@@ -1,70 +1,40 @@
 import React from 'react';
-import { useMediaQuery } from '@librechat/client';
-import { useLocalize } from '~/hooks';
-import { getCategoryLabel } from './skillCategories';
 import { cn } from '~/utils';
 
 interface SkillCategoryTabsProps {
-  categories: string[];
+  tabs: Array<{ value: string; label: string }>;
   activeTab: string;
   onChange: (value: string) => void;
-  /** Per-category skill count from `GET /api/skills/categories`, shown next to the label. */
-  counts?: Record<string, number>;
 }
 
-/** Same look as the agent marketplace tabs, but fed with plain category values
- *  derived on the client (see skillCategories.ts). */
-export default function SkillCategoryTabs({
-  categories,
-  activeTab,
-  onChange,
-  counts,
-}: SkillCategoryTabsProps) {
-  const localize = useLocalize();
-  const isSmallScreen = useMediaQuery('(max-width: 768px)');
-
+/** 와이어프레임 `.cats`: 가운데 정렬 알약 탭, 스크롤해도 위에 붙어 있다. */
+export default function SkillCategoryTabs({ tabs, activeTab, onChange }: SkillCategoryTabsProps) {
   return (
-    <div className="w-full pb-2">
-      <div
-        className={cn(
-          'px-4',
-          isSmallScreen
-            ? 'scrollbar-hide flex gap-2 overflow-x-auto scroll-smooth'
-            : 'flex flex-wrap justify-center gap-1.5',
-        )}
-        role="tablist"
-        aria-orientation="horizontal"
-      >
-        {categories.map((value) => (
-          <button
-            key={value}
-            id={`skill-category-tab-${value}`}
-            onClick={() => onChange(value)}
-            className={cn(
-              'relative cursor-pointer select-none whitespace-nowrap px-3 py-2 transition-all duration-200',
-              isSmallScreen ? 'min-w-fit flex-shrink-0' : '',
-              activeTab === value
-                ? 'rounded-t-lg bg-surface-hover text-text-primary'
-                : 'rounded-lg bg-surface-secondary text-text-secondary hover:bg-surface-hover hover:text-text-primary active:scale-95',
-            )}
-            role="tab"
-            aria-selected={activeTab === value}
-            aria-controls={`skill-category-panel-${value}`}
-            tabIndex={activeTab === value ? 0 : -1}
-          >
-            {getCategoryLabel(value, localize)}
-            {counts?.[value] !== undefined && (
-              <span className="ml-1.5 text-xs text-text-secondary">{counts[value]}</span>
-            )}
-            {activeTab === value && (
-              <div
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-text-primary"
-                aria-hidden="true"
-              />
-            )}
-          </button>
-        ))}
-      </div>
+    <div
+      className="sticky top-0 z-[3] mt-[22px] flex flex-wrap justify-center gap-1 border-b border-border-light bg-presentation py-2.5"
+      role="tablist"
+      aria-orientation="horizontal"
+    >
+      {tabs.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          id={`skill-category-tab-${value}`}
+          onClick={() => onChange(value)}
+          className={cn(
+            'cursor-pointer select-none whitespace-nowrap rounded-full px-[15px] py-2 text-sm font-medium transition-colors',
+            activeTab === value
+              ? 'bg-text-primary text-surface-primary'
+              : 'text-text-tertiary hover:bg-surface-hover',
+          )}
+          role="tab"
+          aria-selected={activeTab === value}
+          aria-controls={`skill-category-panel-${value}`}
+          tabIndex={activeTab === value ? 0 : -1}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

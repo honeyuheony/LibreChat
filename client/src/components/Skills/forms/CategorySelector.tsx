@@ -4,6 +4,7 @@ import { DropdownPopup } from '@librechat/client';
 import { useFormContext, Controller } from 'react-hook-form';
 import type { MenuItemProps } from '@librechat/client';
 import type { ReactNode } from 'react';
+import { SKILL_CATEGORIES, getCategoryLabel } from '../Marketplace/skillCategories';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -12,13 +13,6 @@ interface CategorySelectorProps {
 }
 
 type SkillCategoryOption = { value: string; label: string; icon?: ReactNode };
-
-/**
- * Department categories for skills, distinct from the idea/write/code prompt
- * categories in `~/hooks/Prompts/useCategories` — a skill belongs to a
- * department rather than a prompt-writing style.
- */
-const SKILL_CATEGORY_KEYS = ['general', 'hr', 'rd', 'finance', 'it', 'sales', 'aftersales'] as const;
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({ className = '' }) => {
   const localize = useLocalize();
@@ -32,9 +26,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ className = '' }) =
   const categories = useMemo<SkillCategoryOption[]>(
     () => [
       emptyCategory,
-      ...SKILL_CATEGORY_KEYS.map((key) => ({
-        value: key,
-        label: localize(`com_skills_category_${key}` as Parameters<typeof localize>[0]),
+      ...SKILL_CATEGORIES.map((value) => ({
+        value,
+        label: getCategoryLabel(value, localize),
       })),
     ],
     [localize, emptyCategory],

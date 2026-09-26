@@ -13,6 +13,7 @@ import type { TSkill, TCreateSkill, TSkillWarning } from 'librechat-data-provide
 import { useCreateSkillMutation } from '~/data-provider';
 import SkillContentEditor from './SkillContentEditor';
 import CategorySelector from './CategorySelector';
+import IconSelector from './IconSelector';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -32,6 +33,7 @@ Walk through the steps the agent should take.
 
 interface CreateSkillFormValues {
   name: string;
+  icon: string;
   description: string;
   body: string;
   category: string;
@@ -40,6 +42,7 @@ interface CreateSkillFormValues {
 
 const DEFAULT_VALUES: CreateSkillFormValues = {
   name: '',
+  icon: '',
   description: '',
   body: DEFAULT_BODY,
   category: '',
@@ -114,6 +117,7 @@ export default function CreateSkillForm({
       description: values.description.trim(),
       body: values.body,
       category: values.category || undefined,
+      icon: values.icon || undefined,
       // `invocationMode` is deliberately NOT forwarded — phase 1 backend
       // doesn't persist it. Kept in form state only so the picker has a
       // selection.
@@ -203,6 +207,7 @@ export default function CreateSkillForm({
         </div>
 
         <div className="flex w-full flex-col gap-4 md:mt-[1.075rem]">
+          <IconSelector />
           <Controller
             name="description"
             control={control}

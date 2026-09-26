@@ -22,11 +22,13 @@ import { useLocalize, useSkillPermissions } from '~/hooks';
 import SkillContentEditor from './SkillContentEditor';
 import CategorySelector from './CategorySelector';
 import DeleteSkill from '../dialogs/DeleteSkill';
+import IconSelector from './IconSelector';
 import { ShareSkill } from '../buttons';
 import { cn } from '~/utils';
 
 interface SkillFormValues {
   name: string;
+  icon: string;
   description: string;
   body: string;
   category: string;
@@ -43,6 +45,7 @@ function toValues(skill: TSkill | undefined): SkillFormValues | undefined {
   }
   return {
     name: skill.name,
+    icon: skill.icon ?? '',
     description: skill.description,
     body: skill.body ?? '',
     category: skill.category ?? '',
@@ -69,6 +72,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
   const methods = useForm<SkillFormValues>({
     defaultValues: {
       name: '',
+      icon: '',
       description: '',
       body: '',
       category: '',
@@ -129,6 +133,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
       description: data.description.trim(),
       body: data.body,
       category: data.category || undefined,
+      icon: data.icon || undefined,
       // `invocationMode` is deliberately NOT forwarded to the backend: the
       // column doesn't exist yet. Phase 2 will promote it to a first-class
       // payload field.
@@ -271,6 +276,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         )}
 
         <div className="mt-4 flex w-full flex-col gap-4">
+          <IconSelector />
           <Controller
             name="description"
             control={control}
