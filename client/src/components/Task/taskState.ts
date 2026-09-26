@@ -140,34 +140,34 @@ export function stepStates(
   });
 }
 
-/**
- * Where the plan stands. A call that saved its result has every step done; one
- * that returned without a result (rejected, failed, nothing to work on) stops
- * on the step it reached; a call paused on its approval card sits on the second
- * step (field or view confirmation); otherwise the latest progress event names
- * the step, and before any event the first step is current.
- */
+/** The plan list for the panel, placed by the same rule as the message's plan card. */
 export function resolveTaskSteps(
   call: TaskToolCallState,
   progress: TaskProgressEvent | null,
 ): TaskStepView[] {
-  /** The message card's plan list, so both follow the stage ids the server sends. */
   const stages = TASK_STAGES[call.name];
-  let current = 0;
-  let currentState: 'now' | 'stopped' = 'now';
-  if (call.finished && call.hasResult) {
-    current = stages.length;
-  } else if (call.finished) {
-    current = stoppedStepIndex(stages, progress, call.hadApproval);
-    currentState = 'stopped';
-  } else if (call.awaitingApproval) {
-    current = 1;
-  } else if (progress != null) {
-    const index = stages.findIndex((stage) => stage.id === progress.stage);
-    current = index >= 0 ? index : 0;
-  }
+  const { current, currentState } = taskPlanPosition(stages, call, progress);
   const states = stepStates(stages.length, current, currentState);
   return stages.map((stage, index) => ({ ...stage, state: states[index] }));
+}
+
+/**
+ * Whether the call still waits on its confirmation card. Its `approval` stays until
+ * it returns, so a sent decision, or progress already past the confirmation step,
+ * means the run went on.
+ */
+export function isAwaitingTaskApproval(
+  call: TaskToolCallState,
+  progress: TaskProgressEvent | null,
+  decided: boolean,
+): boolean {
+  if (!call.awaitingApproval || decided) {
+    return false;
+  }
+  const stages = TASK_STAGES[call.name];
+  const progressIndex = stages.findIndex((stage) => stage.id === progress?.stage);
+  const confirmIndex = stages.findIndex((stage) => stage.id === 'confirm');
+  return progressIndex <= confirmIndex;
 }
 
 export type TaskOutputKind = 'table' | 'summary' | 'report';

@@ -12,11 +12,12 @@ import {
   findLatestTaskToolCall,
   formatTaskTime,
   resolveTaskSteps,
+  isAwaitingTaskApproval,
 } from './taskState';
 import { useActiveJobStatus, useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
+import { taskDecisionByToolCallId, taskPanelState, taskProgressByToolCallId } from '~/store/task';
 import { getAgentServerNames } from '~/components/Chat/Input/useAgentConnectorSelection';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
-import { taskPanelState, taskProgressByToolCallId } from '~/store/task';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { ephemeralAgentByConvoId } from '~/store/agents';
 import { mcpValuesAtomFamily } from '~/store/mcp';
@@ -88,12 +89,15 @@ function Section({
 
 function ProgressSection({
   call,
+  awaiting,
   steps,
   progress,
   open,
   onToggle,
 }: {
   call: TaskToolCallState;
+  /** From `isAwaitingTaskApproval`, not the call's own flag. */
+  awaiting: boolean;
   steps: TaskStepView[];
   progress: TaskProgressEvent | null;
   open: boolean;
@@ -101,7 +105,7 @@ function ProgressSection({
 }) {
   const localize = useLocalize();
   const doneSteps = steps.filter((step) => step.state === 'done').length;
-  const liveProgress = !call.finished && !call.awaitingApproval ? progress : null;
+  const liveProgress = !call.finished && !awaiting ? progress : null;
   const percent =
     liveProgress != null
       ? Math.round((100 * liveProgress.done) / Math.max(1, liveProgress.total))
@@ -153,12 +157,12 @@ function ProgressSection({
             </span>
             <span>
               {localize(step.label)}
-              {step.state === 'now' && liveProgress != null && (
+              {step.state === 'now' && liveProgress?.stage === step.id && (
                 <span className="mt-0.5 block text-xs font-normal text-text-muted">
                   {liveProgress.label} · {liveProgress.done}/{liveProgress.total}
                 </span>
               )}
-              {step.state === 'now' && call.awaitingApproval && (
+              {step.state === 'now' && awaiting && (
                 <span className="mt-0.5 block text-xs font-normal text-text-muted">
                   {localize('com_ui_task_waiting_approval')}
                 </span>
@@ -425,12 +429,16 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   const call = useMemo(() => findLatestTaskToolCall(messages), [messages]);
   const outputs = useMemo(() => collectTaskOutputs(messages), [messages]);
   const progress = useAtomValue(taskProgressByToolCallId(call?.toolCallId ?? ''));
+  const decision = useAtomValue(taskDecisionByToolCallId(call?.toolCallId ?? ''));
   const steps = useMemo(() => (call ? resolveTaskSteps(call, progress) : []), [call, progress]);
+  const awaiting = call != null && isAwaitingTaskApproval(call, progress, decision != null);
 
   let status: PanelStatus = 'ok';
-  if (jobStatus === 'requires_action' || call?.awaitingApproval === true) {
+  /** A live task call says itself whether it waits; the polled job list can still
+   *  report the pause for a few seconds after the run went on. */
+  if (awaiting || (jobStatus === 'requires_action' && (call == null || call.finished))) {
     status = 'wait';
-  } else if (jobStatus === 'running' || isSubmitting) {
+  } else if (jobStatus != null || isSubmitting) {
     status = 'run';
   } else if (call?.finished === true && !call.hasResult) {
     status = 'stopped';
@@ -473,6 +481,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
           {call && (
             <ProgressSection
               call={call}
+              awaiting={awaiting}
               steps={steps}
               progress={progress}
               open={sections.progress}

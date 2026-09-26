@@ -3,7 +3,7 @@ import { ContentTypes } from 'librechat-data-provider';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { TMessage, TaskProgressEvent } from 'librechat-data-provider';
 import type { JotaiStore } from 'test/harness';
-import { taskPanelState, taskProgressByToolCallId } from '~/store/task';
+import { taskDecisionByToolCallId, taskPanelState, taskProgressByToolCallId } from '~/store/task';
 import { ephemeralAgentByConvoId } from '~/store/agents';
 import { mcpValuesAtomFamily } from '~/store/mcp';
 import { IsolatedAtomStore } from 'test/harness';
@@ -256,6 +256,48 @@ describe('TaskPanel', () => {
     expect(now).toHaveTextContent('전체 문서에서 항목 추출 · 5/12');
     expect(screen.getByText('2/5')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
+  });
+
+  /** The call keeps its approval until it returns, so the plan card follows the
+   *  progress events past the confirmation; the panel follows the same ones. */
+  it('follows the progress past the confirmation like the plan card', () => {
+    mockJobStatus = 'requires_action';
+    const progress: TaskProgressEvent = {
+      toolCallId: 't1',
+      stage: 'extract',
+      done: 0,
+      total: 5,
+      label: '전체 문서에서 항목 추출',
+    };
+    mockMessages = [
+      toolCall('t1', 'extract_table', {
+        approval: { actionId: 'a', allowed_decisions: ['approve'] },
+      }),
+    ];
+    renderPanel((jotai) => jotai.set(taskProgressByToolCallId('t1'), progress));
+    const now = screen
+      .getAllByRole('listitem')
+      .find((item) => item.getAttribute('data-state') === 'now');
+    expect(now).toHaveTextContent('com_ui_task_stage_extract_all');
+    expect(now).toHaveTextContent('전체 문서에서 항목 추출 · 0/5');
+    expect(now).not.toHaveTextContent('com_ui_task_waiting_approval');
+    expect(screen.getByText('2/5')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_task_status_running')).toBeInTheDocument();
+  });
+
+  it('stops saying it waits for approval once the decision was sent', () => {
+    mockMessages = [
+      toolCall('t1', 'summarize_documents', {
+        approval: { actionId: 'a', allowed_decisions: ['approve'] },
+      }),
+    ];
+    renderPanel((jotai) => jotai.set(taskDecisionByToolCallId('t1'), 'approve'));
+    const now = screen
+      .getAllByRole('listitem')
+      .find((item) => item.getAttribute('data-state') === 'now');
+    expect(now).toHaveTextContent('com_ui_task_stage_confirm_view');
+    expect(now).not.toHaveTextContent('com_ui_task_waiting_approval');
+    expect(screen.queryByText('com_ui_convo_awaiting_approval')).not.toBeInTheDocument();
   });
 
   it('lists three outputs with their kind icon and details', () => {
