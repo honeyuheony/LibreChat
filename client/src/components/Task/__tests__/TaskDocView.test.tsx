@@ -4,8 +4,7 @@ import TaskDocView, { taskDocToMarkdown } from '../TaskDocView';
 
 const mockCopy = jest.fn();
 const mockShowToast = jest.fn();
-const mockGetFileDownload = jest.fn();
-const mockSaveBlob = jest.fn();
+const mockDownloadReport = jest.fn();
 
 jest.mock(
   'copy-to-clipboard',
@@ -24,13 +23,8 @@ jest.mock('@librechat/client', () => ({
   useToastContext: () => ({ showToast: mockShowToast }),
 }));
 
-jest.mock('librechat-data-provider', () => ({
-  ...jest.requireActual('librechat-data-provider'),
-  dataService: { getFileDownload: (...args: unknown[]) => mockGetFileDownload(...args) },
-}));
-
 jest.mock('~/data-provider/Tasks/queries', () => ({
-  saveBlob: (...args: unknown[]) => mockSaveBlob(...args),
+  downloadTaskReportFile: (...args: unknown[]) => mockDownloadReport(...args),
 }));
 
 const summary: TaskDocResult = {
@@ -94,13 +88,14 @@ describe('TaskDocView', () => {
   });
 
   it('downloads the report file under its own name', async () => {
-    const blob = new Blob(['x']);
-    mockGetFileDownload.mockResolvedValueOnce({ data: blob });
+    mockDownloadReport.mockResolvedValueOnce(undefined);
     render(<TaskDocView result={report} />);
     fireEvent.click(screen.getByRole('button', { name: 'HWP' }));
-    await waitFor(() => expect(mockSaveBlob).toHaveBeenCalledTimes(1));
-    expect(mockGetFileDownload).toHaveBeenCalledWith('u1', 'hwpx1');
-    expect(mockSaveBlob).toHaveBeenCalledWith(blob, '부처 표준 보고서 초안.hwpx');
+    await waitFor(() => expect(mockDownloadReport).toHaveBeenCalledTimes(1));
+    expect(mockDownloadReport).toHaveBeenCalledWith('u1', {
+      file_id: 'hwpx1',
+      filename: '부처 표준 보고서 초안.hwpx',
+    });
   });
 });
 

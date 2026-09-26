@@ -3,10 +3,9 @@ import remarkGfm from 'remark-gfm';
 import copy from 'copy-to-clipboard';
 import ReactMarkdown from 'react-markdown';
 import { useToastContext } from '@librechat/client';
-import { dataService } from 'librechat-data-provider';
 import type { TaskDocResult } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
-import { saveBlob } from '~/data-provider/Tasks/queries';
+import { downloadTaskReportFile } from '~/data-provider/Tasks/queries';
 import { useAuthContext, useLocalize } from '~/hooks';
 import { formatTaskTime } from './taskState';
 import TaskFootnote from './TaskFootnote';
@@ -75,8 +74,7 @@ export default function TaskDocView({ result }: { result: TaskDocResult }) {
     }
     setDownloading(true);
     try {
-      const response = await dataService.getFileDownload(user.id, reportFile.file_id);
-      saveBlob(response.data as Blob, reportFile.filename);
+      await downloadTaskReportFile(user.id, reportFile);
     } catch {
       showToast({ message: localize('com_ui_task_download_error'), status: 'error' });
     } finally {
