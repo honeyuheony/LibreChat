@@ -18,11 +18,11 @@ import { cn } from '~/utils';
 
 const DEFAULT_BODY = `# Overview
 
-Describe what this skill does and how it should be applied.
+Describe what this agent does and how it should be applied.
 
 ## When to use
 
-- List concrete signals that should trigger this skill
+- List concrete signals that should trigger this agent
 - Add examples that make the trigger unambiguous
 
 ## How to apply

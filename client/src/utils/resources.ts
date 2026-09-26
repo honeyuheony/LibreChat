@@ -65,11 +65,11 @@ export const RESOURCE_CONFIGS: Partial<Record<ResourceType, ResourceConfig>> = {
     defaultViewerRoleId: AccessRoleIds.SKILL_VIEWER,
     defaultEditorRoleId: AccessRoleIds.SKILL_EDITOR,
     defaultOwnerRoleId: AccessRoleIds.SKILL_OWNER,
-    getResourceName: (name?: string) => (name && name !== '' ? name : 'skill'),
-    getShareMessage: (name?: string) => (name && name !== '' ? name : 'skill'),
+    getResourceName: (name?: string) => (name && name !== '' ? name : 'agent'),
+    getShareMessage: (name?: string) => (name && name !== '' ? name : 'agent'),
     getManageMessage: (name?: string) =>
-      `Manage permissions for ${name && name !== '' ? name : 'skill'}`,
-    getCopyUrlMessage: () => 'Skill URL copied',
+      `Manage permissions for ${name && name !== '' ? name : 'agent'}`,
+    getCopyUrlMessage: () => 'Agent URL copied',
   },
   [ResourceType.SHARED_LINK]: {
     resourceType: ResourceType.SHARED_LINK,

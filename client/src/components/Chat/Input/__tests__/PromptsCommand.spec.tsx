@@ -1,6 +1,6 @@
 /**
  * Locks in the `/` prompts popover keyboard contract, specifically the
- * empty-result edge case that mirrors the `$` skills command and the `@`
+ * empty-result edge case that mirrors the `/` skills command and the `@`
  * mention popover: when filtering yields zero matches the arrow keys must
  * be no-ops (never `% 0` into a `NaN` active index) and Enter/Tab must
  * close the popover and return focus to the textarea. Deleting back to a
