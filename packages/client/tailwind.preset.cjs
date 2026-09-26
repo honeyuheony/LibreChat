@@ -22,10 +22,10 @@ module.exports = {
         'theme-control-touch': 'max(var(--theme-control-height, 2.25rem), 2.75rem)',
       },
       borderRadius: {
-        'theme-control': 'var(--theme-control-radius, 0.5rem)',
+        'theme-control': 'var(--theme-control-radius, 0.625rem)',
         'theme-control-round': 'var(--theme-round-control-radius, 9999px)',
-        'theme-surface': 'var(--theme-surface-radius, 0.75rem)',
-        'theme-surface-lg': 'var(--theme-large-surface-radius, 1rem)',
+        'theme-surface': 'var(--theme-surface-radius, 0.875rem)',
+        'theme-surface-lg': 'var(--theme-large-surface-radius, 1.5rem)',
       },
       boxShadow: {
         'theme-surface':

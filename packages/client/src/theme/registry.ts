@@ -63,10 +63,10 @@ export const themeAppearanceProperties: Readonly<
 });
 
 export const defaultAppearance: IThemeAppearance = Object.freeze({
-  controlRadius: '0.5rem',
+  controlRadius: '0.625rem',
   roundControlRadius: '9999px',
-  surfaceRadius: '0.75rem',
-  largeSurfaceRadius: '1rem',
+  surfaceRadius: '0.875rem',
+  largeSurfaceRadius: '1.5rem',
   controlHeight: '2.25rem',
   spaceCompact: '0.375rem',
   spaceNormal: '0.75rem',

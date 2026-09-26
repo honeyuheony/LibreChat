@@ -256,11 +256,13 @@ html {
   --surface-fixed: var(--white);
   --surface-fixed-hover: 243 243 248; /* #f3f3f8 wireframe gray-100, same in light + dark */
   --text-fixed: 21 21 28; /* #15151c wireframe gray-900, same in light + dark */
-  --radius: 0.5rem;
-  --theme-control-radius: 0.5rem;
+  /* AgentHub wireframe radii: 10px rows and fields (so rounded-md 8px, rounded-sm 6px), pill .btn
+     buttons, 14px cards, 24px composer. Dialogs take the wireframe 22px further down. */
+  --radius: 0.625rem;
+  --theme-control-radius: 0.625rem;
   --theme-round-control-radius: 9999px;
-  --theme-surface-radius: 0.75rem;
-  --theme-large-surface-radius: 1rem;
+  --theme-surface-radius: 0.875rem;
+  --theme-large-surface-radius: 1.5rem;
   --theme-control-height: 2.25rem;
   --theme-space-compact: 0.375rem;
   --theme-space-normal: 0.75rem;
@@ -455,6 +457,15 @@ html:not(.high-contrast) .sidebar-ink {
 /* Selected panel row: ink-3 fill from the tokens above plus the wireframe's 3px brand-400 rail. */
 html:not(.high-contrast) .sidebar-ink [data-testid^='nav-panel-'][aria-pressed='true'] {
   box-shadow: inset 3px 0 0 rgb(167 139 250);
+}
+
+/* Wireframe modal corners (22px). The shared dialog shells hard-code rounded-lg/xl/2xl, so the
+ * radius is set on the Radix content element; phones keep the shells' bottom-sheet corners. */
+@media (min-width: 640px) {
+  [role='dialog'].bg-surface-dialog,
+  [role='alertdialog'].bg-surface-dialog {
+    border-radius: 1.375rem;
+  }
 }
 
 /* High contrast appearance modes.
