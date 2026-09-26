@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { dataService } from 'librechat-data-provider';
+import { QueryKeys, dataService } from 'librechat-data-provider';
 import type { QueryObserverResult } from '@tanstack/react-query';
 import type { TaskResult } from 'librechat-data-provider';
 
 /** Shared by the right panel and the result card in the message, so one fetch serves both. */
-export const taskResultQueryKey = (resultId: string) => ['taskResult', resultId];
+export const taskResultQueryKey = (resultId: string) => [QueryKeys.taskResult, resultId];
 
 export const useTaskResultQuery = (
   resultId: string | null | undefined,

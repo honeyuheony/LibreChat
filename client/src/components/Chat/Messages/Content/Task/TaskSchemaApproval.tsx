@@ -1,6 +1,6 @@
 import { useContext, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Constants, dataService } from 'librechat-data-provider';
+import { Constants, QueryKeys, dataService } from 'librechat-data-provider';
 import type { Agents } from 'librechat-data-provider';
 import { TaskApprovalActions, TaskChip } from './TaskChip';
 import { ChatContext } from '~/Providers/ChatContext';
@@ -88,7 +88,7 @@ export default function TaskSchemaApproval({
   const estimateFields = useMemo(() => JSON.parse(settledKey) as string[], [settledKey]);
 
   const estimate = useQuery(
-    ['taskEstimate', conversationId, estimateFields],
+    [QueryKeys.taskEstimate, conversationId, estimateFields],
     () => dataService.getTaskEstimate(conversationId, estimateFields),
     {
       enabled:
