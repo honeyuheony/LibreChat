@@ -93,6 +93,39 @@ export function stoppedStepIndex(
   return Math.max(0, confirmIndex);
 }
 
+/** What a plan list needs to know about its call. */
+export type TaskPlanFacts = Pick<
+  TaskToolCallState,
+  'awaitingApproval' | 'finished' | 'hasResult' | 'hadApproval'
+>;
+
+/**
+ * The step a call's plan stands on and whether it is running or stopped there. A
+ * call that saved its result is past every step; one that returned without a result
+ * (rejected, failed, nothing to work on) stops on the step it reached; otherwise the
+ * furthest of the latest progress event and, while paused, the confirmation step.
+ */
+export function taskPlanPosition(
+  stages: readonly TaskStage[],
+  call: TaskPlanFacts,
+  progress: TaskProgressEvent | null,
+): { current: number; currentState: 'now' | 'stopped' } {
+  if (call.finished && call.hasResult) {
+    return { current: stages.length, currentState: 'now' };
+  }
+  if (call.finished) {
+    return {
+      current: stoppedStepIndex(stages, progress, call.hadApproval),
+      currentState: 'stopped',
+    };
+  }
+  const progressIndex = stages.findIndex((stage) => stage.id === progress?.stage);
+  const confirmIndex = call.awaitingApproval
+    ? stages.findIndex((stage) => stage.id === 'confirm')
+    : -1;
+  return { current: Math.max(0, progressIndex, confirmIndex), currentState: 'now' };
+}
+
 /** States for the plan list: steps before `current` done, `current` in `currentState`. */
 export function stepStates(
   count: number,
