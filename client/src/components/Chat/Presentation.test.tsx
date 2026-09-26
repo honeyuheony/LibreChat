@@ -6,6 +6,7 @@ import type { TConversation } from 'librechat-data-provider';
 import type { Artifact } from '~/common';
 import { activeSubagentPanel } from '~/components/Chat/Subagents/state';
 import { ChatSurfaceHarness } from 'test/harness';
+import { taskPanelState } from '~/store/task';
 import Presentation from './Presentation';
 import store from '~/store';
 
@@ -14,6 +15,9 @@ const mockOpenArtifactLabel = 'Open Artifact';
 const mockChildPanelLabel = 'Child activity panel loaded';
 const mockOpenChildLabel = 'Open Child Activity';
 const mockSelectAgentConversationLabel = 'Select Agent Conversation';
+const mockTaskPanelLabel = 'Task panel loaded';
+const mockOpenTaskResultLabel = 'Open Task Result';
+const mockUseTaskPanel = jest.fn(() => ({ hasTaskCall: false, open: false }));
 const mockUseParentSubagentsQuery = jest.fn((_conversationId?: string, _config?: unknown) => ({
   data: undefined,
   refetch: jest.fn(),
@@ -35,6 +39,16 @@ jest.mock('~/components/Artifacts/Artifacts', () => {
 jest.mock('~/components/Chat/Subagents/SubagentThreadPanel', () => ({
   __esModule: true,
   default: () => <aside>{mockChildPanelLabel}</aside>,
+}));
+
+jest.mock('~/components/Task/TaskPanel', () => ({
+  __esModule: true,
+  default: () => <aside>{mockTaskPanelLabel}</aside>,
+}));
+
+jest.mock('~/components/Task/useTaskPanel', () => ({
+  __esModule: true,
+  default: () => mockUseTaskPanel(),
 }));
 
 jest.mock('~/components/Chat/Input/Files/DragDropWrapper', () => ({
@@ -123,6 +137,20 @@ const OpenSubagentPanel = () => {
   );
 };
 
+const OpenTaskResult = () => {
+  const setConversation = useSetRecoilState(store.conversationByIndex(0));
+  const setTaskPanel = useSetAtom(taskPanelState);
+  const open = () => {
+    setConversation({ conversationId: 'task-conversation' } as TConversation);
+    setTaskPanel({ open: true, view: 'result', resultId: 'r1' });
+  };
+  return (
+    <button type="button" onClick={open}>
+      {mockOpenTaskResultLabel}
+    </button>
+  );
+};
+
 const SelectAgentConversation = () => {
   const setConversation = useSetRecoilState(store.conversationByIndex(0));
   return (
@@ -202,5 +230,54 @@ describe('Presentation Artifact loading', () => {
     fireEvent.click(screen.getByRole('button', { name: mockOpenArtifactLabel }));
     expect(await screen.findByText(mockArtifactPanelLabel)).toBeInTheDocument();
     expect(screen.queryByText(mockChildPanelLabel)).not.toBeInTheDocument();
+  });
+
+  it('offers the task panel only once the conversation has a task tool call', async () => {
+    mockUseTaskPanel.mockReturnValue({ hasTaskCall: false, open: true });
+    const { rerender } = render(
+      <ChatSurfaceHarness>
+        <RecoilRoot>
+          <Presentation>
+            <OpenTaskResult />
+          </Presentation>
+        </RecoilRoot>
+      </ChatSurfaceHarness>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: mockOpenTaskResultLabel }));
+    expect(screen.queryByText(mockTaskPanelLabel)).not.toBeInTheDocument();
+
+    mockUseTaskPanel.mockReturnValue({ hasTaskCall: true, open: true });
+    rerender(
+      <ChatSurfaceHarness>
+        <RecoilRoot>
+          <Presentation>
+            <OpenTaskResult />
+          </Presentation>
+        </RecoilRoot>
+      </ChatSurfaceHarness>,
+    );
+    expect(await screen.findByText(mockTaskPanelLabel)).toBeInTheDocument();
+  });
+
+  it('steps an open artifact aside when a task result opens', async () => {
+    mockUseTaskPanel.mockReturnValue({ hasTaskCall: true, open: true });
+    render(
+      <ChatSurfaceHarness>
+        <RecoilRoot>
+          <Presentation>
+            <OpenArtifactPanel />
+            <OpenTaskResult />
+          </Presentation>
+        </RecoilRoot>
+      </ChatSurfaceHarness>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: mockOpenArtifactLabel }));
+    expect(await screen.findByText(mockArtifactPanelLabel)).toBeInTheDocument();
+    expect(screen.queryByText(mockTaskPanelLabel)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: mockOpenTaskResultLabel }));
+    expect(await screen.findByText(mockTaskPanelLabel)).toBeInTheDocument();
+    expect(screen.queryByText(mockArtifactPanelLabel)).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useRecoilValue } from 'recoil';
 import { useAtomValue, useSetAtom } from 'jotai';
+import { useMediaQuery } from '@librechat/client';
+import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { EModelEndpoint, FileSources, LocalStorageKeys } from 'librechat-data-provider';
 import type { ExtendedFile } from '~/common';
 import useResetArtifactsOnConversationChange from '~/hooks/Artifacts/useResetArtifactsOnConversationChange';
@@ -8,14 +9,17 @@ import { ParentSubagentsProvider } from '~/components/Chat/Subagents/ParentSubag
 import DragDropWrapper from '~/components/Chat/Input/Files/DragDropWrapper';
 import { activeSubagentPanel } from '~/components/Chat/Subagents/state';
 import { EditorProvider, ArtifactsProvider } from '~/Providers';
+import useTaskPanel from '~/components/Task/useTaskPanel';
 import { useDeleteFilesMutation } from '~/data-provider';
 import { SidePanelGroup } from '~/components/SidePanel';
 import AppChatSurface from '~/components/Chat/Surface';
 import { useSetFilesToDelete } from '~/hooks';
+import { taskPanelState } from '~/store/task';
 import { failedFileIdsFrom } from '~/utils';
 import store from '~/store';
 
 const Artifacts = lazy(() => import('~/components/Artifacts/Artifacts'));
+const TaskPanel = lazy(() => import('~/components/Task/TaskPanel'));
 const SubagentThreadPanel = lazy(() => import('~/components/Chat/Subagents/SubagentThreadPanel'));
 
 export default function Presentation({ children }: { children: React.ReactNode }) {
@@ -38,6 +42,17 @@ export default function Presentation({ children }: { children: React.ReactNode }
   const previousConversationIdRef = useRef<string | null>(null);
 
   useResetArtifactsOnConversationChange();
+
+  const isSmallScreen = useMediaQuery('(max-width: 767px)');
+  const isSubmitting = useRecoilValue(store.isSubmittingFamily(0));
+  const taskPanel = useTaskPanel(conversationId, { autoOpen: !isSmallScreen, isSubmitting });
+  const taskResultId = useAtomValue(taskPanelState).resultId;
+  const setArtifactsVisibility = useSetRecoilState(store.artifactsVisibility);
+
+  /** An open artifact takes the panel slot first, so opening a task result steps it aside. */
+  useEffect(() => {
+    if (taskResultId != null) setArtifactsVisibility(false);
+  }, [taskResultId, setArtifactsVisibility]);
 
   useEffect(() => {
     const previous = previousConversationIdRef.current;
@@ -137,7 +152,19 @@ export default function Presentation({ children }: { children: React.ReactNode }
     );
   }, [conversationId, selectedSubagent]);
 
-  const panelElement = artifactsElement ?? subagentElement;
+  /** Offered only once this conversation has called a task tool. */
+  const taskPanelElement = useMemo(() => {
+    if (!taskPanel.hasTaskCall || !taskPanel.open || conversationId == null) {
+      return null;
+    }
+    return (
+      <Suspense fallback={null}>
+        <TaskPanel conversationId={conversationId} />
+      </Suspense>
+    );
+  }, [conversationId, taskPanel.hasTaskCall, taskPanel.open]);
+
+  const panelElement = artifactsElement ?? taskPanelElement ?? subagentElement;
 
   return (
     <DragDropWrapper className="relative flex w-full grow overflow-hidden bg-presentation">
