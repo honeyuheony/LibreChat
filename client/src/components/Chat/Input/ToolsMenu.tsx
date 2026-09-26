@@ -1,12 +1,13 @@
 import React, { memo, useRef, useEffect } from 'react';
+import { Plus } from 'lucide-react';
 import * as Ariakit from '@ariakit/react';
 import { useNavigate } from 'react-router-dom';
-import { SlidersHorizontal } from 'lucide-react';
 import { MCPIcon, TooltipAnchor } from '@librechat/client';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
 import type { ConnectionStatusMap } from '~/components/MCP/mcpServerUtils';
 import type { BuiltinTool } from './useComposerTools';
+import type { MenuItemProps } from '~/common';
 import {
   DATA_HUB_PATH,
   DESK_SERVER_NAME,
@@ -217,20 +218,68 @@ function BuiltinRow({ tool }: { tool: BuiltinTool }) {
   );
 }
 
+/** An upload or attach entry handed over by the composer's file menu. */
+function UploadRow({ item }: { item: MenuItemProps }) {
+  return (
+    <Ariakit.MenuItem
+      id={item.id}
+      disabled={item.disabled}
+      onClick={item.onClick}
+      className={cn(rowClassName, 'aria-disabled:cursor-default aria-disabled:opacity-50')}
+    >
+      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-hover text-text-secondary [&_svg]:size-4">
+        {item.icon}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+        {item.label}
+      </span>
+    </Ariakit.MenuItem>
+  );
+}
+
+/** Upload entries as rows: nested sources (SharePoint) are laid out flat, separators kept. */
+function UploadRows({ items }: { items: MenuItemProps[] }) {
+  return (
+    <>
+      {items.map((item, index) => {
+        if (item.show === false) {
+          return null;
+        }
+        if (item.separate === true) {
+          return (
+            <Ariakit.MenuSeparator key={`sep-${index}`} className="my-1 border-border-light" />
+          );
+        }
+        if (item.subItems && item.subItems.length > 0) {
+          return item.subItems.map((sub, subIndex) => (
+            <UploadRow key={`${index}-${subIndex}`} item={sub} />
+          ));
+        }
+        return <UploadRow key={item.id ?? `${index}-${item.label}`} item={item} />;
+      })}
+    </>
+  );
+}
+
 /**
- * The composer's one tools control: connectors (MCP servers) and the built-in
- * tool toggles in a single popover, with the number of tools turned on shown
- * on the trigger.
+ * The composer's `+`: file uploads, connectors (MCP servers) and the built-in tool
+ * toggles in a single popover, with the number of tools turned on as a badge.
  */
 function ToolsMenu({
   showBuiltinTools,
+  showConnectors = true,
   agentId,
+  uploadItems = [],
   disabled = false,
 }: {
   /** Built-in toggles only reach the model on endpoints that build an ephemeral agent. */
   showBuiltinTools: boolean;
+  /** Connectors reach every endpoint that runs tools. */
+  showConnectors?: boolean;
   /** The conversation's agent; a saved agent's connectors switch through `disabled_mcp`. */
   agentId?: string | null;
+  /** The file menu's entries (uploads, attach an agent), listed first. */
+  uploadItems?: MenuItemProps[];
   disabled?: boolean;
 }) {
   const localize = useLocalize();
@@ -244,7 +293,7 @@ function ToolsMenu({
     isConnectorOn,
     toggleConnector,
     enabledCount,
-  } = useComposerTools({ showBuiltinTools, agentId });
+  } = useComposerTools({ showBuiltinTools, showConnectors, agentId });
 
   const navigate = useNavigate();
   const menuStore = Ariakit.useMenuStore({ focusLoop: true, placement: 'top-start' });
@@ -270,21 +319,23 @@ function ToolsMenu({
     configDialogWasOpen.current = configDialogOpen;
   }, [configDialogOpen, menuStore]);
 
-  if (builtinTools.length === 0 && servers.length === 0) {
+  const hasUploads = uploadItems.some((item) => item.separate !== true && item.show !== false);
+  if (builtinTools.length === 0 && servers.length === 0 && !hasUploads) {
     return null;
   }
 
   const configDialogProps = manager?.getConfigDialogProps();
+  const menuLabel = localize(hasUploads ? 'com_ui_composer_plus' : 'com_ui_tools');
   const triggerLabel =
     enabledCount > 0
-      ? `${localize('com_ui_tools')}, ${localize('com_ui_tools_enabled_count', { 0: enabledCount })}`
-      : localize('com_ui_tools');
+      ? `${menuLabel}, ${localize('com_ui_tools_enabled_count', { 0: enabledCount })}`
+      : menuLabel;
 
   return (
     <>
       <Ariakit.MenuProvider store={menuStore}>
         <TooltipAnchor
-          description={localize('com_ui_tools')}
+          description={menuLabel}
           disabled={isOpen}
           render={
             <Ariakit.MenuButton
@@ -293,22 +344,22 @@ function ToolsMenu({
               disabled={disabled}
               aria-label={triggerLabel}
               className={cn(
-                'inline-flex h-9 flex-shrink-0 items-center gap-2 rounded-theme-control border border-border-light px-3',
-                'text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary',
+                'relative inline-flex size-[38px] flex-shrink-0 items-center justify-center rounded-full border border-border-light',
+                'text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-opacity-50',
                 'disabled:cursor-not-allowed disabled:opacity-50',
-                isOpen && 'bg-surface-hover text-text-primary',
+                isOpen &&
+                  'border-text-primary bg-text-primary text-surface-primary hover:bg-text-primary hover:text-surface-primary',
               )}
             />
           }
         >
-          <SlidersHorizontal className="size-4" aria-hidden="true" />
-          <span>{localize('com_ui_tools')}</span>
+          <Plus className="size-5" aria-hidden="true" />
           {enabledCount > 0 && (
             <span
               aria-hidden="true"
               data-testid="tools-menu-count"
-              className="rounded-md bg-surface-brand-subtle px-1.5 font-mono text-xs leading-5 text-accent-primary"
+              className="absolute -right-[5px] -top-[5px] flex h-4 min-w-4 items-center justify-center rounded-full bg-[#6d28d9] px-1 font-mono text-[11px] leading-none text-white"
             >
               {enabledCount}
             </span>
@@ -320,7 +371,7 @@ function ToolsMenu({
           gutter={8}
           modal={false}
           unmountOnHide={true}
-          aria-label={localize('com_ui_tools')}
+          aria-label={menuLabel}
           className={cn(
             'z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col rounded-theme-surface',
             'border border-border-light bg-surface-primary p-1.5 shadow-lg',
@@ -330,6 +381,17 @@ function ToolsMenu({
           )}
         >
           <div className="flex max-h-[min(420px,var(--popover-available-height))] flex-col overflow-y-auto">
+            {hasUploads && (
+              <Ariakit.MenuGroup>
+                <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
+                  {localize('com_sidepanel_attach_files')}
+                </Ariakit.MenuGroupLabel>
+                <UploadRows items={uploadItems} />
+              </Ariakit.MenuGroup>
+            )}
+            {hasUploads && (servers.length > 0 || builtinTools.length > 0) && (
+              <Ariakit.MenuSeparator className="my-1 border-border-light" />
+            )}
             {servers.length > 0 && manager && (
               <Ariakit.MenuGroup>
                 <Ariakit.MenuGroupLabel className={sectionLabelClassName}>

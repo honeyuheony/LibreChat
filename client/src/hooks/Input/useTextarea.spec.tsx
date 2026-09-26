@@ -18,8 +18,8 @@ const mockGetUploadOptions = jest.fn(() => [EToolResources.context]);
 const mockSetFilesLoading = jest.fn();
 const mockShowToast = jest.fn();
 const mockOpenModal = jest.fn();
-const mockLocalize = jest.fn((key: string, values?: { 0?: string }) =>
-  key === 'com_endpoint_message_placeholder' ? `Message ${values?.[0] ?? ''}` : key,
+const mockLocalize = jest.fn((key: string) =>
+  key === 'com_ui_composer_placeholder' ? 'How can I help you?' : key,
 );
 const mockSetActivePrompt = jest.fn();
 const mockSetPendingComposerText = jest.fn();
@@ -92,11 +92,6 @@ jest.mock('~/hooks/Files/useFileUploadRouter', () => ({
 
 jest.mock('~/Providers/AgentsMapContext', () => ({
   useAgentsMapContext: jest.fn(() => ({})),
-}));
-
-jest.mock('~/hooks/Conversations/useGetSender', () => ({
-  __esModule: true,
-  default: jest.fn(() => jest.fn(() => 'Assistant')),
 }));
 
 jest.mock('~/hooks/Files/useUploadOptions', () => ({
@@ -186,13 +181,11 @@ describe('useTextarea composer placeholder', () => {
     mockConversation = { endpoint: 'openAI', conversationId: 'convo-1' };
   });
 
-  it('uses the dedicated localized message template', async () => {
+  it('asks the wireframe question whichever model answers', async () => {
     const { textArea } = renderTextareaHook();
 
-    await waitFor(() => expect(textArea).toHaveAttribute('placeholder', 'Message Assistant'));
-    expect(mockLocalize).toHaveBeenCalledWith('com_endpoint_message_placeholder', {
-      0: 'Assistant',
-    });
+    await waitFor(() => expect(textArea).toHaveAttribute('placeholder', 'How can I help you?'));
+    expect(mockLocalize).toHaveBeenCalledWith('com_ui_composer_placeholder');
   });
 });
 

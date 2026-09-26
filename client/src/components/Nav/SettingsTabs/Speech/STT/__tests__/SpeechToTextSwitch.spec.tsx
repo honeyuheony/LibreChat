@@ -1,8 +1,8 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
+import { RecoilRoot } from 'recoil';
 import { render, fireEvent } from 'test/layout-test-utils';
 import SpeechToTextSwitch from '../SpeechToTextSwitch';
-import { RecoilRoot } from 'recoil';
 
 describe('SpeechToTextSwitch', () => {
   /**
@@ -33,6 +33,7 @@ describe('SpeechToTextSwitch', () => {
     const switchElement = getByTestId('SpeechToText');
     fireEvent.click(switchElement);
 
-    expect(mockSetSpeechToText).toHaveBeenCalledWith(false);
+    /* Off by default: the AgentHub composer shows no microphone until the user asks for it. */
+    expect(mockSetSpeechToText).toHaveBeenCalledWith(true);
   });
 });

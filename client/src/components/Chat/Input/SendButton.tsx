@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { useWatch } from 'react-hook-form';
 import { composerSubmitClasses, SendIcon, TooltipAnchor } from '@librechat/client';
 import type { Control } from 'react-hook-form';
-import { isSubmittableMessage } from '~/utils';
+import { cn, isSubmittableMessage } from '~/utils';
 import { useLocalize } from '~/hooks';
 
 type SendButtonProps = {
@@ -24,7 +24,7 @@ const SubmitButton = React.memo(
             aria-label={localize('com_nav_send_message')}
             id="send-button"
             disabled={props.disabled}
-            className={composerSubmitClasses()}
+            className={cn(composerSubmitClasses(), 'size-[38px] rounded-full')}
             data-testid="send-button"
             type="submit"
           >

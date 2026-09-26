@@ -714,7 +714,9 @@ export function useShortcutActions(): ShortcutAction[] {
     const btn =
       document.querySelector<HTMLButtonElement>('#attach-file-menu-button') ??
       document.querySelector<HTMLButtonElement>('#attach-file-button') ??
-      document.querySelector<HTMLButtonElement>('#attach-file');
+      document.querySelector<HTMLButtonElement>('#attach-file') ??
+      /* The composer's `+` menu, which carries the uploads now. */
+      document.querySelector<HTMLButtonElement>('#tools-menu-button');
     return clickTarget(btn);
   }, []);
 

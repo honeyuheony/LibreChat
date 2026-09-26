@@ -36,10 +36,13 @@ export interface BuiltinTool {
  */
 export default function useComposerTools({
   showBuiltinTools,
+  showConnectors = true,
   agentId,
 }: {
   /** Built-in toggles only reach the model on endpoints that build an ephemeral agent. */
   showBuiltinTools: boolean;
+  /** Connectors reach every endpoint that runs tools; the composer turns them off elsewhere. */
+  showConnectors?: boolean;
   /** The conversation's agent; a saved agent's connectors switch through `disabled_mcp`. */
   agentId?: string | null;
 }) {
@@ -80,8 +83,8 @@ export default function useComposerTools({
   const canUseMemory = useHasMemoryAccess();
 
   const servers: MCPServerDefinition[] = useMemo(
-    () => (canUseMcp ? (manager?.selectableServers ?? []) : []),
-    [canUseMcp, manager?.selectableServers],
+    () => (canUseMcp && showConnectors ? (manager?.selectableServers ?? []) : []),
+    [canUseMcp, showConnectors, manager?.selectableServers],
   );
   const catalogServerNames = useMemo(() => servers.map((server) => server.serverName), [servers]);
   const agentConnectors = useAgentConnectorSelection({

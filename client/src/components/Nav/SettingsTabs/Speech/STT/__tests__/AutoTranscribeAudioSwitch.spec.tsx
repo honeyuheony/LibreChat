@@ -1,8 +1,9 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
-import { render, fireEvent } from 'test/layout-test-utils';
-import AutoTranscribeAudioSwitch from '../AutoTranscribeAudioSwitch';
 import { RecoilRoot } from 'recoil';
+import AutoTranscribeAudioSwitch from '../AutoTranscribeAudioSwitch';
+import { render, fireEvent } from 'test/layout-test-utils';
+import store from '~/store';
 
 describe('AutoTranscribeAudioSwitch', () => {
   /**
@@ -28,8 +29,14 @@ describe('AutoTranscribeAudioSwitch', () => {
   });
 
   it('calls onCheckedChange when the switch is toggled', () => {
+    /* Speech to text starts off, and this switch only works once it is on. */
     const { getByTestId } = render(
-      <RecoilRoot>
+      <RecoilRoot
+        initializeState={({ set }) => {
+          set(store.speechToText, true);
+          set(store.textToSpeech, true);
+        }}
+      >
         <AutoTranscribeAudioSwitch onCheckedChange={mockSetAutoTranscribeAudio} />
       </RecoilRoot>,
     );

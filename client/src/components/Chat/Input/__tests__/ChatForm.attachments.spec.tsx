@@ -163,6 +163,9 @@ const attach = (container: HTMLElement, file: File) =>
   userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, file);
 const image = () => new File(['image-bytes'], 'cat.png', { type: 'image/png' });
 
+/** The composer's `+`: uploads and tools in one menu (com_ui_composer_plus). */
+const PLUS_MENU = 'Files and data';
+
 describe('ChatForm attachments', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -212,7 +215,7 @@ describe('ChatForm attachments', () => {
   test('does not steal focus when clicking the nested attachment icon', async () => {
     renderComposer();
     const textarea = await screen.findByTestId('text-input');
-    const trigger = screen.getByRole('button', { name: 'Attach File Options' });
+    const trigger = screen.getByRole('button', { name: PLUS_MENU });
     expect(trigger).toBeEnabled();
     const icon = trigger.querySelector('svg');
     expect(icon).not.toBeNull();
@@ -221,19 +224,19 @@ describe('ChatForm attachments', () => {
     await userEvent.click(icon as SVGElement);
 
     expect(focus).not.toHaveBeenCalled();
-    expect(await screen.findByRole('menu', { name: 'Attach File Options' })).toBeInTheDocument();
+    expect(await screen.findByRole('menu', { name: PLUS_MENU })).toBeInTheDocument();
   }, 20000);
 
   test('closes an open menu when the textarea is clicked', async () => {
     renderComposer();
     const textarea = await screen.findByTestId('text-input');
-    await userEvent.click(screen.getByRole('button', { name: 'Attach File Options' }));
-    expect(await screen.findByRole('menu', { name: 'Attach File Options' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: PLUS_MENU }));
+    expect(await screen.findByRole('menu', { name: PLUS_MENU })).toBeInTheDocument();
 
     await userEvent.click(textarea);
 
     await waitFor(() =>
-      expect(screen.queryByRole('menu', { name: 'Attach File Options' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('menu', { name: PLUS_MENU })).not.toBeInTheDocument(),
     );
     expect(textarea).toHaveFocus();
   }, 20000);

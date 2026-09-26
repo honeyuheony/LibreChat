@@ -56,6 +56,7 @@ import CodeWorkspaceMenu from './CodeWorkspaceMenu';
 import useSteering from '~/hooks/Chat/useSteering';
 import CodeApprovalMenu from './CodeApprovalMenu';
 import FileFormChat from './Files/FileFormChat';
+import ActiveToolChips from './ActiveToolChips';
 import { BadgeRowProvider } from '~/Providers';
 import InFlightSteers from './InFlightSteers';
 import TextareaHeader from './TextareaHeader';
@@ -206,6 +207,7 @@ const ChatForm = memo(function ChatForm({
   /** The built-in tool toggles only reach ephemeral agents. */
   const showEphemeralBadges =
     !!endpoint && !hideBadgeRow && !isAgentsEndpoint(endpoint) && !isAssistantsEndpoint(endpoint);
+  const toolsAgentId = isAgentsEndpoint(endpoint) ? conversation?.agent_id : undefined;
   const skillAttachItems = useSkillAttachItems(index, endpoint);
   const filesLoading = useMemo(() => hasIncompleteFiles(files), [files]);
   const conversationId = useMemo(
@@ -741,7 +743,8 @@ const ChatForm = memo(function ChatForm({
                 'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
                 isTextAreaFocused ? 'shadow-md' : 'shadow-sm',
-                isLandingPage ? 'gap-4 px-4 pb-3 pt-4' : 'gap-3 px-3.5 pb-2.5 pt-3.5',
+                /* The wireframe pads the box alike on the home and in a conversation. */
+                'gap-1.5 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
                    same categorical slot the purple tool badge uses, so the accent
@@ -797,72 +800,10 @@ const ChatForm = memo(function ChatForm({
                 isSubmitting={isSubmitting}
                 observeToolAuthorization={showToolsMenu}
               >
-                {endpoint && (
-                  <div className={cn('flex', isRTL ? 'flex-row-reverse' : 'flex-row')}>
-                    <div
-                      className="relative flex-1"
-                      style={
-                        isCollapsed
-                          ? {
-                              WebkitMaskImage:
-                                'linear-gradient(to bottom, black 60%, transparent 90%)',
-                              maskImage: 'linear-gradient(to bottom, black 60%, transparent 90%)',
-                            }
-                          : undefined
-                      }
-                    >
-                      <TextareaAutosize
-                        {...registerProps}
-                        ref={(e) => {
-                          ref(e);
-                          (
-                            textAreaRef as React.MutableRefObject<HTMLTextAreaElement | null>
-                          ).current = e;
-                        }}
-                        disabled={disableInputs || isNotAppendable || answerMode.composerLocked}
-                        onPaste={handlePaste}
-                        onKeyDown={(e) => {
-                          // Answer mode consumes option-navigation keys from the
-                          // empty composer; everything else follows the normal path.
-                          if (answerMode.handleComposerKeyDown(e)) {
-                            return;
-                          }
-                          handleKeyDown(e);
-                        }}
-                        onKeyUp={handleKeyUp}
-                        onCompositionStart={handleCompositionStart}
-                        onCompositionEnd={handleCompositionEnd}
-                        id={mainTextareaId}
-                        tabIndex={0}
-                        data-testid="text-input"
-                        rows={1}
-                        minRows={isLandingPage ? 2 : 1}
-                        onFocus={handleTextareaFocus}
-                        onBlur={handleTextareaBlur}
-                        aria-label={localize('com_ui_message_input')}
-                        onClick={handleFocusOrClick}
-                        style={{ overflowY: 'auto' }}
-                        className={cn(
-                          baseClasses,
-                          removeFocusRings,
-                          'scrollbar-hover transition-[max-height] duration-200 disabled:cursor-not-allowed',
-                        )}
-                      />
-                    </div>
-                    <div className="flex flex-col items-start justify-start">
-                      <CollapseChat
-                        isCollapsed={isCollapsed}
-                        isScrollable={isMoreThanThreeRows}
-                        setIsCollapsed={setIsCollapsed}
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* The wireframe's composer: `+`, the question and the round send button on one
+                    line; the switched-on tools and the model on the line below. */}
                 <div
-                  className={cn(
-                    '@container flex flex-wrap items-center gap-2',
-                    isRTL ? 'flex-row-reverse' : 'flex-row',
-                  )}
+                  className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : 'flex-row')}
                 >
                   <div className="shrink-0">
                     <AttachFileChat
@@ -872,56 +813,79 @@ const ChatForm = memo(function ChatForm({
                       setFiles={setFiles}
                       setFilesLoading={setFilesLoading}
                       extraItems={skillAttachItems}
+                      renderMenu={(uploadItems) => (
+                        <ToolsMenu
+                          showBuiltinTools={showEphemeralBadges}
+                          showConnectors={showToolsMenu}
+                          agentId={toolsAgentId}
+                          uploadItems={uploadItems}
+                        />
+                      )}
                     />
                   </div>
-                  {showToolsMenu && (
-                    <ToolsMenu
-                      showBuiltinTools={showEphemeralBadges}
-                      agentId={isAgentsEndpoint(endpoint) ? conversation?.agent_id : undefined}
-                    />
-                  )}
-                  <BadgeRow
-                    onChange={setBadges}
-                    isInChat={
-                      Array.isArray(conversation?.messages) && conversation.messages.length >= 1
-                    }
-                  />
-                  <CodeApprovalMenu
-                    conversation={conversation}
-                    addedConversation={addedConvo}
-                    setConversation={setConversation}
-                    disabled={disableInputs}
-                  />
-                  {index === 0 && conversationId != null && (
-                    <PendingToolApprovalButton conversationId={conversationId} />
-                  )}
-                  <div className="grow" />
-                  <TokenUsage
-                    index={index}
-                    conversation={conversation}
-                    isSubmitting={isSubmitting}
-                  />
-                  {SpeechToText && (
-                    <AudioRecorder
-                      methods={methods}
-                      ask={submitComposerText}
-                      disabled={disableInputs || isNotAppendable}
-                      isSubmitting={isSubmitting}
-                    />
-                  )}
-                  {steering.duringRunActive &&
-                    steering.canControlGeneration &&
-                    (textValue?.trim() ?? '') !== '' && (
-                      <div className="shrink-0">
-                        <InterruptSteerButton
-                          steering={steering}
-                          getText={() => methods.getValues('text')}
-                          onConsumed={consumeComposer}
-                          disabled={filesLoading}
+                  {endpoint && (
+                    <div
+                      className={cn('flex min-w-0 flex-1', isRTL ? 'flex-row-reverse' : 'flex-row')}
+                    >
+                      <div
+                        className="relative flex-1"
+                        style={
+                          isCollapsed
+                            ? {
+                                WebkitMaskImage:
+                                  'linear-gradient(to bottom, black 60%, transparent 90%)',
+                                maskImage: 'linear-gradient(to bottom, black 60%, transparent 90%)',
+                              }
+                            : undefined
+                        }
+                      >
+                        <TextareaAutosize
+                          {...registerProps}
+                          ref={(e) => {
+                            ref(e);
+                            (
+                              textAreaRef as React.MutableRefObject<HTMLTextAreaElement | null>
+                            ).current = e;
+                          }}
+                          disabled={disableInputs || isNotAppendable || answerMode.composerLocked}
+                          onPaste={handlePaste}
+                          onKeyDown={(e) => {
+                            // Answer mode consumes option-navigation keys from the
+                            // empty composer; everything else follows the normal path.
+                            if (answerMode.handleComposerKeyDown(e)) {
+                              return;
+                            }
+                            handleKeyDown(e);
+                          }}
+                          onKeyUp={handleKeyUp}
+                          onCompositionStart={handleCompositionStart}
+                          onCompositionEnd={handleCompositionEnd}
+                          id={mainTextareaId}
+                          tabIndex={0}
+                          data-testid="text-input"
+                          rows={1}
+                          minRows={1}
+                          onFocus={handleTextareaFocus}
+                          onBlur={handleTextareaBlur}
+                          aria-label={localize('com_ui_message_input')}
+                          onClick={handleFocusOrClick}
+                          style={{ overflowY: 'auto' }}
+                          className={cn(
+                            baseClasses,
+                            removeFocusRings,
+                            'scrollbar-hover transition-[max-height] duration-200 disabled:cursor-not-allowed',
+                          )}
                         />
                       </div>
-                    )}
-                  {index === 0 && <ModelSelector startupConfig={startupConfig} />}
+                      <div className="flex flex-col items-start justify-start">
+                        <CollapseChat
+                          isCollapsed={isCollapsed}
+                          isScrollable={isMoreThanThreeRows}
+                          setIsCollapsed={setIsCollapsed}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className={cn('shrink-0', isRTL ? 'mr-auto' : 'ml-auto')}>
                     {isSubmitting &&
                     (showStopButton || steering.duringRunActive) &&
@@ -942,6 +906,76 @@ const ChatForm = memo(function ChatForm({
                             }
                           />
                         )}
+                  </div>
+                </div>
+                <div
+                  className={cn(
+                    '@container flex min-h-8 items-center gap-2',
+                    isRTL ? 'flex-row-reverse' : 'flex-row',
+                  )}
+                >
+                  {/* Chips wrap inside their own box so the model stays on the right edge. */}
+                  <div
+                    className={cn(
+                      'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                      isRTL ? 'flex-row-reverse' : 'flex-row',
+                    )}
+                  >
+                    {(showToolsMenu || showEphemeralBadges) && (
+                      <ActiveToolChips
+                        showBuiltinTools={showEphemeralBadges}
+                        showConnectors={showToolsMenu}
+                        agentId={toolsAgentId}
+                      />
+                    )}
+                    <BadgeRow
+                      onChange={setBadges}
+                      isInChat={
+                        Array.isArray(conversation?.messages) && conversation.messages.length >= 1
+                      }
+                    />
+                    <CodeApprovalMenu
+                      conversation={conversation}
+                      addedConversation={addedConvo}
+                      setConversation={setConversation}
+                      disabled={disableInputs}
+                    />
+                    {index === 0 && conversationId != null && (
+                      <PendingToolApprovalButton conversationId={conversationId} />
+                    )}
+                  </div>
+                  <div
+                    className={cn(
+                      'flex shrink-0 items-center gap-2',
+                      isRTL ? 'flex-row-reverse' : 'flex-row',
+                    )}
+                  >
+                    <TokenUsage
+                      index={index}
+                      conversation={conversation}
+                      isSubmitting={isSubmitting}
+                    />
+                    {SpeechToText && (
+                      <AudioRecorder
+                        methods={methods}
+                        ask={submitComposerText}
+                        disabled={disableInputs || isNotAppendable}
+                        isSubmitting={isSubmitting}
+                      />
+                    )}
+                    {steering.duringRunActive &&
+                      steering.canControlGeneration &&
+                      (textValue?.trim() ?? '') !== '' && (
+                        <div className="shrink-0">
+                          <InterruptSteerButton
+                            steering={steering}
+                            getText={() => methods.getValues('text')}
+                            onConsumed={consumeComposer}
+                            disabled={filesLoading}
+                          />
+                        </div>
+                      )}
+                    {index === 0 && <ModelSelector startupConfig={startupConfig} />}
                   </div>
                 </div>
                 <ToolDialogs />

@@ -23,6 +23,7 @@ function AttachFileChat({
   setFiles,
   setFilesLoading,
   extraItems,
+  renderMenu,
 }: {
   disableInputs: boolean;
   conversation: TConversation | null;
@@ -31,6 +32,8 @@ function AttachFileChat({
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   /** Composer actions offered beside the uploads in the `+` menu. */
   extraItems?: MenuItemProps[];
+  /** Hands the `+` entries to a menu the composer owns; it is drawn even with no uploads. */
+  renderMenu?: (items: MenuItemProps[]) => React.ReactNode;
 }) {
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;
   const { endpoint } = conversation ?? { endpoint: null };
@@ -109,8 +112,12 @@ function AttachFileChat({
         setFilesLoading={setFilesLoading}
         conversation={conversation}
         extraItems={extraItems}
+        renderMenu={renderMenu}
       />
     );
+  }
+  if (renderMenu) {
+    return <>{renderMenu(extraItems ?? [])}</>;
   }
   if (extraItems != null && extraItems.length > 0) {
     return <ComposerActionsMenu items={extraItems} />;

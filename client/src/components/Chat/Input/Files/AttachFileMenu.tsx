@@ -92,6 +92,8 @@ interface AttachFileMenuProps {
   conversation: TConversation | null;
   /** Non-upload actions the composer's `+` menu carries after the upload items, such as attaching a skill. */
   extraItems?: MenuItemProps[];
+  /** Draws the upload entries inside a menu the caller owns instead of this `+` control. */
+  renderMenu?: (items: MenuItemProps[]) => React.ReactNode;
 }
 
 /** Bordered square shared by every face of the composer's `+` control. */
@@ -121,6 +123,7 @@ const AttachFileMenu = ({
   setFilesLoading,
   conversation,
   extraItems = noExtraItems,
+  renderMenu,
 }: AttachFileMenuProps) => {
   const localize = useLocalize();
   const isUploadDisabled = disabled ?? false;
@@ -392,6 +395,36 @@ const AttachFileMenu = ({
       console.error('SharePoint file processing error:', error);
     }
   };
+
+  if (renderMenu) {
+    return (
+      <>
+        <FileUpload
+          ref={inputRef}
+          handleFileChange={(e) => {
+            handleFileChange(e, toolResourceRef.current);
+            if (!isUnifiedMode) {
+              toolResourceRef.current = undefined;
+            }
+          }}
+        >
+          {renderMenu(
+            (isUnifiedMode ? unifiedSourceItems : dropdownItems).map((item) =>
+              isUploadDisabled && !extraItems.includes(item) ? { ...item, disabled: true } : item,
+            ),
+          )}
+        </FileUpload>
+        <SharePointPickerDialog
+          isOpen={isSharePointDialogOpen}
+          onOpenChange={setIsSharePointDialogOpen}
+          onFilesSelected={handleSharePointFilesSelected}
+          isDownloading={isProcessing}
+          downloadProgress={downloadProgress}
+          maxSelectionCount={endpointFileConfig?.fileLimit}
+        />
+      </>
+    );
+  }
 
   if (isUnifiedMode) {
     return (

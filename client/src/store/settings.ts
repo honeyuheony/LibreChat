@@ -125,7 +125,9 @@ const localStorageAtoms = {
   conversationMode: atomWithLocalStorage('conversationMode', false),
   advancedMode: atomWithLocalStorage('advancedMode', false),
 
-  speechToText: atomWithLocalStorage('speechToText', true),
+  /* Off until the user turns it on in the speech settings: the AgentHub wireframe's composer
+     has no microphone. */
+  speechToText: atomWithLocalStorage('speechToText', false),
   engineSTT: atomWithLocalStorage('engineSTT', 'browser', (engine) =>
     normalizeSavedSpeechEngine(engine, LEGACY_EXTERNAL_STT_ENGINES),
   ),

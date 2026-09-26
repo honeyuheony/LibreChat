@@ -4,7 +4,6 @@ import debounce from 'lodash/debounce';
 import { useToastContext } from '@librechat/client';
 import { useRecoilValue, useRecoilState } from 'recoil';
 import { Constants, EToolResources, isAssistantsEndpoint } from 'librechat-data-provider';
-import type { TEndpointOption } from 'librechat-data-provider';
 import type { KeyboardEvent } from 'react';
 import type { UploadLifecycleCallbacks } from '~/hooks/Files/useFileHandling';
 import {
@@ -21,7 +20,6 @@ import {
   getFilesDraft,
   setDraft,
   markPastedTextFile,
-  getEntityName,
   getEntity,
   checkIfScrollable,
 } from '~/utils';
@@ -31,7 +29,6 @@ import { useChatFormContext, useUploadModalContext } from '~/Providers';
 import useComposerBindings from '~/hooks/Input/useComposerBindings';
 import useFileUploadRouter from '~/hooks/Files/useFileUploadRouter';
 import { useAgentsMapContext } from '~/Providers/AgentsMapContext';
-import useGetSender from '~/hooks/Conversations/useGetSender';
 import useUploadOptions from '~/hooks/Files/useUploadOptions';
 import { useInteractionHealthCheck } from '~/data-provider';
 import { resolveComposerKeyDown } from '~/utils/shortcuts';
@@ -66,7 +63,6 @@ export default function useTextarea({
   answerModeActive?: boolean;
 }) {
   const localize = useLocalize();
-  const getSender = useGetSender();
   const { setValue } = useChatFormContext();
   const isComposing = useRef(false);
   const agentsMap = useAgentsMapContext();
@@ -104,14 +100,13 @@ export default function useTextarea({
   );
 
   const { endpoint = '' } = conversation || {};
-  const { entity, isAgent, isAssistant } = getEntity({
+  const { isAgent, isAssistant } = getEntity({
     endpoint,
     agentsMap,
     assistantMap,
     agent_id: conversation?.agent_id,
     assistant_id: conversation?.assistant_id,
   });
-  const entityName = entity?.name ?? '';
 
   const isNotAppendable =
     latestMessage?.error === true && latestMessage.isCreatedByUser === true && !isAssistant;
@@ -191,14 +186,9 @@ export default function useTextarea({
         return placeholder;
       }
 
-      const sender =
-        isAssistant || isAgent
-          ? getEntityName({ name: entityName, isAgent, localize })
-          : getSender(conversation as TEndpointOption);
-
-      return `${localize('com_endpoint_message_placeholder', {
-        0: sender ? sender : localize('com_endpoint_ai'),
-      })}`;
+      /* The wireframe asks the same question whatever answers it; the model shows
+         at the composer's right edge instead. */
+      return localize('com_ui_composer_placeholder');
     };
 
     const placeholderText = getPlaceholderText();
@@ -224,9 +214,7 @@ export default function useTextarea({
     isAgent,
     localize,
     disabled,
-    getSender,
     agentsMap,
-    entityName,
     textAreaRef,
     isAssistant,
     assistantMap,
