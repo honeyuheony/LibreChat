@@ -1340,8 +1340,6 @@
   "com_ui_data_hub_scope_oauth": "내 계정으로 로그인해서 내 권한만큼 봅니다.",
   "com_ui_data_hub_scope_user_vars": "내가 넣은 인증 정보로 봅니다.",
   "com_ui_data_hub_scope_shared": "공용 계정으로 연결되어 모두가 같은 범위를 봅니다.",
-  "com_ui_data_hub_scope_desk_online": "내 PC 앱이 연결되어 있고, 켠 폴더는 {{0}}개입니다.",
-  "com_ui_data_hub_scope_desk_offline": "내 PC 앱이 연결되어 있지 않습니다. 앱을 켜면 켠 폴더만 봅니다.",
   "com_ui_data_hub_overview": "한눈에 보기",
   "com_ui_data_hub_overview_period": "기간",
   "com_ui_data_hub_overview_refresh": "갱신",

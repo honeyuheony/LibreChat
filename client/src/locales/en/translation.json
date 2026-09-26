@@ -127,8 +127,6 @@
   "com_ui_data_hub_scope_oauth": "You sign in with your own account and see what it can see.",
   "com_ui_data_hub_scope_user_vars": "It uses the credentials you entered.",
   "com_ui_data_hub_scope_shared": "It connects with a shared account, so everyone sees the same data.",
-  "com_ui_data_hub_scope_desk_online": "Your desktop app is connected with {{0}} folders switched on.",
-  "com_ui_data_hub_scope_desk_offline": "Your desktop app is not connected. Once it runs, only the folders you switch on are visible.",
   "com_ui_data_hub_overview": "At a glance",
   "com_ui_data_hub_overview_period": "Period",
   "com_ui_data_hub_overview_refresh": "Refresh",

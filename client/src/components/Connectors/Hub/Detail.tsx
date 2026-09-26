@@ -11,7 +11,8 @@ import { DESK_DOWNLOAD_PATH, getConnectorState, hubStatusView } from '../status'
 import { useAuthContext, useLocalize } from '~/hooks';
 import { ephemeralAgentByConvoId } from '~/store';
 import useNewChat from '~/hooks/Chat/useNewChat';
-import ToolChips from './ToolChips';
+import { describeDesk } from '../Desk';
+import ConnectorTools from '../Tools';
 import ConnectorIcon from '../Icon';
 import StatusPill from '../Pill';
 
@@ -23,6 +24,7 @@ interface DetailProps {
   status: HubStatus;
   statusProps: MCPServerStatusIconProps;
   deskStatus?: DeskStatusResponse;
+  deskError?: boolean;
   onConnect: (serverName: string) => void;
   onDisconnect: (serverName: string) => void;
 }
@@ -37,16 +39,9 @@ const overviewRows: Array<[keyof NonNullable<MCPOptions['overview']>, Translatio
 /** One line per connector: whose account the connector reads with. */
 function describeScope(
   server: MCPServerDefinition,
-  isDesk: boolean,
   hasCustomUserVars: boolean,
-  deskStatus: DeskStatusResponse | undefined,
   localize: Localize,
 ): string {
-  if (isDesk) {
-    return deskStatus?.state === 'online'
-      ? localize('com_ui_data_hub_scope_desk_online', { 0: String(deskStatus.folders.length) })
-      : localize('com_ui_data_hub_scope_desk_offline');
-  }
   if (server.config.requiresOAuth === true || server.config.oauth != null) {
     return localize('com_ui_data_hub_scope_oauth');
   }
@@ -70,6 +65,24 @@ function describeAuth(
   return localize('com_ui_data_hub_admin_auth_shared');
 }
 
+/** The desktop app's own state and switched-on folders, worded as the app reports them. */
+function DeskScope({
+  deskStatus,
+  deskError,
+}: {
+  deskStatus?: DeskStatusResponse;
+  deskError: boolean;
+}) {
+  const localize = useLocalize();
+  const view = describeDesk(deskStatus, deskError, localize);
+  return (
+    <div className="flex flex-col gap-0.5 rounded-theme-control bg-surface-secondary px-3.5 py-3 text-sm">
+      <span className="font-medium text-text-primary">{localize(view.labelKey)}</span>
+      {view.summary && <span className="text-text-secondary">{view.summary}</span>}
+    </div>
+  );
+}
+
 function SectionHeading({ children }: { children: string }) {
   return <h3 className="mb-2 mt-6 px-1 text-sm font-semibold text-text-secondary">{children}</h3>;
 }
@@ -80,6 +93,7 @@ export default function ConnectorDetail({
   status,
   statusProps,
   deskStatus,
+  deskError = false,
   onConnect,
   onDisconnect,
 }: DetailProps) {
@@ -185,9 +199,13 @@ export default function ConnectorDetail({
       </div>
 
       <SectionHeading>{localize('com_ui_data_hub_scope')}</SectionHeading>
-      <p className="rounded-theme-control bg-surface-secondary px-3.5 py-3 text-sm text-text-primary">
-        {describeScope(server, isDesk, hasCustomUserVars, deskStatus, localize)}
-      </p>
+      {isDesk ? (
+        <DeskScope deskStatus={deskStatus} deskError={deskError} />
+      ) : (
+        <p className="rounded-theme-control bg-surface-secondary px-3.5 py-3 text-sm text-text-primary">
+          {describeScope(server, hasCustomUserVars, localize)}
+        </p>
+      )}
 
       {overview.length > 0 && (
         <>
@@ -207,7 +225,7 @@ export default function ConnectorDetail({
       )}
 
       <SectionHeading>{localize('com_ui_data_hub_abilities')}</SectionHeading>
-      <ToolChips serverName={server.serverName} isConnected={isConnected} />
+      <ConnectorTools serverName={server.serverName} isConnected={isConnected} />
 
       <p className="mt-5 px-1 text-xs leading-relaxed text-text-secondary">
         {localize('com_ui_data_hub_footnote')}

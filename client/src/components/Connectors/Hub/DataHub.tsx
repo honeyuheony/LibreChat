@@ -151,6 +151,7 @@ export default function DataHub() {
           status={statuses.get(selected.serverName) ?? 'checking'}
           statusProps={getServerStatusIconProps(selected.serverName)}
           deskStatus={deskStatus}
+          deskError={deskError}
           onConnect={initializeServer}
           onDisconnect={revokeOAuthForServer}
         />

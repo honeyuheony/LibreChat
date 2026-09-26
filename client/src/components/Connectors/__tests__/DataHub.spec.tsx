@@ -10,6 +10,8 @@ import DataHub from '../Hub/DataHub';
 
 const mockStartNewChat = jest.fn();
 const mockInitializeServer = jest.fn();
+const mockRevokeOAuth = jest.fn();
+const mockTools: { current: Record<string, { tools: object[] }> } = { current: {} };
 const mockServers: { current: MCPServerDefinition[] } = { current: [] };
 const mockStatuses: { current: Record<string, object | undefined> } = { current: {} };
 const mockDesk: { current: DeskStatusResponse | undefined } = { current: undefined };
@@ -32,7 +34,7 @@ jest.mock('~/hooks', () => {
       availableMCPServers: mockServers.current,
       isLoading: false,
       initializeServer: mockInitializeServer,
-      revokeOAuthForServer: jest.fn(),
+      revokeOAuthForServer: mockRevokeOAuth,
       getConfigDialogProps: () => null,
       getServerStatusIconProps: (serverName: string) => ({
         serverName,
@@ -59,22 +61,7 @@ jest.mock('~/data-provider/MCP/queries', () => ({
   useMCPToolsQuery: () => ({
     isLoading: false,
     isError: false,
-    data: {
-      servers: {
-        'google-workspace': {
-          tools: [
-            {
-              name: 'calendar_list_events',
-              pluginKey: 'calendar_list_events_mcp_google-workspace',
-            },
-            {
-              name: 'calendar_create_event',
-              pluginKey: 'calendar_create_event_mcp_google-workspace',
-            },
-          ],
-        },
-      },
-    },
+    data: { servers: mockTools.current },
   }),
 }));
 jest.mock('~/data-provider/Connectors/queries', () => ({
@@ -124,6 +111,14 @@ beforeEach(() => {
     installerUrl: null,
   };
   mockActivity.current = [];
+  mockTools.current = {
+    'google-workspace': {
+      tools: [
+        { name: 'calendar_list_events', pluginKey: 'calendar_list_events_mcp_google-workspace' },
+        { name: 'calendar_create_event', pluginKey: 'calendar_create_event_mcp_google-workspace' },
+      ],
+    },
+  };
   mockServers.current = [
     server('filesystem', { title: 'Shared folder', description: 'Team documents' }),
     server('google-workspace', { title: 'Google', requiresOAuth: true }),
@@ -191,12 +186,57 @@ describe('DataHub', () => {
     ).toBeInTheDocument();
   });
 
-  it('describes the desktop folder by the app state and its switched-on folders', () => {
-    mockDesk.current = { ...mockDesk.current!, state: 'online', folders: ['문서', '바탕 화면'] };
-    renderHub('/connectors/my-pc');
-    expect(
-      screen.getByText('Your desktop app is connected with 2 folders switched on.'),
-    ).toBeInTheDocument();
+  describe('desktop folder', () => {
+    const online = {
+      state: 'online' as const,
+      deviceName: 'KIM-MINJI-PC',
+      folders: ['Work files', 'Documents', 'Desktop'],
+      connectedAt: null,
+      installerUrl: 'https://relay.example/app/desk-app-setup-0.1.0.exe',
+    };
+
+    it('shows the switched-on folders and PC name while the app is on, without a download link', () => {
+      mockDesk.current = { ...online, connectedAt: new Date().toISOString() };
+      renderHub('/connectors/my-pc');
+      expect(screen.getByText('Desktop app connected')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Folders (3): Work files, Documents and 1 more · KIM-MINJI-PC · Connected just now',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
+    });
+
+    it('lists two folders in full', () => {
+      mockDesk.current = { ...online, folders: ['Work files', 'Documents'] };
+      renderHub('/connectors/my-pc');
+      expect(
+        screen.getByText('Folders (2): Work files, Documents · KIM-MINJI-PC'),
+      ).toBeInTheDocument();
+    });
+
+    it('says so when no folder is switched on', () => {
+      mockDesk.current = { ...online, folders: [] };
+      renderHub('/connectors/my-pc');
+      expect(screen.getByText('No folders turned on · KIM-MINJI-PC')).toBeInTheDocument();
+    });
+
+    it('offers the installer while the app is off', () => {
+      mockDesk.current = { ...online, state: 'offline', deviceName: null, folders: [] };
+      renderHub('/connectors/my-pc');
+      expect(screen.getByText('Desktop app not connected')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Get the desktop app' })).toHaveAttribute(
+        'href',
+        '/download',
+      );
+    });
+
+    it('says the status cannot be checked when the relay is unreachable', () => {
+      mockDesk.current = { ...online, state: 'unknown', deviceName: null, installerUrl: null };
+      renderHub('/connectors/my-pc');
+      expect(screen.getByText('Status unavailable')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
+    });
   });
 
   it('shows only the overview facts the connector config sets', () => {
@@ -216,11 +256,52 @@ describe('DataHub', () => {
     expect(screen.queryByText('At a glance')).not.toBeInTheDocument();
   });
 
-  it('marks the tools that change data', () => {
+  it('lists tools by their user-facing name with read or write access', () => {
     renderHub('/connectors/google-workspace');
-    const tools = screen.getByRole('list', { name: 'Tools' });
-    expect(within(tools).getByText('Add event · Write')).toBeInTheDocument();
-    expect(within(tools).getByText('List events')).toBeInTheDocument();
+    const rows = within(screen.getByRole('list', { name: 'Tools' })).getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'List eventsShows upcoming calendar events.Read',
+      'Add eventAdds a new calendar event.Write',
+    ]);
+    expect(screen.getByText('2 tools · includes write')).toBeInTheDocument();
+  });
+
+  it('falls back to the raw tool name and server description for a tool without a label', () => {
+    mockTools.current = {
+      'google-workspace': {
+        tools: [
+          {
+            name: 'drive_export',
+            pluginKey: 'drive_export_mcp_google-workspace',
+            description: 'Exports a file.',
+          },
+        ],
+      },
+    };
+    renderHub('/connectors/google-workspace');
+    expect(
+      within(screen.getByRole('list', { name: 'Tools' })).getByRole('listitem'),
+    ).toHaveTextContent('drive_exportExports a file.');
+  });
+
+  it('starts the OAuth connection for a server that is not connected', async () => {
+    const user = userEvent.setup();
+    renderHub('/connectors/google-workspace');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(mockInitializeServer).toHaveBeenCalledWith('google-workspace');
+    expect(mockRevokeOAuth).not.toHaveBeenCalled();
+  });
+
+  it('revokes the OAuth connection for a connected server', async () => {
+    mockStatuses.current['google-workspace'] = {
+      connectionState: 'connected',
+      requiresOAuth: true,
+    };
+    const user = userEvent.setup();
+    renderHub('/connectors/google-workspace');
+    await user.click(screen.getByRole('button', { name: 'Disconnect' }));
+    expect(mockRevokeOAuth).toHaveBeenCalledWith('google-workspace');
+    expect(mockInitializeServer).not.toHaveBeenCalled();
   });
 
   it('starts a new chat from an available connector', async () => {
