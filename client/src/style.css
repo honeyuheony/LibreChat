@@ -454,8 +454,9 @@ html:not(.high-contrast) .sidebar-ink {
   --ring-primary: 167 139 250; /* #a78bfa wireframe brand-400 */
   color: rgb(var(--text-secondary));
 }
-/* Selected panel row: ink-3 fill from the tokens above plus the wireframe's 3px brand-400 rail. */
-html:not(.high-contrast) .sidebar-ink [data-testid^='nav-panel-'][aria-pressed='true'] {
+/* Selected panel row: ink-3 fill from the tokens above plus the wireframe's 3px brand-400 rail.
+ * The history heading is a row too, but the wireframe draws it as a plain label. */
+html:not(.high-contrast) .sidebar-ink [data-testid^='nav-panel-'][aria-pressed='true']:not([data-section='true']) {
   box-shadow: inset 3px 0 0 rgb(167 139 250);
 }
 

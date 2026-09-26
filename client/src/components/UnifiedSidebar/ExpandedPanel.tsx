@@ -200,6 +200,7 @@ const NavRow = memo(function NavRow({
         aria-pressed={isActive}
         disabled={link.disabled}
         data-testid={`nav-panel-${link.id}`}
+        data-section={section || undefined}
         className={cn(
           expanded ? cn(rowClassName, 'justify-start') : cn(railButtonClassName, 'px-0'),
           section && 'h-8 px-2.5 text-[12.5px] font-normal text-text-muted',

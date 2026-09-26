@@ -318,8 +318,13 @@ function Conversation({
         </span>
       );
     } else if (!renaming && conversationId) {
+      /* Desktop shows the pair only under the pointer or focus, the open chat included;
+         touch has no hover, so the open chat keeps it. */
+      actionVisibilityClassName =
+        'pointer-events-none w-0 scale-x-0 opacity-0 group-focus-within:pointer-events-auto group-focus-within:scale-x-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:scale-x-100 group-hover:opacity-100';
       actionWidthClassName = 'group-focus-within:w-12 group-hover:w-12';
-      if (isSmallScreen || isActiveConvo) {
+      if (isSmallScreen && isActiveConvo) {
+        actionVisibilityClassName = 'pointer-events-auto scale-x-100 opacity-100';
         actionWidthClassName = 'w-12';
       }
       actionContent = (
