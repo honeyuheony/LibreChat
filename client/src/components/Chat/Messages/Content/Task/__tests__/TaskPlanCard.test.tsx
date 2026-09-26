@@ -103,7 +103,9 @@ describe('TaskPlanCard', () => {
       });
     });
 
-    expect(stepStates()[2]).toBe('now ▶3. com_ui_task_stage_summarize · 위험 요인 중심 · 5/12');
+    expect(stepStates()[2]).toBe(
+      'now ▶3. com_ui_task_stage_summarize · com_ui_task_view_default_risk · 5/12',
+    );
     expect(stepStates()[1]).toBe('done ✓2. com_ui_task_stage_confirm_view');
   });
 
@@ -197,7 +199,7 @@ describe('TaskPlanCard', () => {
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: '간부 보고용' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'com_ui_task_view_default_brief' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );

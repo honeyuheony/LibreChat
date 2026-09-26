@@ -3,8 +3,8 @@ import { useAtomValue } from 'jotai';
 import { TaskTools } from 'librechat-data-provider';
 import type { Agents, TAttachment, TaskToolName } from 'librechat-data-provider';
 import type { TaskResultAttachment } from './api';
+import TaskViewApproval, { TaskViewRan, viewLabel } from './TaskViewApproval';
 import TaskSchemaApproval, { TaskSchemaRan } from './TaskSchemaApproval';
-import TaskViewApproval, { TaskViewRan } from './TaskViewApproval';
 import { taskProgressByToolCallId } from '~/store/task';
 import { TASK_STAGES, parseTaskArgs } from './stages';
 import TaskResultCard from './TaskResultCard';
@@ -70,7 +70,10 @@ export default function TaskPlanCard({
     if (index !== current || progress == null || progress.stage !== stages[index].id) {
       return label;
     }
-    const view = typeof args.view === 'string' && progress.stage === 'summarize' ? args.view : '';
+    const view =
+      typeof args.view === 'string' && progress.stage === 'summarize'
+        ? viewLabel(args.view, localize)
+        : '';
     const count = progress.total > 0 ? `${progress.done}/${progress.total}` : '';
     return [label, view, count].filter(Boolean).join(' · ');
   };

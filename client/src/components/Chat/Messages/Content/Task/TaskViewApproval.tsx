@@ -7,12 +7,24 @@ import useTaskApproval from './useTaskApproval';
 import { stringList } from './stages';
 import { useLocalize } from '~/hooks';
 
-/** Views offered when the model called the tool without any (agent-less summary). */
-const DEFAULT_VIEW_KEYS: TranslationKeys[] = [
-  'com_ui_task_view_default_brief',
-  'com_ui_task_view_default_risk',
-  'com_ui_task_view_default_policy',
+/**
+ * Views offered when the model called the tool without any (agent-less summary).
+ * The Korean value is what the server gets as `view` whatever the screen language,
+ * so the summary prompt and the saved args stay the same; only the chip is translated.
+ */
+const DEFAULT_VIEWS: { value: string; label: TranslationKeys }[] = [
+  { value: '간부 보고용', label: 'com_ui_task_view_default_brief' },
+  { value: '위험 요인 중심', label: 'com_ui_task_view_default_risk' },
+  { value: '정책 시사점 중심', label: 'com_ui_task_view_default_policy' },
 ];
+
+const DEFAULT_VIEW_VALUES = DEFAULT_VIEWS.map((view) => view.value);
+
+/** What to show for a `view` value: a default's translated name, anything else as is. */
+export function viewLabel(view: string, localize: ReturnType<typeof useLocalize>): string {
+  const preset = DEFAULT_VIEWS.find((item) => item.value === view);
+  return preset != null ? localize(preset.label) : view;
+}
 
 /**
  * The picker after the call ran, read-only, with the perspective it ran with on.
@@ -23,7 +35,7 @@ export function TaskViewRan({ args }: { args: Record<string, unknown> }) {
   const localize = useLocalize();
   const picked = typeof args.view === 'string' ? args.view : null;
   const offered = stringList(args.views);
-  const views = offered.length > 0 ? offered : DEFAULT_VIEW_KEYS.map((key) => localize(key));
+  const views = offered.length > 0 ? offered : [...DEFAULT_VIEW_VALUES];
   if (picked != null && !views.includes(picked)) {
     views.push(picked);
   }
@@ -33,7 +45,7 @@ export function TaskViewRan({ args }: { args: Record<string, unknown> }) {
       <div className="rounded-xl border border-border-light bg-surface-primary px-3.5 py-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {views.map((view) => (
-            <TaskChip key={view} label={view} on={view === picked} disabled />
+            <TaskChip key={view} label={viewLabel(view, localize)} on={view === picked} disabled />
           ))}
         </div>
         <p className="mt-2.5 text-sm text-text-secondary">{localize('com_ui_task_ran')}</p>
@@ -59,8 +71,8 @@ export default function TaskViewApproval({
   const { status, locked, submit } = useTaskApproval(approval.actionId, toolCallId);
   const offered = useMemo(() => {
     const views = stringList(args.views);
-    return views.length > 0 ? views : DEFAULT_VIEW_KEYS.map((key) => localize(key));
-  }, [args.views, localize]);
+    return views.length > 0 ? views : DEFAULT_VIEW_VALUES;
+  }, [args.views]);
   const [custom, setCustom] = useState<string[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -85,7 +97,7 @@ export default function TaskViewApproval({
           {views.map((view) => (
             <TaskChip
               key={view}
-              label={view}
+              label={viewLabel(view, localize)}
               on={picked === view}
               disabled={locked}
               onClick={() => setPicked(view)}

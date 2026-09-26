@@ -21,7 +21,7 @@ const approval: NonNullable<Agents.ToolCall['approval']> = {
   allowed_decisions: ['approve', 'reject', 'edit'],
 };
 
-const views = ['간부 보고용', '위험 요인 중심', '정책 시사점 중심'];
+const views = ['부서장 보고용', '실무 공유용', '대외 설명용'];
 
 const renderCard = (args: Record<string, unknown>) =>
   render(<TaskViewApproval approval={approval} toolCallId="call-1" args={args} />, {
@@ -41,12 +41,12 @@ describe('TaskViewApproval', () => {
     renderCard({ views });
 
     expect(runButton()).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: '위험 요인 중심' }));
+    fireEvent.click(screen.getByRole('button', { name: '실무 공유용' }));
     expect(runButton()).toBeEnabled();
   });
 
   test('leaves every perspective unpicked even when the model already passed a view', () => {
-    renderCard({ views, view: '위험 요인 중심' });
+    renderCard({ views, view: '실무 공유용' });
 
     for (const name of views) {
       expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
@@ -57,14 +57,14 @@ describe('TaskViewApproval', () => {
   test('submits an edit carrying the picked perspective as view', () => {
     renderCard({ views });
 
-    fireEvent.click(screen.getByRole('button', { name: '정책 시사점 중심' }));
+    fireEvent.click(screen.getByRole('button', { name: '대외 설명용' }));
     fireEvent.click(runButton());
 
     expect(mockApprovalMutate).toHaveBeenCalledTimes(1);
     expect(submittedDecision()).toEqual({
       tool_call_id: 'call-1',
       decision: 'edit',
-      editedArguments: { views, view: '정책 시사점 중심' },
+      editedArguments: { views, view: '대외 설명용' },
     });
   });
 
@@ -94,5 +94,17 @@ describe('TaskViewApproval', () => {
       'com_ui_task_view_default_risk',
       'com_ui_task_view_default_policy',
     ]);
+  });
+
+  test('sends a default perspective as its Korean value while the chip shows the translation', () => {
+    renderCard({});
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_view_default_risk' }));
+    fireEvent.click(runButton());
+
+    expect(submittedDecision().editedArguments).toEqual({
+      views: ['간부 보고용', '위험 요인 중심', '정책 시사점 중심'],
+      view: '위험 요인 중심',
+    });
   });
 });
