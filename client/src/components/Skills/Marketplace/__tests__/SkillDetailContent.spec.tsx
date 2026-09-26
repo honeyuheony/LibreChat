@@ -81,6 +81,21 @@ describe('SkillDetailContent', () => {
     expect(screen.getByTestId('instructions')).toHaveTextContent(/^1\. 양식을 따른다\.$/);
   });
 
+  it('shows connector titles as sources and hides the block when there are none', () => {
+    renderDetail({
+      ...weekly,
+      marketProfile: { ...weekly.marketProfile, sources: ['공유 폴더', 'Google Workspace'] },
+    });
+    expect(screen.getByText('com_skills_sources')).toBeInTheDocument();
+    expect(screen.getByText('공유 폴더')).toBeInTheDocument();
+    expect(screen.getByText('Google Workspace')).toBeInTheDocument();
+  });
+
+  it('hides the sources block for a skill without sources', () => {
+    renderDetail();
+    expect(screen.queryByText('com_skills_sources')).toBeNull();
+  });
+
   it('lists skills adapted from this one and opens them', () => {
     const onSelectSkill = renderDetail();
     fireEvent.click(screen.getByRole('button', { name: /주간보고 작성 \(교류협력팀\)/ }));

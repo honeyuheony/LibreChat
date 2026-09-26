@@ -188,13 +188,14 @@ describe('loadDeploymentSkillsFromDirectory', () => {
       'triggers: ["주간보고"]',
       'pipeline: "전수 · 문서별 추출 → 양식 채움 → HWP 생성"',
       'output: "HWP 문서"',
-      'sources: ["Google Drive", "올린 파일"]',
+      'sources: ["공유 폴더", "Google Workspace"]',
       'base: report',
       'manualMinutes: 26',
       'seedMetrics: { runs: 3120, forks: 41, runSeconds: 40 }',
     ]);
     await marketSkill('weekly-report-exchange-coop', ['forkOf: weekly-report', 'icon: "🧭"']);
     await marketSkill('orphan-fork', ['forkOf: missing-origin']);
+    await marketSkill('polish', ['sources: []', 'icon: "✨"']);
     const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
 
     const registry = await loadDeploymentSkillsFromDirectory(path.join(root, 'skill'), {
@@ -218,7 +219,7 @@ describe('loadDeploymentSkillsFromDirectory', () => {
         triggers: ['주간보고'],
         pipeline: '전수 · 문서별 추출 → 양식 채움 → HWP 생성',
         output: 'HWP 문서',
-        sources: ['Google Drive', '올린 파일'],
+        sources: ['공유 폴더', 'Google Workspace'],
         base: 'report',
       },
     });
@@ -226,6 +227,7 @@ describe('loadDeploymentSkillsFromDirectory', () => {
       origin?._id.toString(),
     );
     expect(byName.get('orphan-fork')?.forkOf).toBeUndefined();
+    expect(byName.get('polish')?.marketProfile).toBeUndefined();
     expect(byName.get('orphan-fork')?.authorName).toBe('Deployment');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('missing-origin'));
     warn.mockRestore();
