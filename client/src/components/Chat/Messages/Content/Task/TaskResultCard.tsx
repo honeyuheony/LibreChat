@@ -48,10 +48,11 @@ export function topValueCounts(result: TaskTableResult, localize: Localize): str
   });
 }
 
-function manualSkillsForResult(messages: TMessage[], resultCreatedAt: string): string[] {
+/** The last user message sent at or before the result was saved: the request it answered. */
+function requestForResult(messages: TMessage[], resultCreatedAt: string): TMessage | undefined {
   const resultTimestamp = Date.parse(resultCreatedAt);
   if (!Number.isFinite(resultTimestamp)) {
-    return [];
+    return undefined;
   }
 
   let latestUserMessage: TMessage | undefined;
@@ -71,7 +72,11 @@ function manualSkillsForResult(messages: TMessage[], resultCreatedAt: string): s
     latestUserMessage = message;
     latestUserTimestamp = messageTimestamp;
   }
-  return latestUserMessage?.manualSkills ?? [];
+  return latestUserMessage;
+}
+
+function manualSkillsForResult(messages: TMessage[], resultCreatedAt: string): string[] {
+  return requestForResult(messages, resultCreatedAt)?.manualSkills ?? [];
 }
 
 function ActionButton({
