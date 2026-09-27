@@ -1,3 +1,4 @@
+import { logger } from '@librechat/data-schemas';
 import type { TSkillMarketProfile, TSkillSummary } from 'librechat-data-provider';
 import { computeSkillUsageMetrics } from './usage';
 
@@ -140,15 +141,31 @@ export function readUserDepartment(user: unknown): string | undefined {
   return readString((user as { department?: unknown }).department);
 }
 
-/** `scope: 팀` agent 는 작성자와 같은 부서 사용자에게만 보인다. */
+const ALL_SCOPE = '전 부서';
+const warnedUnknownScopes = new Set<string>();
+
+/**
+ * `scope: 팀` agent 는 작성자와 같은 부서 사용자에게만 보인다. scope 가 없거나 '전 부서' 면 모두에게
+ * 보이고, 그 밖의 값은 오타일 수 있으므로 공개하지 않고 숨긴다.
+ */
 export function isVisibleToDepartment(
   skill: { marketProfile?: TSkillMarketProfile; authorDepartment?: string },
   userDepartment: string | undefined,
 ): boolean {
-  if (skill.marketProfile?.scope !== TEAM_SCOPE) {
+  const scope = skill.marketProfile?.scope;
+  if (scope === undefined || scope === ALL_SCOPE) {
     return true;
   }
-  return userDepartment !== undefined && userDepartment === skill.authorDepartment;
+  if (scope === TEAM_SCOPE) {
+    return userDepartment !== undefined && userDepartment === skill.authorDepartment;
+  }
+  if (!warnedUnknownScopes.has(scope)) {
+    warnedUnknownScopes.add(scope);
+    logger.warn(
+      `[deploymentSkills] Hiding deployment skills with unknown metadata.scope "${scope}"; use "${ALL_SCOPE}" or "${TEAM_SCOPE}".`,
+    );
+  }
+  return false;
 }
 
 /** 배포 스킬을 요청한 사용자에게 보이거나 불러와도 되는지. 개별 조회와 실행 로딩이 함께 쓴다. */

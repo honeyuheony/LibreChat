@@ -488,6 +488,27 @@ describe('createAdminGroupsHandlers', () => {
     });
   });
 
+  describe('createGroup with a department key', () => {
+    it.each([
+      ['a local group', 'local'],
+      ['an entra group', 'entra'],
+    ])('rejects %s whose idOnTheSource is a department key', async (_label, source) => {
+      const deps = createDeps();
+      const handlers = createAdminGroupsHandlers(deps);
+      const { req, res, status, json } = createReqRes({
+        body: { name: '정세분석팀', source, idOnTheSource: 'department:정세분석팀' },
+      });
+
+      await handlers.createGroup(req, res);
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(json).toHaveBeenCalledWith({
+        error: 'idOnTheSource must not start with department: (reserved for department groups)',
+      });
+      expect(deps.createGroup).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateGroup', () => {
     it('updates group and returns 200', async () => {
       const group = mockGroup({ name: 'Updated' });

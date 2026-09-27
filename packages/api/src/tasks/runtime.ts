@@ -8,12 +8,12 @@ import type { DeploymentSkill } from '~/skills/deployment';
 import type { TaskAgentModel, TaskLLM } from './llm';
 import type { TaskDocument } from './documents';
 import type { TaskToolDeps } from './tools';
+import { loadReportTemplate, resolveReportTemplatePath } from './report';
 import { getDeploymentSkillRegistry } from '~/skills/deployment';
 import { isDeploymentSkillVisibleTo } from '~/skills/market';
 import { createHwpService } from './hwpService';
 import { createMongoTaskCache } from './cache';
 import { prepareDocument } from './documents';
-import { loadReportTemplate } from './report';
 import { createTaskLLM } from './llm';
 
 export interface StoredFile {
@@ -177,20 +177,12 @@ function deploymentSkillDirectory(): string {
   return directory;
 }
 
-/**
- * The deployment skill whose folder holds `templateId`: the folder named `templateId`, or for a
- * variant id such as `hwp-report-general`, the longest folder name it extends with `-<variant>`.
- */
-function findTemplateOwner(templateId: string) {
-  let owner: { skill: DeploymentSkill; folder: string } | undefined;
-  for (const skill of getDeploymentSkillRegistry().list()) {
-    const folder = path.basename(skill.sourceMetadata.directory);
-    const owns = templateId === folder || templateId.startsWith(`${folder}-`);
-    if (owns && (!owner || folder.length > owner.folder.length)) {
-      owner = { skill, folder };
-    }
-  }
-  return owner?.skill;
+/** The deployment skill that registered this exact file; a template nobody owns has none. */
+function findFileOwner(filepath: string): DeploymentSkill | undefined {
+  const target = path.resolve(filepath);
+  return getDeploymentSkillRegistry()
+    .list()
+    .find((skill) => skill.files.some((file) => path.resolve(file.filepath) === target));
 }
 
 /** Wires the task tools to the request: user-scoped files, cache, model and storage. */
@@ -238,11 +230,12 @@ export function createTaskToolDeps(params: TaskRuntimeParams): TaskToolDeps {
       });
     },
     loadTemplate: async (templateId) => {
-      const owner = findTemplateOwner(templateId);
-      if (owner && !isDeploymentSkillVisibleTo(owner, req.user)) {
+      const skillsDir = deploymentSkillDirectory();
+      const owner = findFileOwner(resolveReportTemplatePath(templateId, skillsDir));
+      if (!owner || !isDeploymentSkillVisibleTo(owner, req.user)) {
         throw new Error(`Unknown report template "${templateId}".`);
       }
-      return loadReportTemplate(templateId, deploymentSkillDirectory());
+      return loadReportTemplate(templateId, skillsDir);
     },
     hwp: createHwpService(),
     saveReportFile: ({ buffer, filename }) =>

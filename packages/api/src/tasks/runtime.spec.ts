@@ -117,6 +117,18 @@ describe('createTaskToolDeps loadTemplate', () => {
       path.join(assets, 'slots.json'),
       JSON.stringify({ title: '보고서', fields: [], slots: [] }),
     );
+    await fs.writeFile(
+      path.join(projectRoot, 'skill', 'hwp-report', 'SKILL.md'),
+      [
+        '---',
+        'name: hwp-report',
+        'description: A deployment skill that owns the report templates.',
+        'category: 문서작성',
+        '---',
+        '',
+        '# hwp-report',
+      ].join('\n'),
+    );
   });
 
   afterEach(async () => {
@@ -171,6 +183,23 @@ describe('createTaskToolDeps loadTemplate', () => {
       );
     },
   );
+
+  it('does not load a template from a folder that no deployment skill owns', async () => {
+    const assets = path.join(projectRoot, 'skill', 'orphan-template', 'assets');
+    await fs.mkdir(assets, { recursive: true });
+    await fs.writeFile(
+      path.join(assets, 'slots.json'),
+      JSON.stringify({ title: '주인 없는 서식', fields: [], slots: [] }),
+    );
+    await initializeDeploymentSkills({ projectRoot, env: {} });
+    const deps = createTaskToolDeps({
+      req: { user: { id: 'u1' }, body: {} },
+      models: {},
+    } as unknown as TaskRuntimeParams);
+    await expect(deps.loadTemplate('orphan-template')).rejects.toThrow(
+      'Unknown report template "orphan-template".',
+    );
+  });
 
   it('reads templates from the directory the deployment skills were loaded from, not the cwd', async () => {
     await initializeDeploymentSkills({ projectRoot, env: {} });
