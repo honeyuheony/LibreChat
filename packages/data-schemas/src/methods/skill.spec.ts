@@ -600,6 +600,66 @@ describe('Skill CRUD methods', () => {
     expect(result.status === 'updated' && result.skill.manualMinutes).toBe(12);
   });
 
+  it('persists builder state, publication time, and the last test result', async () => {
+    const builder = {
+      text: 'Summarize the report.',
+      direct: false,
+      sources: { title: 'ai' },
+      aiOff: [],
+    };
+    const publishedAt = new Date('2026-09-27T10:00:00.000Z');
+    const lastTest = {
+      version: 1,
+      seconds: 24,
+      conversationId: 'conversation-1',
+      at: new Date('2026-09-27T09:59:00.000Z'),
+    };
+    const { skill } = await methods.createSkill(makeSkillInput({ builder, publishedAt, lastTest }));
+
+    const reloaded = await methods.getSkillById(skill._id);
+    expect(reloaded).toMatchObject({ builder, publishedAt, lastTest });
+  });
+
+  it('updates builder state and the last test result', async () => {
+    const { skill } = await methods.createSkill(makeSkillInput());
+    const builder = {
+      text: 'Compare the reports.',
+      direct: true,
+      sources: { title: 'me' },
+      aiOff: ['step-1'],
+    };
+    const lastTest = {
+      version: 2,
+      seconds: 18,
+      conversationId: 'conversation-2',
+      at: new Date('2026-09-27T10:02:00.000Z'),
+    };
+
+    const result = await methods.updateSkill({
+      id: skill._id.toString(),
+      expectedVersion: 1,
+      update: { builder, lastTest },
+    });
+
+    expect(result.status).toBe('updated');
+    expect(result.status === 'updated' && result.skill).toMatchObject({ builder, lastTest });
+  });
+
+  it('clears the publication time when an update supplies null', async () => {
+    const { skill } = await methods.createSkill(
+      makeSkillInput({ publishedAt: new Date('2026-09-27T10:00:00.000Z') }),
+    );
+
+    const result = await methods.updateSkill({
+      id: skill._id.toString(),
+      expectedVersion: 1,
+      update: { publishedAt: null },
+    });
+
+    expect(result.status).toBe('updated');
+    expect(result.status === 'updated' && result.skill.publishedAt).toBeUndefined();
+  });
+
   it('rejects an invalid manualMinutes on update', async () => {
     const { skill } = await methods.createSkill(makeSkillInput());
     await expect(
@@ -695,6 +755,42 @@ describe('Skill CRUD methods', () => {
       runTimeSampleCount: 3,
       manualMinutes: 20,
     });
+  });
+
+  it('projects frontmatter examples on list summaries', async () => {
+    const examples = ['Compare the reports.', 'Summarize the findings.'];
+    const { skill } = await methods.createSkill(
+      makeSkillInput({
+        frontmatter: {
+          name: 'demo-skill',
+          description: 'A small demo skill used in tests.',
+          examples,
+        },
+      }),
+    );
+
+    const { skills } = await methods.listSkillsByAccess({
+      accessibleIds: [skill._id],
+      limit: 10,
+    });
+
+    expect(skills[0]).toMatchObject({ frontmatter: { examples } });
+  });
+
+  it('does not project builder state into list summaries', async () => {
+    const builder = {
+      text: 'Private editor text.',
+      direct: false,
+      sources: { title: 'ai' },
+      aiOff: [],
+    };
+    const { skill } = await methods.createSkill(makeSkillInput({ builder }));
+    const { skills } = await methods.listSkillsByAccess({
+      accessibleIds: [skill._id],
+      limit: 10,
+    });
+
+    expect(skills[0]).not.toHaveProperty('builder');
   });
 
   it('stores an emoji icon on create, lists it and updates it', async () => {

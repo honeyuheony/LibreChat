@@ -38,6 +38,7 @@ export * from './types/queries';
 export * from './types/schedules';
 export * from './cadence';
 export * from './types/skills';
+export * from './skills/compose';
 export * from './types/runs';
 export * from './types/web';
 export * from './types/graph';

@@ -275,6 +275,15 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       trim: true,
       maxlength: SKILL_ICON_MAX,
     },
+    builder: {
+      type: Schema.Types.Mixed,
+    },
+    publishedAt: {
+      type: Date,
+    },
+    lastTest: {
+      type: Schema.Types.Mixed,
+    },
   },
   {
     timestamps: true,
