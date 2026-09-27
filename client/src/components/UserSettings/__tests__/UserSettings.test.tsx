@@ -127,6 +127,36 @@ describe('UserSettings', () => {
     ).toBeInTheDocument();
   });
 
+  it('matches the wireframe layout for settings controls', () => {
+    renderSettings();
+
+    expect(screen.getByRole('note')).toHaveClass(
+      'border-accent-primary/20',
+      'bg-surface-brand-subtle',
+      'text-accent-primary',
+    );
+
+    const instructions = screen.getByRole('textbox', {
+      name: 'com_ui_user_settings_global_instructions',
+    });
+    expect(instructions).toHaveClass('w-full', 'max-w-[520px]');
+    expect(instructions.closest('section')?.classList.contains('rounded-xl')).toBe(false);
+    expect(instructions.closest('section')?.classList.contains('border')).toBe(false);
+    expect(screen.getByText('com_ui_user_settings_global_instructions')).toHaveClass(
+      'font-normal',
+      'text-text-tertiary',
+    );
+
+    expect(
+      screen.getByRole('combobox', { name: 'com_ui_user_settings_approval_mode' }),
+    ).toHaveClass('w-full', 'max-w-[520px]');
+    expect(screen.getByRole('button', { name: 'com_ui_account_settings_more' })).toHaveClass(
+      'border-t',
+      'border-border-light',
+      'rounded-none',
+    );
+  });
+
   it('opens the existing settings dialog from the bottom link', () => {
     renderSettings();
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_account_settings_more' }));

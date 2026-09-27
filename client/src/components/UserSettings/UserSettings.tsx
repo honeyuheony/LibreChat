@@ -119,20 +119,23 @@ export default function UserSettings() {
     );
   } else {
     settingsContent = (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <p
           role="note"
-          className="rounded-lg border border-border-light bg-surface-secondary p-3 text-sm text-text-secondary"
+          className="rounded-md border border-accent-primary/20 bg-surface-brand-subtle px-2.5 py-2 text-[13px] text-accent-primary"
         >
           {localizeSetting('com_ui_user_settings_connection_prefix')}
-          <Link to="/connectors" className="text-text-primary underline underline-offset-2">
+          <Link to="/connectors" className="text-link underline underline-offset-2">
             {localizeSetting('com_ui_user_settings_data_integrations')}
           </Link>
           {localizeSetting('com_ui_user_settings_connection_suffix')}
         </p>
-        <section className="space-y-5 rounded-xl border border-border-light bg-surface-secondary p-4 md:p-6">
+        <section className="space-y-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="global-instructions" className="text-sm font-medium text-text-primary">
+            <label
+              htmlFor="global-instructions"
+              className="text-[13px] font-normal text-text-tertiary"
+            >
               {localizeSetting('com_ui_user_settings_global_instructions')}
             </label>
             <textarea
@@ -147,14 +150,14 @@ export default function UserSettings() {
                 }
               }}
               aria-describedby="global-instructions-hint"
-              className="w-full resize-y rounded-md border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
+              className="w-full max-w-[520px] resize-y rounded-md border border-border-light bg-surface-primary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             />
             <p id="global-instructions-hint" className="text-xs text-text-secondary">
               {localizeSetting('com_ui_user_settings_global_instructions_hint')}
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor="approval-mode" className="text-sm font-medium text-text-primary">
+            <label htmlFor="approval-mode" className="text-[13px] font-normal text-text-tertiary">
               {localizeSetting('com_ui_user_settings_approval_mode')}
             </label>
             <select
@@ -172,7 +175,7 @@ export default function UserSettings() {
                   approvalModeMutation.mutate({ approvalMode: nextApprovalMode });
                 }
               }}
-              className="w-fit min-w-60 rounded-md border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
+              className="w-full max-w-[520px] rounded-md border border-border-light bg-surface-primary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             >
               <option value="manual">
                 {localizeSetting('com_ui_user_settings_approval_manual')}
@@ -194,19 +197,21 @@ export default function UserSettings() {
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_nav_settings')}</span>
       </header>
-      <div className="mx-auto w-full max-w-4xl px-4 pb-10 pt-6 md:pt-8">
-        <h1 className="mb-4 text-2xl font-bold text-text-primary">
-          {localize('com_nav_settings')}
-        </h1>
-        {settingsContent}
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-6 w-full justify-start"
-          onClick={() => setSettingsDialogTab(SettingsTabValues.GENERAL)}
-        >
-          {localize('com_ui_account_settings_more')}
-        </Button>
+      <div className="px-4 pb-10 pt-6 md:pt-8">
+        <div className="mx-auto w-full max-w-[520px]">
+          <h1 className="mb-4 text-2xl font-bold text-text-primary">
+            {localize('com_nav_settings')}
+          </h1>
+          {settingsContent}
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-6 h-auto w-full justify-start rounded-none border-t border-border-light px-0 py-3 text-sm font-normal text-text-secondary"
+            onClick={() => setSettingsDialogTab(SettingsTabValues.GENERAL)}
+          >
+            {localize('com_ui_account_settings_more')}
+          </Button>
+        </div>
       </div>
     </main>
   );
