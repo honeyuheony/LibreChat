@@ -102,8 +102,8 @@ const splitExcerpts = (quote: string) =>
 
 /**
  * Finds `quote` verbatim (after normalization) in the document; `null` when absent. A quote
- * of several excerpts counts only when every excerpt is long enough and found in order after
- * the previous one, and is located at the first.
+ * of several excerpts counts only when every excerpt is long enough and found, in any order,
+ * and is located at the excerpt earliest in the text.
  */
 export function locateQuote(doc: TaskDocument, quote: string): TaskEvidence | null {
   const needles = splitExcerpts(quote).map((excerpt) => normalizeWithOrigin(excerpt, true).text);
@@ -117,18 +117,11 @@ export function locateQuote(doc: TaskDocument, quote: string): TaskEvidence | nu
     return null;
   }
   const haystack = getNormalized(doc);
-  let index = -1;
-  let searchFrom = 0;
-  for (const needle of needles) {
-    const found = haystack.text.indexOf(needle, searchFrom);
-    if (found < 0) {
-      return null;
-    }
-    if (index < 0) {
-      index = found;
-    }
-    searchFrom = found + needle.length;
+  const indexes = needles.map((needle) => haystack.text.indexOf(needle));
+  if (indexes.some((found) => found < 0)) {
+    return null;
   }
+  const index = Math.min(...indexes);
   const offset = haystack.origin[index];
   const page = pageAt(doc.pageStarts, offset);
   const pageOffset = page != null && doc.pageStarts ? doc.pageStarts[page - 1] : 0;

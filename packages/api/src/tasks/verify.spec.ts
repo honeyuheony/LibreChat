@@ -43,9 +43,10 @@ describe('locateQuote', () => {
     expect(locateQuote(doc, quote)).toEqual({ quote, paragraph: 2 });
   });
 
-  it('rejects excerpts that appear in the text in a different order', () => {
+  it('accepts excerpts in reverse order, located at the one earliest in the text', () => {
     const doc = prepareDocument({ file_id: 'f1', filename: 'a.hwp', text: hwpText });
-    expect(locateQuote(doc, '경제 부문의 식량 수급\n\n9.9절 행사가 간소화')).toBeNull();
+    const quote = '경제 부문의 식량 수급\n\n9.9절 행사가 간소화';
+    expect(locateQuote(doc, quote)).toEqual({ quote, paragraph: 2 });
   });
 
   it.each([
@@ -58,6 +59,12 @@ describe('locateQuote', () => {
       '예산은 3\n\n억 원',
     ],
     ['one-letter excerpts spanning a word', '가나다라', '가\n\n라'],
+    [
+      'short excerpts combined in reverse order',
+      '예산은 3천만 원이다.\n별첨: 1억 원 이하 사업 목록',
+      '억 원\n\n예산은 3',
+    ],
+    ['one-letter excerpts in reverse order', '가나다라', '라\n\n가'],
     [
       'an excerpt of punctuation only',
       '정치 부문에서는 행사가 간소화되었다. 경제 부문도 조정되었다.',
