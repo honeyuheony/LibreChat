@@ -488,6 +488,27 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
 });
 
 describe('Share step matches the reference screen (12)', () => {
+  it('sizes scope pills like the reference and emphasizes the selected scope', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={{ ...chat, manualMinutes: 30, scope: 'team' }} />);
+
+    const scope = within(screen.getByRole('radiogroup', { name: 'com_skills_builder_scope' }));
+    const selected = scope.getByRole('radio', { name: 'com_skills_scope_team' });
+    expect(selected).toHaveAttribute('aria-checked', 'true');
+    expect(selected).toHaveClass(
+      '!h-[30px]',
+      '!px-[12.5px]',
+      'font-normal',
+      'aria-checked:font-semibold',
+    );
+    expect(selected).not.toHaveClass('!font-normal');
+  });
+
   it('fills selected time and scope options with the brand color', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',

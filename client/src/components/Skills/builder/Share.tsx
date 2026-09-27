@@ -77,7 +77,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
             { value: 'me', label: localize('com_skills_builder_scope_me') },
           ]}
           className="!rounded-full !border !border-border-light !bg-surface-primary !px-0 [&>div:first-child]:hidden"
-          buttonClassName="!h-7 !rounded-full !px-3 !text-[13px] !font-normal border-e border-border-light last:border-e-0 aria-checked:bg-surface-submit aria-checked:font-semibold aria-checked:text-text-on-status"
+          buttonClassName="!h-[30px] !rounded-full !px-[12.5px] !text-[13px] font-normal border-e border-border-light last:border-e-0 aria-checked:bg-surface-submit aria-checked:font-semibold aria-checked:text-text-on-status"
         />
       </div>
     </Block>
