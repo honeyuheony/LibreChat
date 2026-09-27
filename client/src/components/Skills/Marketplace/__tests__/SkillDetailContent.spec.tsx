@@ -120,6 +120,53 @@ describe('SkillDetailContent', () => {
     expect(screen.getByText('액션아이템')).toBeInTheDocument();
   });
 
+  it('strips trigger sentences from deployed skill descriptions ending with 쓴다', () => {
+    const descriptions = [
+      {
+        title: '회의록 → 액션아이템',
+        description:
+          '회의록 → 액션아이템: 회의 메모·녹취록에서 결정 사항과 담당자·기한별 할 일을 뽑아 공유 메일 초안까지 작성. 회의록에서 액션아이템을 뽑아 달라, 담당자별 할 일을 정리해 달라, 할 일을 공유 메일 초안으로 써 달라고 할 때 쓴다.',
+        summary:
+          '회의 메모·녹취록에서 결정 사항과 담당자·기한별 할 일을 뽑아 공유 메일 초안까지 작성.',
+        triggers: ['회의록', '액션아이템'],
+      },
+      {
+        title: '주간보고 작성',
+        description:
+          '주간보고 작성: 메일로 받은 팀원 주간보고를 모아 금주 실적·차주 계획·이슈로 정리한 팀 주간보고(HWP) 작성. 팀원 주간보고를 취합해 달라, 이번 주 팀 주간보고를 써 달라, 지난주와 달라진 이슈만 뽑아 달라고 할 때 쓴다.',
+        summary:
+          '메일로 받은 팀원 주간보고를 모아 금주 실적·차주 계획·이슈로 정리한 팀 주간보고(HWP) 작성.',
+        triggers: ['주간보고'],
+      },
+      {
+        title: '북한 정세 주간 브리핑',
+        description:
+          '북한 정세 주간 브리핑: 공개 매체 모니터링 자료와 북한 동향 DB를 모아 분야별 주간 정세 브리핑(HWP) 작성. 이번 주 북한 정세 브리핑을 만들어 달라, 분야별 주간 동향을 정리해 달라, 주간 정세 브리핑 양식으로 써 달라고 할 때 쓴다.',
+        summary: '공개 매체 모니터링 자료와 북한 동향 DB를 모아 분야별 주간 정세 브리핑(HWP) 작성.',
+        triggers: ['정세 브리핑', '주간 정세', '동향 브리핑'],
+      },
+    ];
+
+    for (const { title, description, summary, triggers } of descriptions) {
+      const { unmount } = render(
+        <SkillDetailContent
+          skill={{
+            ...weekly,
+            displayTitle: title,
+            description,
+            marketProfile: { ...weekly.marketProfile, triggers },
+          }}
+          allSkills={ALL_SKILLS}
+          onSelectSkill={jest.fn()}
+        />,
+      );
+
+      expect(screen.getByText(summary, { selector: 'p' })).toBeInTheDocument();
+      expect(screen.queryByText(/할 때 쓴다\./)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it('matches the detail window close button size', () => {
     renderDetail();
 
