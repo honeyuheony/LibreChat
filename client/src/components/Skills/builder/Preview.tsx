@@ -403,7 +403,7 @@ export default function Preview({
   const empty = state.text.trim().length === 0;
   const clickLabel = localize('com_skills_builder_click_to_edit');
   const done = () => setEditing(null);
-  const showFields = FIELD_OUTPUTS.has(values.output) && !empty;
+  const showFields = FIELD_OUTPUTS.has(values.output);
   const displayFields =
     showFields && values.fields.length === 0
       ? [localize('com_skills_builder_fields_label' as TranslationKeys)]

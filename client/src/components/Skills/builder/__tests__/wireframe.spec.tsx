@@ -315,12 +315,15 @@ describe('Builder laid out like the wireframe editor', () => {
     }
   });
 
-  it('shows only the AI-set badge and the report label for the output while empty', () => {
+  it('shows the empty report field preview while the input is blank', () => {
     render(<Harness />);
     const output = block('com_skills_builder_output') as HTMLElement;
     expect(within(output).getByText('com_skills_builder_source_ai')).toBeVisible();
     expect(within(output).getByText('com_skills_builder_output_report')).toBeVisible();
-    expect(within(output).queryByRole('table')).not.toBeInTheDocument();
+    expect(within(output).getByRole('table')).toBeVisible();
+    const [heading] = within(output).getAllByRole('columnheader');
+    expect(heading).toHaveTextContent('com_skills_builder_fields_label');
+    expect(within(output).getByText('…', { selector: 'td' })).toBeVisible();
   });
 
   it('highlights the preview block that the focused input fills', () => {
