@@ -1,3 +1,6 @@
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const request = require('supertest');
 const mongoose = require('mongoose');
@@ -374,5 +377,116 @@ describe('skill pack routes', () => {
     currentTestUser = testUsers.owner;
     await request(app).delete(`/api/skill-packs/${created.body._id}`).expect(200);
     expect(await SkillPack.findById(created.body._id)).toBeNull();
+  });
+});
+
+describe('skill pack routes with a public ACL entry on a team deployment skill', () => {
+  let root;
+  let teamDeploymentId;
+
+  beforeAll(async () => {
+    const { initializeDeploymentSkills, getDeploymentSkillRegistry } = require('@librechat/api');
+    root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'skill-packs-deployment-'));
+    const skillDir = path.join(root, 'skill', 'center-rollup');
+    await fs.promises.mkdir(skillDir, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(skillDir, 'SKILL.md'),
+      [
+        '---',
+        'name: center-rollup',
+        'description: Rolls up the education center weekly figures for the team.',
+        'metadata:',
+        '  department: "교육센터"',
+        '  scope: 팀',
+        '---',
+        '',
+        '# center-rollup',
+      ].join('\n'),
+    );
+    await initializeDeploymentSkills({ projectRoot: root, env: {} });
+    teamDeploymentId = getDeploymentSkillRegistry().list()[0]._id;
+  });
+
+  afterAll(async () => {
+    const { initializeDeploymentSkills } = require('@librechat/api');
+    await initializeDeploymentSkills({ projectRoot: path.join(root, 'empty'), env: {} });
+    await fs.promises.rm(root, { recursive: true, force: true });
+  });
+
+  beforeEach(async () => {
+    await grantPermission({
+      principalType: PrincipalType.PUBLIC,
+      principalId: null,
+      resourceType: ResourceType.SKILL,
+      resourceId: teamDeploymentId,
+      accessRoleId: AccessRoleIds.SKILL_VIEWER,
+      grantedBy: testUsers.owner._id,
+    });
+  });
+
+  async function insertPackWithTeamSkill() {
+    const publicSkill = await createSkill({
+      name: 'pack-public-skill',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const packId = new mongoose.Types.ObjectId();
+    await SkillPack.collection.insertOne({
+      _id: packId,
+      name: 'Center Pack',
+      slug: 'center-pack',
+      description: 'Skills for the center.',
+      skillIds: [publicSkill._id, teamDeploymentId],
+      author: testUsers.owner._id,
+      authorName: testUsers.owner.name,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    return { packId, publicSkill };
+  }
+
+  it('rejects a pack that contains the team deployment skill', async () => {
+    const publicSkill = await createSkill({
+      name: 'pack-public-skill',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const response = await createPack([publicSkill, { _id: teamDeploymentId }]);
+
+    expect(response.status).toBe(400);
+    expect(await SkillPack.countDocuments({})).toBe(0);
+  });
+
+  it('hides the team deployment skill from another department when listing packs', async () => {
+    const { publicSkill } = await insertPackWithTeamSkill();
+    currentTestUser = testUsers.reader;
+    currentUserOverrides = { department: '통일교육팀' };
+
+    const response = await request(app).get('/api/skill-packs').expect(200);
+
+    expect(response.body[0].skillIds).toEqual([publicSkill._id.toString()]);
+  });
+
+  it('hides the team deployment skill from another department when reading a pack', async () => {
+    const { packId, publicSkill } = await insertPackWithTeamSkill();
+    currentTestUser = testUsers.reader;
+    currentUserOverrides = { department: '통일교육팀' };
+
+    const response = await request(app).get(`/api/skill-packs/${packId}`).expect(200);
+
+    expect(response.body.skillIds).toEqual([publicSkill._id.toString()]);
+  });
+
+  it('shows the team deployment skill to the authoring department', async () => {
+    const { packId, publicSkill } = await insertPackWithTeamSkill();
+    currentTestUser = testUsers.reader;
+    currentUserOverrides = { department: '교육센터' };
+
+    const response = await request(app).get(`/api/skill-packs/${packId}`).expect(200);
+
+    expect(response.body.skillIds).toEqual([
+      publicSkill._id.toString(),
+      teamDeploymentId.toString(),
+    ]);
   });
 });

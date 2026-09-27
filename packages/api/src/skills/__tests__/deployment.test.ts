@@ -14,6 +14,8 @@ import {
   mergeDeploymentSkillIds,
   resolveDeploymentSkillDirectory,
   findDeploymentTeamDepartments,
+  isDeploymentSkillIdVisibleTo,
+  dropHiddenDeploymentSkillIds,
 } from '../deployment';
 
 const DESCRIPTION = 'Use this skill when the deployment needs a shared testing fixture.';
@@ -815,6 +817,38 @@ describe('department-scoped deployment skill ids', () => {
     const merged = ids(mergeDeploymentSkillIds([]));
     expect(merged).toContain(allId);
     expect(merged).not.toContain(teamId);
+  });
+
+  it('drops a team deployment skill id that arrives with the accessible ids', async () => {
+    const { teamId, allId } = await loadScopedSkills();
+    expect(ids(mergeDeploymentSkillIds([teamId], { department: '통일교육팀' }))).toEqual([allId]);
+    expect(ids(mergeDeploymentSkillIds([teamId]))).toEqual([allId]);
+    expect(ids(mergeDeploymentSkillIds([teamId], { department: '교육센터' }))).toEqual(
+      expect.arrayContaining([teamId, allId]),
+    );
+  });
+
+  it('tells whether an id is a deployment skill the user can see', async () => {
+    const { teamId, allId } = await loadScopedSkills();
+    expect(isDeploymentSkillIdVisibleTo(teamId)).toBe(false);
+    expect(isDeploymentSkillIdVisibleTo(teamId, { department: '교육센터' })).toBe(true);
+    expect(isDeploymentSkillIdVisibleTo(allId)).toBe(true);
+    expect(isDeploymentSkillIdVisibleTo(new Types.ObjectId())).toBeUndefined();
+  });
+
+  it('drops only the hidden deployment skill ids from ACL ids without adding others', async () => {
+    const { teamId } = await loadScopedSkills();
+    const dbId = new Types.ObjectId();
+    expect(ids(dropHiddenDeploymentSkillIds([dbId, new Types.ObjectId(teamId)]))).toEqual([
+      dbId.toString(),
+    ]);
+    expect(
+      ids(
+        dropHiddenDeploymentSkillIds([dbId, new Types.ObjectId(teamId)], {
+          department: '교육센터',
+        }),
+      ),
+    ).toEqual([dbId.toString(), teamId]);
   });
 
   it('reports the authoring department of team deployment skills only', async () => {
