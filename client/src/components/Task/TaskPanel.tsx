@@ -17,6 +17,7 @@ import { useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { ephemeralAgentByConvoId } from '~/store/agents';
+import { shortResultTitle } from '~/utils/results';
 import { mcpValuesAtomFamily } from '~/store/mcp';
 import { taskPanelState } from '~/store/task';
 import { isEphemeralAgent } from '~/common';
@@ -222,7 +223,13 @@ function OutputsSection({
                     {icon.label ?? localize('com_ui_task_icon_table')}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <b className="block truncate font-semibold text-text-primary">{output.title}</b>
+                    <b className="block truncate font-semibold text-text-primary">
+                      {shortResultTitle({
+                        kind: output.kind,
+                        title: output.title,
+                        rows: output.stats?.docs,
+                      })}
+                    </b>
                     <OutputMeta output={output} />
                   </span>
                   <span className="text-xs text-text-muted">{localize('com_ui_task_open')} ›</span>
