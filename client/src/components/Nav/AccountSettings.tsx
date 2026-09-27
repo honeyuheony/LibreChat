@@ -1,13 +1,19 @@
 import { useState, memo, useRef } from 'react';
+import { X } from 'lucide-react';
 import * as Menu from '@ariakit/react/menu';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Permissions, PermissionTypes, SystemRoles } from 'librechat-data-provider';
 import {
   Avatar,
+  Button,
   DropdownMenuSeparator,
   OGDialog,
-  OGDialogTemplate,
+  OGDialogClose,
+  OGDialogContent,
+  OGDialogDescription,
+  OGDialogTitle,
+  Spinner,
   useToastContext,
 } from '@librechat/client';
 import type { TFile } from 'librechat-data-provider';
@@ -39,6 +45,8 @@ const GLYPHS = {
 
 const itemClassName =
   'flex w-full cursor-pointer items-center gap-2.5 rounded-theme-control px-2.5 py-2 text-left text-[14.5px] text-text-secondary outline-none hover:bg-surface-hover data-[active-item]:bg-surface-hover';
+const RESET_CONFIRMATION_OVERLAY_CLASS =
+  'bg-black/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
 
 function formatUsedSize(bytes: number): string {
   const units = ['KB', 'MB', 'GB'];
@@ -110,6 +118,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const [showFiles, setShowFiles] = useState(false);
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
+  const resetDemoButtonRef = useRef<HTMLButtonElement>(null);
   const displayName = user?.name || user?.username || localize('com_nav_user');
   const hasAvatarImage = user?.avatar != null && user.avatar !== '';
   const switchTarget = switchUserData?.target;
@@ -219,17 +228,58 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         </Menu.MenuItem>
       </Menu.Menu>
       <OGDialog open={showResetConfirmation} onOpenChange={setShowResetConfirmation}>
-        <OGDialogTemplate
-          title={localize('com_ui_demo_reset_title')}
-          description={localize('com_ui_demo_reset_confirmation')}
-          selection={{
-            selectHandler: () => resetDemoMutation.mutate(),
-            selectClasses:
-              'bg-surface-destructive hover:bg-surface-destructive-hover text-text-on-status transition-colors duration-200',
-            selectText: localize('com_ui_demo_reset_action'),
-            isLoading: resetDemoMutation.isLoading,
+        <OGDialogContent
+          showCloseButton={false}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            resetDemoButtonRef.current?.focus();
           }}
-        />
+          overlayClassName={RESET_CONFIRMATION_OVERLAY_CLASS}
+          className="w-11/12 max-w-[450px] gap-0 overflow-hidden p-0"
+        >
+          <header className="relative border-b border-border-light px-4 py-3 pr-12 text-left">
+            <OGDialogTitle className="text-base font-semibold leading-5">
+              {localize('com_ui_demo_reset_title')}
+            </OGDialogTitle>
+            <OGDialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={localize('com_ui_close')}
+                className="absolute right-3 top-2.5"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </Button>
+            </OGDialogClose>
+          </header>
+          <OGDialogDescription className="border-b border-border-light px-4 py-3 text-left">
+            {localize('com_ui_demo_reset_confirmation')}
+          </OGDialogDescription>
+          <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-4 py-3">
+            <OGDialogClose asChild>
+              <Button type="button" variant="outline">
+                {localize('com_ui_cancel')}
+              </Button>
+            </OGDialogClose>
+            <OGDialogClose asChild>
+              <Button
+                ref={resetDemoButtonRef}
+                type="button"
+                variant="destructive"
+                disabled={resetDemoMutation.isLoading}
+                onClick={() => resetDemoMutation.mutate()}
+                className="focus-visible:ring-ring-primary"
+              >
+                {resetDemoMutation.isLoading ? (
+                  <Spinner className="size-4 text-text-primary" />
+                ) : (
+                  localize('com_ui_demo_reset_action')
+                )}
+              </Button>
+            </OGDialogClose>
+          </footer>
+        </OGDialogContent>
       </OGDialog>
       {showFiles && (
         <MyFilesModal

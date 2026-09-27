@@ -235,6 +235,24 @@ describe('account menu', () => {
     );
   });
 
+  it('matches the compact reset-confirmation dialog layout and focus', () => {
+    renderAccountMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /com_ui_demo_reset/ }));
+
+    const dialog = screen.getByRole('dialog');
+    const resetButton = screen.getByRole('button', { name: 'com_ui_demo_reset_action' });
+    const overlay = document.querySelector('[class*="backdrop-blur"]');
+
+    expect(dialog).toHaveClass('w-11/12', 'max-w-[450px]');
+    expect(dialog.children[0]).toHaveClass('border-b', 'border-border-light');
+    expect(dialog.children[1]).toHaveClass('border-b', 'border-border-light');
+    expect(dialog.children[2]).toHaveClass('bg-surface-secondary');
+    expect(screen.getByRole('button', { name: 'com_ui_close' })).toBeInTheDocument();
+    expect(overlay).toHaveClass('backdrop-blur-[6px]');
+    expect(resetButton).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-ring-primary');
+    expect(resetButton).toHaveFocus();
+  });
+
   it('does not request demo reset when the confirmation is cancelled', () => {
     renderAccountMenu();
     fireEvent.click(screen.getByRole('menuitem', { name: /com_ui_demo_reset/ }));
