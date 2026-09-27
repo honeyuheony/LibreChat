@@ -8,6 +8,7 @@ import { DRAFT_DEBOUNCE_MS } from '../useDraft';
 const mockUseGetSkillQuery = jest.fn();
 const mockUseTaskResultQuery = jest.fn();
 const mockRequestDraft = jest.fn();
+const mockUseSkillsInfiniteQuery = jest.fn();
 
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
@@ -40,6 +41,8 @@ jest.mock('~/data-provider', () => {
     useGetSkillQuery: (id: string, config?: { enabled?: boolean }) =>
       mockUseGetSkillQuery(id, config),
     useGetStartupConfig: () => ({ data: undefined }),
+    useSkillsInfiniteQuery: (params: unknown, config?: { enabled?: boolean }) =>
+      mockUseSkillsInfiniteQuery(params, config),
     useCreateSkillMutation: mutation,
     useUpdateSkillMutation: mutation,
     usePublishSkillMutation: mutation,
@@ -138,6 +141,8 @@ describe('Editor', () => {
     mockUseTaskResultQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
     mockRequestDraft.mockReset();
     mockRequestDraft.mockResolvedValue(modelDraft);
+    mockUseSkillsInfiniteQuery.mockReset();
+    mockUseSkillsInfiniteQuery.mockReturnValue({ data: undefined, isLoading: false });
   });
 
   it('opens the adapt editor filled with the original named in forkOf', () => {
@@ -189,6 +194,46 @@ describe('Editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_connectors_more' }));
     expect(screen.getAllByRole('switch').map((item) => item.closest('label')?.textContent)).toEqual(
       ['confluence', 'jira'],
+    );
+  });
+
+  it('loads the text of the top examples only once the list is opened, then copies one', () => {
+    const summaries = [
+      {
+        ...original,
+        _id: 'peer-a',
+        displayTitle: '회의록 정리',
+        category: '정리·분석',
+        useCount: 90,
+      },
+      { ...original, _id: 'peer-b', displayTitle: '출장보고', category: '문서작성', useCount: 5 },
+      { ...original, _id: 'peer-c', displayTitle: '보도자료', category: '문서작성', useCount: 40 },
+      { ...original, _id: 'peer-d', displayTitle: '용어 번역', category: '번역·교정', useCount: 1 },
+    ];
+    mockUseSkillsInfiniteQuery.mockReturnValue({
+      data: { pages: [{ skills: summaries }] },
+      isLoading: false,
+    });
+    mockUseGetSkillQuery.mockImplementation((id: string | null) => ({
+      data: id ? summaries.find((skill) => skill._id === id) : undefined,
+      isLoading: false,
+      isError: false,
+    }));
+    renderAt('/skills/new');
+    expect(mockUseGetSkillQuery.mock.calls.every(([id]) => id == null)).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    const loaded = new Set(mockUseGetSkillQuery.mock.calls.map(([id]) => id).filter(Boolean));
+    expect(loaded).toEqual(new Set(['peer-c', 'peer-b', 'peer-a']));
+    expect(
+      within(screen.getByRole('list', { name: 'com_skills_builder_peek' }))
+        .getAllByRole('listitem')
+        .map((item) => item.querySelector('b')?.textContent),
+    ).toEqual(['보도자료', '출장보고', '회의록 정리']);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'com_skills_builder_peek_copy' })[0]);
+    expect(screen.getByLabelText('com_skills_builder_how')).toHaveValue(
+      '금주 실적과 차주 계획을 나눈다.',
     );
   });
 

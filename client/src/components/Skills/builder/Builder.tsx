@@ -2,18 +2,24 @@ import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   Button,
+  Spinner,
   OGDialog,
   OGDialogTitle,
   OGDialogContent,
+  useToastContext,
   OGDialogDescription,
 } from '@librechat/client';
 import type { BuilderSession } from './useSession';
 import type { TranslationKeys } from '~/hooks';
 import type { PreviewBlock } from './Preview';
 import type { BuilderFile } from './state';
+import type { PeerExample } from './peers';
+import { getSkillTitle } from '~/components/Skills/Marketplace/skillCategories';
+import { byLine } from '~/components/Skills/Marketplace/SkillMeta';
+import SkillIcon from '~/components/Skills/Marketplace/SkillIcon';
+import { SOURCE_ME, pluginFiles, splitSentences } from './state';
 import SourceTag, { ChangedMark } from './SourceTag';
 import Preview, { PreviewHead } from './Preview';
-import { SOURCE_ME, pluginFiles } from './state';
 import TrialPanel from './TrialPanel';
 import { useLocalize } from '~/hooks';
 import Folder from './Folder';
@@ -27,11 +33,21 @@ type BuilderProps = {
   /** 사용자가 쓸 수 있는 MCP 서버 이름. 「읽는 자료」에서 펼쳐 켤 수 있다. */
   connectorChoices?: string[];
   fromChat?: boolean;
+  /** 「다른 사람이 쓴 예 보기」 목록. 읽는 중이면 undefined 다. */
+  peers?: PeerExample[];
+  onPeek?: (open: boolean) => void;
   /** 응용 편집이면 원본 이름. */
   forkTitle?: string;
   onCancel: () => void;
   onPublish: () => void;
 };
+
+/**
+ * 와이어프레임 v29 `.ov`(946·986행): 옅은 막 rgba(23,21,43,.42)과 blur(6px), 투명도 줄이기 설정이면 흐림 없이 .6.
+ * 공용 배경막(bg-black/80)에 막 색 역할이 없어 여기서만 덮어쓴다.
+ */
+const OVERLAY_CLASS =
+  'bg-black/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
 
 function draftStatusKey(draft: BuilderSession['draft']): TranslationKeys | null {
   if (draft.pending) {
@@ -135,21 +151,75 @@ function AttachRow({ files }: { files: BuilderFile[] }) {
   );
 }
 
-/** 「다른 사람이 쓴 예 보기」: 마켓의 응용하기로 남의 글에서 시작하는 방법을 알려 준다. */
-function PeekRow() {
+type PeekRowProps = {
+  /** 읽는 중이면 undefined 다. */
+  peers?: PeerExample[];
+  onPeek?: (open: boolean) => void;
+  onCopy: (peer: PeerExample) => void;
+};
+
+/** 「다른 사람이 쓴 예 보기」: 남의 agent 세 개와 그 글을 펼치고, 「이 글 가져오기」로 글칸에 넣는다. */
+function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
   const localize = useLocalize();
   const [open, setOpen] = useState(false);
+  const toggle = (next: boolean) => {
+    setOpen(next);
+    onPeek?.(next);
+  };
   return (
     <>
       <div>
-        <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => toggle(!open)}>
           {localize(open ? 'com_skills_builder_peek_close' : 'com_skills_builder_peek')}
         </Button>
       </div>
       {open && (
-        <p className="rounded-lg border border-border-light bg-surface-secondary px-3 py-2.5 text-sm text-text-secondary">
-          {localize('com_skills_builder_peek_hint')}
-        </p>
+        <div className="flex flex-col gap-2.5 rounded-lg border border-border-light bg-surface-secondary p-2.5">
+          {peers == null && (
+            <Spinner
+              className="mx-auto text-text-secondary"
+              aria-label={localize('com_ui_loading')}
+            />
+          )}
+          {peers?.length === 0 && (
+            <p className="text-sm text-text-secondary">
+              {localize('com_skills_builder_peek_empty' as TranslationKeys)}
+            </p>
+          )}
+          {peers != null && peers.length > 0 && (
+            <ul aria-label={localize('com_skills_builder_peek')} className="flex flex-col gap-2.5">
+              {peers.map((peer) => (
+                <li
+                  key={peer.skill._id}
+                  className="rounded-lg border border-border-light bg-surface-primary p-2.5"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <SkillIcon skill={peer.skill} />
+                    <div className="min-w-0 flex-1">
+                      <b className="text-text-primary">{getSkillTitle(peer.skill)}</b>
+                      <div className="text-xs text-text-secondary">
+                        {byLine(peer.skill, localize, { withRuns: true })}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        toggle(false);
+                        onCopy(peer);
+                      }}
+                    >
+                      {localize('com_skills_builder_peek_copy' as TranslationKeys)}
+                    </Button>
+                  </div>
+                  <pre className="mt-2 whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-text-secondary">
+                    {peer.text}
+                  </pre>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </>
   );
@@ -162,11 +232,14 @@ export default function Builder({
   department,
   connectorChoices,
   fromChat,
+  peers,
+  onPeek,
   forkTitle,
   onCancel,
   onPublish,
 }: BuilderProps) {
   const localize = useLocalize();
+  const { showToast } = useToastContext();
   const { state } = session;
   const [selectedFile, setSelectedFile] = useState('');
   const [raw, setRaw] = useState(false);
@@ -180,11 +253,24 @@ export default function Builder({
   const textChanged = session.changed.has('text');
   const draftStatus = draftStatusKey(session.draft);
   const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
+  const copyPeer = ({ skill, text }: PeerExample) => {
+    const name = getSkillTitle(skill);
+    session.copyText(
+      splitSentences(text).join('\n'),
+      localize('com_skills_builder_source_copied' as TranslationKeys, { name }),
+    );
+    setActiveBlock('how');
+    showToast({
+      status: 'success',
+      message: localize('com_skills_builder_peek_copied' as TranslationKeys, { name }),
+    });
+  };
 
   return (
     <OGDialog open onOpenChange={(open) => !open && onCancel()}>
       <OGDialogContent
         showCloseButton={false}
+        overlayClassName={OVERLAY_CLASS}
         className="flex w-[1180px] max-w-[97vw] flex-col gap-0 overflow-hidden rounded-[22px] bg-presentation p-0"
       >
         <header className="flex items-center gap-3 border-b border-border-light px-5 py-3">
@@ -247,7 +333,7 @@ export default function Builder({
                 {draftStatus ? localize(draftStatus) : ''}
               </p>
               <AttachRow files={state.files} />
-              <PeekRow />
+              <PeekRow peers={peers} onPeek={onPeek} onCopy={copyPeer} />
             </section>
           </div>
 

@@ -128,6 +128,11 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
   const prompt = starterPrompt(state.values) || firstSentence(state.text);
 
   const setText = useCallback((text: string) => setState((prev) => ({ ...prev, text })), []);
+  /** 남의 글을 가져오면 직접 모드로 바꾸고 출처를 `by` 로 둔다. */
+  const copyText = useCallback(
+    (text: string, by: string) => setState((prev) => ({ ...prev, text, direct: true, textBy: by })),
+    [],
+  );
   const edit = useCallback(
     <K extends BuilderField>(field: K, value: BuilderValues[K]) =>
       setState((prev) => editField(prev, field, value)),
@@ -286,6 +291,7 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
     publishing,
     draft,
     setText,
+    copyText,
     edit,
     stepOff,
     stepsRestore,
