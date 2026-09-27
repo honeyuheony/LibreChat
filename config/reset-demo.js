@@ -4,10 +4,12 @@
  */
 const path = require('path');
 const mongoose = require('mongoose');
+const { MeiliSearch } = require('meilisearch');
+const { createDemoSearchIndex } = require('@librechat/api');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { processDeleteRequest } = require('~/server/services/Files/process');
-const { File } = require('~/db/models');
+const { File, Conversation, Message } = require('~/db/models');
 const { getAppConfig } = require('~/server/services/Config');
 const { parseCliArgs, createDemoData } = require('./demo-data');
 const { createResetDemoFileDeleter } = require('./reset-demo-files');
@@ -41,6 +43,12 @@ const connect = require('./connect');
     dryRun,
     protectedEmails,
     deleteFiles,
+    searchIndex: createDemoSearchIndex({
+      env: process.env,
+      createClient: (config) => new MeiliSearch(config),
+      models: { Conversation, Message },
+      runAsSystem,
+    }),
     warn: (message) => console.yellow(message),
   });
   rows.forEach(({ email, collection, deleted, replaced, created }) =>

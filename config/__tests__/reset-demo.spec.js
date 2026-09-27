@@ -14,6 +14,7 @@ const {
   parseEmails,
   createDemoData,
 } = require('../demo-data');
+const { createDemoSearchIndex } = require('@librechat/api');
 const { createResetDemoFileDeleter } = require('../reset-demo-files');
 
 logger.silent = true;
@@ -104,6 +105,8 @@ function makeConvo(userId, conversationId, title) {
     endpoint: 'agents',
     createdAt: new Date('2026-09-02T00:00:00Z'),
     updatedAt: new Date('2026-09-02T00:00:00Z'),
+    _meiliIndex: true,
+    _meiliIndexSchemaVersion: 1,
   };
 }
 
@@ -116,6 +119,8 @@ function makeMessage(userId, conversationId, messageId, text) {
     text,
     isCreatedByUser: true,
     createdAt: new Date('2026-09-02T00:00:00Z'),
+    _meiliIndex: true,
+    _meiliIndexSchemaVersion: 1,
   };
 }
 
@@ -514,5 +519,188 @@ describe('resetDemo', () => {
     const files = await col('File').find({ user: ids.lee }).sort({ file_id: 1 }).toArray();
     expect(files.map((f) => f.file_id)).toEqual(['lee-file-1', 'lee-file-2']);
     expect(warnings.join('\n')).toContain('lee-file-2');
+  });
+});
+
+describe('resetDemo search index', () => {
+  const PROTECTED_KEY = /^(admin|demo)-/;
+
+  const fakeSearchIndex = () => ({
+    remove: jest.fn(async () => undefined),
+    add: jest.fn(async () => undefined),
+  });
+
+  const run = (options = {}) =>
+    demoData.resetDemo({
+      dir: baselineDir,
+      emails: [LEE, ADMIN, DEMO],
+      includeShared: false,
+      dryRun: false,
+      deleteFiles,
+      warn,
+      ...options,
+    });
+
+  const callsFor = (mock, model) =>
+    mock.mock.calls.filter(([name]) => name === model).map(([, value]) => value);
+
+  it('F6-1 removes deleted and restored ids, then re-adds the restored documents', async () => {
+    const searchIndex = fakeSearchIndex();
+    await run({ searchIndex });
+
+    const removedConvos = callsFor(searchIndex.remove, 'Conversation').flat();
+    const removedMessages = callsFor(searchIndex.remove, 'Message').flat();
+    expect(removedConvos.sort()).toEqual(['lee-convo-1', 'lee-convo-2']);
+    expect(removedMessages.sort()).toEqual(['lee-msg-1', 'lee-msg-2']);
+
+    const addedConvos = callsFor(searchIndex.add, 'Conversation').flat();
+    const addedMessages = callsFor(searchIndex.add, 'Message').flat();
+    expect(addedConvos.map((doc) => doc.conversationId)).toEqual(['lee-convo-1']);
+    expect(addedConvos[0].title).toBe('시나리오 대화');
+    expect(addedMessages.map((doc) => doc.messageId)).toEqual(['lee-msg-1']);
+
+    searchIndex.add.mock.calls.forEach(([model], i) => {
+      const removeAt = searchIndex.remove.mock.calls.findIndex(([name]) => name === model);
+      expect(searchIndex.remove.mock.invocationCallOrder[removeAt]).toBeLessThan(
+        searchIndex.add.mock.invocationCallOrder[i],
+      );
+    });
+  });
+
+  it('F6-1 never sends protected account documents to the search index', async () => {
+    const searchIndex = fakeSearchIndex();
+    await run({ searchIndex });
+
+    const removed = searchIndex.remove.mock.calls.flatMap(([, keys]) => keys);
+    const added = searchIndex.add.mock.calls.flatMap(([, docs]) => docs);
+    expect(removed.length).toBeGreaterThan(0);
+    expect(removed.filter((key) => PROTECTED_KEY.test(key))).toEqual([]);
+    expect(added.map((doc) => String(doc.user))).toEqual(
+      expect.not.arrayContaining([String(ids.admin), String(ids.demo)]),
+    );
+    const protectedConvo = await col('Conversation').findOne({ conversationId: 'admin-convo-1' });
+    expect(protectedConvo._meiliIndex).toBe(true);
+  });
+
+  it('F6-1 leaves restored documents marked unindexed so a later sync picks them up', async () => {
+    await run();
+    const convo = await col('Conversation').findOne({ conversationId: 'lee-convo-1' });
+    const message = await col('Message').findOne({ messageId: 'lee-msg-1' });
+    for (const doc of [convo, message]) {
+      expect(doc._meiliIndex).toBe(false);
+      expect(doc).not.toHaveProperty('_meiliIndexSchemaVersion');
+      expect(doc).not.toHaveProperty('_meiliIndexAttempted');
+      expect(doc).not.toHaveProperty('_meiliIndexVersion');
+    }
+  });
+
+  it('does not touch the search index on a dry run', async () => {
+    const searchIndex = fakeSearchIndex();
+    await run({ searchIndex, dryRun: true });
+    expect(searchIndex.remove).not.toHaveBeenCalled();
+    expect(searchIndex.add).not.toHaveBeenCalled();
+  });
+
+  it('finishes the reset and warns when the search index fails', async () => {
+    const searchIndex = fakeSearchIndex();
+    searchIndex.remove.mockRejectedValue(new Error('meili down'));
+    await run({ searchIndex });
+
+    const convos = await col('Conversation')
+      .find({ user: String(ids.lee) })
+      .toArray();
+    expect(convos.map((c) => c.conversationId)).toEqual(['lee-convo-1']);
+    expect(warnings.join('\n')).toContain('meili down');
+    expect(searchIndex.add).not.toHaveBeenCalled();
+  });
+});
+
+describe('createDemoSearchIndex', () => {
+  const env = { SEARCH: 'true', MEILI_HOST: 'http://meili:7700', MEILI_MASTER_KEY: 'key' };
+
+  const fakeClient = (status = 'succeeded') => {
+    const indexes = new Map();
+    const index = (uid) => {
+      if (!indexes.has(uid)) {
+        indexes.set(uid, { uid, deleteDocuments: jest.fn(async () => ({ taskUid: 7 })) });
+      }
+      return indexes.get(uid);
+    };
+    return { index: jest.fn(index), waitForTask: jest.fn(async () => ({ status })), indexes };
+  };
+
+  const fakeModels = () => ({
+    Conversation: { processSyncBatch: jest.fn(async () => undefined) },
+    Message: { processSyncBatch: jest.fn(async () => undefined) },
+  });
+
+  const build = (overrides = {}) => {
+    const client = fakeClient(overrides.status);
+    const models = fakeModels();
+    const createClient = jest.fn(() => client);
+    const searchIndex = createDemoSearchIndex({
+      env,
+      createClient,
+      models,
+      runAsSystem: (action) => action(),
+      ...overrides,
+    });
+    return { client, models, createClient, searchIndex };
+  };
+
+  it.each([
+    ['search is off', { ...env, SEARCH: 'false' }],
+    ['the host is missing', { ...env, MEILI_HOST: undefined }],
+    ['the key is missing', { ...env, MEILI_MASTER_KEY: undefined }],
+  ])('is undefined when %s', (_label, disabledEnv) => {
+    const { searchIndex, createClient } = build({ env: disabledEnv });
+    expect(searchIndex).toBeUndefined();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it('deletes ids from the matching index and waits for Meilisearch', async () => {
+    const { searchIndex, client, createClient } = build();
+    await searchIndex.remove('Conversation', ['c1', 'c2']);
+    await searchIndex.remove('Message', []);
+
+    expect(createClient).toHaveBeenCalledWith({
+      host: env.MEILI_HOST,
+      apiKey: env.MEILI_MASTER_KEY,
+    });
+    expect(client.indexes.get('convos').deleteDocuments).toHaveBeenCalledWith(['c1', 'c2']);
+    expect(client.indexes.has('messages')).toBe(false);
+    expect(client.waitForTask).toHaveBeenCalledWith(7, expect.any(Object));
+  });
+
+  it('throws when Meilisearch does not finish the deletion', async () => {
+    const { searchIndex } = build({ status: 'failed' });
+    await expect(searchIndex.remove('Message', ['m1'])).rejects.toThrow('failed');
+  });
+
+  it('adds only documents the plugin would index', async () => {
+    const { searchIndex, models, client } = build();
+    const future = new Date(Date.now() + 60_000);
+    const docs = [
+      { conversationId: 'plain' },
+      { conversationId: 'kept', isTemporary: false, expiredAt: future },
+      { conversationId: 'temporary', isTemporary: true, expiredAt: future },
+      { conversationId: 'legacy-expiring', expiredAt: future },
+      { conversationId: 'expired', isTemporary: false, expiredAt: new Date(0) },
+      { conversationId: 'subagent', subagentThread: { parentConversationId: 'plain' } },
+    ];
+    await searchIndex.add('Conversation', docs);
+    await searchIndex.add('Message', [{ messageId: 'task', subagentTask: { id: 't' } }]);
+
+    const [index, added] = models.Conversation.processSyncBatch.mock.calls[0];
+    expect(index).toBe(client.indexes.get('convos'));
+    expect(added.map((doc) => doc.conversationId)).toEqual(['plain', 'kept']);
+    expect(models.Message.processSyncBatch).not.toHaveBeenCalled();
+  });
+
+  it('throws when the search plugin is not registered on the model', async () => {
+    const { searchIndex } = build({ models: { Conversation: {}, Message: {} } });
+    await expect(searchIndex.add('Conversation', [{ conversationId: 'c' }])).rejects.toThrow(
+      'Conversation',
+    );
   });
 });

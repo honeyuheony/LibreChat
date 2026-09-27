@@ -28,6 +28,19 @@ jest.mock('~/server/middleware', () => ({
   checkBan: jest.requireActual('~/server/middleware/checkBan'),
 }));
 
+const mockMeiliIndexes = new Map();
+jest.mock('meilisearch', () => ({
+  MeiliSearch: jest.fn().mockImplementation(() => ({
+    index: (uid) => {
+      if (!mockMeiliIndexes.has(uid)) {
+        mockMeiliIndexes.set(uid, { deleteDocuments: jest.fn(async () => ({ taskUid: 1 })) });
+      }
+      return mockMeiliIndexes.get(uid);
+    },
+    waitForTask: async () => ({ status: 'succeeded' }),
+  })),
+}));
+
 const SWITCH_ORIGIN_COOKIE = 'demo_switch_origin';
 
 let app;
@@ -648,6 +661,43 @@ describe('demo reset route', () => {
 
     const after = await resetAs(hong);
     expect(after.status).toBe(200);
+  });
+
+  describe('with search on', () => {
+    const searchEnv = { SEARCH: 'true', MEILI_HOST: 'http://meili:7700', MEILI_MASTER_KEY: 'k' };
+
+    beforeEach(() => {
+      Object.assign(process.env, searchEnv);
+      mockMeiliIndexes.clear();
+    });
+
+    afterEach(() => {
+      Object.keys(searchEnv).forEach((key) => delete process.env[key]);
+    });
+
+    test('removes the reset account conversations from the search index only', async () => {
+      await raw('conversations').insertOne(makeConvo(lee, 'lee-convo-2', '이협력 새 대화'));
+
+      const response = await resetAs(hong);
+
+      expect(response.status).toBe(200);
+      const removed = mockMeiliIndexes.get('convos').deleteDocuments.mock.calls.flat(2);
+      expect(removed.sort()).toEqual(['lee-convo-1', 'lee-convo-2']);
+      const restored = await raw('conversations').findOne({ conversationId: 'lee-convo-1' });
+      expect(restored._meiliIndex).toBe(false);
+    });
+
+    test('leaves the search index alone when search is off', async () => {
+      delete process.env.SEARCH;
+
+      const response = await resetAs(hong);
+
+      expect(response.status).toBe(200);
+      const deletions = [...mockMeiliIndexes.values()].flatMap(
+        (index) => index.deleteDocuments.mock.calls,
+      );
+      expect(deletions).toEqual([]);
+    });
   });
 
   test('rejects a cross-site POST', async () => {

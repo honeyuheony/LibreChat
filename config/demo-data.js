@@ -13,10 +13,13 @@ const PROTECTED_EMAILS = ['admin@admin.com', 'demo@example.com'];
 /** Demo default agent (`librechat.yaml` modelSpecs), same id as `add-task-tools-to-agent.js`. */
 const DEFAULT_AGENT_ID = 'agent_mFf0h9SHTwJ6za2e8HUiv';
 
-/** Per-account collections and the field holding the owner id (String or ObjectId per schema). */
+/**
+ * Per-account collections and the field holding the owner id (String or ObjectId per schema);
+ * `searchKey` marks the Meilisearch primary key of collections the search index mirrors.
+ */
 const ACCOUNT_COLLECTIONS = [
-  { model: 'Conversation', owner: 'user' },
-  { model: 'Message', owner: 'user' },
+  { model: 'Conversation', owner: 'user', searchKey: 'conversationId' },
+  { model: 'Message', owner: 'user', searchKey: 'messageId' },
   { model: 'TaskResult', owner: 'user' },
   { model: 'TaskExtraction', owner: 'user' },
   { model: 'TaskSummary', owner: 'user' },
@@ -38,6 +41,13 @@ const USER_FIELDS = [
 ];
 
 const AGENT_FIELDS = ['instructions', 'tools'];
+
+/** mongoMeili bookkeeping copied into the baseline at export; it describes the index back then. */
+const SEARCH_STATE_FIELDS = [
+  '_meiliIndexAttempted',
+  '_meiliIndexVersion',
+  '_meiliIndexSchemaVersion',
+];
 
 const MANIFEST_FILE = 'manifest.json';
 
@@ -97,6 +107,12 @@ const ownerFilter = (owner, userId) => ({ [owner]: { $in: [userId, String(userId
 const idKey = (id) => String(id);
 
 const fileOf = (collection) => `${collection.collectionName}.json`;
+
+/** Restored documents start unindexed, so a failed index write still leaves them for the next sync. */
+const asUnindexed = (doc) => ({
+  ...Object.fromEntries(Object.entries(doc).filter(([key]) => !SEARCH_STATE_FIELDS.includes(key))),
+  _meiliIndex: false,
+});
 
 /**
  * Builds export and reset over the given mongoose connection, the way `createModels(mongoose)` does.
@@ -269,22 +285,61 @@ function createDemoData(mongoose) {
     return row;
   }
 
-  async function resetAccount({ user, profile, baseline, dryRun, deleteFiles, warn }) {
+  /**
+   * Raw writes skip the mongoMeili hooks: drop every id the account had or gets back from the
+   * index, then index the restored documents. The reset stands even if this fails.
+   */
+  async function syncSearchIndex({
+    model,
+    searchKey,
+    searchIndex,
+    currentKeys,
+    baselineDocs,
+    user,
+    warn,
+  }) {
+    const keys = [...new Set([...currentKeys, ...baselineDocs.map((doc) => doc[searchKey])])];
+    try {
+      await searchIndex.remove(model, keys);
+      await searchIndex.add(model, baselineDocs);
+    } catch (error) {
+      warn(`${user.email}: search index for ${model} not updated (${error.message}).`);
+    }
+  }
+
+  async function resetAccount({ user, profile, baseline, dryRun, deleteFiles, searchIndex, warn }) {
     const rows = [await resetUserProfile({ user, profile, dryRun })];
-    for (const { model, owner } of ACCOUNT_COLLECTIONS) {
+    for (const { model, owner, searchKey } of ACCOUNT_COLLECTIONS) {
       const collection = collectionOf(model);
-      const baselineDocs = baseline(collection).filter(
-        (doc) => idKey(doc[owner]) === idKey(user._id),
-      );
+      const filter = ownerFilter(owner, user._id);
+      const ownDocs = baseline(collection).filter((doc) => idKey(doc[owner]) === idKey(user._id));
+      const baselineDocs = searchKey ? ownDocs.map(asUnindexed) : ownDocs;
+      const trackSearch = searchKey && searchIndex && !dryRun;
+      const currentKeys = trackSearch
+        ? (await collection.find(filter, { projection: { [searchKey]: 1 } }).toArray()).map(
+            (doc) => doc[searchKey],
+          )
+        : [];
       const beforeDelete =
         model === 'File' ? fileDeleter({ collection, user, deleteFiles, warn }) : undefined;
       const counts = await syncDocuments({
         collection,
-        filter: ownerFilter(owner, user._id),
+        filter,
         baselineDocs,
         dryRun,
         beforeDelete,
       });
+      if (trackSearch) {
+        await syncSearchIndex({
+          model,
+          searchKey,
+          searchIndex,
+          currentKeys,
+          baselineDocs,
+          user,
+          warn,
+        });
+      }
       rows.push({ email: user.email, ...counts });
     }
     return rows;
@@ -321,7 +376,8 @@ function createDemoData(mongoose) {
    * @param {{ dir: string, emails: string[], includeShared?: boolean, dryRun?: boolean,
    *   protectedEmails?: Set<string>, warn: (message: string) => void,
    *   deleteFiles: (user: { _id: unknown, email: string }, files: object[]) =>
-   *     Promise<{ failedFileIds?: string[] }> }} params
+   *     Promise<{ failedFileIds?: string[] }>,
+   *   searchIndex?: import('@librechat/api').DemoSearchIndex }} params
    * @returns {Promise<Array<{ email?: string, collection: string, deleted: number,
    *   replaced: number, created: number }>>}
    */
@@ -332,6 +388,7 @@ function createDemoData(mongoose) {
     dryRun = false,
     protectedEmails = resolveProtectedEmails(),
     deleteFiles,
+    searchIndex,
     warn,
   }) {
     const manifest = readJson(dir, MANIFEST_FILE);
@@ -362,7 +419,17 @@ function createDemoData(mongoose) {
         warn(`Skipping ${user.email}: user id differs from the baseline (account was recreated).`);
         continue;
       }
-      rows.push(...(await resetAccount({ user, profile, baseline, dryRun, deleteFiles, warn })));
+      rows.push(
+        ...(await resetAccount({
+          user,
+          profile,
+          baseline,
+          dryRun,
+          deleteFiles,
+          searchIndex,
+          warn,
+        })),
+      );
     }
     if (includeShared) {
       rows.push(...(await resetShared({ baseline, agentId: manifest.agentId, dryRun, warn })));
