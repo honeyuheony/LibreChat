@@ -22,7 +22,7 @@ export interface ISchedule {
   chatProjectId?: string;
   file_ids?: string[];
   tools?: string[];
-  /** Skill names each run sends as `manualSkills`, the same field a chat turn uses. */
+  /** 실행할 때마다 `manualSkills` 로 보내는 스킬 이름. 대화 턴이 쓰는 필드와 같다. */
   skills?: string[];
   cron?: string;
   enabled: boolean;

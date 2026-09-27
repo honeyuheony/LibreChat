@@ -104,7 +104,7 @@ const scheduleSchema: Schema<IScheduleDocument> = new Schema(
       type: [String],
       default: undefined,
     },
-    /** Skill names every run invokes as the user's manual `/` pick (`manualSkills`). */
+    /** 실행할 때마다 사용자가 `/` 로 직접 고른 것처럼(`manualSkills`) 부르는 스킬 이름. */
     skills: {
       type: [String],
       default: undefined,

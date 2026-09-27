@@ -9313,9 +9313,8 @@ class GenerationJobManagerClass {
   }
 
   /**
-   * Active jobs for a user with their status. `requires_action` marks a run paused
-   * for human review (e.g. tool approval), which the sidebar shows apart from a
-   * running one.
+   * `requires_action` 은 사람의 검토(도구 승인 등)를 기다리며 멈춘 실행이라, 사이드바가 실행 중인
+   * 작업과 따로 보여 준다.
    */
   async getActiveJobsForUser(userId: string, tenantId?: string): Promise<UserJobSummary[]> {
     if (this.jobStore.getActiveJobsByUser) {

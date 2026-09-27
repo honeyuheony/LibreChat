@@ -35,10 +35,9 @@ export interface SkillConfigurableContext {
    */
   skillPrimedIdsByName?: Record<string, string>;
   /**
-   * Names whose SKILL.md body a manual or always-apply prime already put in
-   * this turn's transcript. Unlike `skillPrimedIdsByName`, mid-turn skill
-   * authoring never adds to it, so the skill tool can skip re-injecting a
-   * body only when the model can actually see it.
+   * 수동 선택이나 always-apply 로 이번 턴 대화 기록에 SKILL.md 본문이 이미 들어간 스킬 이름.
+   * `skillPrimedIdsByName` 과 달리 턴 도중에 만든 스킬은 들어가지 않으므로, 모델이 본문을 실제로
+   * 볼 수 있을 때만 skill 도구가 다시 넣기를 건너뛴다.
    */
   freshSkillPrimeNames?: Set<string>;
   /**

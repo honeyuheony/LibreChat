@@ -14,7 +14,7 @@ function makeDocs(count: number) {
   );
 }
 
-/** Per-document replies quote their own text; merge replies cite d1p1 and one unknown id. */
+/** 문서별 답은 자기 text 를 인용하고, 합치기 답은 d1p1 과 없는 id 하나를 인용한다. */
 function summaryModel() {
   return fakeLLM((prompt) => {
     if (prompt.startsWith('Merge')) {

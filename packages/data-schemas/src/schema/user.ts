@@ -38,11 +38,11 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       lowercase: true,
       default: '',
     },
-    /** Shown under the name in the sidebar's account card (e.g. 정세분석팀). */
+    /** 사이드바 계정 카드에서 이름 아래에 보인다(예: 정세분석팀). */
     department: {
       type: String,
     },
-    /** The organization the account belongs to (e.g. 통일부), shown in the same card and the home notice. */
+    /** 계정이 속한 기관(예: 통일부). 같은 카드와 홈 안내문에 보인다. */
     organization: {
       type: String,
     },
@@ -170,13 +170,13 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
           enum: STATEFUL_CODE_ENVIRONMENTS,
           default: 'user',
         },
-        /** Per-connector "use in new chats" switch. Key = MCP server name. */
+        /** 커넥터별 「새 대화에서 사용」 스위치. 키는 MCP 서버 이름이다. */
         connectorDefaults: {
           type: Map,
           of: Boolean,
           default: undefined,
         },
-        /** Global instructions added to every conversation's shared context. */
+        /** 모든 대화의 공용 맥락에 들어가는 전역 지침. */
         instructions: {
           type: String,
           maxlength: MAX_USER_INSTRUCTIONS_LENGTH,

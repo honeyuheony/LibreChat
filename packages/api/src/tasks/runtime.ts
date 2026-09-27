@@ -8,7 +8,7 @@ import type { DeploymentSkill } from '~/skills/deployment';
 import type { TaskAgentModel, TaskLLM } from './llm';
 import type { TaskDocument } from './documents';
 import type { TaskToolDeps } from './tools';
-import { loadReportTemplate, resolveReportTemplatePath } from './report';
+import { loadReportTemplate, resolveReportTemplatePath } from './template';
 import { getDeploymentSkillRegistry } from '~/skills/deployment';
 import { isDeploymentSkillVisibleTo } from '~/skills/market';
 import { createHwpService } from './hwpService';
@@ -25,7 +25,7 @@ export interface StoredFile {
   source?: string;
 }
 
-/** Files with no text to read (images, audio, video) are not task documents. */
+/** 읽을 text 가 없는 파일(이미지·오디오·동영상)은 작업 문서로 보지 않는다. */
 const NON_DOCUMENT_TYPE = /^(image|audio|video)\//;
 const HWPX_MIME_TYPE = 'application/hwp+zip';
 
@@ -37,9 +37,9 @@ async function readStream(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/** Per-page text; stored File `text` joins pages with one newline, so page numbers are lost there. */
+/** 쪽별 text 를 얻는다. 저장된 File `text` 는 쪽을 줄바꿈 하나로 이어 붙여서 쪽 번호를 잃는다. */
 export async function extractPdfPages(data: Buffer): Promise<string[]> {
-  // Imported inline so that Jest can load this module without the ESM-only pdfjs build
+  // ESM 전용 pdfjs 빌드가 없어도 Jest 가 이 모듈을 읽을 수 있게 함수 안에서 불러온다
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const pdf = await getDocument({ data: new Uint8Array(data) }).promise;
   const pages: string[] = [];
@@ -57,8 +57,8 @@ export async function extractPdfPages(data: Buffer): Promise<string[]> {
 }
 
 /**
- * The conversation's files, oldest message first, restricted to files the user owns.
- * `fileIds` from the model can only narrow this set, never add to it.
+ * 대화에 올라온 파일을 오래된 메시지부터 모으되, 사용자가 소유한 파일로만 한정한다.
+ * 모델이 주는 `fileIds` 는 이 목록을 좁힐 수만 있고 늘릴 수는 없다.
  */
 export async function loadConversationDocuments({
   userId,
@@ -166,8 +166,8 @@ export interface TaskRuntimeParams {
 }
 
 /**
- * The directory the server loaded deployment skills from at startup. Resolving it again
- * here would use the process cwd (`/app/api` in the container) instead of the project root.
+ * 서버가 시작할 때 배포 스킬을 읽어 들인 폴더다. 여기서 다시 계산하면 프로젝트 루트가 아니라
+ * 프로세스 cwd(컨테이너에서는 `/app/api`)를 기준으로 삼게 된다.
  */
 function deploymentSkillDirectory(): string {
   const directory = getDeploymentSkillRegistry().getDirectory();
@@ -177,7 +177,7 @@ function deploymentSkillDirectory(): string {
   return directory;
 }
 
-/** The deployment skill that registered this exact file; a template nobody owns has none. */
+/** 이 파일을 등록한 배포 스킬이다. 어느 스킬에도 속하지 않은 양식이면 없다. */
 function findFileOwner(filepath: string): DeploymentSkill | undefined {
   const target = path.resolve(filepath);
   return getDeploymentSkillRegistry()
@@ -185,7 +185,7 @@ function findFileOwner(filepath: string): DeploymentSkill | undefined {
     .find((skill) => skill.files.some((file) => path.resolve(file.filepath) === target));
 }
 
-/** Wires the task tools to the request: user-scoped files, cache, model and storage. */
+/** task tool 에 요청의 사용자 범위 파일, cache, 모델, 저장소를 연결한다. */
 export function createTaskToolDeps(params: TaskRuntimeParams): TaskToolDeps {
   const { req, agent, db, models } = params;
   const userId = req.user?.id;

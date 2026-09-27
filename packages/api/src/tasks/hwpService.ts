@@ -1,7 +1,7 @@
-/** 기준 주소. 끝에 `/render` 를 붙여 부른다. compose 내부망 주소가 기본값이다. */
+/** hwp-mcp 기준 주소를 담는 환경 변수다. 끝에 `/render` 를 붙여 부르고, 기본값은 compose 내부망 주소다. */
 export const HWP_MCP_URL_ENV = 'HWP_MCP_URL';
 export const DEFAULT_HWP_MCP_URL = 'http://hwp-mcp:8765';
-/** 설계 문서의 업로드 추출 제한(30초)을 그대로 쓴 값이며 양식 채움 시간은 측정하지 않았다. */
+/** 업로드 추출 제한과 같은 30초로 맞췄으며, 양식을 채우는 데 걸리는 시간을 측정해 정한 값은 아니다. */
 export const HWP_RENDER_TIMEOUT_MS = 30_000;
 
 export interface HwpRenderRequest {
@@ -19,7 +19,7 @@ export type HwpRenderOutcome =
   | { ok: true; buffer: Buffer; filename: string; title?: string }
   | {
       ok: false;
-      /** `unavailable` = no full answer (down, refused, timed out, body cut off); the rest are hwp-mcp error codes. */
+      /** `unavailable` 은 온전한 응답을 받지 못한 경우(서버 중단, 연결 거부, 시간 초과, 본문 끊김)이고 나머지는 hwp-mcp 오류 코드다. */
       code: 'unavailable' | 'unknown_template' | 'invalid_request' | 'render_failed' | string;
       message: string;
     };
@@ -28,7 +28,7 @@ export interface HwpService {
   render(request: HwpRenderRequest, signal?: AbortSignal): Promise<HwpRenderOutcome>;
 }
 
-/** Reads `filename*=UTF-8''…` first, then a plain `filename="…"`. */
+/** `filename*=UTF-8''…` 를 먼저 읽고, 없으면 일반 `filename="…"` 를 읽는다. */
 export function parseContentDispositionFilename(header: string | null): string | null {
   if (!header) {
     return null;
@@ -96,7 +96,7 @@ export function createHwpService({
       }
       let buffer: Buffer;
       try {
-        // The timeout also covers the body, so a stalled or reset stream fails here
+        // 시간 제한이 본문 읽기까지 걸려 있어서, 멈추거나 끊긴 stream 은 여기서 실패한다
         buffer = Buffer.from(await response.arrayBuffer());
       } catch (error) {
         return {

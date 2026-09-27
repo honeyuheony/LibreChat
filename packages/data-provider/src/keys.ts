@@ -106,9 +106,9 @@ export enum QueryKeys {
   agentQueuedTurns = 'agentQueuedTurns',
   /* Combined Pinned-section display order (favorites + pinned chats) */
   pinnedOrder = 'pinnedOrder',
-  /* Saved task tool result (table, summary or report) by result id */
+  /* 결과 id 로 찾는, 저장된 작업 도구 결과(표·요약·보고서) */
   taskResult = 'taskResult',
-  /* Document count and time estimate for a table's selected fields */
+  /* 표에서 고른 필드의 문서 수와 예상 소요 시간 */
   taskEstimate = 'taskEstimate',
 }
 

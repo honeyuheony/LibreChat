@@ -81,12 +81,12 @@ export function createUserPreferencesHandler(
   };
 }
 
-/** Enough for every connector a deployment lists; a larger body is not a real switch. */
+/** 배포 환경에 등록된 커넥터를 모두 담기에 충분하다. 이보다 큰 본문은 실제 스위치 조작이 아니다. */
 const MAX_CONNECTOR_DEFAULTS_PER_REQUEST = 100;
 
 /**
- * Server names become Mongo path segments (`personalization.connectorDefaults.<name>`), so a
- * name must not split the path (`.`) or read as an operator (leading `$`).
+ * 서버 이름이 Mongo 경로 조각(`personalization.connectorDefaults.<name>`)이 되므로, 경로를 나누는
+ * `.` 이 들어가거나 연산자로 읽히는 `$` 로 시작하면 안 된다.
  */
 function isConnectorName(name: string): boolean {
   return name.length > 0 && name.length <= 200 && !name.includes('.') && !name.startsWith('$');
@@ -105,8 +105,8 @@ export interface ConnectorDefaultsHandlerDeps {
 }
 
 /**
- * Saves which connectors a new chat starts with switched on, per user. The body names only
- * the connectors being switched; the others keep their stored value or the config default.
+ * 새 채팅을 시작할 때 켜 둘 커넥터를 사용자마다 저장한다. 본문에는 바꾸는 커넥터만 적고, 나머지는
+ * 저장된 값이나 설정 기본값을 그대로 쓴다.
  */
 export function createConnectorDefaultsHandler(
   deps: ConnectorDefaultsHandlerDeps,
@@ -171,7 +171,7 @@ function isUserApprovalMode(value: unknown): value is UserApprovalMode {
   return USER_APPROVAL_MODES.some((mode) => mode === value);
 }
 
-/** Reads the body's workspace fields; `null` when a field is invalid or none is present. */
+/** 값이 잘못된 필드가 있거나 필드가 하나도 없으면 `null` 을 돌려준다. */
 function parseWorkspacePreferences(body: {
   instructions?: unknown;
   approvalMode?: unknown;
@@ -195,7 +195,7 @@ function parseWorkspacePreferences(body: {
   };
 }
 
-/** The user's workspace preferences, with defaults for the values never saved. */
+/** 저장한 적 없는 값은 기본값으로 채운다. */
 export function resolveWorkspacePreferences(user: PersonalizationHolder): TWorkspacePreferences {
   return {
     instructions: user?.personalization?.instructions ?? '',
@@ -203,13 +203,13 @@ export function resolveWorkspacePreferences(user: PersonalizationHolder): TWorks
   };
 }
 
-/** The user's global instructions as a shared-context block, or `undefined` when there are none. */
+/** 사용자 전역 지침을 공유 맥락 블록으로 만든다. 지침이 없으면 `undefined` 다. */
 export function formatUserInstructionsContext(user: PersonalizationHolder): string | undefined {
   const instructions = user?.personalization?.instructions?.trim();
   return instructions ? `# 사용자 전역 지침\n${instructions}` : undefined;
 }
 
-/** Answers with the signed-in user's own workspace preferences; there is no way to name another user. */
+/** 로그인한 사용자 본인의 작업 공간 설정만 돌려준다. 다른 사용자를 지정할 방법은 없다. */
 export function getWorkspacePreferencesHandler(
   req: Pick<WorkspacePreferencesRequest, 'user'>,
   res: Response,
@@ -220,7 +220,7 @@ export function getWorkspacePreferencesHandler(
   return res.status(200).json(resolveWorkspacePreferences(req.user));
 }
 
-/** Saves the global instructions and approval mode; a field left out keeps its stored value. */
+/** 전역 지침과 승인 방식을 저장한다. 본문에서 뺀 필드는 저장된 값을 그대로 둔다. */
 export function createWorkspacePreferencesHandler(
   deps: WorkspacePreferencesHandlerDeps,
 ): (req: WorkspacePreferencesRequest, res: Response) => Promise<Response> {

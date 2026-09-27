@@ -1,5 +1,6 @@
 export * from './aggregate';
 export * from './cache';
+export * from './definitions';
 export * from './documents';
 export * from './extract';
 export * from './hwpService';
@@ -9,6 +10,7 @@ export * from './progress';
 export * from './report';
 export * from './runtime';
 export * from './summarize';
+export * from './template';
 export * from './tools';
 export * from './verify';
 export * from './export';

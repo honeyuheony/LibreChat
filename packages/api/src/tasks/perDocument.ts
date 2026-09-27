@@ -1,4 +1,4 @@
-/** 추정값: 설계 문서의 제안값이며 모델 한도·처리 시간은 측정하지 않았다. */
+/** 모델 한도와 처리 시간을 측정하지 않고 어림한 동시 처리 수다. */
 export const DEFAULT_TASK_CONCURRENCY = 4;
 
 export type PerDocumentOutcome<T> = { ok: true; value: T } | { ok: false; error: Error };
@@ -6,13 +6,13 @@ export type PerDocumentOutcome<T> = { ok: true; value: T } | { ok: false; error:
 export interface RunPerDocumentOptions {
   concurrency?: number;
   signal?: AbortSignal;
-  /** Called after each item settles with the number settled so far. */
+  /** 항목 하나가 끝날 때마다 지금까지 끝난 수를 넘겨 부른다. */
   onSettled?: (done: number, total: number) => void | Promise<void>;
 }
 
 /**
- * Runs `worker` over every item with bounded concurrency and keeps input order.
- * One item failing never stops the rest; its error is returned in place.
+ * 동시 실행 수를 제한해 모든 항목에 `worker` 를 돌리고 입력 순서를 지킨다.
+ * 한 항목이 실패해도 나머지는 멈추지 않고, 그 자리에 오류를 돌려준다.
  */
 export async function runPerDocument<I, T>(
   items: readonly I[],

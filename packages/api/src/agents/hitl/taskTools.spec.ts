@@ -1,6 +1,6 @@
 import { createToolPolicyHook } from '@librechat/agents';
 import { toolApprovalPolicySchema } from 'librechat-data-provider';
-import { TASK_TOOL_APPROVAL_POLICY } from '~/tasks/tools';
+import { TASK_TOOL_APPROVAL_POLICY } from '~/tasks/definitions';
 import { mapToolApprovalPolicy } from './policy';
 import { buildHITLRunWiring } from './runtime';
 

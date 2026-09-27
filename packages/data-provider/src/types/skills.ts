@@ -162,13 +162,10 @@ export type TSkill = {
    * referencing yet-to-be-implemented tools import without breaking.
    */
   allowedTools?: string[];
-  /**
-   * Mirrors the `examples` frontmatter field — sample prompts shown on the
-   * skill marketplace card. Optional; falls back to nothing when absent.
-   */
+  /** 머리말 `examples` 필드 값. 스킬 마켓 카드에 보이는 예시 프롬프트다. */
   examples?: string[];
   builder?: TSkillBuilderState;
-  /** Omitted when no publication state was recorded; `null` means an explicit draft. */
+  /** 게시 상태를 기록한 적이 없으면 빠진다. `null` 은 초안이라고 명시한 것이다. */
   publishedAt?: string | null;
   lastTest?: TSkillLastTest;
   author: string;
@@ -197,9 +194,9 @@ export type TSkill = {
    * responses.
    */
   warnings?: TSkillWarning[];
-  /** ISO timestamp of the last admin review approval. Absent means never reviewed. */
+  /** 관리자가 마지막으로 검수를 승인한 시각(ISO). 없으면 검수받은 적이 없다. */
   reviewedAt?: string;
-  /** Admin user id who approved the review at `reviewedAt`. */
+  /** `reviewedAt` 에 검수를 승인한 관리자 user id. */
   reviewedBy?: string;
   /** 실행 수. 스킬이 쓰인 대화 턴이 끝날 때 1 오른다. */
   useCount?: number;
@@ -234,7 +231,6 @@ export type TSkillMarketProfile = {
   triggers?: string[];
   /** 일하는 방법 한 줄 요약. */
   pipeline?: string;
-  /** 결과물. */
   output?: string;
   /** 읽는 자료. */
   sources?: string[];
@@ -589,13 +585,13 @@ export type TSkillListResponse = {
   after: string | null;
 };
 
-/** One tab's worth of category data for GET `/api/skills/categories`. */
+/** GET `/api/skills/categories` 응답에 담기는 분류 하나의 건수. */
 export type TSkillCategoryCount = {
   value: string;
   count: number;
 };
 
-/** Response from GET `/api/skills/categories`. */
+/** GET `/api/skills/categories` 응답. */
 export type TSkillCategoriesResponse = {
   categories: TSkillCategoryCount[];
   total: number;

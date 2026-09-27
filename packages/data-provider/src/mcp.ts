@@ -207,7 +207,7 @@ const BaseOptionsSchema = z.object({
    */
   startup: z.boolean().optional(),
   iconPath: z.string().optional(),
-  /** Display-only facts for the data hub's "at a glance" row; a missing entry is hidden. */
+  /** 데이터 허브의 「한눈에 보기」 줄에 보여 주기만 하는 정보. 없는 항목은 숨긴다. */
   overview: z
     .object({
       period: z.string().optional(),
@@ -216,11 +216,11 @@ const BaseOptionsSchema = z.object({
       contact: z.string().optional(),
     })
     .optional(),
-  /** Heading the data hub groups this connector under; connectors without one share an "other" group. */
+  /** 데이터 허브에서 이 커넥터를 묶는 제목. 없는 커넥터는 모두 「기타」 묶음에 들어간다. */
   category: z.string().optional(),
   /**
-   * Whether a new chat starts with this connector switched on, until the user sets their own
-   * choice in the data hub. Unset means off, so the composer shows only what was chosen.
+   * 사용자가 데이터 허브에서 직접 정하기 전까지 새 대화를 이 커넥터가 켜진 채로 시작할지 정한다.
+   * 비워 두면 꺼진 것으로 보므로, 입력창에는 고른 커넥터만 보인다.
    */
   defaultOn: z.boolean().optional(),
   timeout: z.number().int().nonnegative().optional(),

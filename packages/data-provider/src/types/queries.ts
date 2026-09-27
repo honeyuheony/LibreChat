@@ -251,25 +251,25 @@ export interface MCPServerStatus {
   authorizationGeneration?: string;
 }
 
-/** The user's desktop app as the desk relay last saw it; `unknown` when the relay could not be asked. */
+/** desk 중계 서버가 마지막으로 본 사용자 데스크톱 앱 상태. 중계 서버에 묻지 못했으면 `unknown` 이다. */
 export interface DeskStatusResponse {
   state: 'online' | 'offline' | 'unknown';
   deviceName: string | null;
-  /** Names of the folders switched on in the app, in the app's order. */
+  /** 앱에서 켠 폴더 이름. 순서는 앱에 보이는 순서를 따른다. */
   folders: string[];
   connectedAt: string | null;
-  /** Public installer link, or `null` when no public relay address or release is known. */
+  /** 공개 설치 파일 링크. 공개 중계 주소나 릴리스를 모르면 `null` 이다. */
   installerUrl: string | null;
 }
 
-/** A read outside the switched-on folders that the desktop app is waiting for the user to allow. */
+/** 켜 둔 폴더 밖을 읽으려는 요청. 데스크톱 앱이 사용자의 허용을 기다리고 있다. */
 export interface DeskPermission {
   requestId: number;
-  /** The path as the model sent it. */
+  /** 모델이 보낸 경로 그대로. */
   path: string;
-  /** Port of the app's 127.0.0.1 endpoint; only a browser on that same PC reaches it. */
+  /** 앱의 127.0.0.1 엔드포인트 포트. 같은 PC 의 브라우저만 닿는다. */
   localPort: number;
-  /** One-time token the app accepts once for this request. */
+  /** 이 요청에 한 번만 받아 주는 일회용 토큰. */
   approveToken: string;
   /** ISO 8601 */
   expiresAt: string;
@@ -277,9 +277,9 @@ export interface DeskPermission {
 
 export type DeskPermissionDecision = 'once' | 'always' | 'deny';
 
-/** One connector tool the user's conversation called, possibly several times in one turn. */
+/** 사용자 대화가 부른 커넥터 도구 하나. 한 턴에 여러 번 불렀을 수 있다. */
 export interface ConnectorActivityItem {
-  /** Model-facing tool key, `${tool}${Constants.mcp_delimiter}${server}`. */
+  /** 모델에 보이는 도구 키. `${tool}${Constants.mcp_delimiter}${server}` 꼴이다. */
   toolKey: string;
   count: number;
   conversationId: string;
@@ -288,7 +288,7 @@ export interface ConnectorActivityItem {
   createdAt: string;
 }
 
-/** The desktop app installer the relay serves; every field is `null` when no release is known. */
+/** 중계 서버가 내려 주는 데스크톱 앱 설치 파일. 릴리스를 모르면 모든 필드가 `null` 이다. */
 export interface DeskAppReleaseResponse {
   installerUrl: string | null;
   version: string | null;

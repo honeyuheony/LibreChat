@@ -3,7 +3,7 @@ import type { TaskDocument } from './documents';
 
 interface NormalizedText {
   text: string;
-  /** `origin[i]` is the offset in the original text of normalized character `i`. */
+  /** `origin[i]` 는 정규화한 문자 `i` 가 원문에서 놓인 위치다. */
   origin: number[];
 }
 
@@ -13,9 +13,9 @@ const isSpace = (ch: string) => /\s/.test(ch);
 const isDigitOrLatin = (ch: string | undefined) => ch != null && /[0-9A-Za-z]/.test(ch);
 
 /**
- * NFKC per character with whitespace runs folded to one space, keeping an offset map back.
- * `dropWordSpaces` drops a run unless a digit or Latin letter touches it: HWP wraps lines inside
- * words, while `1\n200` must not read as `1200` nor `is land` as `island`.
+ * 문자마다 NFKC 를 적용하고 이어진 공백을 한 칸으로 접으며, 원문 위치로 돌아가는 대응표를 남긴다.
+ * `dropWordSpaces` 면 숫자나 로마자가 맞닿지 않은 공백을 지운다. HWP 는 단어 중간에서도 줄을
+ * 바꾸지만, `1\n200` 이 `1200` 으로, `is land` 가 `island` 로 읽히면 안 되기 때문이다.
  */
 function normalizeWithOrigin(source: string, dropWordSpaces = false): NormalizedText {
   let text = '';
@@ -43,7 +43,7 @@ function normalizeWithOrigin(source: string, dropWordSpaces = false): Normalized
   return { text, origin };
 }
 
-/** Folds every whitespace run to one space; quote matching also drops spaces between words. */
+/** 이어진 공백을 모두 한 칸으로 접는다. 인용을 맞춰 볼 때는 단어 사이 공백도 지운다. */
 export function normalizeQuote(quote: string): string {
   return normalizeWithOrigin(quote).text;
 }
@@ -57,7 +57,7 @@ function getNormalized(doc: TaskDocument): NormalizedText {
   return normalized;
 }
 
-/** 1-based index among non-empty lines; HWP·DOCX text keeps one paragraph per line. */
+/** 빈 줄을 뺀 줄 가운데 몇 번째인지 1부터 센다. HWP·DOCX text 는 한 문단을 한 줄에 둔다. */
 function paragraphAt(text: string, offset: number): number {
   let paragraph = 0;
   let lineHasText = false;
@@ -88,11 +88,11 @@ function pageAt(pageStarts: number[] | undefined, offset: number): number | unde
   return page;
 }
 
-/** Models join excerpts from separate places with a blank line, as the prompt asks. */
+/** 모델은 prompt 가 시킨 대로 떨어진 곳의 발췌를 빈 줄로 이어 붙인다. */
 const EXCERPT_BREAK = /\n[^\S\n]*\n/;
 /**
- * Letters and digits each excerpt of a multi-excerpt quote needs, so short pieces cannot be
- * combined into a value the text never states. 5 measured on 55 stored demo cells: 47 pass, 8 at 8.
+ * 여러 발췌로 된 인용에서 발췌마다 있어야 하는 글자·숫자 수다. 짧은 조각을 이어 붙여 원문에 없는
+ * 값을 만들지 못하게 한다. 5는 저장된 데모 칸 55개로 측정해 정했다(47개 통과, 8개는 8자).
  */
 const MIN_EXCERPT_CHARS = 5;
 const WORD_CHAR = /[\p{L}\p{N}]/gu;
@@ -101,9 +101,8 @@ const splitExcerpts = (quote: string) =>
   quote.split(EXCERPT_BREAK).filter((excerpt) => excerpt.trim().length > 0);
 
 /**
- * Finds `quote` verbatim (after normalization) in the document; `null` when absent. A quote
- * of several excerpts counts only when every excerpt is long enough and found, in any order,
- * and is located at the excerpt earliest in the text.
+ * 정규화한 뒤 문서에서 `quote` 를 그대로 찾고, 없으면 `null` 이다. 여러 발췌로 된 인용은 모든
+ * 발췌가 충분히 길고 순서와 상관없이 모두 찾아질 때만 인정하며, 위치는 원문에서 가장 앞선 발췌로 잡는다.
  */
 export function locateQuote(doc: TaskDocument, quote: string): TaskEvidence | null {
   const needles = splitExcerpts(quote).map((excerpt) => normalizeWithOrigin(excerpt, true).text);
@@ -141,8 +140,8 @@ export interface FootnoteSource {
 const MARKER_PATTERN = /\[\^([A-Za-z0-9_-]+)\]/g;
 
 /**
- * Rewrites model-written `[^id]` markers to `[^n]`, one number per marker across all texts.
- * No number is reused: hwp-mcp attaches a footnote at every marker. Unknown ids are removed.
+ * 모델이 쓴 `[^id]` 표시를 `[^n]` 으로 바꾸며, 모든 text 에 걸쳐 표시마다 번호를 하나씩 준다.
+ * hwp-mcp 가 표시마다 각주를 달기 때문에 같은 번호를 다시 쓰지 않는다. 모르는 id 는 지운다.
  */
 export function numberFootnotes(
   texts: readonly string[],
@@ -165,7 +164,7 @@ export function numberFootnotes(
   return { texts: rewritten, footnotes, removed };
 }
 
-/** 「파일 · 「인용」 · N쪽 M번째 문단」, the footnote text written into the HWPX. */
+/** HWPX 에 넣는 각주 문구로, 「파일 · 「인용」 · N쪽 M번째 문단」 꼴이다. */
 export function formatFootnote(source: Pick<FootnoteSource, 'filename' | 'evidence'>): string {
   const { evidence } = source;
   const position = [

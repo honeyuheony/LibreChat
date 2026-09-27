@@ -21,7 +21,7 @@ type SearchClient<TIndex extends SearchIndexHandle> = {
   ) => Promise<{ status: string }>;
 };
 
-/** `processSyncBatch` exists only when the mongoMeili plugin is registered on the model. */
+/** `processSyncBatch` 는 모델에 mongoMeili 플러그인이 등록됐을 때만 있다. */
 type SearchModel<TIndex> = {
   processSyncBatch?: (index: TIndex, documents: SearchDocument[]) => Promise<void>;
 };
@@ -33,29 +33,29 @@ type SearchEnv = {
 };
 
 export type DemoSearchIndex = {
-  /** Deletes every index document of `userId`; primary keys are not unique across users. */
+  /** 기본 키가 사용자끼리 겹칠 수 있어 `userId` 의 색인 문서를 모두 지운다. */
   remove: (model: SearchModelName, userId: string) => Promise<void>;
   add: (model: SearchModelName, documents: SearchDocument[]) => Promise<void>;
 };
 
-/** Index names and exclusion paths as registered in `data-schemas` `models/convo.ts` and `models/message.ts`. */
+/** `data-schemas` 의 `models/convo.ts`·`models/message.ts` 에 등록된 색인 이름과 제외 경로를 그대로 쓴다. */
 const SEARCH_INDEXES: Record<SearchModelName, { uid: string; excludePath: keyof SearchDocument }> =
   {
     Conversation: { uid: 'convos', excludePath: 'subagentThread' },
     Message: { uid: 'messages', excludePath: 'subagentTask' },
   };
 
-/** Same request timeout as the plugin's `meiliRequestTimeoutMs`; `waitForTask` only bounds polling. */
+/** 플러그인의 `meiliRequestTimeoutMs` 와 같은 요청 제한 시간이다. `waitForTask` 는 폴링 시간만 제한한다. */
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 
-/** The plugin indexes `user` as the stored string id and marks it filterable. */
+/** 플러그인은 `user` 를 저장된 문자열 id 로 색인하고 필터에 쓸 수 있게 표시한다. */
 const userFilter = (userId: string): string =>
   `user = "${userId.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 const hasActiveExpiration = (expiredAt: SearchDocument['expiredAt']): boolean =>
   expiredAt == null || new Date(expiredAt).getTime() > Date.now();
 
-/** Mirrors the plugin's `isIndexableDocument` for raw documents, where a stored `isTemporary` is explicit. */
+/** 플러그인의 `isIndexableDocument` 를 원시 문서용으로 옮긴 것이다. 원시 문서에서는 저장된 `isTemporary` 값이 그대로 드러난다. */
 const isIndexable = (doc: SearchDocument, excludePath: keyof SearchDocument): boolean =>
   doc[excludePath] == null &&
   (doc.isTemporary === false
@@ -63,8 +63,8 @@ const isIndexable = (doc: SearchDocument, excludePath: keyof SearchDocument): bo
     : doc.isTemporary == null && doc.expiredAt == null);
 
 /**
- * Search index writes for the demo reset, which bypasses the mongoMeili hooks by writing raw
- * collections. Returns undefined when search is off, matching when the plugin's hooks index.
+ * 데모 초기화는 컬렉션에 직접 써서 mongoMeili 훅을 거치지 않으므로 검색 색인을 따로 쓴다.
+ * 플러그인 훅이 색인하지 않는 조건과 맞춰, 검색이 꺼져 있으면 undefined 를 돌려준다.
  */
 export function createDemoSearchIndex<TIndex extends SearchIndexHandle>({
   env,

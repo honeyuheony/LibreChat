@@ -13,7 +13,7 @@ const SKILL_BODY_MAX_LENGTH = 100_000;
 /** Max length for the human-friendly `displayTitle`. */
 const SKILL_DISPLAY_TITLE_MAX_LENGTH = 128;
 
-/** Max length for the emoji `icon` (librechat-data-provider `SKILL_ICON_MAX_LENGTH`). */
+/** 이모지 `icon` 길이 상한. librechat-data-provider 의 `SKILL_ICON_MAX_LENGTH` 와 같다. */
 const SKILL_ICON_MAX = 16;
 
 const skillNamePattern = /^[a-z0-9][a-z0-9-]*$/;
@@ -221,11 +221,11 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       type: String,
       index: true,
     },
-    /** Timestamp of the last admin review approval. `undefined` means never reviewed. */
+    /** 관리자가 마지막으로 검수를 승인한 시각. `undefined` 면 검수받은 적이 없다. */
     reviewedAt: {
       type: Date,
     },
-    /** Admin user who approved the review at `reviewedAt`. */
+    /** `reviewedAt` 에 검수를 승인한 관리자. */
     reviewedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

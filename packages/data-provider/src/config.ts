@@ -2880,7 +2880,7 @@ export const configSchema = z.object({
     .object({
       allowedDomains: z.array(z.string()).optional(),
       allowedAddresses: allowedAddressesSchema,
-      /** Drop MCP servers awaiting OAuth sign-in from a chat turn instead of prompting and waiting. */
+      /** OAuth 로그인을 기다리는 MCP 서버는 로그인을 묻고 기다리지 않고 대화 턴에서 뺀다. */
       skipOAuthInChat: z.boolean().optional(),
       catalogRecovery: z
         .object({
@@ -3602,9 +3602,7 @@ export enum ViolationTypes {
    * Shared link retrieval limit violations.
    */
   SHARE_LIMIT = 'share_limit',
-  /**
-   * Skill draft (AI suggestion) request limit violations.
-   */
+  /** 스킬 초안(AI 제안) 요청 한도 위반. */
   SKILL_DRAFT_LIMIT = 'skill_draft_limit',
 }
 
@@ -3837,9 +3835,7 @@ export enum SettingsTabValues {
    * Tab for Personalization Settings
    */
   PERSONALIZATION = 'personalization',
-  /**
-   * Tab for Connectors (MCP servers shown to users as connectors)
-   */
+  /** 커넥터 탭. 사용자에게는 MCP 서버를 커넥터라고 보여 준다. */
   CONNECTORS = 'connectors',
   /**
    * Tab for About / Build Info
@@ -4279,7 +4275,7 @@ export enum LocalStorageKeys {
   AUTO_EXPAND_TOOLS = 'autoExpandTools',
   /** Last selected MCP values per conversation ID */
   LAST_MCP_ = 'LAST_MCP_',
-  /** Last MCP servers switched off for a saved agent in a conversation */
+  /** 대화별로 저장 agent 에서 마지막으로 끈 MCP 서버 */
   LAST_MCP_DISABLED_ = 'LAST_MCP_DISABLED_',
   /** Last checked toggle for Code Interpreter API per conversation ID */
   LAST_CODE_TOGGLE_ = 'LAST_CODE_TOGGLE_',

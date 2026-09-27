@@ -11,9 +11,10 @@ export type ScheduleFrequency = (typeof scheduleFrequencies)[number];
  *  list: an every-minute-of-the-hour cadence spelled out runs past two hundred chars. */
 export const SCHEDULE_CRON_MAX_LENGTH = 256;
 
-/** Mirrors the chat path's bounds on `manualSkills` (`MAX_MANUAL_SKILLS` and
- *  `MAX_SKILL_NAME_LENGTH` in packages/api): a longer list would be truncated at fire
- *  time, so the schedule refuses it at write time instead of saving skills it drops. */
+/**
+ * 대화 경로의 `manualSkills` 한도(packages/api 의 `MAX_MANUAL_SKILLS`·`MAX_SKILL_NAME_LENGTH`)와 같다.
+ * 더 긴 목록은 실행할 때 잘리므로, 버려질 스킬을 저장하지 않도록 예약을 저장할 때 거절한다.
+ */
 export const SCHEDULE_MAX_SKILLS = 10;
 export const SCHEDULE_SKILL_NAME_MAX_LENGTH = 200;
 
@@ -88,8 +89,8 @@ export const createSchedulePayloadSchema = z.object({
     .transform((ids) => Array.from(new Set(ids)))
     .optional(),
   /**
-   * Skill names each run invokes, sent as the chat request's `manualSkills` like a
-   * `/` pick. Visibility to the requesting user is checked server-side at write time.
+   * 실행할 때마다 부르는 스킬 이름. `/` 로 고른 것처럼 대화 요청의 `manualSkills` 로 보낸다.
+   * 요청한 사용자가 볼 수 있는 스킬인지는 저장할 때 서버가 확인한다.
    */
   skills: z
     .array(z.string().trim().min(1).max(SCHEDULE_SKILL_NAME_MAX_LENGTH))

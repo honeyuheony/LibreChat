@@ -9,14 +9,14 @@ import { hasText, mayHaveText, withPages } from './documents';
 import { locateQuote } from './verify';
 import { invokeJson } from './llm';
 
-/** 추정값: 모델 입력 한도에 맞춘 문서당 글자 수 상한이며 측정하지 않았다. */
+/** 모델 입력 한도에 맞춰 어림한 문서당 글자 수 상한이다. */
 export const MAX_DOCUMENT_CHARS = 60_000;
 
 export interface ExtractedRow {
   doc: TaskDocument;
-  /** Same order as the requested fields. */
+  /** 요청한 항목과 같은 순서다. */
   cells: TaskCell[];
-  /** False when the document had no text or the model call failed; cells are then all `none`. */
+  /** 문서에 text 가 없거나 모델 호출이 실패하면 false 이고, 이때 칸은 모두 `none` 이다. */
   reflected: boolean;
   fromCache: boolean;
 }
@@ -47,7 +47,7 @@ export function buildExtractionPrompt(doc: TaskDocument, fields: readonly string
   ].join('\n');
 }
 
-/** A value whose quote is not found verbatim in the document is kept but marked `low`. */
+/** 인용이 문서에 그대로 나오지 않는 값은 버리지 않고 `low` 로 표시한다. */
 export function toVerifiedCell(doc: TaskDocument, raw: unknown): TaskCell {
   const entry = raw != null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const rawValue = typeof entry.value === 'number' ? String(entry.value) : entry.value;
@@ -99,7 +99,7 @@ export async function extractFields({
       };
       const cached = await cache.getCells({ ...key, fields: normalized });
       const missing = normalized.filter((field) => !cached.has(field));
-      // Cached cells already carry their page evidence, so pages are read only for a miss
+      // 캐시된 칸에는 쪽 근거가 이미 있으므로, 캐시에 없을 때만 쪽을 읽는다
       let doc = stored;
       if (missing.length > 0) {
         doc = await withPages(stored);

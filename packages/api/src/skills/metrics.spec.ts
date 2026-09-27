@@ -307,11 +307,8 @@ describe('computeSkillMetrics', () => {
   });
 });
 
-/**
- * 와이어프레임(agent-hub-prototype_v29.html)의 계산을 그대로 옮긴 것이다.
- * `recalcSave`(1877행), `savedH`(1876행), `renderMetrics`(1968~1978행)의 식이다.
- */
-type WireframeAgent = {
+/** 운영 현황 화면이 보여 주는 계산식을 그대로 옮긴 것이다. 서버 계산과 결과를 비교하는 기준으로 쓴다. */
+type ScreenAgent = {
   id: string;
   kind: string;
   owner: string;
@@ -324,13 +321,13 @@ type WireframeAgent = {
   saveMin?: number;
 };
 
-function recalcSave(x: WireframeAgent): void {
+function recalcSave(x: ScreenAgent): void {
   x.saveMin = Math.max(0, Math.round(x.manualMin - (x.runSec || 0) / 60));
 }
 
-const savedH = (x: WireframeAgent): number => Math.round(((x.runs || 0) * (x.saveMin || 0)) / 60);
+const savedH = (x: ScreenAgent): number => Math.round(((x.runs || 0) * (x.saveMin || 0)) / 60);
 
-function renderMetrics(all: WireframeAgent[]) {
+function renderMetrics(all: ScreenAgent[]) {
   const runs = all.reduce((a, x) => a + (x.runs || 0), 0);
   const forks = all.reduce((a, x) => a + (x.forks || 0), 0);
   const hrs = all.reduce((a, x) => a + savedH(x), 0);
@@ -376,13 +373,13 @@ function renderMetrics(all: WireframeAgent[]) {
 }
 
 /**
- * 같은 입력을 와이어프레임 모양으로 옮긴다. 와이어프레임에는 게시하지 않은 응용본이 없으므로
+ * 같은 입력을 화면 계산식이 받는 모양으로 옮긴다. 화면에는 게시한 응용본만 나오므로
  * `unpublishedForkIds`의 `forkOf`는 뺀다.
  */
-function toWireframeAgents(
+function toScreenAgents(
   input: SkillMetricsInput,
   unpublishedForkIds: ReadonlySet<string> = new Set(['u10']),
-): WireframeAgent[] {
+): ScreenAgent[] {
   const deploymentAgents = input.deploymentSkills.map((skill) => {
     const id = skill._id.toString();
     const seed = skill.seedMetrics ?? { runs: 0, forks: 0, runSeconds: 0 };
@@ -413,7 +410,7 @@ function toWireframeAgents(
       runs: skill.useCount ?? 0,
       forks: input.publishedForks[id] ?? 0,
       manualMin: skill.manualMinutes ?? 0,
-      /* 측정 기록이 없으면 서버는 절감 시간을 0으로 더한다. 와이어프레임에서 같은 결과를 내려면
+      /* 측정 기록이 없으면 서버는 절감 시간을 0으로 더한다. 화면 계산식에서 같은 결과를 내려면
          수작업 분 전체가 실행 시간으로 걸린 것으로 둔다. */
       runSec:
         samples > 0 ? (skill.runTimeTotalSeconds ?? 0) / samples : (skill.manualMinutes ?? 0) * 60,
@@ -425,7 +422,7 @@ function toWireframeAgents(
   return agents;
 }
 
-describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 비교', () => {
+describe('화면이 보여 주는 계산식과 서버 계산(computeSkillMetrics)이 같은지', () => {
   it('같은 입력으로 지표 네 칸·순위·기본 합계 줄·기여자 순위가 같다', () => {
     const base = fixture();
     const input: SkillMetricsInput = {
@@ -447,7 +444,7 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
         userSkill('u12', 'userB', '최분석', 1, 90, 10),
       ],
     };
-    const wireframe = renderMetrics(toWireframeAgents(input));
+    const screen = renderMetrics(toScreenAgents(input));
     const report = computeSkillMetrics(input);
 
     expect({
@@ -460,7 +457,7 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
       forkedAgents: report.forks.forkedAgents,
       hours: report.savedHours.total,
       staffHours: report.savedHours.staff,
-    }).toEqual(wireframe.kpis);
+    }).toEqual(screen.kpis);
     expect(
       report.ranking.map((agent) => ({
         id: agent.id,
@@ -468,13 +465,13 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
         forks: agent.forks,
         hours: agent.savedHours ?? 0,
       })),
-    ).toEqual(wireframe.top);
+    ).toEqual(screen.top);
     expect({
       count: report.baseTotal.count,
       runs: report.baseTotal.runs,
       forks: report.baseTotal.forks,
       hours: report.baseTotal.savedHours,
-    }).toEqual(wireframe.baseRow);
+    }).toEqual(screen.baseRow);
     expect(
       report.contributors.map((person) => ({
         key: `${person.authorName} · ${person.department ?? ''}`,
@@ -483,10 +480,10 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
         forks: person.forks,
         h: person.savedHours,
       })),
-    ).toEqual(wireframe.people);
+    ).toEqual(screen.people);
   });
 
-  it('회당 단축 분과 agent 별 절감 시간을 와이어프레임처럼 정수로 반올림한다', () => {
+  it('회당 단축 분과 agent 별 절감 시간을 화면 계산식처럼 정수로 반올림한다', () => {
     const input: SkillMetricsInput = {
       deploymentSkills: [],
       userSkills: [userSkill('u1', 'userA', '김정세', 2140, 40, 41)],
@@ -494,10 +491,10 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
       deploymentUsage: {},
       authorDepartments: {},
     };
-    const wireframe = renderMetrics(toWireframeAgents(input));
+    const screen = renderMetrics(toScreenAgents(input));
     const report = computeSkillMetrics(input);
 
-    expect(wireframe.top[0].hours).toBe(1427);
+    expect(screen.top[0].hours).toBe(1427);
     expect(report.ranking[0].savedHours).toBe(1427);
   });
 });

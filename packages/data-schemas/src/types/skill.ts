@@ -97,9 +97,9 @@ export interface ISkill {
    */
   alwaysApply: boolean;
   tenantId?: string;
-  /** Timestamp of the last admin review approval. `undefined` means never reviewed. */
+  /** 관리자가 마지막으로 검수를 승인한 시각. `undefined` 면 검수받은 적이 없다. */
   reviewedAt?: Date;
-  /** Admin user who approved the review at `reviewedAt`. */
+  /** `reviewedAt` 에 검수를 승인한 관리자. */
   reviewedBy?: Types.ObjectId;
   /** 실행 수. 스킬이 쓰인 대화 턴이 끝날 때 오른다(스키마 주석 참고). */
   useCount?: number;

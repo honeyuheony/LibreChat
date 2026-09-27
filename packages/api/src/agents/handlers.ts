@@ -3051,7 +3051,6 @@ function isSkillPrimedForAuthoring(
   return typeof skillPrimedIdsByName[skillName] === 'string';
 }
 
-/** True when this turn's manual or always-apply prime already carries the skill body. */
 function isSkillBodyPrimedThisTurn(
   skillName: string,
   mergedConfigurable: Record<string, unknown>,
@@ -5002,9 +5001,8 @@ async function handleSkillToolCall(
     return filtered;
   }
 
-  /* A manual or always-apply prime already spliced this body into the
-     transcript; injecting it again would only duplicate tokens. Files below
-     are still primed because a first-turn prime does not mount them. */
+  /* 수동 선택이나 always-apply 로 본문이 이미 대화 기록에 들어갔으면 다시 넣어 봐야 토큰만
+     겹친다. 첫 턴 prime 은 파일을 올려 두지 않으므로 아래 파일 prime 은 그대로 한다. */
   const primedThisTurn = isSkillBodyPrimedThisTurn(skill.name, mergedConfigurable);
   const injectedMessages: InjectedMessage[] | undefined = primedThisTurn
     ? undefined

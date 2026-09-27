@@ -1416,7 +1416,7 @@ describe('ApprovalLifecycle via GenerationJobManager.approvals (in-memory)', () 
       await manager.createJob('s-legacy-paused', 'user-legacy');
       await manager.approvals.pause('s-legacy-paused', buildAction('s-legacy-paused'));
 
-      // An own `undefined` shadows the prototype method, as an older store would lack it.
+      // 인스턴스에 `undefined` 를 직접 두어 prototype 메서드를 가려, 이 메서드가 없는 예전 저장소처럼 만든다.
       Object.defineProperty(jobStore, 'getActiveJobsByUser', {
         value: undefined,
         configurable: true,

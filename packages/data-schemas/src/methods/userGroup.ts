@@ -29,10 +29,10 @@ const INVALIDATION_CLEAR_THRESHOLD = 1000;
 /** Fallback delay for the second invalidation pass when the store sets none. */
 const DEFAULT_STALE_EVICTION_DELAY_MS = 3000;
 /**
- * Department groups are local groups keyed `department:<department>`. A user belongs to one
- * through `user.department` at permission time, never through `memberIds`.
+ * 부서 그룹은 `department:<부서>` 를 키로 하는 로컬 그룹이다. 사용자는 `memberIds` 가 아니라
+ * 권한을 판정할 때 `user.department` 로 그룹에 속한다.
  */
-const DEPARTMENT_GROUP_PREFIX = 'department:';
+export const DEPARTMENT_GROUP_PREFIX = 'department:';
 const DEPARTMENT_GROUP_PATTERN = /^department:/;
 
 function readDepartment(value: unknown): string | undefined {
@@ -655,7 +655,7 @@ export function createUserGroupMethods(
     const regex = new RegExp(escapeRegExp(namePattern), 'i');
     const query: Record<string, unknown> = {
       $or: [{ name: regex }, { email: regex }, { description: regex }],
-      /** Department groups exist only to receive skill 「우리 팀」 grants; they are not shareable targets. */
+      /** 부서 그룹은 스킬 「우리 팀」 권한을 받는 데만 쓰므로 공유 대상으로 내놓지 않는다. */
       idOnTheSource: { $not: DEPARTMENT_GROUP_PATTERN },
     };
 
@@ -1441,7 +1441,7 @@ export function createUserGroupMethods(
     return group;
   }
 
-  /** Uncached on purpose: a department change must show up in the next permission check. */
+  /** 부서가 바뀌면 바로 다음 권한 확인에 반영돼야 하므로 일부러 캐시하지 않는다. */
   async function findDepartmentGroupId(
     department: string | null | undefined,
     session?: ClientSession,
@@ -1462,7 +1462,7 @@ export function createUserGroupMethods(
     return group?._id ?? null;
   }
 
-  /** Returns the id of the department's group, creating it (with no members) on first use. */
+  /** 부서 그룹 id 를 돌려준다. 처음 쓰일 때 구성원 없이 만든다. */
   async function ensureDepartmentGroup(department: string): Promise<string> {
     const name = readDepartment(department);
     if (!name) {
@@ -1476,7 +1476,7 @@ export function createUserGroupMethods(
         { $setOnInsert: { name, memberIds: [] } },
         { upsert: true, new: true },
       ).lean<IGroup>();
-    /** Two first publishes of one department can race on the unique index; the loser re-reads. */
+    /** 한 부서의 첫 게시가 동시에 두 번 오면 unique 인덱스에서 부딪힌다. 진 쪽은 다시 읽는다. */
     const group = await upsert().catch((error: { code?: number }) => {
       if (error?.code === 11000) {
         return upsert();
@@ -1502,7 +1502,7 @@ export function createUserGroupMethods(
     return group !== null;
   }
 
-  /** Each department-group grant carrying `permissionBit` on the given resources, with its department. */
+  /** 주어진 리소스에 `permissionBit` 를 가진 부서 그룹 권한을 부서와 함께 모두 찾는다. */
   async function findDepartmentGrants(
     resourceType: string,
     resourceIds: Array<string | Types.ObjectId>,
