@@ -1,41 +1,81 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const { logger } = require('@librechat/data-schemas');
-const { PermissionBits, ResourceType } = require('librechat-data-provider');
-const { createSkillPack, listSkillPacks, getSkillPackById, deleteSkillPack } = require('~/models');
+const { logger, MAX_SKILL_PACK_SKILLS } = require('@librechat/data-schemas');
+const { generateCheckAccess } = require('@librechat/api');
+const {
+  PermissionBits,
+  PermissionTypes,
+  Permissions,
+  ResourceType,
+} = require('librechat-data-provider');
+const {
+  createSkillPack,
+  listSkillPacks,
+  getSkillPackById,
+  deleteSkillPack,
+  getRoleByName,
+} = require('~/models');
 const {
   findAccessibleResources,
   findPubliclyAccessibleResources,
 } = require('~/server/services/PermissionService');
 const { requireJwtAuth } = require('~/server/middleware');
+const configMiddleware = require('~/server/middleware/config/app');
+
+function serializeSkillPack(pack, skillIds) {
+  const serializedPack = {
+    _id: pack._id,
+    name: pack.name,
+    slug: pack.slug,
+    description: pack.description,
+    icon: pack.icon,
+    author: pack.author,
+    authorName: pack.authorName,
+    createdAt: pack.createdAt,
+    updatedAt: pack.updatedAt,
+  };
+  if (skillIds !== undefined) {
+    serializedPack.skillIds = skillIds;
+  }
+  return serializedPack;
+}
+
+function resolvePackAuthorName(user) {
+  const emailPrefix = typeof user.email === 'string' ? user.email.split('@')[0] : undefined;
+  const authorName = [user.name, user.username, emailPrefix].find(
+    (value) => typeof value === 'string' && value.trim().length > 0,
+  );
+  return typeof authorName === 'string' ? authorName.trim() : undefined;
+}
+
+const checkSkillAccess = generateCheckAccess({
+  permissionType: PermissionTypes.SKILLS,
+  permissions: [Permissions.USE],
+  getRoleByName,
+});
+const checkSkillCreate = generateCheckAccess({
+  permissionType: PermissionTypes.SKILLS,
+  permissions: [Permissions.USE, Permissions.CREATE],
+  getRoleByName,
+});
 
 const router = express.Router();
 
 router.use(requireJwtAuth);
+router.use(configMiddleware);
+router.use(checkSkillAccess);
 
 router.get('/', async (_req, res) => {
   try {
     const packs = await listSkillPacks();
-    return res.json(
-      packs.map((pack) => ({
-        _id: pack._id,
-        name: pack.name,
-        slug: pack.slug,
-        description: pack.description,
-        icon: pack.icon,
-        author: pack.author,
-        authorName: pack.authorName,
-        createdAt: pack.createdAt,
-        updatedAt: pack.updatedAt,
-      })),
-    );
+    return res.json(packs.map((pack) => serializeSkillPack(pack)));
   } catch (error) {
     logger.error('[skill-packs] Failed to list packs:', error);
     return res.status(500).json({ error: 'Failed to list packs' });
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', checkSkillCreate, async (req, res) => {
   const { name, description, icon, skillIds } = req.body ?? {};
   if (
     typeof name !== 'string' ||
@@ -46,6 +86,7 @@ router.post('/', async (req, res) => {
     description.trim().length > 2048 ||
     (icon !== undefined && (typeof icon !== 'string' || icon.trim().length > 16)) ||
     !Array.isArray(skillIds) ||
+    skillIds.length > MAX_SKILL_PACK_SKILLS ||
     !skillIds.every(
       (skillId) => typeof skillId === 'string' && mongoose.Types.ObjectId.isValid(skillId),
     )
@@ -77,7 +118,7 @@ router.post('/', async (req, res) => {
       icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
       skillIds: normalizedSkillIds.map((skillId) => new mongoose.Types.ObjectId(skillId)),
       author: new mongoose.Types.ObjectId(req.user.id),
-      authorName: req.user.name,
+      authorName: resolvePackAuthorName(req.user),
     });
     return res.status(201).json(pack);
   } catch (error) {
@@ -109,12 +150,10 @@ router.get('/:id', async (req, res) => {
     }
 
     const accessibleSkillIdSet = new Set(accessibleSkillIds.map((skillId) => skillId.toString()));
-    return res.json({
-      ...pack,
-      skillIds: pack.skillIds
-        .filter((skillId) => accessibleSkillIdSet.has(skillId.toString()))
-        .map((skillId) => skillId.toString()),
-    });
+    const visibleSkillIds = pack.skillIds
+      .filter((skillId) => accessibleSkillIdSet.has(skillId.toString()))
+      .map((skillId) => skillId.toString());
+    return res.json(serializeSkillPack(pack, visibleSkillIds));
   } catch (error) {
     logger.error('[skill-packs] Failed to read pack:', error);
     return res.status(500).json({ error: 'Failed to read pack' });

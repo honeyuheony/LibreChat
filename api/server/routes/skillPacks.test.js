@@ -5,12 +5,15 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   AccessRoleIds,
   PermissionBits,
+  PermissionTypes,
   PrincipalType,
   ResourceType,
   SystemRoles,
 } = require('librechat-data-provider');
 
 let currentTestUser;
+let currentUserOverrides = {};
+let rolePermissionsByName;
 
 jest.mock('~/server/middleware', () => ({
   requireJwtAuth: (req, res, next) => {
@@ -20,6 +23,8 @@ jest.mock('~/server/middleware', () => ({
     return next();
   },
 }));
+
+jest.mock('~/server/middleware/config/app', () => (_req, _res, next) => next());
 
 let app;
 let mongoServer;
@@ -56,6 +61,21 @@ beforeAll(async () => {
       PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
   });
 
+  rolePermissionsByName = new Map([
+    [SystemRoles.USER, { USE: true, CREATE: true }],
+    ['PACKS_NO_USE', { USE: false, CREATE: false }],
+    ['PACKS_NO_CREATE', { USE: true, CREATE: false }],
+  ]);
+  const modelMethods = require('~/models');
+  modelMethods.getRoleByName = async (roleName) => ({
+    permissions: {
+      [PermissionTypes.SKILLS]: rolePermissionsByName.get(roleName) ?? {
+        USE: false,
+        CREATE: false,
+      },
+    },
+  });
+
   const permissionService = require('~/server/services/PermissionService');
   grantPermission = permissionService.grantPermission;
 
@@ -75,6 +95,16 @@ beforeAll(async () => {
       email: 'other-user@test.com',
       role: SystemRoles.USER,
     }),
+    noSkillUse: await User.create({
+      name: 'No Skill Use',
+      email: 'no-skill-use@test.com',
+      role: 'PACKS_NO_USE',
+    }),
+    noSkillCreate: await User.create({
+      name: 'No Skill Create',
+      email: 'no-skill-create@test.com',
+      role: 'PACKS_NO_CREATE',
+    }),
   };
 
   app = express();
@@ -83,6 +113,7 @@ beforeAll(async () => {
     if (currentTestUser) {
       req.user = {
         ...currentTestUser.toObject(),
+        ...currentUserOverrides,
         id: currentTestUser._id.toString(),
         _id: currentTestUser._id,
       };
@@ -97,6 +128,7 @@ afterEach(async () => {
   await AclEntry.deleteMany({});
   await Skill.deleteMany({});
   currentTestUser = testUsers.reader;
+  currentUserOverrides = {};
 });
 
 afterAll(async () => {
@@ -153,6 +185,30 @@ describe('skill pack routes', () => {
     expect(response.status).toBe(401);
   });
 
+  it('denies listing to a role without skills USE permission', async () => {
+    currentTestUser = testUsers.noSkillUse;
+
+    const response = await request(app).get('/api/skill-packs');
+
+    expect(response.status).toBe(403);
+  });
+
+  it('denies creation to a role without skills CREATE permission', async () => {
+    const first = await createSkill({
+      name: 'create-denied-one',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const second = await createSkill({
+      name: 'create-denied-two',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const response = await createPack([first, second], testUsers.noSkillCreate);
+
+    expect(response.status).toBe(403);
+  });
+
   it('rejects a pack with fewer than two skill ids', async () => {
     const skill = await createSkill({
       name: 'single-skill',
@@ -160,6 +216,21 @@ describe('skill pack routes', () => {
       publicViewer: true,
     });
     const response = await createPack([skill]);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects a pack with more than 50 skill ids', async () => {
+    const skills = await Promise.all(
+      Array.from({ length: 51 }, (_, index) =>
+        createSkill({
+          name: `large-pack-skill-${index}`,
+          author: testUsers.owner,
+          publicViewer: true,
+        }),
+      ),
+    );
+    const response = await createPack(skills);
 
     expect(response.status).toBe(400);
   });
@@ -186,7 +257,9 @@ describe('skill pack routes', () => {
       name: 'hidden-skill',
       author: testUsers.owner,
     });
-    const created = await SkillPack.create({
+    const packId = new mongoose.Types.ObjectId();
+    await SkillPack.collection.insertOne({
+      _id: packId,
       name: 'Quarterly Pack',
       slug: 'quarterly-pack',
       description: 'Skills for quarterly work.',
@@ -194,13 +267,55 @@ describe('skill pack routes', () => {
       skillIds: [visibleSkill._id, hiddenSkill._id],
       author: testUsers.owner._id,
       authorName: testUsers.owner.name,
+      tenantId: 'tenant-private',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      __v: 7,
     });
 
     currentTestUser = testUsers.reader;
-    const response = await request(app).get(`/api/skill-packs/${created._id}`).expect(200);
+    const response = await request(app).get(`/api/skill-packs/${packId}`).expect(200);
 
+    expect(response.body._id).toBe(packId.toString());
     expect(response.body.skillIds).toEqual([visibleSkill._id.toString()]);
     expect(response.body.skillIds).not.toContain(hiddenSkill._id.toString());
+    expect(Object.keys(response.body).sort()).toEqual(
+      [
+        '_id',
+        'author',
+        'authorName',
+        'createdAt',
+        'description',
+        'icon',
+        'name',
+        'skillIds',
+        'slug',
+        'updatedAt',
+      ].sort(),
+    );
+  });
+
+  it('uses username or email prefix when the author name is blank', async () => {
+    const first = await createSkill({
+      name: 'fallback-name-one',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const second = await createSkill({
+      name: 'fallback-name-two',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+
+    currentUserOverrides = { name: '', username: 'pack-owner-alias' };
+    const usernameResponse = await createPack([first, second]);
+    expect(usernameResponse.status).toBe(201);
+    expect(usernameResponse.body.authorName).toBe('pack-owner-alias');
+
+    currentUserOverrides = { name: '', username: '', email: 'pack-fallback@test.com' };
+    const emailResponse = await createPack([first, second]);
+    expect(emailResponse.status).toBe(201);
+    expect(emailResponse.body.authorName).toBe('pack-fallback');
   });
 
   it('prevents users other than the author from deleting a pack', async () => {

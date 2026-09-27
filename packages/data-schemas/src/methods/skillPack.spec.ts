@@ -53,6 +53,40 @@ describe('createSkillPackMethods', () => {
     expect(pack.updatedAt).toBeInstanceOf(Date);
   });
 
+  it('uses different random slugs for Korean pack names', async () => {
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValueOnce(0.2);
+    try {
+      const first = await methods.createSkillPack(createInput('보고서'));
+      const second = await methods.createSkillPack(createInput('검토'));
+
+      expect(first.slug).toMatch(/^pack-[a-z0-9]{6}$/);
+      expect(second.slug).toMatch(/^pack-[a-z0-9]{6}$/);
+      expect(second.slug).not.toBe(first.slug);
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it('stops trying slugs after five collisions', async () => {
+    const collidedSlugs = ['collision', 'collision-2', 'collision-3', 'collision-4', 'collision-5'];
+    await mongoose.models.SkillPack.insertMany(
+      collidedSlugs.map((slug, index) => ({
+        ...createInput(`Existing ${index}`),
+        slug,
+      })),
+    );
+
+    const existsSpy = jest.spyOn(mongoose.models.SkillPack, 'exists');
+    try {
+      await expect(methods.createSkillPack(createInput('Collision'))).rejects.toThrow(
+        'Unable to generate a unique skill pack slug',
+      );
+      expect(existsSpy).toHaveBeenCalledTimes(5);
+    } finally {
+      existsSpy.mockRestore();
+    }
+  });
+
   it('lists packs and reads one pack by id', async () => {
     const created = await methods.createSkillPack(createInput('Pack One'));
     await methods.createSkillPack(createInput('Pack Two'));
@@ -66,10 +100,37 @@ describe('createSkillPackMethods', () => {
     expect(await methods.getSkillPackById('not-an-object-id')).toBeNull();
   });
 
+  it('lists no more than the 100 most recent packs', async () => {
+    const packs = Array.from({ length: 101 }, (_, index) => {
+      const timestamp = new Date(Date.UTC(2026, 0, 1, 0, 0, index));
+      return {
+        ...createInput(`Pack ${index}`),
+        slug: `pack-${index}`,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+    });
+    await mongoose.models.SkillPack.insertMany(packs);
+
+    const listed = await methods.listSkillPacks();
+
+    expect(listed).toHaveLength(100);
+    expect(listed[0].name).toBe('Pack 100');
+    expect(listed[99].name).toBe('Pack 1');
+  });
+
   it('rejects packs containing fewer than two skills', async () => {
     await expect(methods.createSkillPack(createInput('Single Skill', 1))).rejects.toMatchObject({
       name: 'ValidationError',
     });
+  });
+
+  it('rejects packs containing more than 50 skills', async () => {
+    await expect(methods.createSkillPack(createInput('Too Many Skills', 51))).rejects.toMatchObject(
+      {
+        name: 'ValidationError',
+      },
+    );
   });
 
   it('rejects packs that repeat a skill id', async () => {

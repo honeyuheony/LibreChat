@@ -2,6 +2,8 @@ import { Schema } from 'mongoose';
 import type { Types } from 'mongoose';
 import type { ISkillPackDocument } from '~/types/skillPack';
 
+export const MAX_SKILL_PACK_SKILLS = 50;
+
 const skillPackSchema: Schema<ISkillPackDocument> = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 128 },
@@ -12,10 +14,17 @@ const skillPackSchema: Schema<ISkillPackDocument> = new Schema(
       type: [{ type: Schema.Types.ObjectId, ref: 'Skill' }],
       required: true,
       validate: {
-        validator: (skillIds: Types.ObjectId[]) =>
-          Array.isArray(skillIds) &&
-          new Set(skillIds.map((skillId) => skillId.toString())).size >= 2,
-        message: 'A skill pack must contain at least two different skills',
+        validator: (skillIds: Types.ObjectId[]) => {
+          if (
+            !Array.isArray(skillIds) ||
+            skillIds.length < 2 ||
+            skillIds.length > MAX_SKILL_PACK_SKILLS
+          ) {
+            return false;
+          }
+          return new Set(skillIds.map((skillId) => skillId.toString())).size === skillIds.length;
+        },
+        message: 'A skill pack must contain between two and 50 different skills',
       },
     },
     author: { type: Schema.Types.ObjectId, ref: 'User', required: true },

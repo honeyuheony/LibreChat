@@ -1,6 +1,9 @@
 import type { Model, Types } from 'mongoose';
 import type { ISkillPack, ISkillPackDocument } from '~/types/skillPack';
 
+const MAX_SKILL_PACK_SLUG_ATTEMPTS = 5;
+const MAX_SKILL_PACKS = 100;
+
 export type CreateSkillPackInput = Pick<
   ISkillPack,
   'name' | 'description' | 'icon' | 'skillIds' | 'author' | 'authorName'
@@ -27,15 +30,29 @@ function isDuplicateKeyError(error: unknown): boolean {
   );
 }
 
-function createSlugBase(name: string): string {
-  return (
-    name
-      .normalize('NFKD')
-      .replace(/\p{Diacritic}/gu, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'skill-pack'
-  );
+function createSlugBase(name: string): string | null {
+  const slug = name
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || null;
+}
+
+function createRandomSlug(): string {
+  const suffix = Math.random().toString(36).slice(2, 8).padEnd(6, '0');
+  return `pack-${suffix}`;
+}
+
+function createSlugCandidate(baseSlug: string | null, attempt: number): string {
+  if (baseSlug === null) {
+    return createRandomSlug();
+  }
+  if (attempt === 0) {
+    return baseSlug;
+  }
+  return `${baseSlug}-${attempt + 1}`;
 }
 
 export function createSkillPackMethods(mongoose: typeof import('mongoose')): SkillPackMethods {
@@ -43,8 +60,8 @@ export function createSkillPackMethods(mongoose: typeof import('mongoose')): Ski
 
   async function createSkillPack(input: CreateSkillPackInput): Promise<SkillPackRecord> {
     const baseSlug = createSlugBase(input.name);
-    for (let suffix = 1; ; suffix += 1) {
-      const slug = suffix === 1 ? baseSlug : `${baseSlug}-${suffix}`;
+    for (let attempt = 0; attempt < MAX_SKILL_PACK_SLUG_ATTEMPTS; attempt += 1) {
+      const slug = createSlugCandidate(baseSlug, attempt);
       if (await SkillPack.exists({ slug })) {
         continue;
       }
@@ -57,10 +74,14 @@ export function createSkillPackMethods(mongoose: typeof import('mongoose')): Ski
         }
       }
     }
+    throw new Error('Unable to generate a unique skill pack slug');
   }
 
   async function listSkillPacks(): Promise<SkillPackRecord[]> {
-    const packs = await SkillPack.find({}).sort({ createdAt: -1, _id: -1 }).lean();
+    const packs = await SkillPack.find({})
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(MAX_SKILL_PACKS)
+      .lean();
     return packs as SkillPackRecord[];
   }
 
