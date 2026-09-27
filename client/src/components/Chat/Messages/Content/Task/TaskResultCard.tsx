@@ -1,10 +1,12 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useRef, useState } from 'react';
+import { v4 } from 'uuid';
 import { useSetAtom } from 'jotai';
 import copy from 'copy-to-clipboard';
 import { useSetRecoilState } from 'recoil';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, useToastContext } from '@librechat/client';
-import type { TaskTableResult } from 'librechat-data-provider';
+import { PermissionTypes, Permissions } from 'librechat-data-provider';
+import type { TCreateSchedule, TMessage, TaskTableResult } from 'librechat-data-provider';
 import type { TaskResultAttachment } from './api';
 import {
   downloadTaskReportFile,
@@ -12,8 +14,17 @@ import {
   taskResultQuery,
   useTaskResultQuery,
 } from '~/data-provider/Tasks/queries';
-import { useAuthContext, useLocalize, useSubmitMessage } from '~/hooks';
+import {
+  createScheduleCadence,
+  DEFAULT_SCHEDULE_CADENCE,
+  SCHEDULE_TIMEZONE,
+} from '~/components/Schedules/cadence';
+import { useAuthContext, useHasAccess, useLocalize, useSubmitMessage } from '~/hooks';
+import { localizeScheduleText } from '~/components/Schedules/localize';
+import { useCreateScheduleMutation } from '~/data-provider/Schedules';
 import { taskDocToMarkdown } from '~/components/Task/TaskDocView';
+import { useListSkillsQuery } from '~/data-provider/Skills';
+import { useGetStartupConfig } from '~/data-provider';
 import { ChatContext } from '~/Providers/ChatContext';
 import { taskPanelState } from '~/store/task';
 import { cn } from '~/utils';
@@ -37,9 +48,49 @@ export function topValueCounts(result: TaskTableResult, localize: Localize): str
   });
 }
 
-function ActionButton({ label, onClick }: { label: string; onClick: () => void }) {
+function manualSkillsForResult(messages: TMessage[], resultCreatedAt: string): string[] {
+  const resultTimestamp = Date.parse(resultCreatedAt);
+  if (!Number.isFinite(resultTimestamp)) {
+    return [];
+  }
+
+  let latestUserMessage: TMessage | undefined;
+  let latestUserTimestamp = Number.NEGATIVE_INFINITY;
+  for (const message of messages) {
+    if (!message.isCreatedByUser) {
+      continue;
+    }
+    const messageTimestamp = Date.parse(message.createdAt ?? '');
+    if (
+      !Number.isFinite(messageTimestamp) ||
+      messageTimestamp > resultTimestamp ||
+      messageTimestamp < latestUserTimestamp
+    ) {
+      continue;
+    }
+    latestUserMessage = message;
+    latestUserTimestamp = messageTimestamp;
+  }
+  return latestUserMessage?.manualSkills ?? [];
+}
+
+function ActionButton({
+  label,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <Button size="sm" variant="ghost" className="h-8 px-2.5 text-text-secondary" onClick={onClick}>
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-8 px-2.5 text-text-secondary"
+      onClick={onClick}
+      disabled={disabled}
+    >
       {label}
     </Button>
   );
@@ -83,7 +134,25 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
   const localize = useLocalize();
   const queryClient = useQueryClient();
   const { showToast } = useToastContext();
-  const inChat = useContext(ChatContext) != null;
+  const chatContext = useContext(ChatContext);
+  const conversation = chatContext?.conversation;
+  const inChat = chatContext != null;
+  const { data: startupConfig } = useGetStartupConfig();
+  const canCreateSchedules = useHasAccess({
+    permissionType: PermissionTypes.SCHEDULES,
+    permission: Permissions.CREATE,
+  });
+  const schedulesConfig = startupConfig?.interface?.schedules;
+  const schedulesEnabled =
+    schedulesConfig != null &&
+    schedulesConfig !== false &&
+    !(typeof schedulesConfig === 'object' && schedulesConfig.use === false);
+  const canSchedule =
+    inChat && canCreateSchedules && schedulesEnabled && (conversation?.agent_id ?? '') !== '';
+  const { data: listedSkills } = useListSkillsQuery({ limit: 100 }, { enabled: canSchedule });
+  const createSchedule = useCreateScheduleMutation();
+  const scheduleRequestId = useRef(v4());
+  const [isPreparingSchedule, setIsPreparingSchedule] = useState(false);
   const setTaskPanel = useSetAtom(taskPanelState);
   const setArtifactsVisible = useSetRecoilState(store.artifactsVisibility);
   const { resultId, kind, stats } = result;
@@ -117,6 +186,57 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
       await downloadTaskResultWorkbook(resultId, `${result.title}.xlsx`);
     } catch {
       showToast({ status: 'error', message: localize('com_ui_task_excel_error') });
+    }
+  };
+
+  const createWeeklySchedule = async () => {
+    if (!canSchedule || conversation?.agent_id == null || isPreparingSchedule) {
+      return;
+    }
+    setIsPreparingSchedule(true);
+    try {
+      const taskResult = await queryClient.fetchQuery(taskResultQuery(resultId));
+      if (taskResult.conversationId !== conversation.conversationId) {
+        throw new Error('Result conversation does not match current conversation');
+      }
+      const manualSkills = manualSkillsForResult(
+        chatContext?.getMessages?.() ?? [],
+        taskResult.createdAt,
+      );
+      const firstSkillName = manualSkills[0];
+      const firstSkill = listedSkills?.skills.find((skill) => skill.name === firstSkillName);
+      const scheduleName =
+        firstSkill?.displayTitle || firstSkill?.name || firstSkillName || result.title;
+      const payload: TCreateSchedule = {
+        name: scheduleName,
+        prompt: `${scheduleName}을 실행해 주세요.`,
+        agent_id: conversation.agent_id,
+        cadence: createScheduleCadence(DEFAULT_SCHEDULE_CADENCE),
+        timezone: SCHEDULE_TIMEZONE,
+        target: 'new',
+        enabled: true,
+        clientRequestId: scheduleRequestId.current,
+        ...(manualSkills.length > 0 ? { skills: manualSkills } : {}),
+        ...(conversation.file_ids != null ? { file_ids: conversation.file_ids } : {}),
+        ...(conversation.chatProjectId ? { chatProjectId: conversation.chatProjectId } : {}),
+      };
+      createSchedule.mutate(payload, {
+        onSuccess: () => {
+          scheduleRequestId.current = v4();
+          setIsPreparingSchedule(false);
+          showToast({
+            status: 'success',
+            message: localizeScheduleText(localize, 'com_ui_schedules_weekly_created'),
+          });
+        },
+        onError: () => {
+          setIsPreparingSchedule(false);
+          showToast({ status: 'error', message: localize('com_ui_error') });
+        },
+      });
+    } catch {
+      setIsPreparingSchedule(false);
+      showToast({ status: 'error', message: localize('com_ui_error') });
     }
   };
 
@@ -190,6 +310,13 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
             <ActionButton label={localize('com_ui_task_open')} onClick={openResult} />
             {result.file != null && <HwpDownloadButton file={result.file} />}
           </>
+        )}
+        {canSchedule && (
+          <ActionButton
+            label={localizeScheduleText(localize, 'com_ui_task_schedule_weekly')}
+            onClick={createWeeklySchedule}
+            disabled={isPreparingSchedule || createSchedule.isLoading}
+          />
         )}
       </div>
     </div>
