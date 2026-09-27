@@ -3504,6 +3504,8 @@
   "com_metrics_staff_contributor_note": "직원 제작 agent 기준",
   "com_metrics_title": "운영 현황",
   "com_skills_builder_file_kind_examples": "예시",
+  "com_skills_builder_file_kind_assets": "양식",
+  "com_skills_builder_file_kind_references": "참고",
   "com_skills_builder_files_list": "가져온 문서",
   "com_skills_builder_source_chat": "대화에서 확정",
   "com_ui_account_settings_more": "화면·계정 설정 더 보기",

@@ -3499,6 +3499,8 @@
   "com_metrics_staff_contributor_note": "Staff-created agents",
   "com_metrics_title": "Operational metrics",
   "com_skills_builder_file_kind_examples": "Example",
+  "com_skills_builder_file_kind_assets": "Template",
+  "com_skills_builder_file_kind_references": "Reference",
   "com_skills_builder_files_list": "Documents brought over",
   "com_skills_builder_source_chat": "Settled in chat",
   "com_ui_account_settings_more": "More display and account settings",
