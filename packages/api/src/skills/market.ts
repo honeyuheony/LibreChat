@@ -72,6 +72,17 @@ function compactProfile(profile: TSkillMarketProfile): TSkillMarketProfile | und
   return entries.length > 0 ? (Object.fromEntries(entries) as TSkillMarketProfile) : undefined;
 }
 
+/**
+ * scope 키가 있는데 비어 있지 않은 문자열이 아니면, 버리지 않고 그 값을 적어 둔다. 버리면 scope 가
+ * 없는 스킬처럼 전 부서에 공개되므로, `isVisibleToDepartment` 가 알 수 없는 값으로 보고 숨기게 한다.
+ */
+function readScope(raw: Record<string, unknown>): string | undefined {
+  if (!Object.prototype.hasOwnProperty.call(raw, 'scope')) {
+    return undefined;
+  }
+  return readString(raw.scope) ?? JSON.stringify(raw.scope ?? null);
+}
+
 /** SKILL.md 머리말 `metadata`를 읽는다. 모양이 틀린 값은 버린다. */
 export function readDeploymentMarketFields(
   frontmatter: Record<string, unknown>,
@@ -91,7 +102,7 @@ export function readDeploymentMarketFields(
     seedMetrics: readSeedMetrics(raw.seedMetrics),
     marketProfile: compactProfile({
       kind: readString(raw.kind),
-      scope: readString(raw.scope),
+      scope: readScope(raw),
       version: readString(raw.version),
       triggers: readStringList(raw.triggers),
       pipeline: readString(raw.pipeline),
