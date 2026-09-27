@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import Schedules from '../index';
 
 const mockRefetch = jest.fn();
+let mockCanCreate = false;
 const mockQueryState = {
   data: { schedules: [], limits: { maxPerUser: 10 } },
   dataUpdatedAt: 0,
@@ -11,7 +12,7 @@ const mockQueryState = {
 };
 
 jest.mock('~/hooks', () => ({
-  useHasAccess: () => false,
+  useHasAccess: () => mockCanCreate,
   useLocalize: () => (key: string, values?: Record<string, string | number>) =>
     values == null ? key : `${key}:${Object.values(values).join('|')}`,
 }));
@@ -31,10 +32,33 @@ jest.mock('../../SidePanel/Schedules/useRunSync', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanCreate = false;
   mockQueryState.data = { schedules: [], limits: { maxPerUser: 10 } };
   mockQueryState.dataUpdatedAt = 0;
   mockQueryState.isError = false;
   mockQueryState.isLoading = false;
+});
+
+test('places the create action in the top bar and keeps the content narrow', () => {
+  mockCanCreate = true;
+  render(<Schedules />);
+
+  const createButton = screen.getByRole('button', { name: 'com_ui_schedule_new' });
+  const toolbar = createButton.closest('header');
+  expect(toolbar).toBeInTheDocument();
+  if (toolbar == null) {
+    return;
+  }
+
+  expect(toolbar).toHaveClass('h-12');
+  expect(within(toolbar).getByText('com_ui_schedules_title')).toBeInTheDocument();
+  const content = screen.getByRole('region', { name: 'com_ui_schedules_title' });
+  expect(
+    within(content).queryByRole('button', { name: 'com_ui_schedule_new' }),
+  ).not.toBeInTheDocument();
+  expect(content).toHaveClass('max-w-[760px]', 'px-6');
+  expect(content.parentElement).toHaveClass('bg-surface-secondary');
+  expect(content).not.toContainElement(createButton);
 });
 
 test('does not show a schedule tile when the list is empty', () => {
