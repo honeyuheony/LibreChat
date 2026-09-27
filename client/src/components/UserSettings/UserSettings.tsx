@@ -175,7 +175,7 @@ export default function UserSettings() {
                   approvalModeMutation.mutate({ approvalMode: nextApprovalMode });
                 }
               }}
-              className="w-full max-w-[520px] rounded-md border border-border-light bg-surface-primary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
+              className="w-full max-w-[520px] rounded-md border border-border-light bg-surface-secondary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             >
               <option value="manual">
                 {localizeSetting('com_ui_user_settings_approval_manual')}
@@ -197,8 +197,8 @@ export default function UserSettings() {
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_nav_settings')}</span>
       </header>
-      <div className="px-4 pb-10 pt-6 md:pt-8">
-        <div className="mx-auto w-full max-w-[520px]">
+      <div className="px-4 pb-10 pt-6 md:pt-4">
+        <div className="mx-auto w-full max-w-[710px]">
           <h1 className="mb-4 text-2xl font-bold text-text-primary">
             {localize('com_nav_settings')}
           </h1>

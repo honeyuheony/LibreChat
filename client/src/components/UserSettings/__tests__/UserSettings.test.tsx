@@ -130,11 +130,15 @@ describe('UserSettings', () => {
   it('matches the wireframe layout for settings controls', () => {
     renderSettings();
 
-    expect(screen.getByRole('note')).toHaveClass(
+    const note = screen.getByRole('note');
+    expect(note).toHaveClass(
       'border-accent-primary/20',
       'bg-surface-brand-subtle',
       'text-accent-primary',
     );
+    expect(note.closest('div.mx-auto')).toHaveClass('max-w-[710px]');
+    const settingsHeading = screen.getByRole('heading', { name: 'com_nav_settings' });
+    expect(settingsHeading.closest('div.px-4')).toHaveClass('md:pt-4');
 
     const instructions = screen.getByRole('textbox', {
       name: 'com_ui_user_settings_global_instructions',
@@ -149,7 +153,7 @@ describe('UserSettings', () => {
 
     expect(
       screen.getByRole('combobox', { name: 'com_ui_user_settings_approval_mode' }),
-    ).toHaveClass('w-full', 'max-w-[520px]');
+    ).toHaveClass('w-full', 'max-w-[520px]', 'bg-surface-secondary');
     expect(screen.getByRole('button', { name: 'com_ui_account_settings_more' })).toHaveClass(
       'border-t',
       'border-border-light',
