@@ -1285,6 +1285,20 @@ export function switchDemoUser(): Promise<TDemoSwitchUserResponse> {
   return request.post(endpoints.demoSwitchUser(), {});
 }
 
+type TDemoResetResponse = {
+  rows: Array<{
+    email?: string;
+    collection: string;
+    deleted: number;
+    replaced: number;
+    created: number;
+  }>;
+};
+
+export function resetDemo(): Promise<TDemoResetResponse> {
+  return request.post(endpoints.demoReset(), {});
+}
+
 export function getSchedules(): Promise<sch.TSchedulesResponse> {
   return request.get(endpoints.schedules());
 }

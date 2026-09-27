@@ -1,1 +1,1 @@
-export { useDemoSwitchUserMutation, useDemoSwitchUserQuery } from './queries';
+export { useDemoResetMutation, useDemoSwitchUserMutation, useDemoSwitchUserQuery } from './queries';

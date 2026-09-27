@@ -459,6 +459,7 @@ export const runSchedule = (id: string) => `${schedule(id)}/run`;
 
 /* 데모 사용자 전환 */
 export const demoSwitchUser = () => `${BASE_URL}/api/demo/switch-user`;
+export const demoReset = () => `${BASE_URL}/api/demo/reset`;
 
 /* Skills */
 export const skills = () => `${BASE_URL}/api/skills`;

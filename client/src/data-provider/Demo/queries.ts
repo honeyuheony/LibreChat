@@ -9,6 +9,7 @@ import type {
 
 type TDemoSwitchUserResponse = Awaited<ReturnType<typeof dataService.getDemoSwitchUser>>;
 type TDemoSwitchUserMutationResponse = Awaited<ReturnType<typeof dataService.switchDemoUser>>;
+type TDemoResetMutationResponse = Awaited<ReturnType<typeof dataService.resetDemo>>;
 
 const demoSwitchUserQueryKey = ['demo', 'switch-user'] as const;
 
@@ -27,6 +28,15 @@ export function useDemoSwitchUserMutation(
 ): UseMutationResult<TDemoSwitchUserMutationResponse, Error, void> {
   return useMutation<TDemoSwitchUserMutationResponse, Error, void>(
     () => dataService.switchDemoUser(),
+    config,
+  );
+}
+
+export function useDemoResetMutation(
+  config?: UseMutationOptions<TDemoResetMutationResponse, Error, void>,
+): UseMutationResult<TDemoResetMutationResponse, Error, void> {
+  return useMutation<TDemoResetMutationResponse, Error, void>(
+    () => dataService.resetDemo(),
     config,
   );
 }
