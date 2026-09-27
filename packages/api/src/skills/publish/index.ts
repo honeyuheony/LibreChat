@@ -145,6 +145,55 @@ async function readAuthorDepartment(
   return departments[authorId];
 }
 
+/** 공유 대화상자와 같은 역할 검사를 거친다. 'all' 게시는 공개 공유 검사까지 통과해야 한다. */
+async function passesPublishSharePolicy(
+  sharePolicy: SkillSharePolicy,
+  req: ServerRequest,
+  res: Response,
+  isPublic: boolean,
+): Promise<boolean> {
+  if (!(await passesSharePolicy(sharePolicy.checkShareAccess, req, res, isPublic))) {
+    return false;
+  }
+  return !isPublic || passesSharePolicy(sharePolicy.checkSharePublicAccess, req, res, isPublic);
+}
+
+/** ACL 을 바꾸지 못하면 `publishedAt` 을 게시 전 값으로 되돌리고 false 를 돌려준다. */
+async function applyPublishAccess(
+  deps: SkillPublishDeps,
+  skill: SkillDoc,
+  publishedVersion: number,
+  principals: PublishPrincipals,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const aclResult = await deps.bulkUpdateResourcePermissions({
+      resourceType: ResourceType.SKILL,
+      resourceId: skill._id,
+      ...principals,
+      grantedBy: userId,
+    });
+    if (aclResult?.errors?.length) {
+      throw new Error(aclResult.errors.map((entry) => entry.error).join('; '));
+    }
+    return true;
+  } catch (aclError) {
+    logger.error(
+      `[skillPublish] ACL update failed for ${skill._id}, restoring publish state`,
+      aclError,
+    );
+    const restored = await deps.setSkillPublicationState({
+      id: skill._id.toString(),
+      expectedVersion: publishedVersion,
+      publishedAt: skill.publishedAt ?? null,
+    });
+    if (restored.status !== 'updated') {
+      logger.error(`[skillPublish] Could not restore publish state for ${skill._id}`);
+    }
+    return false;
+  }
+}
+
 /** `POST /api/skills/:id/publish`: 게시 조건을 확인하고 공개 범위를 ACL 에 적은 뒤 `publishedAt` 을 남긴다. */
 export function createSkillPublishHandler(deps: SkillPublishDeps) {
   return async function skillPublishHandler(
@@ -178,13 +227,7 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         });
       }
       const isPublic = publishScope === 'all';
-      if (!(await passesSharePolicy(deps.sharePolicy.checkShareAccess, req, res, isPublic))) {
-        return;
-      }
-      if (
-        isPublic &&
-        !(await passesSharePolicy(deps.sharePolicy.checkSharePublicAccess, req, res, isPublic))
-      ) {
+      if (!(await passesPublishSharePolicy(deps.sharePolicy, req, res, isPublic))) {
         return;
       }
 
@@ -206,29 +249,7 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         return res.status(409).json(conflictResponse(published.current, isPublic));
       }
 
-      try {
-        const aclResult = await deps.bulkUpdateResourcePermissions({
-          resourceType: ResourceType.SKILL,
-          resourceId: skill._id,
-          ...principals,
-          grantedBy: userId,
-        });
-        if (aclResult?.errors?.length) {
-          throw new Error(aclResult.errors.map((entry) => entry.error).join('; '));
-        }
-      } catch (aclError) {
-        logger.error(
-          `[skillPublish] ACL update failed for ${skill._id}, restoring publish state`,
-          aclError,
-        );
-        const restored = await deps.setSkillPublicationState({
-          id: skill._id.toString(),
-          expectedVersion: published.skill.version,
-          publishedAt: skill.publishedAt ?? null,
-        });
-        if (restored.status !== 'updated') {
-          logger.error(`[skillPublish] Could not restore publish state for ${skill._id}`);
-        }
+      if (!(await applyPublishAccess(deps, skill, published.skill.version, principals, userId))) {
         return res
           .status(500)
           .json({ error: 'Failed to update sharing for the skill', code: 'PUBLISH_ACL_FAILED' });

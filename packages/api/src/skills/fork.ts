@@ -73,6 +73,126 @@ async function readStoredFile(
   return Buffer.concat(chunks);
 }
 
+type ForkAuthor = { id: string; objectId: Types.ObjectId; name: string; tenantId?: string };
+
+type CreateForkOutcome =
+  | { status: 'created'; skill: SkillDoc }
+  | { status: 'invalid'; issues: unknown[] }
+  | { status: 'taken' };
+
+/** 후보 이름을 차례로 써 보고, 이름이 겹치면 다음 후보로 넘어간다. */
+async function createForkedSkill(
+  deps: ForkSkillDeps,
+  original: SkillDoc,
+  names: string[],
+  author: ForkAuthor,
+): Promise<CreateForkOutcome> {
+  let created: CreateSkillResult | null = null;
+  for (const name of names) {
+    try {
+      created = await deps.createSkill({
+        name,
+        displayTitle: original.displayTitle,
+        description: original.description,
+        body: original.body,
+        frontmatter: original.frontmatter,
+        category: original.category,
+        alwaysApply: original.alwaysApply,
+        manualMinutes: original.manualMinutes,
+        forkOf: original._id,
+        icon: original.icon,
+        author: author.objectId,
+        authorName: author.name,
+        tenantId: author.tenantId,
+      });
+      break;
+    } catch (error) {
+      if (isValidationError(error)) {
+        return { status: 'invalid', issues: error.issues };
+      }
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+    }
+  }
+  if (!created) {
+    return { status: 'taken' };
+  }
+  return { status: 'created', skill: created.skill as SkillDoc };
+}
+
+/** 소유 권한을 주지 못하면 만든 사본을 지우고 false 를 돌려준다. */
+async function grantForkOwner(
+  deps: ForkSkillDeps,
+  forked: SkillDoc,
+  userId: string,
+): Promise<boolean> {
+  try {
+    await deps.grantPermission({
+      principalType: PrincipalType.USER,
+      principalId: userId,
+      resourceType: ResourceType.SKILL,
+      resourceId: forked._id,
+      accessRoleId: AccessRoleIds.SKILL_OWNER,
+      grantedBy: userId,
+    });
+    return true;
+  } catch (permissionError) {
+    logger.error(
+      `[forkSkill] Failed to grant SKILL_OWNER for ${forked._id}, rolling back:`,
+      permissionError,
+    );
+    await deps
+      .deleteSkill(forked._id.toString())
+      .catch((rollbackError) =>
+        logger.error(`[forkSkill] Compensating delete failed for ${forked._id}:`, rollbackError),
+      );
+    return false;
+  }
+}
+
+/** 파일마다 따로 복사해, 하나가 실패해도 나머지는 계속 옮긴다. */
+async function copySkillFiles(
+  req: ServerRequest,
+  deps: ForkSkillDeps,
+  original: SkillDoc,
+  forked: SkillDoc,
+  author: ForkAuthor,
+): Promise<ForkFileResult[]> {
+  const context = {
+    userId: author.id,
+    skillId: forked._id,
+    authorId: author.objectId,
+    tenantId: author.tenantId,
+  };
+  const fileResults: ForkFileResult[] = [];
+  for (const file of await deps.listSkillFiles(original._id)) {
+    try {
+      const buffer = await readStoredFile(req, deps, file);
+      await persistSkillFile(req as unknown as Request, deps, file, buffer, context);
+      fileResults.push({ path: file.relativePath, status: 'ok' });
+    } catch (error) {
+      logger.error(`[forkSkill] Failed to copy file ${file.relativePath}:`, error);
+      fileResults.push({
+        path: file.relativePath,
+        status: 'error',
+        error: (error as Error).message,
+      });
+    }
+  }
+  return fileResults;
+}
+
+function summarizeFileCopies(fileResults: ForkFileResult[]): TForkSkillResponse['_forkSummary'] {
+  const errors = fileResults.filter((result) => result.status === 'error');
+  return {
+    filesProcessed: fileResults.length,
+    filesSucceeded: fileResults.length - errors.length,
+    filesFailed: errors.length,
+    errors,
+  };
+}
+
 /** `POST /api/skills/:id/fork`: 원본 본문과 파일을 복사한 비공개 새 스킬을 만든다. 원본 응용 수는 사본을 게시해야 오른다. */
 export function createForkSkillHandler(deps: ForkSkillDeps) {
   return async function forkSkillHandler(req: ServerRequest, res: Response): Promise<Response> {
@@ -94,8 +214,12 @@ export function createForkSkillHandler(deps: ForkSkillDeps) {
         return res.status(404).json({ error: 'Skill not found' });
       }
 
-      const authorId = (user._id ?? user.id) as unknown as Types.ObjectId;
-      const tenantId = resolveRequestTenantId(req);
+      const author: ForkAuthor = {
+        id: user.id,
+        objectId: (user._id ?? user.id) as unknown as Types.ObjectId,
+        name: user.name ?? user.username ?? 'Unknown',
+        tenantId: resolveRequestTenantId(req),
+      };
       // 배포 스킬과 이름이 같은 사용자 스킬은 목록에서 배포 스킬에 가려지므로 원본 이름을 건너뛴다.
       const fromDeployment = isDeploymentSkillId(original._id);
       const names = requestedName
@@ -103,92 +227,24 @@ export function createForkSkillHandler(deps: ForkSkillDeps) {
         : forkNameCandidates(original.name).filter(
             (name) => !fromDeployment || name !== original.name,
           );
-      let created: CreateSkillResult | null = null;
-      for (const name of names) {
-        try {
-          created = await deps.createSkill({
-            name,
-            displayTitle: original.displayTitle,
-            description: original.description,
-            body: original.body,
-            frontmatter: original.frontmatter,
-            category: original.category,
-            alwaysApply: original.alwaysApply,
-            manualMinutes: original.manualMinutes,
-            forkOf: original._id,
-            icon: original.icon,
-            author: authorId,
-            authorName: user.name ?? user.username ?? 'Unknown',
-            tenantId,
-          });
-          break;
-        } catch (error) {
-          if (isValidationError(error)) {
-            return res.status(400).json({ error: 'Validation failed', issues: error.issues });
-          }
-          if (!isDuplicateKeyError(error)) {
-            throw error;
-          }
-        }
+      const outcome = await createForkedSkill(deps, original, names, author);
+      if (outcome.status === 'invalid') {
+        return res.status(400).json({ error: 'Validation failed', issues: outcome.issues });
       }
-      if (!created) {
+      if (outcome.status === 'taken') {
         return res.status(409).json({ error: 'A skill with this name already exists' });
       }
-      const forked = created.skill as SkillDoc;
-
-      try {
-        await deps.grantPermission({
-          principalType: PrincipalType.USER,
-          principalId: user.id,
-          resourceType: ResourceType.SKILL,
-          resourceId: forked._id,
-          accessRoleId: AccessRoleIds.SKILL_OWNER,
-          grantedBy: user.id,
-        });
-      } catch (permissionError) {
-        logger.error(
-          `[forkSkill] Failed to grant SKILL_OWNER for ${forked._id}, rolling back:`,
-          permissionError,
-        );
-        await deps
-          .deleteSkill(forked._id.toString())
-          .catch((rollbackError) =>
-            logger.error(
-              `[forkSkill] Compensating delete failed for ${forked._id}:`,
-              rollbackError,
-            ),
-          );
+      const forked = outcome.skill;
+      if (!(await grantForkOwner(deps, forked, user.id))) {
         return res.status(500).json({ error: 'Failed to initialize skill permissions' });
       }
 
-      const context = { userId: user.id, skillId: forked._id, authorId, tenantId };
-      const fileResults: ForkFileResult[] = [];
-      for (const file of await deps.listSkillFiles(original._id)) {
-        try {
-          const buffer = await readStoredFile(req, deps, file);
-          await persistSkillFile(req as unknown as Request, deps, file, buffer, context);
-          fileResults.push({ path: file.relativePath, status: 'ok' });
-        } catch (error) {
-          logger.error(`[forkSkill] Failed to copy file ${file.relativePath}:`, error);
-          fileResults.push({
-            path: file.relativePath,
-            status: 'error',
-            error: (error as Error).message,
-          });
-        }
-      }
-
+      const fileResults = await copySkillFiles(req, deps, original, forked, author);
       const refreshed = (await deps.getSkillById(forked._id)) ?? forked;
-      const errors = fileResults.filter((result) => result.status === 'error');
       const response: TForkSkillResponse = {
         ...serializeSkill(refreshed, false),
         forkCount: 0,
-        _forkSummary: {
-          filesProcessed: fileResults.length,
-          filesSucceeded: fileResults.length - errors.length,
-          filesFailed: errors.length,
-          errors,
-        },
+        _forkSummary: summarizeFileCopies(fileResults),
       };
       return res.status(201).json(response);
     } catch (error) {

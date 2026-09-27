@@ -70,74 +70,100 @@ function joinDistinct(
   return parts.length > 0 ? parts.join(separator) : null;
 }
 
+type FieldIndex = (name: string | undefined) => number;
+
+function fillListSlot(
+  slot: ReportSlot,
+  rows: readonly ExtractedRow[],
+  reflected: number[],
+  fieldIndex: FieldIndex,
+): string[] {
+  if (slot.source === 'filenames') {
+    return rows.map((row) => row.doc.filename);
+  }
+  const index = fieldIndex(slot.field);
+  return index < 0
+    ? []
+    : reflected.flatMap((rowIndex) => {
+        const text = joinDistinct(rows, [rowIndex], index, '');
+        return text == null ? [] : [text];
+      });
+}
+
+function fillFixedRowsTable(
+  slot: ReportSlot,
+  rows: readonly ExtractedRow[],
+  reflected: number[],
+  fieldIndex: FieldIndex,
+): Record<string, Record<string, CellText>> {
+  const labelIndex = fieldIndex(slot.rowField);
+  const table: Record<string, Record<string, CellText>> = {};
+  for (const label of slot.rows ?? []) {
+    const matching =
+      labelIndex < 0
+        ? []
+        : reflected.filter((rowIndex) => {
+            const value = rows[rowIndex].cells[labelIndex]?.value;
+            return value != null && normalizeQuote(value).includes(normalizeQuote(label));
+          });
+    table[label] = Object.fromEntries(
+      Object.entries(slot.columns ?? {}).map(([column, field]) => {
+        const index = fieldIndex(field);
+        return [column, index < 0 ? null : joinDistinct(rows, matching, index, ' / ')];
+      }),
+    );
+  }
+  return table;
+}
+
+function fillRowTable(
+  slot: ReportSlot,
+  rows: readonly ExtractedRow[],
+  reflected: number[],
+  fieldIndex: FieldIndex,
+): Array<Record<string, CellText>> {
+  const columns = Object.entries(slot.columns ?? {});
+  /* 칸 이름과 같은 항목(금주 실적)을 받는 열에 값이 있어야 행을 만든다. 담당처럼 여러 표가
+   * 함께 쓰는 열만으로 모든 표에 행이 생기면 안 되기 때문이다. */
+  const keyColumns = columns.filter(([, field]) => normalizeKey(field) === normalizeKey(slot.id));
+  return reflected.flatMap((rowIndex) => {
+    const cells: Record<string, CellText> = {};
+    for (const [column, field] of columns) {
+      if (field === FILENAME_COLUMN) {
+        cells[column] = rows[rowIndex].doc.filename;
+        continue;
+      }
+      const index = fieldIndex(field);
+      const text = index < 0 ? null : citedValue(rows, rowIndex, index);
+      if (text != null) {
+        cells[column] = text;
+      }
+    }
+    const decisive = keyColumns.length > 0 ? keyColumns : columns;
+    const hasValue = decisive.some(
+      ([column, field]) => field !== FILENAME_COLUMN && cells[column] != null,
+    );
+    return hasValue ? [cells] : [];
+  });
+}
+
 /** 코드가 채우는 칸(표와 목록)을 추출 결과로 모두 채우고, 문단은 비워 둔다. */
 export function assembleCodeSlots(
   template: ReportTemplate,
   fields: readonly string[],
   rows: readonly ExtractedRow[],
 ): SlotContent {
-  const fieldIndex = (name: string | undefined) =>
-    name == null ? -1 : fields.indexOf(normalizeKey(name));
+  const fieldIndex: FieldIndex = (name) => (name == null ? -1 : fields.indexOf(normalizeKey(name)));
   const reflected = rows.flatMap((row, index) => (row.reflected ? [index] : []));
   const content: SlotContent = { paragraphs: {}, fixedTables: {}, rowTables: {} };
 
   for (const slot of template.slots) {
-    if (slot.kind === 'list' && slot.source === 'filenames') {
-      content.paragraphs[slot.id] = rows.map((row) => row.doc.filename);
-    } else if (slot.kind === 'list') {
-      const index = fieldIndex(slot.field);
-      content.paragraphs[slot.id] =
-        index < 0
-          ? []
-          : reflected.flatMap((rowIndex) => {
-              const text = joinDistinct(rows, [rowIndex], index, '');
-              return text == null ? [] : [text];
-            });
+    if (slot.kind === 'list') {
+      content.paragraphs[slot.id] = fillListSlot(slot, rows, reflected, fieldIndex);
     } else if (slot.kind === 'table_fixed_rows') {
-      const labelIndex = fieldIndex(slot.rowField);
-      const table: Record<string, Record<string, CellText>> = {};
-      for (const label of slot.rows ?? []) {
-        const matching =
-          labelIndex < 0
-            ? []
-            : reflected.filter((rowIndex) => {
-                const value = rows[rowIndex].cells[labelIndex]?.value;
-                return value != null && normalizeQuote(value).includes(normalizeQuote(label));
-              });
-        table[label] = Object.fromEntries(
-          Object.entries(slot.columns ?? {}).map(([column, field]) => {
-            const index = fieldIndex(field);
-            return [column, index < 0 ? null : joinDistinct(rows, matching, index, ' / ')];
-          }),
-        );
-      }
-      content.fixedTables[slot.id] = table;
+      content.fixedTables[slot.id] = fillFixedRowsTable(slot, rows, reflected, fieldIndex);
     } else if (slot.kind === 'table_rows') {
-      const columns = Object.entries(slot.columns ?? {});
-      /* 칸 이름과 같은 항목(금주 실적)을 받는 열에 값이 있어야 행을 만든다. 담당처럼 여러 표가
-       * 함께 쓰는 열만으로 모든 표에 행이 생기면 안 되기 때문이다. */
-      const keyColumns = columns.filter(
-        ([, field]) => normalizeKey(field) === normalizeKey(slot.id),
-      );
-      content.rowTables[slot.id] = reflected.flatMap((rowIndex) => {
-        const cells: Record<string, CellText> = {};
-        for (const [column, field] of columns) {
-          if (field === FILENAME_COLUMN) {
-            cells[column] = rows[rowIndex].doc.filename;
-            continue;
-          }
-          const index = fieldIndex(field);
-          const text = index < 0 ? null : citedValue(rows, rowIndex, index);
-          if (text != null) {
-            cells[column] = text;
-          }
-        }
-        const decisive = keyColumns.length > 0 ? keyColumns : columns;
-        const hasValue = decisive.some(
-          ([column, field]) => field !== FILENAME_COLUMN && cells[column] != null,
-        );
-        return hasValue ? [cells] : [];
-      });
+      content.rowTables[slot.id] = fillRowTable(slot, rows, reflected, fieldIndex);
     }
   }
   return content;

@@ -76,6 +76,31 @@ function findTestTurn(
   return { userMessage, response };
 }
 
+type TestTurnMeasure = { elapsedMs: number } | { problem: { error: string; code: string } };
+
+/** 시험 턴이 게시 조건을 채우는지 보고, 채우면 질문부터 마지막 응답까지 걸린 시간을 측정한다. */
+function measureTestTurn(messages: SkillTestMessage[], skillName: string): TestTurnMeasure {
+  const { userMessage, response } = findTestTurn(messages, skillName);
+  if (!userMessage) {
+    return {
+      problem: { error: 'The conversation did not run this skill', code: 'SKILL_NOT_USED' },
+    };
+  }
+  if (!response) {
+    return { problem: { error: 'The test turn has no response yet', code: 'RESPONSE_MISSING' } };
+  }
+  if (!finishedCleanly(response)) {
+    return { problem: { error: 'The test turn did not finish cleanly', code: 'RESPONSE_FAILED' } };
+  }
+  const elapsedMs = toTime(response.updatedAt) - toTime(userMessage.createdAt);
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) {
+    return {
+      problem: { error: 'The test turn has no usable timestamps', code: 'RESPONSE_MISSING' },
+    };
+  }
+  return { elapsedMs };
+}
+
 /** `POST /api/skills/:id/test-result`: 시험 대화 한 턴이 오류 없이 끝났음을 확인하고 걸린 초를 `lastTest` 에 적는다. */
 export function createSkillTestResultHandler(deps: SkillTestResultDeps) {
   return async function skillTestResultHandler(
@@ -118,28 +143,11 @@ export function createSkillTestResultHandler(deps: SkillTestResultDeps) {
         { conversationId, user: userId },
         'messageId parentMessageId isCreatedByUser manualSkills error unfinished finish_reason content.type createdAt updatedAt',
       );
-      const { userMessage, response } = findTestTurn(messages, skill.name);
-      if (!userMessage) {
-        return res
-          .status(400)
-          .json({ error: 'The conversation did not run this skill', code: 'SKILL_NOT_USED' });
+      const measured = measureTestTurn(messages, skill.name);
+      if ('problem' in measured) {
+        return res.status(400).json(measured.problem);
       }
-      if (!response) {
-        return res
-          .status(400)
-          .json({ error: 'The test turn has no response yet', code: 'RESPONSE_MISSING' });
-      }
-      if (!finishedCleanly(response)) {
-        return res
-          .status(400)
-          .json({ error: 'The test turn did not finish cleanly', code: 'RESPONSE_FAILED' });
-      }
-      const elapsedMs = toTime(response.updatedAt) - toTime(userMessage.createdAt);
-      if (!Number.isFinite(elapsedMs) || elapsedMs < 0) {
-        return res
-          .status(400)
-          .json({ error: 'The test turn has no usable timestamps', code: 'RESPONSE_MISSING' });
-      }
+      const { elapsedMs } = measured;
 
       const result = await deps.setSkillPublicationState({
         id: skill._id.toString(),
