@@ -308,7 +308,7 @@ describe('computeSkillMetrics', () => {
 });
 
 /** 운영 현황 화면이 보여 주는 계산식을 그대로 옮긴 것이다. 서버 계산과 결과를 비교하는 기준으로 쓴다. */
-type WireframeAgent = {
+type ScreenAgent = {
   id: string;
   kind: string;
   owner: string;
@@ -321,13 +321,13 @@ type WireframeAgent = {
   saveMin?: number;
 };
 
-function recalcSave(x: WireframeAgent): void {
+function recalcSave(x: ScreenAgent): void {
   x.saveMin = Math.max(0, Math.round(x.manualMin - (x.runSec || 0) / 60));
 }
 
-const savedH = (x: WireframeAgent): number => Math.round(((x.runs || 0) * (x.saveMin || 0)) / 60);
+const savedH = (x: ScreenAgent): number => Math.round(((x.runs || 0) * (x.saveMin || 0)) / 60);
 
-function renderMetrics(all: WireframeAgent[]) {
+function renderMetrics(all: ScreenAgent[]) {
   const runs = all.reduce((a, x) => a + (x.runs || 0), 0);
   const forks = all.reduce((a, x) => a + (x.forks || 0), 0);
   const hrs = all.reduce((a, x) => a + savedH(x), 0);
@@ -376,10 +376,10 @@ function renderMetrics(all: WireframeAgent[]) {
  * 같은 입력을 화면 계산식이 받는 모양으로 옮긴다. 화면에는 게시한 응용본만 나오므로
  * `unpublishedForkIds`의 `forkOf`는 뺀다.
  */
-function toWireframeAgents(
+function toScreenAgents(
   input: SkillMetricsInput,
   unpublishedForkIds: ReadonlySet<string> = new Set(['u10']),
-): WireframeAgent[] {
+): ScreenAgent[] {
   const deploymentAgents = input.deploymentSkills.map((skill) => {
     const id = skill._id.toString();
     const seed = skill.seedMetrics ?? { runs: 0, forks: 0, runSeconds: 0 };
@@ -444,7 +444,7 @@ describe('화면이 보여 주는 계산식과 서버 계산(computeSkillMetrics
         userSkill('u12', 'userB', '최분석', 1, 90, 10),
       ],
     };
-    const wireframe = renderMetrics(toWireframeAgents(input));
+    const screen = renderMetrics(toScreenAgents(input));
     const report = computeSkillMetrics(input);
 
     expect({
@@ -457,7 +457,7 @@ describe('화면이 보여 주는 계산식과 서버 계산(computeSkillMetrics
       forkedAgents: report.forks.forkedAgents,
       hours: report.savedHours.total,
       staffHours: report.savedHours.staff,
-    }).toEqual(wireframe.kpis);
+    }).toEqual(screen.kpis);
     expect(
       report.ranking.map((agent) => ({
         id: agent.id,
@@ -465,13 +465,13 @@ describe('화면이 보여 주는 계산식과 서버 계산(computeSkillMetrics
         forks: agent.forks,
         hours: agent.savedHours ?? 0,
       })),
-    ).toEqual(wireframe.top);
+    ).toEqual(screen.top);
     expect({
       count: report.baseTotal.count,
       runs: report.baseTotal.runs,
       forks: report.baseTotal.forks,
       hours: report.baseTotal.savedHours,
-    }).toEqual(wireframe.baseRow);
+    }).toEqual(screen.baseRow);
     expect(
       report.contributors.map((person) => ({
         key: `${person.authorName} · ${person.department ?? ''}`,
@@ -480,7 +480,7 @@ describe('화면이 보여 주는 계산식과 서버 계산(computeSkillMetrics
         forks: person.forks,
         h: person.savedHours,
       })),
-    ).toEqual(wireframe.people);
+    ).toEqual(screen.people);
   });
 
   it('회당 단축 분과 agent 별 절감 시간을 화면 계산식처럼 정수로 반올림한다', () => {
@@ -491,10 +491,10 @@ describe('화면이 보여 주는 계산식과 서버 계산(computeSkillMetrics
       deploymentUsage: {},
       authorDepartments: {},
     };
-    const wireframe = renderMetrics(toWireframeAgents(input));
+    const screen = renderMetrics(toScreenAgents(input));
     const report = computeSkillMetrics(input);
 
-    expect(wireframe.top[0].hours).toBe(1427);
+    expect(screen.top[0].hours).toBe(1427);
     expect(report.ranking[0].savedHours).toBe(1427);
   });
 });

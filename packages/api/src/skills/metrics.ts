@@ -96,7 +96,7 @@ type MetricsRow = SkillMetricsAgent & { isBase: boolean };
 
 type MetricsTotals = { runs: number; forks: number; savedHours: number };
 
-function wireframeSavedHours(counters: SkillUsageCounters): number | null {
+function roundedSavedHours(counters: SkillUsageCounters): number | null {
   const samples = counters.runTimeSampleCount ?? 0;
   if (samples <= 0 || counters.manualMinutes == null) {
     return null;
@@ -149,7 +149,7 @@ function toDeploymentRow(skill: MetricsDeploymentSkill, input: SkillMetricsInput
     ...(skill.authorDepartment !== undefined && { authorDepartment: skill.authorDepartment }),
     runs: usage.useCount ?? 0,
     forks: (seed?.forks ?? 0) + (input.publishedForks[id] ?? 0),
-    savedHours: wireframeSavedHours(usage),
+    savedHours: roundedSavedHours(usage),
     isBase: skill.marketProfile?.kind === BASE_KIND,
   };
 }
@@ -165,7 +165,7 @@ function toUserRow(skill: MetricsUserSkill, input: SkillMetricsInput): MetricsRo
     ...(authorDepartment !== undefined && { authorDepartment }),
     runs: Math.max(0, skill.useCount ?? 0),
     forks: input.publishedForks[id] ?? 0,
-    savedHours: wireframeSavedHours(skill),
+    savedHours: roundedSavedHours(skill),
     isBase: false,
   };
 }
