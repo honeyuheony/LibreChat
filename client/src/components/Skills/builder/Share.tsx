@@ -52,7 +52,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
               className={cn(
                 'rounded-full border px-3 py-1 text-[13px]',
                 manualMinutes === minutes
-                  ? 'border-border-brand bg-surface-submit font-semibold text-text-on-status'
+                  ? 'border-border-brand bg-surface-brand-subtle font-semibold text-text-primary'
                   : 'border-border-light bg-surface-primary text-text-secondary hover:border-border-medium',
               )}
             >

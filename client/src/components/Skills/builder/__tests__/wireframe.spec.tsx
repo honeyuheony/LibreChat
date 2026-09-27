@@ -509,7 +509,7 @@ describe('Share step matches the reference screen (12)', () => {
     expect(selected).not.toHaveClass('!font-normal');
   });
 
-  it('fills selected time and scope options with the brand color', () => {
+  it('styles selected time and scope options like the reference', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
       fields: [],
@@ -522,10 +522,12 @@ describe('Share step matches the reference screen (12)', () => {
     const minutes = within(share).getByRole('button', { name: 'com_skills_builder_minutes_30' });
     expect(minutes).toHaveClass(
       'rounded-full',
-      'bg-surface-submit',
+      'border-border-brand',
+      'bg-surface-brand-subtle',
       'font-semibold',
-      'text-text-on-status',
+      'text-text-primary',
     );
+    expect(minutes).not.toHaveClass('bg-surface-submit', 'text-text-on-status');
     expect(minutes.parentElement).toHaveClass('inline-flex', 'gap-1.5');
 
     const scope = within(share).getByRole('radiogroup', { name: 'com_skills_builder_scope' });
