@@ -952,6 +952,65 @@ describe('Skill CRUD methods', () => {
     });
   });
 
+  it('lists all skills with only the admin metrics projection', async () => {
+    const forkOriginId = new mongoose.Types.ObjectId();
+    const { skill: firstSkill } = await methods.createSkill(
+      makeSkillInput({
+        name: 'metrics-original',
+        displayTitle: 'Metrics Original',
+        manualMinutes: 30,
+        forkOf: forkOriginId,
+      }),
+    );
+    const { skill: otherSkill } = await methods.createSkill(
+      makeSkillInput({
+        name: 'metrics-private',
+        author: other._id,
+        authorName: 'Other User',
+        manualMinutes: 12,
+      }),
+    );
+    await Skill.updateOne(
+      { _id: firstSkill._id },
+      { $set: { useCount: 8, runTimeTotalSeconds: 120, runTimeSampleCount: 4 } },
+    );
+    await Skill.updateOne(
+      { _id: otherSkill._id },
+      { $set: { useCount: 3, runTimeTotalSeconds: 45, runTimeSampleCount: 2 } },
+    );
+
+    const expectedRows = [
+      {
+        _id: firstSkill._id.toString(),
+        name: 'metrics-original',
+        displayTitle: 'Metrics Original',
+        author: owner._id.toString(),
+        authorName: 'Skill Owner',
+        useCount: 8,
+        runTimeTotalSeconds: 120,
+        runTimeSampleCount: 4,
+        manualMinutes: 30,
+        forkOf: forkOriginId.toString(),
+      },
+      {
+        _id: otherSkill._id.toString(),
+        name: 'metrics-private',
+        author: other._id.toString(),
+        authorName: 'Other User',
+        useCount: 3,
+        runTimeTotalSeconds: 45,
+        runTimeSampleCount: 2,
+        manualMinutes: 12,
+      },
+    ].sort((left, right) => left.name.localeCompare(right.name));
+    expect(typeof methods.listSkillsForMetrics).toBe('function');
+    const rows = await methods.listSkillsForMetrics();
+
+    expect(rows.sort((left, right) => left.name.localeCompare(right.name))).toStrictEqual(
+      expectedRows,
+    );
+  });
+
   it('accumulates deployment skill runs per skill id outside the Skill collection', async () => {
     const reportId = new mongoose.Types.ObjectId();
     const summaryId = new mongoose.Types.ObjectId();
