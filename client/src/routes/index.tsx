@@ -35,6 +35,8 @@ const AuthLayout = () => (
   </AuthContextProvider>
 );
 
+const EmptyHydrateFallback = () => null;
+
 const loadInlinePromptsView = () =>
   import('~/components/Prompts/layouts/InlinePromptsView').then((m) => ({
     Component: m.default,
@@ -191,34 +193,42 @@ export const router = createBrowserRouter(
             {
               path: 'prompts/:promptId',
               lazy: loadInlinePromptsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'skills',
               lazy: loadSkillsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'insights',
               lazy: loadInsightsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'skills/new',
               lazy: loadSkillBuilder,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'skills/:skillId',
               lazy: loadSkillsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'skills/:skillId/edit',
               lazy: loadSkillsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'projects',
               lazy: loadProjectsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'projects/:projectId',
               lazy: loadProjectWorkspace,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'agents',
@@ -247,18 +257,22 @@ export const router = createBrowserRouter(
             {
               path: 'library',
               lazy: loadLibraryView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'schedules',
               lazy: loadSchedulesView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'operations',
               lazy: loadMetricsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'settings',
               lazy: loadUserSettingsView,
+              HydrateFallback: EmptyHydrateFallback,
             },
             {
               path: 'skills-market',

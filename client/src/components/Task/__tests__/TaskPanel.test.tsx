@@ -366,7 +366,7 @@ describe('TaskPanel', () => {
     const titles = screen
       .getAllByTestId('task-output-row')
       .map((row) => row.querySelector('b')?.textContent);
-    expect(titles).toEqual(['비교표 · 3건', '통합 요약 · 위험 요인 중심']);
+    expect(titles).toEqual(['비교표 · com_ui_task_count {"0":"3"}', '통합 요약 · 위험 요인 중심']);
   });
 
   it('explains the empty outputs list', () => {

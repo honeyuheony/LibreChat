@@ -152,7 +152,9 @@ export default function Library() {
                         {item.kind === 'table' ? '▦' : '≡'}
                       </span>
                       <Link to={resultPath(item)} className="hover:underline">
-                        {shortResultTitle(item)}
+                        {shortResultTitle(item, (rows) =>
+                          localize('com_ui_task_count', { 0: String(rows) }),
+                        )}
                       </Link>
                     </TableCell>
                     <TableCell className="whitespace-nowrap px-2 py-2 text-text-secondary">
