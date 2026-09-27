@@ -144,7 +144,7 @@ describe('Library', () => {
   /** The wireframe sets the intro in its muted 13px `.muted` line, lighter than
    *  the rows it introduces, and starts the heading 24px below the top bar. */
   it('sets the intro in the muted theme role under a heading 24px down', async () => {
-    getTaskResults.mockResolvedValue(page([item()]));
+    getTaskResults.mockResolvedValue(page([item({})]));
     renderLibrary();
 
     const intro = await screen.findByText('com_ui_library_intro {"0":"1"}');
