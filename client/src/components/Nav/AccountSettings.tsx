@@ -1,10 +1,21 @@
 import { useState, memo, useRef } from 'react';
 import * as Menu from '@ariakit/react/menu';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, DropdownMenuSeparator, useToastContext } from '@librechat/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Permissions, PermissionTypes, SystemRoles } from 'librechat-data-provider';
+import {
+  Avatar,
+  DropdownMenuSeparator,
+  OGDialog,
+  OGDialogTemplate,
+  useToastContext,
+} from '@librechat/client';
 import type { TFile } from 'librechat-data-provider';
-import { useDemoSwitchUserMutation, useDemoSwitchUserQuery } from '~/data-provider/Demo';
+import {
+  useDemoResetMutation,
+  useDemoSwitchUserMutation,
+  useDemoSwitchUserQuery,
+} from '~/data-provider/Demo';
 import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
 import { useGetFiles, useGetStartupConfig } from '~/data-provider';
@@ -18,6 +29,7 @@ const GLYPHS = {
   metrics: '▥',
   settings: '⚙',
   switchUser: '⇄',
+  resetDemo: '↺',
   logout: '↪',
   desk: '▭',
   open: '▾',
@@ -51,6 +63,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthContext();
   const { showToast } = useToastContext();
+  const queryClient = useQueryClient();
   const { data: startupConfig } = useGetStartupConfig();
   const menu = Menu.useMenuStore({ placement: collapsed ? 'right-end' : 'top-start' });
   const isOpen = menu.useState('open');
@@ -62,7 +75,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const { data: schedulesData } = useSchedulesQuery({
     enabled: !!isAuthenticated && isOpen && schedulesEnabled,
   });
-  const { data: switchUserData } = useDemoSwitchUserQuery({
+  const { data: switchUserData, isSuccess: isSwitchUserQuerySuccess } = useDemoSwitchUserQuery({
     enabled: !!isAuthenticated && isOpen,
   });
   const switchUserMutation = useDemoSwitchUserMutation({
@@ -73,16 +86,33 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         status: 'error',
       }),
   });
+  const resetDemoMutation = useDemoResetMutation({
+    onSuccess: () => {
+      showToast({
+        message: localize('com_ui_demo_reset_success'),
+        status: 'success',
+      });
+      void queryClient.invalidateQueries();
+      navigate('/', { replace: true });
+    },
+    onError: () =>
+      showToast({
+        message: localize('com_ui_demo_reset_error'),
+        status: 'error',
+      }),
+  });
   const { data: usedBytes } = useGetFiles<number>({
     enabled: !!isAuthenticated && isOpen,
     select: (files: TFile[]) => files.reduce((sum, file) => sum + (file.bytes ?? 0), 0),
   });
   const [showFiles, setShowFiles] = useState(false);
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
   const displayName = user?.name || user?.username || localize('com_nav_user');
   const hasAvatarImage = user?.avatar != null && user.avatar !== '';
   const switchTarget = switchUserData?.target;
   const canSwitchDemoUser = typeof switchTarget?.name === 'string' && switchTarget.name.length > 0;
+  const canResetDemo = user?.role === SystemRoles.ADMIN && isSwitchUserQuerySuccess;
 
   const openDeskDownload = () => window.open(DESK_DOWNLOAD_PATH, '_blank', 'noopener,noreferrer');
 
@@ -167,6 +197,16 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           </Menu.MenuItem>
         )}
         <DropdownMenuSeparator />
+        {canResetDemo && (
+          <Menu.MenuItem
+            onClick={() => setShowResetConfirmation(true)}
+            disabled={resetDemoMutation.isLoading}
+            className={itemClassName}
+          >
+            <MenuGlyph glyph={GLYPHS.resetDemo} />
+            {localize('com_ui_demo_reset')}
+          </Menu.MenuItem>
+        )}
         <Menu.MenuItem onClick={() => logout()} className={itemClassName}>
           <MenuGlyph glyph={GLYPHS.logout} />
           {localize('com_nav_log_out')}
@@ -176,6 +216,19 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           {localize('com_nav_desk_app')}
         </Menu.MenuItem>
       </Menu.Menu>
+      <OGDialog open={showResetConfirmation} onOpenChange={setShowResetConfirmation}>
+        <OGDialogTemplate
+          title={localize('com_ui_demo_reset_title')}
+          description={localize('com_ui_demo_reset_confirmation')}
+          selection={{
+            selectHandler: () => resetDemoMutation.mutate(),
+            selectClasses:
+              'bg-surface-destructive hover:bg-surface-destructive-hover text-text-on-status transition-colors duration-200',
+            selectText: localize('com_ui_demo_reset_action'),
+            isLoading: resetDemoMutation.isLoading,
+          }}
+        />
+      </OGDialog>
       {showFiles && (
         <MyFilesModal
           open={showFiles}
