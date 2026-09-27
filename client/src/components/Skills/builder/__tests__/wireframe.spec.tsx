@@ -487,6 +487,66 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
   });
 });
 
+describe('Share step matches the reference screen (12)', () => {
+  it('fills selected time and scope options with the brand color', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={{ ...chat, manualMinutes: 30, scope: 'team' }} />);
+
+    const share = block('com_skills_builder_share') as HTMLElement;
+    const minutes = within(share).getByRole('button', { name: 'com_skills_builder_minutes_30' });
+    expect(minutes).toHaveClass(
+      'rounded-full',
+      'bg-surface-submit',
+      'font-semibold',
+      'text-text-on-status',
+    );
+    expect(minutes.parentElement).toHaveClass('inline-flex', 'gap-1.5');
+
+    const scope = within(share).getByRole('radiogroup', { name: 'com_skills_builder_scope' });
+    expect(scope).toHaveClass(
+      '!rounded-full',
+      '!border',
+      '!border-border-light',
+      '!bg-surface-primary',
+    );
+    expect(within(scope).getByRole('radio', { name: 'com_skills_scope_team' })).toHaveClass(
+      'aria-checked:bg-surface-submit',
+      'aria-checked:font-semibold',
+      'aria-checked:text-text-on-status',
+    );
+  });
+
+  it('marks the missing time requirement with the error status color', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('com_skills_builder_minutes_required')).toHaveClass(
+      'rounded-full',
+      'bg-status-error-subtle',
+      'text-status-error',
+    );
+  });
+
+  it('shows a generic field heading when the report has no specified fields', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+
+    const output = block('com_skills_builder_output') as HTMLElement;
+    const [heading] = within(output).getAllByRole('columnheader');
+    expect(heading).toHaveTextContent('com_skills_builder_fields_label');
+    expect(within(output).getByText('…', { selector: 'td' })).toBeVisible();
+  });
+});
+
 describe('Others’ examples shown like the wireframe (08)', () => {
   it('lists each example line by line as a numbered list in the body font instead of raw text', () => {
     render(<Harness peers={[peer]} />);

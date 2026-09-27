@@ -29,7 +29,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
         <>
           {localize('com_skills_builder_share')}
           {manualMinutes > 0 ? null : (
-            <span className="ms-1 rounded-full bg-status-warning-subtle px-2 text-[10.5px] text-status-warning">
+            <span className="ms-1 rounded-full bg-status-error-subtle px-2 text-[10.5px] text-status-error">
               {localize('com_skills_builder_minutes_required')}
             </span>
           )}
@@ -42,28 +42,31 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
         className="mb-1.5 flex flex-wrap items-center gap-2 text-sm"
       >
         <span className="text-text-secondary">{localize('com_skills_builder_minutes_before')}</span>
-        {MINUTE_CHOICES.map(([minutes, labelKey]) => (
-          <button
-            key={minutes}
-            type="button"
-            aria-pressed={manualMinutes === minutes}
-            onClick={() => onMinutes(minutes)}
-            className={cn(
-              'rounded-full border px-3 py-1 text-sm',
-              manualMinutes === minutes
-                ? 'border-border-brand bg-surface-brand-subtle font-semibold'
-                : 'border-border-light bg-surface-primary hover:border-border-medium',
-            )}
-          >
-            {localize(labelKey)}
-          </button>
-        ))}
+        <div className="inline-flex flex-wrap gap-1.5">
+          {MINUTE_CHOICES.map(([minutes, labelKey]) => (
+            <button
+              key={minutes}
+              type="button"
+              aria-pressed={manualMinutes === minutes}
+              onClick={() => onMinutes(minutes)}
+              className={cn(
+                'rounded-full border px-3 py-1 text-[13px]',
+                manualMinutes === minutes
+                  ? 'border-border-brand bg-surface-submit font-semibold text-text-on-status'
+                  : 'border-border-light bg-surface-primary text-text-secondary hover:border-border-medium',
+              )}
+            >
+              {localize(labelKey)}
+            </button>
+          ))}
+        </div>
         <span className="text-text-secondary">{localize('com_skills_builder_minutes_after')}</span>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span id="builder-scope-label" className="text-text-secondary">
           {localize('com_skills_builder_scope')}
         </span>
+        {/* 선택한 단추가 색을 채우므로 Radio의 흰색 이동 표시를 숨긴다. */}
         <Radio
           aria-labelledby="builder-scope-label"
           value={scope}
@@ -73,6 +76,8 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
             { value: 'team', label: localize('com_skills_scope_team') },
             { value: 'me', label: localize('com_skills_builder_scope_me') },
           ]}
+          className="!rounded-full !border !border-border-light !bg-surface-primary !px-0 [&>div:first-child]:hidden"
+          buttonClassName="!h-7 !rounded-full !px-3 !text-[13px] !font-normal border-e border-border-light last:border-e-0 aria-checked:bg-surface-submit aria-checked:font-semibold aria-checked:text-text-on-status"
         />
       </div>
     </Block>
