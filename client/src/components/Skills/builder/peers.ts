@@ -31,8 +31,16 @@ export function pickPeers(
     .slice(0, PEER_LIMIT);
 }
 
-/** 글이 없는 agent 는 가져올 것이 없으므로 null 이다. */
+/** 사람이 읽을 문장만 남긴다: 링크는 글자만, 백틱·굵게·줄머리 기호는 걷어 낸다. */
+const plainLine = (line: string) =>
+  line
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/`|\*\*|__/g, '')
+    .replace(/^\s*(?:[-*+>]|#+)\s+/, '')
+    .trim();
+
+/** 응용하기와 같은 줄(`originalLines`)을 뽑아 읽기 쉬운 문장으로 바꾼다. 글이 없는 agent 는 null 이다. */
 export function peerExample(skill: TSkill): PeerExample | null {
-  const text = originalLines(skill).trim();
+  const text = originalLines(skill).split('\n').map(plainLine).filter(Boolean).join('\n');
   return text ? { skill, text } : null;
 }

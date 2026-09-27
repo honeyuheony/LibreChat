@@ -74,6 +74,9 @@ const peer: PeerExample = {
   text: '팀원 주간보고를 취합한다. 금주 실적과 차주 계획을 나눈다.\n마감은 금요일이다.',
 };
 
+/** 예 목록의 첫 항목. 항목 안에 번호 목록이 들어 있어 바깥 목록의 직계 자식으로 찾는다. */
+const peerItem = () =>
+  screen.getByRole('list', { name: 'com_skills_builder_peek' }).firstElementChild as HTMLElement;
 const textarea = () => screen.getByLabelText('com_skills_builder_text_heading');
 const block = (title: string) => screen.getByText(title, { selector: 'h5' }).closest('section');
 
@@ -124,12 +127,10 @@ describe('Builder laid out like the wireframe editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
 
     expect(onPeek).toHaveBeenLastCalledWith(true);
-    const list = screen.getByRole('list', { name: 'com_skills_builder_peek' });
-    const item = within(list).getByRole('listitem');
+    const item = peerItem();
     expect(within(item).getByText('주간보고 작성')).toBeVisible();
-    expect(item).toHaveTextContent('com_skills_by_author_department');
     expect(item).toHaveTextContent('com_skills_meta_runs:{"value":"1,200"}');
-    expect(item.querySelector('pre')).toHaveTextContent('마감은 금요일이다.');
+    expect(item.querySelector('ol')).toHaveTextContent('마감은 금요일이다.');
 
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek_close' }));
     expect(onPeek).toHaveBeenLastCalledWith(false);
@@ -336,5 +337,37 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
       'bg-black/[0.38]',
       '[@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55]',
     );
+  });
+});
+
+describe('Others’ examples shown like the wireframe (08)', () => {
+  it('lists each example line by line as a numbered list in the body font instead of raw text', () => {
+    render(<Harness peers={[peer]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    const item = peerItem();
+    expect(item.querySelector('pre')).toBeNull();
+    const steps = item.querySelector('ol') as HTMLElement;
+    expect(steps).toHaveClass('list-decimal', 'font-sans');
+    expect(Array.from(steps.children).map((line) => line.textContent)).toEqual([
+      '팀원 주간보고를 취합한다. 금주 실적과 차주 계획을 나눈다.',
+      '마감은 금요일이다.',
+    ]);
+  });
+
+  it('writes the author line as owner · department · runs, without By or adaptations', () => {
+    render(<Harness peers={[{ ...peer, skill: { ...peer.skill, forkCount: 41 } as TSkill }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    const item = peerItem();
+    expect(item).toHaveTextContent('박지원 · 기획팀 · com_skills_meta_runs:{"value":"1,200"}');
+    expect(item).not.toHaveTextContent('com_skills_by_author');
+    expect(item).not.toHaveTextContent('com_skills_meta_forks');
+  });
+
+  it('outlines the how-it-works card while the examples are open', () => {
+    render(<Harness peers={[peer]} />);
+    const how = block('com_skills_builder_how') as HTMLElement;
+    expect(how).toHaveAttribute('data-active', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    expect(how).toHaveAttribute('data-active', 'true');
   });
 });

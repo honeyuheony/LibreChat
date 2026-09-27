@@ -14,9 +14,12 @@ import type { TranslationKeys } from '~/hooks';
 import type { PreviewBlock } from './Preview';
 import type { BuilderFile } from './state';
 import type { PeerExample } from './peers';
-import { getSkillTitle } from '~/components/Skills/Marketplace/skillCategories';
+import {
+  runsOf,
+  formatCount,
+  getSkillTitle,
+} from '~/components/Skills/Marketplace/skillCategories';
 import { SOURCE_ME, DRAFT_SLUG, pluginFiles, splitSentences } from './state';
-import { byLine } from '~/components/Skills/Marketplace/SkillMeta';
 import SkillIcon from '~/components/Skills/Marketplace/SkillIcon';
 import Preview, { EMOJI_STYLE, PreviewHead } from './Preview';
 import SourceTag, { ChangedMark } from './SourceTag';
@@ -170,6 +173,17 @@ type PeekRowProps = {
   onCopy: (peer: PeerExample) => void;
 };
 
+/** 와이어프레임 `pk1 .by`: 작성자 · 부서 · 실행 수. 「By」와 응용 수는 적지 않는다. */
+function peerByLine(skill: PeerExample['skill'], localize: ReturnType<typeof useLocalize>) {
+  return [
+    skill.authorName,
+    skill.authorDepartment,
+    localize('com_skills_meta_runs', { value: formatCount(runsOf(skill)) }),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 /** 「다른 사람이 쓴 예 보기」: 남의 agent 세 개와 그 글을 펼치고, 「이 글 가져오기」로 글칸에 넣는다. */
 function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
   const localize = useLocalize();
@@ -210,7 +224,7 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                     <div className="min-w-0 flex-1">
                       <b className="text-text-primary">{getSkillTitle(peer.skill)}</b>
                       <div className="text-xs text-text-secondary">
-                        {byLine(peer.skill, localize, { withRuns: true })}
+                        {peerByLine(peer.skill, localize)}
                       </div>
                     </div>
                     <Button
@@ -224,9 +238,11 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                       {localize('com_skills_builder_peek_copy' as TranslationKeys)}
                     </Button>
                   </div>
-                  <pre className="mt-2 whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-text-secondary">
-                    {peer.text}
-                  </pre>
+                  <ol className="mt-2 list-decimal ps-5 font-sans text-[13px] leading-relaxed text-text-secondary">
+                    {peer.text.split('\n').map((line, index) => (
+                      <li key={index}>{line}</li>
+                    ))}
+                  </ol>
                 </li>
               ))}
             </ul>
@@ -277,6 +293,10 @@ export default function Builder({
       return;
     }
     void session.runTest();
+  };
+  const peek = (open: boolean) => {
+    setActiveBlock('how');
+    onPeek?.(open);
   };
   const copyPeer = ({ skill, text }: PeerExample) => {
     const name = getSkillTitle(skill);
@@ -362,7 +382,7 @@ export default function Builder({
                 {statusText ? localize(statusText) : ''}
               </p>
               <AttachRow files={state.files} />
-              <PeekRow peers={peers} onPeek={onPeek} onCopy={copyPeer} />
+              <PeekRow peers={peers} onPeek={peek} onCopy={copyPeer} />
             </section>
           </div>
 
