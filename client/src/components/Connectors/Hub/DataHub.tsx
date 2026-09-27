@@ -242,7 +242,7 @@ export default function DataHub() {
         )}
       </header>
       <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-6 md:pt-8">
-        <h1 className="flex items-baseline gap-2 text-2xl font-bold text-text-primary">
+        <h1 className="flex items-baseline gap-2 text-[22px] font-bold text-text-primary">
           {localize('com_ui_data_hub')}
           <span className="text-sm font-medium text-text-secondary">
             {localize('com_ui_data_hub_badge')}
