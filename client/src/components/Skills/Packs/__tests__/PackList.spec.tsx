@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { riskCheck, weekly } from '../../Marketplace/__fixtures__/skills';
 import PackList from '../PackList';
 
@@ -38,6 +38,19 @@ jest.mock('~/data-provider', () => ({
 }));
 
 describe('PackList', () => {
+  it('shows the create action with a large brand-colored circle', () => {
+    render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
+
+    const createButton = screen.getByRole('button', { name: /com_skills_pack_create/ });
+    expect(createButton).toHaveClass('items-center');
+    expect(within(createButton).getByText('＋')).toHaveClass(
+      'size-[68px]',
+      'bg-surface-brand-subtle',
+      'text-accent-primary',
+      'text-[34px]',
+    );
+  });
+
   it('shows stats for the included skills available to the user', async () => {
     render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
 
