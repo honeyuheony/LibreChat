@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { ContentTypes } from 'librechat-data-provider';
 import { act, renderHook } from '@testing-library/react';
 import { createStore, Provider as JotaiProvider } from 'jotai';
@@ -27,10 +28,12 @@ const resultMessage = (resultId: string) =>
 
 type Props = { conversationId: string; autoOpen: boolean; isSubmitting: boolean };
 
-function setup(initial: Props) {
+function setup(initial: Props, url = '/c/a') {
   const jotai = createStore();
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <JotaiProvider store={jotai}>{children}</JotaiProvider>
+    <MemoryRouter initialEntries={[url]}>
+      <JotaiProvider store={jotai}>{children}</JotaiProvider>
+    </MemoryRouter>
   );
   const hook = renderHook(
     ({ conversationId, autoOpen, isSubmitting }: Props) =>
@@ -80,7 +83,9 @@ describe('useTaskPanel', () => {
     jotai.set(taskPanelState, { open: true, view: 'result', resultId: 'stale' });
     renderHook(() => useTaskPanel('b', { autoOpen: true, isSubmitting: false }), {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <JotaiProvider store={jotai}>{children}</JotaiProvider>
+        <MemoryRouter>
+          <JotaiProvider store={jotai}>{children}</JotaiProvider>
+        </MemoryRouter>
       ),
     });
     expect(jotai.get(taskPanelState)).toEqual({ open: false, view: 'overview', resultId: null });
@@ -133,5 +138,50 @@ describe('useTaskPanel', () => {
     mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old'), resultMessage('r-new')];
     rerender({ conversationId: 'a', autoOpen: true, isSubmitting: true });
     expect(jotai.get(taskPanelState).resultId).toBe('r-new');
+  });
+
+  describe('result query', () => {
+    it('opens the named result once the conversation messages have loaded', () => {
+      const { jotai, rerender } = setup(
+        { conversationId: 'a', autoOpen: true, isSubmitting: false },
+        '/c/a?result=r-old',
+      );
+      expect(jotai.get(taskPanelState).view).toBe('overview');
+
+      mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old'), resultMessage('r-new')];
+      rerender({ conversationId: 'a', autoOpen: true, isSubmitting: false });
+      expect(jotai.get(taskPanelState)).toEqual({ open: true, view: 'result', resultId: 'r-old' });
+    });
+
+    it('opens the named result on small screens too', () => {
+      mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old')];
+      const { jotai } = setup(
+        { conversationId: 'a', autoOpen: false, isSubmitting: false },
+        '/c/a?result=r-old',
+      );
+      expect(jotai.get(taskPanelState)).toEqual({ open: true, view: 'result', resultId: 'r-old' });
+    });
+
+    it('ignores a result that is not in this conversation', () => {
+      mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old')];
+      const { jotai } = setup(
+        { conversationId: 'a', autoOpen: true, isSubmitting: false },
+        '/c/a?result=r-other',
+      );
+      expect(jotai.get(taskPanelState)).toEqual({ open: true, view: 'overview', resultId: null });
+    });
+
+    it('does not reopen the result after the user goes back to the overview', () => {
+      mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old')];
+      const { jotai, rerender } = setup(
+        { conversationId: 'a', autoOpen: true, isSubmitting: false },
+        '/c/a?result=r-old',
+      );
+      act(() => jotai.set(taskPanelState, { open: true, view: 'overview', resultId: null }));
+
+      mockMessagesByConvo.a = [taskCall('t1'), resultMessage('r-old'), resultMessage('r-2')];
+      rerender({ conversationId: 'a', autoOpen: true, isSubmitting: false });
+      expect(jotai.get(taskPanelState)).toEqual({ open: true, view: 'overview', resultId: null });
+    });
   });
 });
