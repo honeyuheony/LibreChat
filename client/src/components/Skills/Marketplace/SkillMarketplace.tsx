@@ -211,6 +211,21 @@ export default function SkillMarketplace() {
     <div className="relative flex w-full grow overflow-hidden bg-presentation">
       <SidePanelGroup>
         <main className="flex h-full flex-col overflow-hidden" role="main">
+          <header className="flex h-[50px] flex-none items-center border-b border-border-light px-6">
+            <div className="flex items-baseline gap-1.5 text-sm">
+              <span className="font-medium text-text-primary">
+                {localize('com_skills_marketplace')}
+              </span>
+              <span className="text-xs text-text-tertiary">{allSkills.length}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleTabChange(MINE_TAB)}
+              className="ml-auto text-sm text-text-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+            >
+              {localize('com_skills_tab_mine')} {mySkills.length}
+            </button>
+          </header>
           <div className="scrollbar-gutter-stable relative flex h-full flex-col overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-[1000px] px-6 pb-[70px]">
               {isSmallScreen && (
