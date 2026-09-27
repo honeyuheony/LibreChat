@@ -125,7 +125,7 @@ export default function UserSettings() {
           className="rounded-md border border-accent-primary/20 bg-surface-brand-subtle px-2.5 py-2 text-[13px] text-accent-primary"
         >
           {localizeSetting('com_ui_user_settings_connection_prefix')}
-          <Link to="/connectors" className="text-link underline underline-offset-2">
+          <Link to="/connectors" className="text-link hover:underline">
             {localizeSetting('com_ui_user_settings_data_integrations')}
           </Link>
           {localizeSetting('com_ui_user_settings_connection_suffix')}
@@ -134,7 +134,7 @@ export default function UserSettings() {
           <div className="flex flex-col gap-2">
             <label
               htmlFor="global-instructions"
-              className="text-[13px] font-normal text-text-tertiary"
+              className="text-[13px] font-normal text-text-muted"
             >
               {localizeSetting('com_ui_user_settings_global_instructions')}
             </label>
@@ -152,12 +152,12 @@ export default function UserSettings() {
               aria-describedby="global-instructions-hint"
               className="w-full max-w-[520px] resize-y rounded-md border border-border-light bg-surface-primary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             />
-            <p id="global-instructions-hint" className="text-xs text-text-secondary">
+            <p id="global-instructions-hint" className="text-[13px] text-text-muted">
               {localizeSetting('com_ui_user_settings_global_instructions_hint')}
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor="approval-mode" className="text-[13px] font-normal text-text-tertiary">
+            <label htmlFor="approval-mode" className="text-[13px] font-normal text-text-muted">
               {localizeSetting('com_ui_user_settings_approval_mode')}
             </label>
             <select
@@ -175,7 +175,7 @@ export default function UserSettings() {
                   approvalModeMutation.mutate({ approvalMode: nextApprovalMode });
                 }
               }}
-              className="w-full max-w-[520px] rounded-md border border-border-light bg-surface-secondary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
+              className="w-full max-w-[520px] rounded-lg border border-border-medium bg-surface-tertiary px-3 py-2 text-[14.5px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             >
               <option value="manual">
                 {localizeSetting('com_ui_user_settings_approval_manual')}

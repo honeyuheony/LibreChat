@@ -112,21 +112,21 @@ export default function Library() {
     return (
       <>
         <Table className="table-fixed text-[13px]">
-          <TableHeader className="bg-surface-secondary">
+          <TableHeader className="bg-surface-primary">
             <TableRow className="h-7">
-              <TableHead className="h-7 w-[38%] px-2 py-1 text-[11.5px]">
+              <TableHead className="h-7 w-[38%] px-2 py-1 text-[11.5px] text-text-muted">
                 {localize('com_ui_name')}
               </TableHead>
-              <TableHead className="h-7 w-[13%] whitespace-nowrap px-2 py-1 text-[11.5px]">
+              <TableHead className="h-7 w-[13%] whitespace-nowrap px-2 py-1 text-[11.5px] text-text-muted">
                 {localize('com_ui_library_col_type')}
               </TableHead>
-              <TableHead className="h-7 w-[27%] px-2 py-1 text-[11.5px]">
+              <TableHead className="h-7 w-[27%] px-2 py-1 text-[11.5px] text-text-muted">
                 {localize('com_ui_conversation')}
               </TableHead>
-              <TableHead className="h-7 w-[14%] whitespace-nowrap px-2 py-1 text-[11.5px]">
+              <TableHead className="h-7 w-[14%] whitespace-nowrap px-2 py-1 text-[11.5px] text-text-muted">
                 {localize('com_ui_library_col_created')}
               </TableHead>
-              <TableHead className="h-7 w-[8%] whitespace-nowrap px-2 py-1 text-[11.5px]">
+              <TableHead className="h-7 w-[8%] whitespace-nowrap px-2 py-1 text-[11.5px] text-text-muted">
                 <span className="sr-only">{localize('com_ui_library_col_action')}</span>
               </TableHead>
             </TableRow>
@@ -200,10 +200,10 @@ export default function Library() {
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_ui_library')}</span>
       </header>
-      <div className="mx-auto w-full max-w-[900px] px-6 pb-10 pt-6 md:pt-8">
+      <div className="mx-auto w-full max-w-[900px] px-6 pb-10 pt-6">
         <h1 className="text-2xl font-bold text-text-primary">{localize('com_ui_library')}</h1>
         {!isLoading && !isError && (
-          <p className="mb-3 mt-1 text-sm text-text-secondary">
+          <p className="mb-3 mt-1 text-[13px] text-text-muted">
             {localize('com_ui_library_intro', {
               0: `${items.length}${hasNextPage ? '+' : ''}`,
             })}

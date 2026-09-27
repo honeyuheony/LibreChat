@@ -166,12 +166,23 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(screen.queryByRole('list', { name: 'com_skills_builder_peek' })).not.toBeInTheDocument();
   });
 
-  it('uses normal weight for the close-examples button', () => {
+  it('draws the example toggle and the copy action as quiet pills', () => {
     render(<Harness peers={[peer]} />);
+    const pill = ['h-7', 'text-[13px]', 'font-normal', 'rounded-theme-control-round'];
+    expect(screen.getByRole('button', { name: 'com_skills_builder_peek' })).toHaveClass(
+      ...pill,
+      'text-text-tertiary',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
 
     expect(screen.getByRole('button', { name: 'com_skills_builder_peek_close' })).toHaveClass(
-      'font-normal',
+      ...pill,
+      'text-text-tertiary',
+    );
+    expect(screen.getByRole('button', { name: 'com_skills_builder_peek_copy' })).toHaveClass(
+      ...pill,
+      'border-border-medium',
+      'text-text-secondary',
     );
   });
 
@@ -278,8 +289,16 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(aiTag).toHaveClass('text-accent-primary');
   });
 
-  it('uses disabled text color for empty preview hints', () => {
+  /** The wireframe draws empty hints in its gray-400 (166,166,182). The theme
+   *  has no role at that value, so the hints fade the muted role to 60%, which
+   *  lands on about (166,166,176) over white. The class has to name a color
+   *  the Tailwind config really defines: an unknown role emits no CSS and the
+   *  hint inherits the black body text. */
+  it('fades empty preview hints from a color the theme defines', () => {
     render(<Harness />);
+    const { theme } = jest.requireActual<{
+      theme: { extend: { colors: Record<string, string> } };
+    }>(`${process.cwd()}/tailwind.config.cjs`);
 
     for (const hint of [
       'com_skills_builder_name_ghost',
@@ -287,7 +306,12 @@ describe('Builder laid out like the wireframe editor', () => {
       'com_skills_builder_when_ghost',
       'com_skills_builder_how_ghost',
     ]) {
-      expect(screen.getByText(hint)).toHaveClass('text-text-disabled');
+      const ghost = screen.getByText(hint);
+      expect(ghost).toHaveClass('text-text-muted/60');
+      const roles = [...ghost.classList]
+        .filter((name) => name.startsWith('text-text-'))
+        .map((name) => name.slice('text-'.length).split('/')[0]);
+      roles.forEach((role) => expect(theme.extend.colors[role]).toBeDefined());
     }
   });
 
@@ -338,10 +362,23 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     render(<Harness />);
 
     const skillRow = screen.getByRole('treeitem', { name: /SKILL\.md/ });
-    expect(skillRow).toHaveClass('text-accent-primary');
+    /** The wireframe fills the selected row with brand-100 (237,233,254); the
+     *  theme carries that exact value as the user-bubble surface. */
+    expect(skillRow).toHaveClass('bg-surface-message-user', 'text-accent-primary-hover');
+    expect(skillRow).not.toHaveClass('bg-surface-brand-subtle');
     expect(within(skillRow).getByText('com_skills_builder_folder_main')).toHaveClass(
       'text-accent-primary',
     );
+    expect(screen.getByText('skills/agent-draft/SKILL.md')).toHaveClass(
+      'text-[11.5px]',
+      'text-text-muted',
+    );
+    expect(screen.getByText('com_skills_builder_folder_empty')).toHaveClass('text-text-muted');
+  });
+
+  it('sets the dialog title in the wireframe bold weight', () => {
+    render(<Harness />);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveClass('font-bold');
   });
 
   it('still saves an unnamed draft under a generated agent- name, not the draft folder name', async () => {

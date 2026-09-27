@@ -161,6 +161,13 @@ describe('save-as-agent offer at the end of the answer', () => {
     );
 
     expect(await offerButton()).toBeInTheDocument();
+    expect(await offerButton()).toHaveClass(
+      'bg-surface-submit',
+      'h-7',
+      'text-[13px]',
+      'font-normal',
+      'rounded-theme-control-round',
+    );
     expect(screen.getByText('com_ui_task_save_agent_title')).toBeInTheDocument();
     expect(screen.getByText('com_ui_task_save_agent_body')).toBeInTheDocument();
   });

@@ -209,10 +209,10 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
       <div>
         <Button
           variant="ghost"
-          size="sm"
+          size="pill"
           aria-expanded={open}
           onClick={() => toggle(!open)}
-          className="font-normal"
+          className="text-text-tertiary"
         >
           {localize(open ? 'com_skills_builder_peek_close' : 'com_skills_builder_peek')}
         </Button>
@@ -247,7 +247,8 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                     </div>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="pill"
+                      className="border-border-medium text-text-secondary"
                       onClick={() => {
                         toggle(false);
                         onCopy(peer);
@@ -337,7 +338,7 @@ export default function Builder({
         className="flex w-[1180px] max-w-[97vw] flex-col gap-0 overflow-hidden rounded-[22px] bg-presentation p-0"
       >
         <header className="flex items-center gap-3 border-b border-border-light px-5 py-3">
-          <OGDialogTitle className="flex-none text-base font-semibold text-text-primary">
+          <OGDialogTitle className="flex-none text-base font-bold text-text-primary">
             {title}
           </OGDialogTitle>
           <OGDialogDescription className="flex-1 text-sm text-text-secondary">

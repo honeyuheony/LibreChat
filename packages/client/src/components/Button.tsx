@@ -31,6 +31,7 @@ type ButtonVariantOptions =
         | 'sm'
         | 'lg'
         | 'theme'
+        | 'pill'
         | null
         | undefined;
       shape?: 'default' | 'theme' | 'round' | null | undefined;
@@ -120,6 +121,13 @@ const buttonVariantRecipe = cva(
          */
         'icon-theme': 'size-theme-control p-0',
         theme: 'h-theme-control gap-theme-compact px-theme-normal',
+        /**
+         * A secondary action that should not compete with the screen's primary
+         * one — a header's "new" button, a dialog's footer pair, a card's
+         * inline offer. Short, regular weight and fully rounded, so it reads
+         * as a quiet chip rather than as another 40px control.
+         */
+        pill: 'h-7 gap-1 rounded-theme-control-round px-3 text-[13px] font-normal',
       },
       shape: {
         default: 'rounded-lg',

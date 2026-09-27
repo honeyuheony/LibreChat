@@ -131,11 +131,26 @@ describe('Library', () => {
     expect(conversation).toHaveClass('w-[27%]');
     expect(created).toHaveClass('w-[14%]');
     expect(action).toHaveClass('w-[8%]', 'whitespace-nowrap');
-    expect(table.querySelector('thead')).toHaveClass('bg-surface-secondary');
+    expect(table.querySelector('thead')).toHaveClass('bg-surface-primary');
+    [name, type, conversation, created, action].forEach((header) =>
+      expect(header).toHaveClass('text-text-muted'),
+    );
     expect(bodyRows()[0]).toHaveClass('h-9');
     const cells = within(bodyRows()[0]).getAllByRole('cell');
     expect(cells[1]).toHaveClass('whitespace-nowrap');
     expect(cells[4]).toHaveClass('whitespace-nowrap');
+  });
+
+  /** The wireframe sets the intro in its muted 13px `.muted` line, lighter than
+   *  the rows it introduces, and starts the heading 24px below the top bar. */
+  it('sets the intro in the muted theme role under a heading 24px down', async () => {
+    getTaskResults.mockResolvedValue(page([item({})]));
+    renderLibrary();
+
+    const intro = await screen.findByText('com_ui_library_intro {"0":"1"}');
+    expect(intro).toHaveClass('text-[13px]', 'text-text-muted');
+    expect(intro.parentElement).toHaveClass('pt-6');
+    expect(intro.parentElement).not.toHaveClass('md:pt-8');
   });
 
   it('shows the empty line when there are no results', async () => {

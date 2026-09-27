@@ -110,7 +110,7 @@ export default function Folder({
     <>
       <div className="mb-1.5 mt-3 flex items-baseline gap-2">
         <b className="text-sm text-text-primary">{localize('com_skills_builder_folder')}</b>
-        <span className="text-xs text-text-secondary">
+        <span className="text-xs text-text-muted">
           {localize(empty ? 'com_skills_builder_folder_empty' : 'com_skills_builder_folder_ready')}
         </span>
       </div>
@@ -148,7 +148,7 @@ export default function Folder({
               onClick={() => onSelect(row.path)}
               className={cn(
                 'block w-full py-0.5 text-start text-text-secondary hover:bg-surface-hover',
-                row.path === current.path && 'bg-surface-brand-subtle text-accent-primary',
+                row.path === current.path && 'bg-surface-message-user text-accent-primary-hover',
               )}
               style={{ paddingInlineStart: row.depth * 16 + 8 }}
             >
@@ -164,7 +164,7 @@ export default function Folder({
       </div>
       <div className="mt-3">
         <div className="mb-2 flex items-center gap-2">
-          <span className="min-w-0 truncate font-mono text-xs text-text-secondary">
+          <span className="min-w-0 truncate font-mono text-[11.5px] text-text-muted">
             {current.path}
           </span>
           {isSkillFile(current.path) && <ViewToggle raw={raw} onRaw={onRaw} />}

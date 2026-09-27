@@ -90,7 +90,7 @@ export default function TaskSaveOffer({
         <b className="block">{localize('com_ui_task_save_agent_title' as TranslationKeys)}</b>
         {localize('com_ui_task_save_agent_body' as TranslationKeys)}
       </div>
-      <Button size="sm" variant="submit" onClick={save}>
+      <Button size="pill" variant="submit" onClick={save}>
         {localize('com_skills_chat_save_as_agent')}
       </Button>
     </div>

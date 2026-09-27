@@ -106,7 +106,7 @@ export default function Schedules() {
         {canCreate && (
           <Button
             type="button"
-            size="sm"
+            size="pill"
             variant="outline"
             disabled={atLimit || isLoading || isError}
             onClick={() => setCreateOpen(true)}
