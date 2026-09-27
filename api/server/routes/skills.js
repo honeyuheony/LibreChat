@@ -39,9 +39,10 @@ const {
   getConvo,
   getUserKey,
   getMessages,
-  updateSkill,
   getUserKeyValues,
   getAuthorSkillByName,
+  findEntriesByResource,
+  setSkillPublicationState,
 } = require('~/models');
 const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
@@ -206,14 +207,15 @@ const draftHandler = createSkillDraftHandler({
 });
 const testResultHandler = createSkillTestResultHandler({
   getSkillById,
-  updateSkill,
+  setSkillPublicationState,
   getConvo,
   getMessages,
   hasPublicPermission,
 });
 const publishHandler = createSkillPublishHandler({
   getSkillById,
-  updateSkill,
+  setSkillPublicationState,
+  findEntriesByResource,
   bulkUpdateResourcePermissions,
   sharePolicy,
 });

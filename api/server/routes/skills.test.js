@@ -1325,7 +1325,7 @@ describe('Skill builder routes', () => {
   });
 
   describe('POST /api/skills/:id/test-result', () => {
-    it('records the test on the version it bumps to', async () => {
+    it('records the test on the current version without bumping it', async () => {
       const created = await createSkillAsOwner();
       await insertTestTurn({
         user: testUsers.owner,
@@ -1338,13 +1338,28 @@ describe('Skill builder routes', () => {
         .send({ conversationId: 'convo-owner', version: 1 });
 
       expect(res.status).toBe(200);
-      expect(res.body.version).toBe(2);
+      expect(res.body.version).toBe(1);
       expect(res.body.lastTest).toEqual(
-        expect.objectContaining({ version: 2, seconds: 12, conversationId: 'convo-owner' }),
+        expect.objectContaining({ version: 1, seconds: 12, conversationId: 'convo-owner' }),
       );
       const stored = await Skill.findById(created.body._id).lean();
-      expect(stored.version).toBe(2);
-      expect(stored.lastTest.version).toBe(2);
+      expect(stored.version).toBe(1);
+      expect(stored.lastTest.version).toBe(1);
+    });
+
+    it('lets a content edit after the test withdraw the pass', async () => {
+      const tested = await createTestedSkill();
+      const edited = await request(app)
+        .patch(`/api/skills/${tested._id}`)
+        .send({ expectedVersion: tested.version, body: '# Demo changed' });
+      expect(edited.status).toBe(200);
+      expect(edited.body.version).toBe(tested.version + 1);
+
+      const res = await request(app)
+        .post(`/api/skills/${tested._id}/publish`)
+        .send({ scope: 'all' });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('TEST_REQUIRED');
     });
 
     it('rejects a caller without edit access', async () => {
@@ -1426,6 +1441,14 @@ describe('Skill builder routes', () => {
 
     it('publishes to everyone, then back to the owner only', async () => {
       const tested = await createTestedSkill();
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: testUsers.editor._id,
+        resourceType: ResourceType.SKILL,
+        resourceId: tested._id,
+        accessRoleId: AccessRoleIds.SKILL_EDITOR,
+        grantedBy: testUsers.owner._id,
+      });
 
       const shared = await request(app)
         .post(`/api/skills/${tested._id}/publish`)
@@ -1433,7 +1456,8 @@ describe('Skill builder routes', () => {
       expect(shared.status).toBe(200);
       expect(shared.body.isPublic).toBe(true);
       expect(typeof shared.body.publishedAt).toBe('string');
-      expect(shared.body.lastTest.version).toBe(shared.body.version);
+      expect(shared.body.version).toBe(tested.version);
+      expect(shared.body.lastTest.version).toBe(tested.version);
       const entry = await publicEntry(tested._id);
       expect(entry.roleId.toString()).toBe(testRoles.viewer._id.toString());
 
@@ -1442,14 +1466,14 @@ describe('Skill builder routes', () => {
         .send({ scope: 'me' });
       expect(privateAgain.status).toBe(200);
       expect(privateAgain.body.isPublic).toBe(false);
-      expect(await publicEntry(tested._id)).toBeNull();
-      const ownerEntry = await AclEntry.findOne({
+      const remaining = await AclEntry.find({
         resourceType: ResourceType.SKILL,
         resourceId: tested._id,
-        principalType: PrincipalType.USER,
-        principalId: testUsers.owner._id,
       }).lean();
-      expect(ownerEntry).toBeTruthy();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].principalType).toBe(PrincipalType.USER);
+      expect(remaining[0].principalId.toString()).toBe(testUsers.owner._id.toString());
+      expect(remaining[0].roleId.toString()).toBe(testRoles.owner._id.toString());
     });
 
     it('rejects the team scope', async () => {

@@ -5,8 +5,8 @@ import {
   PrincipalType,
   PermissionBits,
 } from 'librechat-data-provider';
-import type { ISkill, UpdateSkillInput, UpdateSkillResult } from '@librechat/data-schemas';
 import type { TSkillConflictResponse, TSkillPublishScope } from 'librechat-data-provider';
+import type { ISkill, UpdateSkillResult } from '@librechat/data-schemas';
 import type { NextFunction, Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest } from '~/types';
@@ -14,11 +14,13 @@ import { serializeSkill } from './handlers';
 
 type SkillDoc = ISkill & { _id: Types.ObjectId };
 
-type UpdateSkill = (params: {
+/** data-schemas `setSkillPublicationState` 인자와 같은 모양. 그 타입은 패키지 밖으로 내보내지 않는다. */
+type PublicationStateUpdate = {
   id: string;
   expectedVersion: number;
-  update: UpdateSkillInput;
-}) => Promise<UpdateSkillResult>;
+  lastTest?: ISkill['lastTest'];
+  publishedAt?: Date | null;
+};
 
 /** 시험 대화에서 읽는 메시지 칸. 응답 행은 턴이 끝날 때 다시 저장되므로 `updatedAt` 이 끝난 시각이다. */
 export interface SkillTestMessage {
@@ -34,7 +36,8 @@ export interface SkillTestMessage {
 
 interface SkillLookupDeps {
   getSkillById: (id: string | Types.ObjectId) => Promise<SkillDoc | null>;
-  updateSkill: UpdateSkill;
+  /** 게시 상태 칸만 적고 `version` 은 올리지 않는다. 내용 수정만 버전을 올려 시험 통과를 푼다. */
+  setSkillPublicationState: (params: PublicationStateUpdate) => Promise<UpdateSkillResult>;
 }
 
 export interface SkillTestResultDeps extends SkillLookupDeps {
@@ -62,9 +65,13 @@ export interface SkillSharePolicy {
   checkSharePublicAccess: SharePolicyMiddleware;
 }
 
-type PublishPrincipal = { type: string; id: null; accessRoleId?: string };
+type PublishPrincipal = { type: string; id: string | null; accessRoleId?: string };
 
 export interface SkillPublishDeps extends SkillLookupDeps {
+  findEntriesByResource: (
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+  ) => Promise<Array<{ principalType: string; principalId?: string | Types.ObjectId | null }>>;
   bulkUpdateResourcePermissions: (params: {
     resourceType: string;
     resourceId: string | Types.ObjectId;
@@ -185,17 +192,14 @@ export function createSkillTestResultHandler(deps: SkillTestResultDeps) {
           .json({ error: 'The test turn has no usable timestamps', code: 'RESPONSE_MISSING' });
       }
 
-      // updateSkill 은 버전을 올리므로 기록은 올라간 버전으로 적어야 게시 조건과 맞는다.
-      const result = await deps.updateSkill({
+      const result = await deps.setSkillPublicationState({
         id: skill._id.toString(),
         expectedVersion: version,
-        update: {
-          lastTest: {
-            version: version + 1,
-            seconds: Math.round(elapsedMs / 100) / 10,
-            conversationId,
-            at: new Date(),
-          },
+        lastTest: {
+          version,
+          seconds: Math.round(elapsedMs / 100) / 10,
+          conversationId,
+          at: new Date(),
         },
       });
       if (result.status === 'not_found') {
@@ -249,17 +253,26 @@ async function passesSharePolicy(
   return passed;
 }
 
-function publishPrincipals(scope: TSkillPublishScope): {
-  updatedPrincipals: PublishPrincipal[];
-  revokedPrincipals: PublishPrincipal[];
-} {
+/** 'all' 은 public viewer 를 주고, 'me' 는 작성자 항목만 남기고 public·사용자·그룹·역할 항목을 모두 거둔다. */
+async function publishPrincipals(
+  deps: SkillPublishDeps,
+  scope: TSkillPublishScope,
+  skill: SkillDoc,
+): Promise<{ updatedPrincipals: PublishPrincipal[]; revokedPrincipals: PublishPrincipal[] }> {
   const publicPrincipal = { type: PrincipalType.PUBLIC, id: null };
-  return scope === 'all'
-    ? {
-        updatedPrincipals: [{ ...publicPrincipal, accessRoleId: AccessRoleIds.SKILL_VIEWER }],
-        revokedPrincipals: [],
-      }
-    : { updatedPrincipals: [], revokedPrincipals: [publicPrincipal] };
+  if (scope === 'all') {
+    return {
+      updatedPrincipals: [{ ...publicPrincipal, accessRoleId: AccessRoleIds.SKILL_VIEWER }],
+      revokedPrincipals: [],
+    };
+  }
+  const authorId = skill.author.toString();
+  const entries = await deps.findEntriesByResource(ResourceType.SKILL, skill._id);
+  const shared = entries
+    .filter((entry) => entry.principalType !== PrincipalType.PUBLIC)
+    .map((entry) => ({ type: entry.principalType, id: entry.principalId?.toString() ?? null }))
+    .filter((principal) => !(principal.type === PrincipalType.USER && principal.id === authorId));
+  return { updatedPrincipals: [], revokedPrincipals: [publicPrincipal, ...shared] };
 }
 
 /** `POST /api/skills/:id/publish`: 게시 조건을 확인하고 공개 범위를 ACL 에 적은 뒤 `publishedAt` 을 남긴다. */
@@ -302,11 +315,11 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         return;
       }
 
-      const lastTest = skill.lastTest as NonNullable<ISkill['lastTest']>;
-      const published = await deps.updateSkill({
+      const principals = await publishPrincipals(deps, publishScope, skill);
+      const published = await deps.setSkillPublicationState({
         id: skill._id.toString(),
         expectedVersion: skill.version,
-        update: { publishedAt: new Date(), lastTest: { ...lastTest, version: skill.version + 1 } },
+        publishedAt: new Date(),
       });
       if (published.status === 'not_found') {
         return res.status(404).json({ error: 'Skill not found' });
@@ -319,7 +332,7 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         await deps.bulkUpdateResourcePermissions({
           resourceType: ResourceType.SKILL,
           resourceId: skill._id,
-          ...publishPrincipals(publishScope),
+          ...principals,
           grantedBy: userId,
         });
       } catch (aclError) {
@@ -327,13 +340,10 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
           `[skillPublish] ACL update failed for ${skill._id}, restoring publish state`,
           aclError,
         );
-        const restored = await deps.updateSkill({
+        const restored = await deps.setSkillPublicationState({
           id: skill._id.toString(),
           expectedVersion: published.skill.version,
-          update: {
-            publishedAt: skill.publishedAt ?? null,
-            lastTest: { ...lastTest, version: published.skill.version + 1 },
-          },
+          publishedAt: skill.publishedAt ?? null,
         });
         if (restored.status !== 'updated') {
           logger.error(`[skillPublish] Could not restore publish state for ${skill._id}`);

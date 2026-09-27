@@ -87,15 +87,15 @@ describe('createSkillTestResultHandler', () => {
       getConvo: jest.fn(async () => ({ conversationId: 'convo-1' })),
       getMessages: jest.fn(async () => testMessages()),
       hasPublicPermission: jest.fn(async () => false),
-      updateSkill: jest.fn(async ({ update }) => ({
+      setSkillPublicationState: jest.fn(async ({ lastTest }) => ({
         status: 'updated' as const,
-        skill: createSkill({ version: 5, lastTest: update.lastTest }),
+        skill: createSkill({ lastTest }),
       })),
       ...overrides,
     } as SkillTestResultDeps & {
       getConvo: jest.Mock;
       getMessages: jest.Mock;
-      updateSkill: jest.Mock;
+      setSkillPublicationState: jest.Mock;
     };
   }
 
@@ -117,7 +117,7 @@ describe('createSkillTestResultHandler', () => {
     const deps = createDeps();
     const res = await run(deps, body);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
   });
 
   it('rejects a version that is not the stored version with 409', async () => {
@@ -129,7 +129,7 @@ describe('createSkillTestResultHandler', () => {
       current: expect.objectContaining({ version: 4 }),
     });
     expect(deps.getConvo).not.toHaveBeenCalled();
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
   });
 
   it('rejects a conversation the caller does not own with 404', async () => {
@@ -138,7 +138,7 @@ describe('createSkillTestResultHandler', () => {
     expect(deps.getConvo).toHaveBeenCalledWith(USER_ID, 'someone-elses');
     expect(res.status).toHaveBeenCalledWith(404);
     expect(deps.getMessages).not.toHaveBeenCalled();
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
   });
 
   it('rejects a conversation where the skill was not picked with 400', async () => {
@@ -148,7 +148,7 @@ describe('createSkillTestResultHandler', () => {
     const res = await run(deps, { conversationId: 'convo-1', version: 4 });
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'SKILL_NOT_USED' }));
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -160,7 +160,7 @@ describe('createSkillTestResultHandler', () => {
     const res = await run(deps, { conversationId: 'convo-1', version: 4 });
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code }));
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
   });
 
   it('records the seconds between the user message and the finished response', async () => {
@@ -172,13 +172,12 @@ describe('createSkillTestResultHandler', () => {
       { conversationId: 'convo-1', user: USER_ID },
       expect.any(String),
     );
-    expect(deps.updateSkill).toHaveBeenCalledTimes(1);
-    const { id, expectedVersion, update } = deps.updateSkill.mock.calls[0][0];
-    expect(id).toBe(SKILL_ID.toString());
-    expect(expectedVersion).toBe(4);
-    expect(update).toEqual({
+    expect(deps.setSkillPublicationState).toHaveBeenCalledTimes(1);
+    expect(deps.setSkillPublicationState).toHaveBeenCalledWith({
+      id: SKILL_ID.toString(),
+      expectedVersion: 4,
       lastTest: {
-        version: 5,
+        version: 4,
         seconds: 42.5,
         conversationId: 'convo-1',
         at: expect.any(Date),
@@ -186,8 +185,8 @@ describe('createSkillTestResultHandler', () => {
     });
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        version: 5,
-        lastTest: expect.objectContaining({ version: 5, seconds: 42.5 }),
+        version: 4,
+        lastTest: expect.objectContaining({ version: 4, seconds: 42.5 }),
       }),
     );
   });
@@ -215,12 +214,12 @@ describe('createSkillTestResultHandler', () => {
     const deps = createDeps({ getMessages: jest.fn(async () => messages) });
     const res = await run(deps, { conversationId: 'convo-1', version: 4 });
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(deps.updateSkill.mock.calls[0][0].update.lastTest.seconds).toBe(10);
+    expect(deps.setSkillPublicationState.mock.calls[0][0].lastTest.seconds).toBe(10);
   });
 
   it('answers 409 when the skill changed while the result was being recorded', async () => {
     const deps = createDeps({
-      updateSkill: jest.fn(async () => ({
+      setSkillPublicationState: jest.fn(async () => ({
         status: 'conflict' as const,
         current: createSkill({ version: 6 }),
       })),
@@ -245,28 +244,33 @@ describe('createSkillPublishHandler', () => {
     };
   }
 
+  const TESTED = { version: 4, seconds: 42.5, conversationId: 'convo-1', at: new Date() };
+
   function createDeps(overrides: Partial<SkillPublishDeps> = {}) {
     return {
       getSkillById: jest.fn(async () => null),
-      updateSkill: jest.fn(async ({ expectedVersion, update }) => ({
+      setSkillPublicationState: jest.fn(async ({ expectedVersion, publishedAt }) => ({
         status: 'updated' as const,
-        skill: createSkill({ version: expectedVersion + 1, ...update }),
+        skill: createSkill({
+          version: expectedVersion,
+          lastTest: TESTED,
+          publishedAt: publishedAt ?? undefined,
+        }),
       })),
+      findEntriesByResource: jest.fn(async () => []),
       bulkUpdateResourcePermissions: jest.fn(async () => ({})),
       sharePolicy: createPolicy(),
       ...overrides,
     } as SkillPublishDeps & {
-      updateSkill: jest.Mock;
+      setSkillPublicationState: jest.Mock;
+      findEntriesByResource: jest.Mock;
       bulkUpdateResourcePermissions: jest.Mock;
       sharePolicy: { checkShareAccess: jest.Mock; checkSharePublicAccess: jest.Mock };
     };
   }
 
   const testedSkill = (overrides: Partial<SkillDoc> = {}) =>
-    createSkill({
-      lastTest: { version: 4, seconds: 42.5, conversationId: 'convo-1', at: new Date() },
-      ...overrides,
-    });
+    createSkill({ lastTest: TESTED, ...overrides });
 
   async function run(deps: SkillPublishDeps, body: unknown, skill: SkillDoc = testedSkill()) {
     const res = createResponse();
@@ -283,7 +287,7 @@ describe('createSkillPublishHandler', () => {
     const res = await run(deps, body);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(deps.sharePolicy.checkShareAccess).not.toHaveBeenCalled();
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
     expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
   });
 
@@ -303,7 +307,7 @@ describe('createSkillPublishHandler', () => {
     const res = await run(deps, { scope: 'all' }, testedSkill(overrides as Partial<SkillDoc>));
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code }));
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
     expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
   });
 
@@ -314,7 +318,7 @@ describe('createSkillPublishHandler', () => {
     const deps = createDeps({ sharePolicy: createPolicy({ checkShareAccess: jest.fn(deny) }) });
     const res = await run(deps, { scope: 'me' });
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(deps.updateSkill).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
     expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
   });
 
@@ -344,11 +348,11 @@ describe('createSkillPublishHandler', () => {
     const res = await run(deps, { scope: 'all' });
 
     expect(res.status).toHaveBeenCalledWith(200);
-    const { id, expectedVersion, update } = deps.updateSkill.mock.calls[0][0];
-    expect(id).toBe(SKILL_ID.toString());
-    expect(expectedVersion).toBe(4);
-    expect(update.publishedAt).toBeInstanceOf(Date);
-    expect(update.lastTest).toEqual(expect.objectContaining({ version: 5, seconds: 42.5 }));
+    expect(deps.setSkillPublicationState).toHaveBeenCalledWith({
+      id: SKILL_ID.toString(),
+      expectedVersion: 4,
+      publishedAt: expect.any(Date),
+    });
     expect(deps.bulkUpdateResourcePermissions).toHaveBeenCalledWith({
       resourceType: ResourceType.SKILL,
       resourceId: SKILL_ID,
@@ -359,28 +363,52 @@ describe('createSkillPublishHandler', () => {
       grantedBy: USER_ID,
     });
     const body = res.json.mock.calls[0][0];
-    expect(body.version).toBe(5);
+    expect(body.version).toBe(4);
     expect(typeof body.publishedAt).toBe('string');
-    expect(body.lastTest.version).toBe(5);
+    expect(body.lastTest.version).toBe(4);
   });
 
-  it('publishes to the owner only by revoking the public grant', async () => {
-    const deps = createDeps();
+  it('publishes to the owner only by revoking every grant but the author', async () => {
+    const colleague = new Types.ObjectId();
+    const group = new Types.ObjectId();
+    const deps = createDeps({
+      findEntriesByResource: jest.fn(async () => [
+        { principalType: PrincipalType.USER, principalId: new Types.ObjectId(USER_ID) },
+        { principalType: PrincipalType.USER, principalId: colleague },
+        { principalType: PrincipalType.GROUP, principalId: group },
+        { principalType: PrincipalType.ROLE, principalId: 'ADMIN' },
+        { principalType: PrincipalType.PUBLIC, principalId: null },
+      ]),
+    });
     const res = await run(deps, { scope: 'me' });
 
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(deps.findEntriesByResource).toHaveBeenCalledWith(ResourceType.SKILL, SKILL_ID);
     expect(deps.bulkUpdateResourcePermissions).toHaveBeenCalledWith({
       resourceType: ResourceType.SKILL,
       resourceId: SKILL_ID,
       updatedPrincipals: [],
-      revokedPrincipals: [{ type: PrincipalType.PUBLIC, id: null }],
+      revokedPrincipals: [
+        { type: PrincipalType.PUBLIC, id: null },
+        { type: PrincipalType.USER, id: colleague.toString() },
+        { type: PrincipalType.GROUP, id: group.toString() },
+        { type: PrincipalType.ROLE, id: 'ADMIN' },
+      ],
       grantedBy: USER_ID,
     });
   });
 
+  it('revokes the public grant for the me scope even when no entry is listed', async () => {
+    const deps = createDeps();
+    await run(deps, { scope: 'me' });
+    expect(deps.bulkUpdateResourcePermissions.mock.calls[0][0].revokedPrincipals).toEqual([
+      { type: PrincipalType.PUBLIC, id: null },
+    ]);
+  });
+
   it('answers 409 without touching the ACL when the skill changed first', async () => {
     const deps = createDeps({
-      updateSkill: jest.fn(async () => ({
+      setSkillPublicationState: jest.fn(async () => ({
         status: 'conflict' as const,
         current: createSkill({ version: 7 }),
       })),
@@ -400,10 +428,12 @@ describe('createSkillPublishHandler', () => {
     const res = await run(deps, { scope: 'all' }, testedSkill({ publishedAt: previous }));
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(deps.updateSkill).toHaveBeenCalledTimes(2);
-    const rollback = deps.updateSkill.mock.calls[1][0];
-    expect(rollback.expectedVersion).toBe(5);
-    expect(rollback.update.publishedAt).toEqual(previous);
+    expect(deps.setSkillPublicationState).toHaveBeenCalledTimes(2);
+    expect(deps.setSkillPublicationState.mock.calls[1][0]).toEqual({
+      id: SKILL_ID.toString(),
+      expectedVersion: 4,
+      publishedAt: previous,
+    });
   });
 
   it('clears the publish time on rollback when the skill was a draft', async () => {
@@ -413,7 +443,7 @@ describe('createSkillPublishHandler', () => {
       }),
     });
     await run(deps, { scope: 'me' }, testedSkill({ publishedAt: undefined }));
-    expect(deps.updateSkill.mock.calls[1][0].update.publishedAt).toBeNull();
+    expect(deps.setSkillPublicationState.mock.calls[1][0].publishedAt).toBeNull();
   });
 });
 
@@ -426,10 +456,11 @@ describe('share policy request', () => {
     };
     const deps = {
       getSkillById: jest.fn(async () => null),
-      updateSkill: jest.fn(async ({ expectedVersion, update }) => ({
+      setSkillPublicationState: jest.fn(async ({ expectedVersion, publishedAt }) => ({
         status: 'updated' as const,
-        skill: createSkill({ version: expectedVersion + 1, ...update }),
+        skill: createSkill({ version: expectedVersion, publishedAt }),
       })),
+      findEntriesByResource: jest.fn(async () => []),
       bulkUpdateResourcePermissions: jest.fn(async () => ({})),
       sharePolicy: { checkShareAccess: record, checkSharePublicAccess: record },
     } as unknown as SkillPublishDeps;
