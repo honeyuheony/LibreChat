@@ -86,6 +86,10 @@ fileConfig:
           'application/pdf': 'provider'
           'text/plain': 'text'
           'text/csv': 'none'
+    # task-mode.spec.ts uploads its twelve fixture documents in one pick, like the
+    # deployment's 50-file limit; the default limit is 10.
+    'Mock Tasks':
+      fileLimit: 50
     'Mock Provider A':
       legacyFileUploadUX: true
     'Mock Provider B':
@@ -130,6 +134,10 @@ endpoints:
       mode: bypass
       ask:
         - approval_probe_mcp_e2e-memory
+        # The document task tools pause for their field and viewpoint cards
+        # (task-mode.spec.ts); no other mock agent carries them, so nothing else pauses.
+        - extract_table
+        - summarize_documents
       reason: E2E approval required before running {tool}.
       hooks:
         - module: e2e/setup/tool-approval-hook.js
@@ -231,6 +239,19 @@ endpoints:
       activityModel: 'mock-label-model'
       activityPhaseLabel: true
       activityPhaseModel: 'mock-phase-label-model'
+
+    # Agent endpoint for task-mode.spec.ts. The chat turn is still the in-process
+    # fake model; the task tools' per-document calls go to this baseURL, served by
+    # e2e/setup/fake-task-model-server.js from e2e/fixtures/task-mode/documents.json.
+    - name: 'Mock Tasks'
+      apiKey: 'e2e-mock-tasks'
+      baseURL: 'http://127.0.0.1:8893/v1'
+      models:
+        default:
+          - 'mock-task-model'
+        fetch: false
+      titleConvo: false
+      modelDisplayLabel: 'Mock Tasks'
 
 modelSpecs:
   prioritize: true

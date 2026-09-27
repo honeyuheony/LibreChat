@@ -76,6 +76,24 @@ const RUN_FILES_CHILD_MARKER = 'E2E_RUN_FILES_CHILD:';
 const RUN_FILES_FOLLOWUP_MARKER = 'E2E_RUN_FILES_FOLLOWUP:';
 const RUN_FILE_VERSIONS_MARKER = 'E2E_RUN_FILE_VERSIONS:';
 const RUN_FILE_VERSIONS_CHILD_MARKER = 'E2E_RUN_FILE_VERSIONS_CHILD:';
+const TASK_TABLE_MARKER = 'E2E_TASK_TABLE:';
+const TASK_SUMMARY_MARKER = 'E2E_TASK_SUMMARY:';
+const TASK_REPORT_MARKER = 'E2E_TASK_REPORT:';
+const TASK_FILE_CONTEXT_MARKER = 'E2E_TASK_FILE_CONTEXT:';
+/** What the result card's 「hwp 보고서로」 button sends (`com_ui_task_to_report_prompt`, ko and en). */
+const TASK_TO_REPORT_PROMPTS = [
+  '이 표를 근거로 hwp 보고서 초안 만들어줘',
+  'Draft an HWP report based on this table',
+];
+const TASK_TOOL_CALL_PREFIX = 'call_e2e_task_';
+const TASK_TABLE_FIELDS = ['정세 전망', '전월 대비', '위험도'];
+const TASK_TABLE_SUGGESTED_FIELDS = ['출처 매체', '관련 지표'];
+const TASK_SUMMARY_VIEWS = ['위험 요인 중심', '간부 보고용', '정책 시사점 중심'];
+const TASK_REPORT_TEMPLATE_ID = 'hwp-report';
+/** Header line `extract_table` puts before its per-field counts (packages/api/src/tasks/tools.ts). */
+const TASK_TABLE_COUNTS_HEADER = '항목별 상위 값(건수, 코드 집계):';
+const TASK_FINAL_TEXT = 'E2E task done';
+const TASK_FILE_CONTEXT_FINAL_TEXT = 'E2E task file context';
 const SUBAGENT_MODEL_OVERRIDE_ERROR =
   '[e2e] Streamed subagent result coverage requires an @librechat/agents release with ' +
   'StandardGraph.setSubagentModelOverride';
@@ -2745,6 +2763,116 @@ function codeExecResponses({ filename, toolCallId, finalText, code }, toolNames)
   };
 }
 
+function taskToolCall(name, label, args) {
+  return {
+    id: `${TASK_TOOL_CALL_PREFIX}${name}_${label}_${Date.now()}`,
+    name,
+    args,
+    type: 'tool_call',
+  };
+}
+
+/** Fields of the latest `extract_table` result in history, read from its per-field count lines. */
+function latestTableFields(messages) {
+  for (let index = (messages?.length ?? 0) - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (messageType(message) !== 'tool') {
+      continue;
+    }
+    const content = getContentText(message.content);
+    const headerIndex = content.indexOf(TASK_TABLE_COUNTS_HEADER);
+    if (headerIndex === -1) {
+      continue;
+    }
+    return content
+      .slice(headerIndex + TASK_TABLE_COUNTS_HEADER.length)
+      .split('\n')
+      .flatMap((line) => {
+        const field = /^- (.+?): /.exec(line)?.[1];
+        return field ? [field] : [];
+      });
+  }
+  return [];
+}
+
+function taskFixtureDocument(filename) {
+  const fixture = require('../fixtures/task-mode/documents.json');
+  return fixture.documents.find((doc) => doc.filename === filename);
+}
+
+/** Whether the uploaded file's first paragraph reached the model without a Hangul tool call. */
+function taskFileContextResponses({ messages, text }) {
+  const filename = getMarkerValue(text, TASK_FILE_CONTEXT_MARKER);
+  const firstParagraph = taskFixtureDocument(filename)?.text.split('\n\n')[0];
+  if (!firstParagraph) {
+    return { responses: [`${TASK_FILE_CONTEXT_FINAL_TEXT} unknown fixture: ${filename}`] };
+  }
+  const promptText = collectPromptText(messages).join('\n');
+  const state = promptText.includes(firstParagraph) ? 'present' : 'absent';
+  return { responses: [`${TASK_FILE_CONTEXT_FINAL_TEXT} ${state}: ${filename}`] };
+}
+
+/**
+ * Scripted calls for the document task tools. Each returns before any tool runs;
+ * the reply after the tool (and after a card approval resumes the run) comes from
+ * `taskOutcomeResponses`, because resume rebuilds the model without the prompt.
+ */
+function taskToolResponses({ messages, text, toolNames }) {
+  const request = (() => {
+    const tableLabel = getMarkerValue(text, TASK_TABLE_MARKER);
+    if (tableLabel) {
+      return taskToolCall('extract_table', tableLabel, {
+        fields: TASK_TABLE_FIELDS,
+        suggested_fields: TASK_TABLE_SUGGESTED_FIELDS,
+      });
+    }
+    const summaryLabel = getMarkerValue(text, TASK_SUMMARY_MARKER);
+    if (summaryLabel) {
+      return taskToolCall('summarize_documents', summaryLabel, { views: TASK_SUMMARY_VIEWS });
+    }
+    const reportLabel = getMarkerValue(text, TASK_REPORT_MARKER);
+    const fromTable = TASK_TO_REPORT_PROMPTS.includes(text.trim());
+    if (reportLabel || fromTable) {
+      const fields = latestTableFields(messages);
+      return taskToolCall('write_report', reportLabel || 'from_table', {
+        template_id: TASK_REPORT_TEMPLATE_ID,
+        ...(fields.length > 0 ? { fields } : {}),
+      });
+    }
+    return null;
+  })();
+  if (!request) {
+    return null;
+  }
+  if (!toolNames.has(request.name)) {
+    return { responses: [`E2E task tool unavailable: ${request.name} was not advertised.`] };
+  }
+  return { responses: ['', ''], toolCalls: [request] };
+}
+
+/** The closing reply once a task tool of the current turn returned (or was rejected). */
+function taskOutcomeResponses(messages) {
+  let latestHumanIndex = -1;
+  for (let index = 0; index < (messages ?? []).length; index++) {
+    const type = messageType(messages[index]);
+    if (type === 'human' || type === 'user') {
+      latestHumanIndex = index;
+    }
+  }
+  const outcome = (messages ?? [])
+    .slice(latestHumanIndex + 1)
+    .find(
+      (message) =>
+        messageType(message) === 'tool' &&
+        typeof message?.tool_call_id === 'string' &&
+        message.tool_call_id.startsWith(TASK_TOOL_CALL_PREFIX),
+    );
+  if (!outcome) {
+    return null;
+  }
+  return { responses: [`${TASK_FINAL_TEXT}: ${outcome.name ?? outcome.tool_call_id}`] };
+}
+
 function resolveResponses({ graph, messages, text, toolNames }) {
   const lifecycle = runFileLifecycle.responsesForText(text);
   if (lifecycle) return lifecycle;
@@ -2795,6 +2923,29 @@ function resolveResponses({ graph, messages, text, toolNames }) {
   const approvalLabel = getMarkerValue(text, TOOL_APPROVAL_MARKER);
   if (approvalLabel) {
     return approvalToolResponses(approvalLabel, toolNames);
+  }
+
+  const taskTool = taskToolResponses({ messages, text, toolNames });
+  if (taskTool) {
+    return taskTool;
+  }
+
+  if (text.includes(TASK_FILE_CONTEXT_MARKER)) {
+    return {
+      responses: [MOCK_REPLY],
+      resolveOnStream: async (streamMessages, streamOptions, runManager) =>
+        taskFileContextResponses({
+          messages: (
+            await getStreamAgentView({
+              graph,
+              messages: streamMessages,
+              options: streamOptions,
+              runManager,
+            })
+          ).messages,
+          text,
+        }),
+    };
   }
 
   const reply = replyResponses(text);
@@ -3017,6 +3168,7 @@ module.exports = function fakeModelHook(run, context) {
       resolveInvocation?.(streamMessages, streamOptions, runManager) ??
       null,
     resolveOnStream: (streamMessages, streamOptions, runManager) =>
+      taskOutcomeResponses(streamMessages) ??
       approvalOutcomeResponses(streamMessages) ??
       resolveOnStream?.(streamMessages, streamOptions, runManager) ??
       null,

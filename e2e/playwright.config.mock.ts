@@ -36,6 +36,13 @@ const ragServerPath = path.resolve(rootPath, 'e2e/setup/fake-rag-server.js');
  *  Kept clear of the MCP (8765/8767/8768) and label (8889) fixtures. */
 const CODE_API_PORT = process.env.E2E_CODE_API_PORT || '8790';
 const RAG_API_PORT = process.env.E2E_RAG_API_PORT || '8791';
+const taskModelServerPath = path.resolve(rootPath, 'e2e/setup/fake-task-model-server.js');
+const hwpMcpServerPath = path.resolve(rootPath, 'e2e/setup/fake-hwp-mcp-server.js');
+/** The `Mock Tasks` endpoint's `baseURL` in the template hard-codes 8893; an override is substituted below. */
+const TASK_MODEL_PORT = process.env.E2E_TASK_MODEL_PORT || '8893';
+/** Fake hwp-mcp service port (the server's `HWP_MCP_URL`) and its test control port. */
+const HWP_MCP_PORT = process.env.E2E_HWP_MCP_PORT || '8894';
+const HWP_CONTROL_PORT = process.env.E2E_HWP_CONTROL_PORT || '8895';
 const fakeModelHookPath = path.resolve(rootPath, 'e2e/setup/fake-model.js');
 /** Model-fixture record mode: the run hook taps the REAL provider stream into a
  *  replayable fixture instead of overriding the model (e2e/setup/model-replay.js). */
@@ -122,6 +129,9 @@ const vanillaOverrides = {
   STREAM_KEEP_COMPLETED_JOBS: 'true',
   FORK_IP_MAX: '100',
   FORK_USER_MAX: '100',
+  /** task-mode.spec.ts uploads twelve documents per test; the default window allows far fewer. */
+  FILE_UPLOAD_IP_MAX: '1000',
+  FILE_UPLOAD_USER_MAX: '1000',
   /** A local `.env` may enable balance enforcement, which `neutralizeCredentialEnv`
    *  does not blank (not credential-shaped); the fresh e2e user has no balance
    *  record, so every streaming spec would be refused with a token_balance
@@ -163,6 +173,8 @@ const baseEnv = {
   ...(externalCodeBaseUrl ? { LIBRECHAT_CODE_BASEURL_STATEFUL: externalCodeBaseUrl } : {}),
   ...codeApiKeyEnv,
   RAG_API_URL: `http://127.0.0.1:${RAG_API_PORT}`,
+  /** Read by the HWP upload parser and the report renderer (packages/api). */
+  HWP_MCP_URL: `http://127.0.0.1:${HWP_MCP_PORT}`,
   ...vanillaOverrides,
 };
 
@@ -280,6 +292,9 @@ function writeRuntimeMockConfig() {
    *  every activity-label request went to the wrong port. */
   if (LABEL_PORT !== '8889') {
     config = config.split('127.0.0.1:8889').join(`127.0.0.1:${LABEL_PORT}`);
+  }
+  if (TASK_MODEL_PORT !== '8893') {
+    config = config.split('127.0.0.1:8893').join(`127.0.0.1:${TASK_MODEL_PORT}`);
   }
   if (MCP_OAUTH_PORT !== '8767') {
     config = config.split('127.0.0.1:8767').join(`127.0.0.1:${MCP_OAUTH_PORT}`);
@@ -440,6 +455,30 @@ export default defineConfig({
       cwd: rootPath,
       env: { ...process.env, E2E_RAG_API_PORT: RAG_API_PORT },
       url: `http://127.0.0.1:${RAG_API_PORT}/health`,
+      stdout: 'pipe',
+      timeout: 60_000,
+      reuseExistingServer: false,
+    },
+    {
+      // Per-document model calls of the task tools (the `Mock Tasks` endpoint's baseURL).
+      command: `node ${taskModelServerPath}`,
+      cwd: rootPath,
+      env: { ...process.env, E2E_TASK_MODEL_PORT: TASK_MODEL_PORT },
+      url: `http://127.0.0.1:${TASK_MODEL_PORT}/`,
+      stdout: 'pipe',
+      timeout: 60_000,
+      reuseExistingServer: false,
+    },
+    {
+      // hwp-mcp `/extract` and `/render`; health and on/off switching go through the control port.
+      command: `node ${hwpMcpServerPath}`,
+      cwd: rootPath,
+      env: {
+        ...process.env,
+        E2E_HWP_MCP_PORT: HWP_MCP_PORT,
+        E2E_HWP_CONTROL_PORT: HWP_CONTROL_PORT,
+      },
+      url: `http://127.0.0.1:${HWP_CONTROL_PORT}/`,
       stdout: 'pipe',
       timeout: 60_000,
       reuseExistingServer: false,
