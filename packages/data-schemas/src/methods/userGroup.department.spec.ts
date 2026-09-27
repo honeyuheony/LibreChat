@@ -12,8 +12,6 @@ jest.mock('~/config/winston', () => ({
   debug: jest.fn(),
 }));
 
-const PREFIX = 'department:';
-
 let mongoServer: MongoMemoryServer;
 let Group: mongoose.Model<t.IGroup>;
 let User: mongoose.Model<t.IUser>;
@@ -39,179 +37,139 @@ beforeEach(async () => {
 async function createUser(
   name: string,
   department?: string,
-  idOnTheSource?: string,
 ): Promise<t.IUser & { _id: mongoose.Types.ObjectId }> {
   return (await User.create({
     name,
     email: `${name}@example.com`,
     provider: 'local',
     ...(department !== undefined && { department }),
-    ...(idOnTheSource !== undefined && { idOnTheSource }),
   })) as t.IUser & { _id: mongoose.Types.ObjectId };
 }
 
-describe('setGroupMembersByDepartment', () => {
-  test('creates the local group with every user of the department as members', async () => {
-    const a = await createUser('a', '정세분석팀');
-    await createUser('b', ' 정세분석팀 ', 'entra-b');
-    await createUser('c', '운영지원팀');
-    await createUser('d');
+function groupIdsOf(principals: Array<{ principalType: string; principalId?: unknown }>) {
+  return principals
+    .filter((principal) => principal.principalType === PrincipalType.GROUP)
+    .map((principal) => String(principal.principalId));
+}
 
-    const group = await methods.setGroupMembersByDepartment({
-      idOnTheSource: `${PREFIX}정세분석팀`,
-      department: '정세분석팀',
-    });
+function createMapCache(): t.CacheStore {
+  const store = new Map<string, unknown>();
+  return {
+    get: async (key) => store.get(key),
+    set: async (key, value) => store.set(key, value),
+    delete: async (key) => store.delete(key),
+    clear: async () => store.clear(),
+  };
+}
 
-    expect(group?.source).toBe('local');
-    expect(group?.name).toBe('정세분석팀');
-    expect(group?.idOnTheSource).toBe(`${PREFIX}정세분석팀`);
-    expect([...(group?.memberIds ?? [])].sort()).toEqual([a._id.toString(), 'entra-b'].sort());
-    expect(await Group.countDocuments()).toBe(1);
-  });
+describe('ensureDepartmentGroup', () => {
+  test('creates one local group per department without members', async () => {
+    const first = await methods.ensureDepartmentGroup(' 정세분석팀 ');
+    const second = await methods.ensureDepartmentGroup('정세분석팀');
 
-  test('drops members who left the department on the next sync', async () => {
-    const a = await createUser('a', '정세분석팀');
-    const b = await createUser('b', '정세분석팀');
-    const key = `${PREFIX}정세분석팀`;
-    await methods.setGroupMembersByDepartment({ idOnTheSource: key, department: '정세분석팀' });
-
-    await User.updateOne({ _id: b._id }, { $set: { department: '운영지원팀' } });
-    const group = await methods.setGroupMembersByDepartment({
-      idOnTheSource: key,
-      department: '정세분석팀',
-    });
-
-    expect(group?.memberIds).toEqual([a._id.toString()]);
-  });
-
-  test('does not match a department that only shares a prefix', async () => {
-    await createUser('a', '정세분석팀2');
-    const group = await methods.setGroupMembersByDepartment({
-      idOnTheSource: `${PREFIX}정세분석팀`,
-      department: '정세분석팀',
-    });
-    expect(group?.memberIds).toEqual([]);
-  });
-});
-
-describe('syncUserLocalGroupMembership', () => {
-  test('adds the user to the target group, creating it once', async () => {
-    const a = await createUser('a', '정세분석팀');
-    const target = { idOnTheSource: `${PREFIX}정세분석팀`, name: '정세분석팀' };
-
-    const first = await methods.syncUserLocalGroupMembership({
-      userId: a._id,
-      prefix: PREFIX,
-      target,
-    });
-    const second = await methods.syncUserLocalGroupMembership({
-      userId: a._id,
-      prefix: PREFIX,
-      target,
-    });
-
-    expect(first.changed).toBe(true);
-    expect(second.changed).toBe(false);
+    expect(second).toBe(first);
     const groups = await Group.find({}).lean();
     expect(groups).toHaveLength(1);
-    expect(groups[0].memberIds).toEqual([a._id.toString()]);
-    expect(first.groupId).toBe(groups[0]._id.toString());
-  });
-
-  test('moves the user out of other prefixed groups but keeps hand-made groups', async () => {
-    const a = await createUser('a', '운영지원팀');
-    const member = a._id.toString();
-    const old = await Group.create({
+    expect(groups[0]).toMatchObject({
       name: '정세분석팀',
       source: 'local',
-      idOnTheSource: `${PREFIX}정세분석팀`,
-      memberIds: [member, 'someone-else'],
+      idOnTheSource: 'department:정세분석팀',
+      memberIds: [],
     });
-    const manual = await Group.create({ name: '정세분석팀', source: 'local', memberIds: [member] });
-    const entra = await Group.create({
-      name: 'department:운영지원팀',
-      source: 'entra',
-      idOnTheSource: `${PREFIX}운영지원팀`,
-      memberIds: [member],
-    });
-
-    const result = await methods.syncUserLocalGroupMembership({
-      userId: a._id,
-      prefix: PREFIX,
-      target: { idOnTheSource: `${PREFIX}운영지원팀`, name: '운영지원팀' },
-    });
-
-    expect(result.changed).toBe(true);
-    expect((await Group.findById(old._id).lean())?.memberIds).toEqual(['someone-else']);
-    expect((await Group.findById(manual._id).lean())?.memberIds).toEqual([member]);
-    expect((await Group.findById(entra._id).lean())?.memberIds).toEqual([member]);
-    const target = await Group.findOne({
-      source: 'local',
-      idOnTheSource: `${PREFIX}운영지원팀`,
-    }).lean();
-    expect(target?.memberIds).toEqual([member]);
+    expect(groups[0]._id.toString()).toBe(first);
   });
 
-  test('leaves every prefixed group when the user has no department', async () => {
-    const a = await createUser('a');
-    const old = await Group.create({
-      name: '정세분석팀',
-      source: 'local',
-      idOnTheSource: `${PREFIX}정세분석팀`,
-      memberIds: [a._id.toString()],
-    });
-
-    const result = await methods.syncUserLocalGroupMembership({
-      userId: a._id,
-      prefix: PREFIX,
-      target: null,
-    });
-
-    expect(result).toEqual({ changed: true });
-    expect((await Group.findById(old._id).lean())?.memberIds).toEqual([]);
-    expect(await Group.countDocuments()).toBe(1);
-  });
-
-  test('stores the external member key for external users', async () => {
-    const a = await createUser('a', '정세분석팀', 'entra-a');
-    await methods.syncUserLocalGroupMembership({
-      userId: a._id,
-      idOnTheSource: 'entra-a',
-      prefix: PREFIX,
-      target: { idOnTheSource: `${PREFIX}정세분석팀`, name: '정세분석팀' },
-    });
-    const group = await Group.findOne({ idOnTheSource: `${PREFIX}정세분석팀` }).lean();
-    expect(group?.memberIds).toEqual(['entra-a']);
-  });
-
-  test('makes the user a principal of the target group', async () => {
-    const a = await createUser('a', '정세분석팀');
-    const { groupId } = await methods.syncUserLocalGroupMembership({
-      userId: a._id,
-      prefix: PREFIX,
-      target: { idOnTheSource: `${PREFIX}정세분석팀`, name: '정세분석팀' },
-    });
-    const principals = await methods.getUserPrincipals({ userId: a._id, role: null });
-    const groupIds = principals
-      .filter((p) => p.principalType === PrincipalType.GROUP)
-      .map((p) => p.principalId?.toString());
-    expect(groupIds).toEqual([groupId]);
-    expect(typeof groupId).toBe('string');
+  test('refuses a blank department', async () => {
+    await expect(methods.ensureDepartmentGroup('  ')).rejects.toThrow('department is required');
+    expect(await Group.countDocuments()).toBe(0);
   });
 });
 
-describe('findLocalGroupIdsByPrefix', () => {
-  test('returns only local groups whose external id starts with the prefix', async () => {
-    const dept = await Group.create({
-      name: '정세분석팀',
-      source: 'local',
-      idOnTheSource: `${PREFIX}정세분석팀`,
-    });
-    await Group.create({ name: 'manual', source: 'local' });
-    await Group.create({ name: 'x', source: 'local', idOnTheSource: `x${PREFIX}정세분석팀` });
-    await Group.create({ name: 'e', source: 'entra', idOnTheSource: `${PREFIX}운영지원팀` });
+describe('findDepartmentGroupIds', () => {
+  test('maps each department that has a group to its group id', async () => {
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+    await Group.create({ name: '운영지원팀', source: 'local' });
 
-    const ids = await methods.findLocalGroupIdsByPrefix(PREFIX);
-    expect(ids.map((id) => id.toString())).toEqual([dept._id.toString()]);
+    expect(await methods.findDepartmentGroupIds(['정세분석팀', '운영지원팀'])).toEqual({
+      정세분석팀: id,
+    });
+  });
+});
+
+describe('listDepartmentGroupIds', () => {
+  test('returns only local groups keyed as departments', async () => {
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+    await Group.create({ name: 'manual', source: 'local' });
+    await Group.create({ name: 'x', source: 'local', idOnTheSource: 'xdepartment:정세분석팀' });
+    await Group.create({ name: 'e', source: 'entra', idOnTheSource: 'department:운영지원팀' });
+
+    const ids = await methods.listDepartmentGroupIds();
+    expect(ids.map((groupId) => groupId.toString())).toEqual([id]);
+  });
+});
+
+describe('getUserPrincipals with department groups', () => {
+  test('adds the group of the department stored on the user', async () => {
+    const user = await createUser('a', '정세분석팀');
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+    await methods.ensureDepartmentGroup('운영지원팀');
+
+    const principals = await methods.getUserPrincipals({ userId: user._id, role: null });
+    expect(groupIdsOf(principals)).toEqual([id]);
+  });
+
+  test('follows a department change at once, even with a warm membership cache', async () => {
+    const cached = createUserGroupMethods(mongoose, { getCache: () => createMapCache() });
+    const user = await createUser('a', '정세분석팀');
+    await cached.ensureDepartmentGroup('정세분석팀');
+    const next = await cached.ensureDepartmentGroup('운영지원팀');
+    await cached.getUserPrincipals({ userId: user._id, role: null });
+
+    await User.updateOne({ _id: user._id }, { $set: { department: '운영지원팀' } });
+    const principals = await cached.getUserPrincipals({ userId: user._id, role: null });
+
+    expect(groupIdsOf(principals)).toEqual([next]);
+  });
+
+  test('reads the department even when the caller passes role and idOnTheSource', async () => {
+    const user = await createUser('a', '정세분석팀');
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+
+    const principals = await methods.getUserPrincipals({
+      userId: user._id,
+      role: 'USER',
+      idOnTheSource: null,
+    });
+    expect(groupIdsOf(principals)).toEqual([id]);
+  });
+
+  test('adds no department group for a user without a department', async () => {
+    const user = await createUser('a');
+    await methods.ensureDepartmentGroup('정세분석팀');
+
+    const principals = await methods.getUserPrincipals({ userId: user._id, role: null });
+    expect(groupIdsOf(principals)).toEqual([]);
+  });
+
+  test('ignores members written into a department group by hand', async () => {
+    const user = await createUser('a', '운영지원팀');
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+    await Group.updateOne({ _id: id }, { $addToSet: { memberIds: user._id.toString() } });
+
+    const principals = await methods.getUserPrincipals({ userId: user._id, role: null });
+    expect(groupIdsOf(principals)).toEqual([]);
+  });
+
+  test('keeps ordinary group memberships next to the department group', async () => {
+    const user = await createUser('a', '정세분석팀');
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+    const manual = await Group.create({
+      name: 'manual',
+      source: 'local',
+      memberIds: [user._id.toString()],
+    });
+
+    const principals = await methods.getUserPrincipals({ userId: user._id, role: null });
+    expect(groupIdsOf(principals).sort()).toEqual([id, manual._id.toString()].sort());
   });
 });

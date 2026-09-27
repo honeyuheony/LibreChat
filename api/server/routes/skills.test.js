@@ -1677,6 +1677,54 @@ describe('Skill builder routes', () => {
         expect((await request(app).get(`/api/skills/${tested._id}`)).status).toBe(403);
       });
 
+      it('follows a department change at once without a new token or login', async () => {
+        const tested = await createTestedSkill();
+        expect((await publish(tested._id, 'team')).status).toBe(200);
+        const { teammate, outsider } = testUsers;
+
+        try {
+          await User.updateOne({ _id: teammate._id }, { $set: { department: '운영지원팀' } });
+          await User.updateOne({ _id: outsider._id }, { $set: { department: '정세분석팀' } });
+
+          setTestUser(teammate);
+          expect((await listIds()).has(tested._id)).toBe(false);
+          expect((await request(app).get(`/api/skills/${tested._id}`)).status).toBe(403);
+
+          setTestUser(outsider);
+          expect((await listIds()).get(tested._id)?.scope).toBe('team');
+          expect((await request(app).get(`/api/skills/${tested._id}`)).status).toBe(200);
+        } finally {
+          await User.updateOne({ _id: teammate._id }, { $set: { department: '정세분석팀' } });
+          await User.updateOne({ _id: outsider._id }, { $set: { department: '운영지원팀' } });
+        }
+      });
+
+      it('does not show the team badge for a grant to another department group', async () => {
+        const tested = await createTestedSkill();
+        await publish(tested._id, 'team');
+        await publish(tested._id, 'me');
+        const { createDepartmentGroups } = require('@librechat/api');
+        const otherGroupId = await createDepartmentGroups(require('~/models')).ensureGroup(
+          '운영지원팀',
+        );
+        await AclEntry.create({
+          principalType: PrincipalType.GROUP,
+          principalId: new mongoose.Types.ObjectId(otherGroupId),
+          principalModel: 'Group',
+          resourceType: ResourceType.SKILL,
+          resourceId: tested._id,
+          permBits: PermissionBits.VIEW,
+          roleId: testRoles.viewer._id,
+          grantedBy: testUsers.owner._id,
+        });
+
+        expect((await listIds()).get(tested._id)?.scope).toBe('me');
+        expect((await request(app).get(`/api/skills/${tested._id}`)).body.scope).toBe('me');
+
+        setTestUser(testUsers.outsider);
+        expect((await listIds()).get(tested._id)?.scope).toBe('me');
+      });
+
       it('rejects the team scope when the author has no department', async () => {
         const tested = await createTestedSkill();
         await User.updateOne({ _id: testUsers.owner._id }, { $unset: { department: '' } });

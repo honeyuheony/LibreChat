@@ -27,6 +27,20 @@ const GROUP_LOCK_POLL_MS = 50;
 const INVALIDATION_CLEAR_THRESHOLD = 1000;
 /** Fallback delay for the second invalidation pass when the store sets none. */
 const DEFAULT_STALE_EVICTION_DELAY_MS = 3000;
+/**
+ * Department groups are local groups keyed `department:<department>`. A user belongs to one
+ * through `user.department` at permission time, never through `memberIds`.
+ */
+const DEPARTMENT_GROUP_PREFIX = 'department:';
+const DEPARTMENT_GROUP_PATTERN = /^department:/;
+
+function readDepartment(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 const isCachedGroupId = (value: unknown): value is string =>
   typeof value === 'string' && isValidObjectIdString(value);
@@ -233,6 +247,7 @@ export function createUserGroupMethods(
       userId: string | Types.ObjectId;
       role?: string | null;
       idOnTheSource?: string | null;
+      department?: string | null;
     },
     session?: ClientSession,
   ) => Promise<Array<{ principalType: PrincipalType; principalId?: string | Types.ObjectId }>>;
@@ -279,17 +294,9 @@ export function createUserGroupMethods(
     memberId: string,
     session?: ClientSession,
   ) => Promise<IGroup | null>;
-  setGroupMembersByDepartment: (params: {
-    idOnTheSource: string;
-    department: string;
-  }) => Promise<IGroup | null>;
-  syncUserLocalGroupMembership: (params: {
-    userId: string | Types.ObjectId;
-    idOnTheSource?: string | null;
-    prefix: string;
-    target: { idOnTheSource: string; name: string } | null;
-  }) => Promise<{ changed: boolean; groupId?: string }>;
-  findLocalGroupIdsByPrefix: (prefix: string) => Promise<Types.ObjectId[]>;
+  ensureDepartmentGroup: (department: string) => Promise<string>;
+  findDepartmentGroupIds: (departments: string[]) => Promise<Record<string, string>>;
+  listDepartmentGroupIds: () => Promise<Types.ObjectId[]>;
 } {
   const getPrincipalsCache = (): CacheStore | undefined =>
     deps.getCache?.(CacheKeys.USER_PRINCIPALS);
@@ -300,7 +307,10 @@ export function createUserGroupMethods(
     readPrimary = false,
   ): Promise<Types.ObjectId[]> {
     const Group = mongoose.models.Group as Model<IGroup>;
-    const groupsQuery = Group.find({ memberIds: memberId }, { _id: 1 });
+    const groupsQuery = Group.find(
+      { memberIds: memberId, idOnTheSource: { $not: DEPARTMENT_GROUP_PATTERN } },
+      { _id: 1 },
+    );
     if (session) {
       groupsQuery.session(session);
     }
@@ -868,10 +878,11 @@ export function createUserGroupMethods(
       userId: string | Types.ObjectId;
       role?: string | null;
       idOnTheSource?: string | null;
+      department?: string | null;
     },
     session?: ClientSession,
   ): Promise<Array<{ principalType: PrincipalType; principalId?: string | Types.ObjectId }>> {
-    const { userId, role, idOnTheSource } = params;
+    const { userId, role, idOnTheSource, department } = params;
     /** `userId` must be an `ObjectId` for USER principal since ACL entries store `ObjectId`s */
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
     const principals: Array<{
@@ -881,20 +892,28 @@ export function createUserGroupMethods(
 
     let userRole = role;
     let memberIdOnTheSource = idOnTheSource;
+    let userDepartment = department;
 
     /** Single fallback lookup, only for whichever identity fields the caller omitted. */
-    if (userRole === undefined || memberIdOnTheSource === undefined) {
+    if (
+      userRole === undefined ||
+      memberIdOnTheSource === undefined ||
+      userDepartment === undefined
+    ) {
       const User = mongoose.models.User as Model<IUser>;
-      const query = User.findById(userId).select('role idOnTheSource');
+      const query = User.findById(userId).select('role idOnTheSource department');
       if (session) {
         query.session(session);
       }
-      const user = await query.lean<Pick<IUser, 'role' | 'idOnTheSource'>>();
+      const user = await query.lean<Pick<IUser, 'role' | 'idOnTheSource' | 'department'>>();
       if (userRole === undefined) {
         userRole = user?.role;
       }
       if (memberIdOnTheSource === undefined) {
         memberIdOnTheSource = user?.idOnTheSource ?? null;
+      }
+      if (userDepartment === undefined) {
+        userDepartment = user?.department ?? null;
       }
     }
 
@@ -904,9 +923,15 @@ export function createUserGroupMethods(
 
     /** `memberIds` stores `idOnTheSource` for external users, else the raw user id. */
     const memberId = memberIdOnTheSource || userId.toString();
-    const groupIds = await getMemberGroupIds(memberId, session);
+    const [groupIds, departmentGroupId] = await Promise.all([
+      getMemberGroupIds(memberId, session),
+      findDepartmentGroupId(userDepartment, session),
+    ]);
     for (const groupId of groupIds) {
       principals.push({ principalType: PrincipalType.GROUP, principalId: groupId });
+    }
+    if (departmentGroupId) {
+      principals.push({ principalType: PrincipalType.GROUP, principalId: departmentGroupId });
     }
 
     principals.push({ principalType: PrincipalType.PUBLIC });
@@ -1408,94 +1433,79 @@ export function createUserGroupMethods(
     return group;
   }
 
-  /**
-   * Replaces a local group's members with every user whose `department` equals `department`
-   * (surrounding whitespace ignored), creating the group when it does not exist.
-   */
-  async function setGroupMembersByDepartment({
-    idOnTheSource,
-    department,
-  }: {
-    idOnTheSource: string;
-    department: string;
-  }): Promise<IGroup | null> {
-    const User = mongoose.models.User as Model<IUser>;
-    const users = await User.find(
-      { department: new RegExp(`^\\s*${escapeRegExp(department)}\\s*$`) },
-      { idOnTheSource: 1 },
-    ).lean<Array<{ _id: Types.ObjectId; idOnTheSource?: string }>>();
-    const memberIds = users.map((user) => user.idOnTheSource || user._id.toString());
-    return await upsertGroupByExternalId(idOnTheSource, 'local', {
-      name: department,
-      source: 'local',
-      memberIds,
-    });
-  }
-
-  /**
-   * Keeps one user in exactly one of the local groups whose `idOnTheSource` starts with
-   * `prefix`: `target`, created on first use, or none when `target` is null. Writes only
-   * when the membership differs, so it is cheap to call on every token issue.
-   */
-  async function syncUserLocalGroupMembership({
-    userId,
-    idOnTheSource,
-    prefix,
-    target,
-  }: {
-    userId: string | Types.ObjectId;
-    idOnTheSource?: string | null;
-    prefix: string;
-    target: { idOnTheSource: string; name: string } | null;
-  }): Promise<{ changed: boolean; groupId?: string }> {
+  /** Uncached on purpose: a department change must show up in the next permission check. */
+  async function findDepartmentGroupId(
+    department: string | null | undefined,
+    session?: ClientSession,
+  ): Promise<Types.ObjectId | null> {
+    const name = readDepartment(department);
+    if (!name) {
+      return null;
+    }
     const Group = mongoose.models.Group as Model<IGroup>;
-    const memberId = idOnTheSource || userId.toString();
-    const current = await Group.find(
-      {
-        source: 'local',
-        memberIds: memberId,
-        idOnTheSource: { $regex: `^${escapeRegExp(prefix)}` },
-      },
-      { _id: 1, idOnTheSource: 1 },
-    ).lean<Array<{ _id: Types.ObjectId; idOnTheSource?: string }>>();
-
-    const staleIds = current
-      .filter((group) => group.idOnTheSource !== target?.idOnTheSource)
-      .map((group) => group._id);
-    const joined = current.find((group) => group.idOnTheSource === target?.idOnTheSource);
-    if (staleIds.length === 0 && (target === null || joined)) {
-      return { changed: false, ...(joined && { groupId: joined._id.toString() }) };
+    const query = Group.findOne(
+      { source: 'local', idOnTheSource: `${DEPARTMENT_GROUP_PREFIX}${name}` },
+      { _id: 1 },
+    );
+    if (session) {
+      query.session(session);
     }
-
-    if (staleIds.length > 0) {
-      await Group.updateMany({ _id: { $in: staleIds } }, { $pull: { memberIds: memberId } });
-    }
-    let groupId = joined?._id.toString();
-    if (target && !joined) {
-      const filter = { idOnTheSource: target.idOnTheSource, source: 'local' };
-      const update = {
-        $setOnInsert: { name: target.name },
-        $addToSet: { memberIds: memberId },
-      };
-      const upsert = () =>
-        Group.findOneAndUpdate(filter, update, { upsert: true, new: true }).lean<IGroup>();
-      /** Two first logins of one department can race on the unique index; the loser retries as an update. */
-      const group = await upsert().catch((error: { code?: number }) => {
-        if (error?.code === 11000) {
-          return upsert();
-        }
-        throw error;
-      });
-      groupId = group?._id.toString();
-    }
-    await invalidateMemberGroupsCache([memberId]);
-    return { changed: true, ...(groupId && { groupId }) };
+    const group = await query.lean<Pick<IGroup, '_id'>>();
+    return group?._id ?? null;
   }
 
-  async function findLocalGroupIdsByPrefix(prefix: string): Promise<Types.ObjectId[]> {
+  /** Returns the id of the department's group, creating it (with no members) on first use. */
+  async function ensureDepartmentGroup(department: string): Promise<string> {
+    const name = readDepartment(department);
+    if (!name) {
+      throw new Error('department is required');
+    }
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const filter = { source: 'local', idOnTheSource: `${DEPARTMENT_GROUP_PREFIX}${name}` };
+    const upsert = () =>
+      Group.findOneAndUpdate(
+        filter,
+        { $setOnInsert: { name, memberIds: [] } },
+        { upsert: true, new: true },
+      ).lean<IGroup>();
+    /** Two first publishes of one department can race on the unique index; the loser re-reads. */
+    const group = await upsert().catch((error: { code?: number }) => {
+      if (error?.code === 11000) {
+        return upsert();
+      }
+      throw error;
+    });
+    if (!group) {
+      throw new Error(`Could not create the department group for ${name}`);
+    }
+    return group._id.toString();
+  }
+
+  async function findDepartmentGroupIds(departments: string[]): Promise<Record<string, string>> {
+    const names = [...new Set(departments.map(readDepartment).filter(Boolean))] as string[];
+    if (names.length === 0) {
+      return {};
+    }
     const Group = mongoose.models.Group as Model<IGroup>;
     const groups = await Group.find(
-      { source: 'local', idOnTheSource: { $regex: `^${escapeRegExp(prefix)}` } },
+      {
+        source: 'local',
+        idOnTheSource: { $in: names.map((name) => `${DEPARTMENT_GROUP_PREFIX}${name}`) },
+      },
+      { _id: 1, idOnTheSource: 1 },
+    ).lean<Array<Pick<IGroup, '_id' | 'idOnTheSource'>>>();
+    return Object.fromEntries(
+      groups.map((group) => [
+        (group.idOnTheSource ?? '').slice(DEPARTMENT_GROUP_PREFIX.length),
+        group._id.toString(),
+      ]),
+    );
+  }
+
+  async function listDepartmentGroupIds(): Promise<Types.ObjectId[]> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const groups = await Group.find(
+      { source: 'local', idOnTheSource: DEPARTMENT_GROUP_PATTERN },
       { _id: 1 },
     ).lean<Array<Pick<IGroup, '_id'>>>();
     return groups.map((group) => group._id);
@@ -1525,9 +1535,9 @@ export function createUserGroupMethods(
     countGroups,
     deleteGroup,
     removeMemberById,
-    setGroupMembersByDepartment,
-    syncUserLocalGroupMembership,
-    findLocalGroupIdsByPrefix,
+    ensureDepartmentGroup,
+    findDepartmentGroupIds,
+    listDepartmentGroupIds,
   };
 }
 

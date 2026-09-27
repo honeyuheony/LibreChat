@@ -34,6 +34,7 @@ import type {
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
+import type { DepartmentGroups } from '~/user/department';
 import type { SkillUsageCountersInput } from './market';
 import {
   applyDeploymentUsage,
@@ -136,8 +137,8 @@ export interface SkillsHandlersDeps {
   getSkillAuthorDepartments?: (
     authorIds: Array<string | Types.ObjectId>,
   ) => Promise<Record<string, string>>;
-  /** 부서 그룹에 VIEW 가 부여된 스킬 id. 없으면 비공개 스킬의 `scope` 는 'me' 로 싣는다. */
-  findTeamSharedSkillIds?: (skillIds: Array<string | Types.ObjectId>) => Promise<Set<string>>;
+  /** 작성자 부서 그룹 부여 확인. 없으면 비공개 스킬의 `scope` 는 'me' 로 싣는다. */
+  departmentGroups?: Pick<DepartmentGroups, 'findSharedWithOwnDepartment'>;
 }
 
 /**
@@ -515,7 +516,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     countPublishedForks,
     getDeploymentSkillUsage,
     getSkillAuthorDepartments,
-    findTeamSharedSkillIds,
+    departmentGroups,
   } = deps;
 
   async function withForkCounts<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
@@ -592,22 +593,29 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
   }
 
-  async function findTeamShared(ids: Array<string | Types.ObjectId>): Promise<Set<string>> {
-    if (!findTeamSharedSkillIds || ids.length === 0) {
+  /** 작성자 부서 그룹에 VIEW 가 있는 스킬만 'team' 이다. 다른 부서 그룹에 준 공유는 세지 않는다. */
+  async function findTeamShared(
+    skills: Array<{ _id: Types.ObjectId; author: Types.ObjectId }>,
+  ): Promise<Set<string>> {
+    if (!departmentGroups || !getSkillAuthorDepartments || skills.length === 0) {
       return new Set();
     }
-    return findTeamSharedSkillIds(ids);
+    const departments = await getSkillAuthorDepartments(skills.map((skill) => skill.author));
+    return departmentGroups.findSharedWithOwnDepartment(
+      ResourceType.SKILL,
+      skills.map((skill) => ({ id: skill._id, department: departments[skill.author.toString()] })),
+    );
   }
 
   /** 응답에 싣는 공개 여부와 부서 공개 여부. `includePublicStatus: false` 면 둘 다 계산하지 않는다. */
   async function readVisibility(
-    skillId: string | Types.ObjectId,
+    skill: { _id: Types.ObjectId; author: Types.ObjectId },
     options?: SkillResponseOptions,
   ): Promise<{ pub: boolean; team?: Set<string> }> {
     if (options?.includePublicStatus === false) {
       return { pub: false };
     }
-    const [pub, team] = await Promise.all([isSkillPublic(skillId), findTeamShared([skillId])]);
+    const [pub, team] = await Promise.all([isSkillPublic(skill._id), findTeamShared([skill])]);
     return { pub, team };
   }
 
@@ -665,7 +673,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         visibleRows.map((skill) => [skill._id.toString(), skill.frontmatter] as const),
       );
       const teamSet = await findTeamShared(
-        visibleRows.filter((row) => !publicSet.has(row._id.toString())).map((row) => row._id),
+        visibleRows.filter((row) => !publicSet.has(row._id.toString())),
       );
       const skills = await withCountsAndMarketFields(
         visibleRows.map((s) => serializeSkillSummary(s, publicSet, teamSet)),
@@ -788,7 +796,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (!skill) {
         return res.status(404).json({ error: 'Skill not found' });
       }
-      const { pub, team } = await readVisibility(skill._id, options);
+      const { pub, team } = await readVisibility(skill, options);
       const [serialized] = await withCountsAndMarketFields([serializeSkill(skill, pub, team)]);
       return res.status(200).json(serialized);
     } catch (error) {
@@ -865,7 +873,10 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Skill not found' });
       }
-      const { pub, team } = await readVisibility(id, options);
+      const { pub, team } = await readVisibility(
+        result.status === 'conflict' ? result.current : result.skill,
+        options,
+      );
       if (result.status === 'conflict') {
         const conflict: TSkillConflictResponse = {
           error: 'skill_version_conflict',

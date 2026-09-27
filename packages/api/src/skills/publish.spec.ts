@@ -292,7 +292,7 @@ describe('createSkillPublishHandler', () => {
       sharePolicy: createPolicy(),
       getSkillAuthorDepartments: jest.fn(async () => ({ [USER_ID]: '정세분석팀' })),
       departmentGroups: {
-        syncDepartment: jest.fn(async () => TEAM_GROUP.toString()),
+        ensureGroup: jest.fn(async () => TEAM_GROUP.toString()),
         findGroupIds: jest.fn(
           async () => new Set([TEAM_GROUP.toString(), OLD_TEAM_GROUP.toString()]),
         ),
@@ -303,7 +303,7 @@ describe('createSkillPublishHandler', () => {
       findEntriesByResource: jest.Mock;
       bulkUpdateResourcePermissions: jest.Mock;
       getSkillAuthorDepartments: jest.Mock;
-      departmentGroups: { syncDepartment: jest.Mock; findGroupIds: jest.Mock };
+      departmentGroups: { ensureGroup: jest.Mock; findGroupIds: jest.Mock };
       sharePolicy: { checkShareAccess: jest.Mock; checkSharePublicAccess: jest.Mock };
     };
   }
@@ -460,7 +460,7 @@ describe('createSkillPublishHandler', () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(deps.getSkillAuthorDepartments).toHaveBeenCalledWith([USER_ID]);
-    expect(deps.departmentGroups.syncDepartment).toHaveBeenCalledWith('정세분석팀');
+    expect(deps.departmentGroups.ensureGroup).toHaveBeenCalledWith('정세분석팀');
     expect(deps.bulkUpdateResourcePermissions).toHaveBeenCalledWith({
       resourceType: ResourceType.SKILL,
       resourceId: SKILL_ID,
@@ -496,7 +496,7 @@ describe('createSkillPublishHandler', () => {
     const deps = createDeps({ sharePolicy: createPolicy({ checkShareAccess: jest.fn(deny) }) });
     const res = await run(deps, { scope: 'team' });
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(deps.departmentGroups.syncDepartment).not.toHaveBeenCalled();
+    expect(deps.departmentGroups.ensureGroup).not.toHaveBeenCalled();
     expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
   });
 
@@ -506,7 +506,7 @@ describe('createSkillPublishHandler', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'DEPARTMENT_REQUIRED' }));
-    expect(deps.departmentGroups.syncDepartment).not.toHaveBeenCalled();
+    expect(deps.departmentGroups.ensureGroup).not.toHaveBeenCalled();
     expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
     expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
   });

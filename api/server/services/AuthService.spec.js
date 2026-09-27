@@ -18,13 +18,11 @@ jest.mock(
   }),
   { virtual: true },
 );
-const mockSyncDepartmentUser = jest.fn();
 jest.mock(
   '@librechat/api',
   () => {
     const shouldUseSecureCookie = jest.fn(() => false);
     return {
-      createDepartmentGroups: jest.fn(() => ({ syncUser: mockSyncDepartmentUser })),
       isEnabled: jest.fn((val) => val === 'true' || val === true),
       checkEmailConfig: jest.fn(),
       isEmailDomainAllowed: jest.fn(),
@@ -1607,29 +1605,6 @@ describe('CloudFront cookie integration', () => {
           tenantId: 'tenantA',
         },
         { userId: 'old-user', tenantId: 'old-tenant' },
-      );
-    });
-
-    it('syncs the department group of the fetched user before issuing the token', async () => {
-      const user = { _id: 'user-123', tenantId: 'tenantA', department: '정세분석팀' };
-      getUserById.mockResolvedValueOnce(user);
-      mockSyncDepartmentUser.mockClear();
-
-      await setAuthTokens('user-123', mockResponse());
-
-      expect(mockSyncDepartmentUser).toHaveBeenCalledTimes(1);
-      expect(mockSyncDepartmentUser).toHaveBeenCalledWith(user);
-    });
-
-    it('still issues the token when the department group sync fails', async () => {
-      mockSyncDepartmentUser.mockRejectedValueOnce(new Error('db down'));
-
-      const result = await setAuthTokens('user-123', mockResponse());
-
-      expect(result).toBe('mock-access-token');
-      expect(logger.warn).toHaveBeenCalledWith(
-        '[setAuthTokens] Could not sync the department group:',
-        expect.any(Error),
       );
     });
 

@@ -88,7 +88,7 @@ export interface SkillPublishDeps extends SkillLookupDeps {
   getSkillAuthorDepartments: (
     authorIds: Array<string | Types.ObjectId>,
   ) => Promise<Record<string, string>>;
-  departmentGroups: Pick<DepartmentGroups, 'syncDepartment' | 'findGroupIds'>;
+  departmentGroups: Pick<DepartmentGroups, 'ensureGroup' | 'findGroupIds'>;
 }
 
 type SkillRequest = ServerRequest & { resourceAccess?: { resourceInfo?: SkillDoc } };
@@ -334,14 +334,6 @@ async function readAuthorDepartment(
   return departments[authorId];
 }
 
-async function syncTeamGroup(deps: SkillPublishDeps, department: string): Promise<string> {
-  const groupId = await deps.departmentGroups.syncDepartment(department);
-  if (!groupId) {
-    throw new Error(`Could not create the department group for ${department}`);
-  }
-  return groupId;
-}
-
 /** `POST /api/skills/:id/publish`: 게시 조건을 확인하고 공개 범위를 ACL 에 적은 뒤 `publishedAt` 을 남긴다. */
 export function createSkillPublishHandler(deps: SkillPublishDeps) {
   return async function skillPublishHandler(
@@ -385,8 +377,11 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         return;
       }
 
-      /** 그룹 구성원을 쓰는 일이므로 공유 권한 검사를 통과한 뒤에 한다. */
-      const teamGroupId = department ? await syncTeamGroup(deps, department) : null;
+      /**
+       * 그룹 문서를 만들 수 있으므로 공유 권한 검사를 통과한 뒤에 한다. 부여는 게시 때 작성자 부서
+       * 그룹에 남고, 작성자가 부서를 옮겨도 따라가지 않는다(다시 게시하면 새 부서로 옮긴다).
+       */
+      const teamGroupId = department ? await deps.departmentGroups.ensureGroup(department) : null;
       const principals = await publishPrincipals(deps, publishScope, skill, teamGroupId);
       const published = await deps.setSkillPublicationState({
         id: skill._id.toString(),
