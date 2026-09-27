@@ -11,7 +11,7 @@ import { cn } from '~/utils';
 
 type EditTarget = BuilderField;
 
-/** 미리보기 블록 이름. 입력칸에 초점이 가면 그 칸이 채우는 블록을 강조한다(와이어프레임 `PV_OF`). */
+/** 미리보기 블록 이름. 입력칸에 초점이 가면 그 칸이 채우는 블록을 강조한다. */
 export type PreviewBlock = 'head' | 'when' | 'how' | 'out' | 'data';
 
 const BLOCK_OF: Record<EditTarget, PreviewBlock> = {

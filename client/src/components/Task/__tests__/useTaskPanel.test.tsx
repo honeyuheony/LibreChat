@@ -10,7 +10,7 @@ import useTaskPanel from '../useTaskPanel';
 const mockMessagesByConvo: Record<string, TMessage[]> = {};
 
 jest.mock('~/data-provider', () => ({
-  /** Undefined until a conversation's messages are loaded, like the query cache. */
+  /** 쿼리 캐시처럼 대화의 메시지를 불러오기 전에는 undefined 다. */
   useGetMessagesByConvoId: (id: string) => ({ data: mockMessagesByConvo[id] }),
 }));
 

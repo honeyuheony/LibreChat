@@ -31,7 +31,7 @@ import TaskTable from './TaskTable';
 import { cn } from '~/utils';
 import store from '~/store';
 
-/** `doc` and `hwp` are file-kind tags shown as is; only the table tag is a word to translate. */
+/** `doc`·`hwp` 는 파일 종류 표시라 그대로 쓰고, 표만 번역할 단어다. */
 const OUTPUT_ICON: Record<TaskOutput['kind'], { label?: string; className: string }> = {
   table: { className: 'bg-surface-brand-subtle text-accent-primary' },
   summary: { label: 'doc', className: 'bg-status-success-subtle text-status-success' },
@@ -50,7 +50,7 @@ function Section({
 }: {
   title: string;
   count?: ReactNode;
-  /** A link on the heading's right, beside the toggle rather than inside it. */
+  /** 제목 오른쪽 링크. 펼침 단추 안이 아니라 옆에 둔다. */
   action?: ReactNode;
   open: boolean;
   onToggle: () => void;
@@ -103,7 +103,7 @@ function HeadingLink({
   );
 }
 
-/** Tool keys carry the normalized server name, so titles are looked up by that. */
+/** 도구 키에는 정규화한 서버 이름이 들어 있어 그 이름으로 제목을 찾는다. */
 function useServerTitles(servers: MCPServersListResponse | undefined): Map<string, string> {
   return useMemo(() => {
     const titles = new Map<string, string>();
@@ -155,7 +155,7 @@ function ProgressSection({
   onToggle,
 }: {
   call: TaskToolCallState;
-  /** From `isAwaitingTaskApproval`, not the call's own flag. */
+  /** 호출 자체의 값이 아니라 `isAwaitingTaskApproval` 의 결과다. */
   awaiting: boolean;
   steps: TaskStepView[];
   progress: TaskProgressEvent | null;
@@ -247,9 +247,8 @@ function ProgressSection({
 }
 
 /**
- * The row's detail line. A document's evidence is its footnotes, which only the saved
- * result holds (its `stats.reflected` counts documents), so that count shows once the
- * result has loaded — the same fetch the result screen and the message card use.
+ * 결과물 행의 둘째 줄. 문서의 근거는 각주이고 각주는 저장된 결과에만 있으므로(`stats.reflected` 는
+ * 문서 수다) 결과를 읽은 뒤에 수를 보인다. 결과 화면·메시지 카드와 같은 요청을 쓴다.
  */
 function OutputMeta({ output }: { output: TaskOutput }) {
   const localize = useLocalize();
@@ -397,9 +396,10 @@ function ContextSection({
   const { tools, agent } = useAgentToolPermissions(isSavedAgent ? agentId : null, ephemeralAgent);
   const modelName = agent?.model ?? conversation?.model ?? '';
 
-  /** Mirrors the composer: a saved agent's own connectors, less those switched off in this chat;
-   *  otherwise the chat menu's servers and the chat's selection. */
-  /** The list is keyed by server name; its entries do not repeat it. */
+  /**
+   * 입력창과 같은 규칙: 저장된 agent 면 그 agent 의 MCP 서버에서 이 대화에서 끈 것을 빼고,
+   * 아니면 대화 메뉴의 서버와 이 대화에서 고른 값을 쓴다. 목록 응답은 서버 이름이 키라 값에 이름이 없다.
+   */
   const serverRows = useMemo(() => {
     const catalog = Object.entries(servers ?? {}).map(([serverName, config]) => ({
       serverName,
@@ -529,7 +529,7 @@ function ResultView({ resultId, onBack }: { resultId: string; onBack: () => void
   );
 }
 
-/** The right-hand task panel: progress, outputs, references, and the result screens they open. */
+/** 오른쪽 작업 패널: 진행·결과물·참고 자료와, 거기서 여는 결과 화면. */
 export default function TaskPanel({ conversationId }: { conversationId: string }) {
   const localize = useLocalize();
   const [panel, setPanel] = useAtom(taskPanelState);

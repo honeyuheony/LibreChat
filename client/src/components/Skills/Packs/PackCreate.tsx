@@ -38,7 +38,7 @@ function SectionHead({ step, title, note }: { step: number; title: string; note?
   );
 }
 
-/** 팩 만들기 창(와이어프레임 `renderNewPack`): 이름·설명과 담을 agent, 오른쪽에 폴더와 MCP 서버 합집합. */
+/** 팩 만들기 창: 이름·설명과 담을 agent, 오른쪽에 폴더와 MCP 서버 합집합. */
 export default function PackCreate({ skills, userId, onClose }: PackCreateProps) {
   const localize = useLocalize();
   const { showToast } = useToastContext();

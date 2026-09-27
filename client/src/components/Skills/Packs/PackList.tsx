@@ -55,7 +55,7 @@ function PackCard({ pack, skills, onOpen }: PackCardProps) {
   );
 }
 
-/** 마켓 「팩」 탭(와이어프레임 `agTab==='packs'`): 팩 카드와 「팩 만들기」 카드. */
+/** 마켓 「팩」 탭: 팩 카드와 「팩 만들기」 카드. */
 export default function PackList({ onOpen, onCreate }: PackListProps) {
   const localize = useLocalize();
   const { data: packs = [], isLoading, isError } = useListSkillPacksQuery();

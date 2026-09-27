@@ -29,10 +29,10 @@ export function getSkillTitle(skill: TSkillSummary): string {
 
 const SUMMARY_LEAD_PHRASE_MAX_LENGTH = 40;
 
-/** Strips a leading "<제목 구절>: " (a Korean title phrase followed by a colon and a space)
- *  from the description when the skill has a `displayTitle`: that lead phrase mirrors the
- *  title for the `/` skill panel's list view, and repeating it here duplicates the row/detail
- *  title shown right above the description. */
+/**
+ * `displayTitle` 이 있으면 설명 앞의 「<제목 구절>: 」을 뗀다. 그 구절은 `/` 스킬 목록에서 제목 노릇을 하는데,
+ * 마켓에서는 바로 위에 제목이 있어 되풀이된다.
+ */
 export function getSkillSummary(skill: TSkillSummary): string {
   if (!skill.displayTitle) {
     return skill.description;
@@ -81,7 +81,7 @@ export function isNewSkill(skill: TSkillSummary, now: number = Date.now()): bool
   return Number.isFinite(created) && now - created < NEW_SKILL_DAYS * 86_400_000;
 }
 
-/** 와이어프레임 `hueOf`와 같은 식이다. */
+/** 이름마다 늘 같은 색상(0~359)을 준다. */
 export function hueOf(seed: string): number {
   let hue = 0;
   for (const char of seed) {

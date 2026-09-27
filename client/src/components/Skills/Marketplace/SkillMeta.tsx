@@ -101,7 +101,7 @@ export function authorLine(skill: TSkillSummary, localize: Localize, detail = fa
     : localize('com_skills_by_author_only', { author: skill.authorName });
 }
 
-/** 순위 행의 By 줄. `withRuns`면 분류 탭처럼 실행 수와 원본 이름까지 붙인다(와이어프레임 `byLine`). */
+/** 순위 행의 By 줄. `withRuns`면 분류 탭처럼 실행 수와 원본 이름까지 붙인다. */
 export function byLine(
   skill: TSkillSummary,
   localize: Localize,

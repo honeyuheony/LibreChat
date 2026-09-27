@@ -76,8 +76,7 @@ describe('findLatestTaskToolCall', () => {
     ).toBe(false);
   });
 
-  /** A finished call carries no `approval` any more, so a reload only has the
-   *  answer the SDK gave in place of running the tool. */
+  /** 끝난 호출에는 `approval` 이 남지 않아, 다시 불러오면 SDK 가 실행 대신 준 답만 남는다. */
   it('knows a saved call was stopped at its confirmation from the blocked answer', () => {
     const call = findLatestTaskToolCall([
       toolCallMessage({
@@ -112,7 +111,7 @@ describe('resolveTaskSteps', () => {
     hadApproval: false,
   };
 
-  /** Walks up from this test to the repository root, the folder that holds `packages/api`. */
+  /** 이 테스트에서 위로 올라가며 `packages/api` 가 든 저장소 루트를 찾는다. */
   const serverToolsSource = () => {
     let dir = __dirname;
     while (!fs.existsSync(path.join(dir, 'packages', 'api'))) {
@@ -125,7 +124,7 @@ describe('resolveTaskSteps', () => {
     return fs.readFileSync(path.join(dir, 'packages', 'api', 'src', 'tasks', 'tools.ts'), 'utf8');
   };
 
-  /** Stage ids per tool as written in the server's `TASK_STAGES`, read from its source. */
+  /** 서버 소스의 `TASK_STAGES` 에 적힌 도구별 단계 id. */
   const serverStageIds = (source: string, tool: string) => {
     const block = source.match(new RegExp(`\\[TaskTools\\.${tool}\\]: \\[([^\\]]*)\\]`));
     return [...(block?.[1] ?? '').matchAll(/id: '([^']+)'/g)].map((match) => match[1]);

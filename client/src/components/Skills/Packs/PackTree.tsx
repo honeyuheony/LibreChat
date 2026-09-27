@@ -28,7 +28,6 @@ function treeRows(paths: string[]): TreeRow[] {
   });
 }
 
-/** 와이어프레임 `treeView`: 폴더를 펼친 나무 모양 목록. */
 export default function PackTree({ root, paths }: { root: string; paths: string[] }) {
   const rows = [{ depth: 0, label: `${root}/` }, ...treeRows(paths)];
   return (

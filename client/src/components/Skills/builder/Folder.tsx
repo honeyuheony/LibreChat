@@ -7,7 +7,7 @@ type Row = { kind: 'dir' | 'file'; name: string; depth: number; path: string };
 
 const isSkillFile = (path: string) => /SKILL\.md$/.test(path);
 
-/** 하위 폴더가 있는 파일을 먼저, 그다음 맨 위 파일을 이름순으로 늘어놓는다(와이어프레임 `treeRows`). */
+/** 하위 폴더가 있는 파일을 먼저, 그다음 맨 위 파일을 이름순으로 늘어놓는다. */
 export function treeRows(files: PluginFile[]): Row[] {
   const rows: Row[] = [];
   const seen = new Set<string>();

@@ -4,7 +4,7 @@ import { firstSentence } from './state';
 
 /** 입력창에서 손을 뗀 뒤 초안을 부르기까지 기다리는 시간. */
 export const DRAFT_DEBOUNCE_MS = 1000;
-/** 429 를 받은 뒤 초안 요청을 쉬는 시간. 검증 안 됨: 서버 한도 창 길이를 확인하지 않고 정한 값이다. */
+/** 429 를 받은 뒤 초안 요청을 쉬는 시간. 서버 한도 창 길이에 맞춘 값은 아니다. */
 export const DRAFT_RATE_LIMIT_PAUSE_MS = 30_000;
 
 type UseDraftOptions = {

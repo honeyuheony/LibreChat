@@ -12,7 +12,7 @@ const SKILL_MD = 'SKILL.md';
 
 type TreeRow = { kind: 'dir' | 'file'; path: string; label: string; depth: number };
 
-/** 와이어프레임 `treeView`처럼 폴더를 먼저, 같은 깊이에서는 이름순으로 펼친다. */
+/** 폴더를 먼저, 같은 깊이에서는 이름순으로 펼친다. */
 function buildTreeRows(paths: string[]): TreeRow[] {
   const sorted = paths
     .slice()

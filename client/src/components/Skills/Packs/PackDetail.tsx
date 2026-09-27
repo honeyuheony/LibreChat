@@ -50,7 +50,7 @@ export function activateAll(
   return next;
 }
 
-/** 팩 상세 창(와이어프레임 `renderPackModal`): agent 수·합계 실행·MCP 서버, 들어 있는 agent, 모두 켜기. */
+/** 팩 상세 창: agent 수·합계 실행·MCP 서버, 들어 있는 agent, 모두 켜기. */
 export default function PackDetail({
   packId,
   skills,

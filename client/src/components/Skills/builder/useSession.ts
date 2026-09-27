@@ -34,7 +34,7 @@ import { getResponseStatus } from '~/utils/errors';
 import { runTrial } from './trial';
 import useDraft from './useDraft';
 
-/** test-result 가 응답 저장보다 먼저 닿을 때를 위한 한 번의 재시도 간격. 검증 안 됨: 서버 저장 지연을 측정하지 않았다. */
+/** test-result 가 응답 저장보다 먼저 닿을 때 한 번 다시 시도하기까지의 간격. 서버 저장 지연을 측정해 정한 값은 아니다. */
 const TEST_RESULT_RETRY_MS = 1000;
 
 export type SessionDeps = {

@@ -47,14 +47,13 @@ type BuilderProps = {
 };
 
 /**
- * 와이어프레임 v29 `.ov`(946·986행): 옅은 막 rgba(23,21,43,.42)과 blur(6px), 투명도 줄이기 설정이면 흐림 없이 .6.
- * 공용 배경막(bg-black/80)에 막 색 역할이 없어 여기서만 덮어쓴다. 보랏빛 먹색 역할이 없어 검정으로 쓰고,
- * 흰 바탕 위 밝기가 와이어프레임과 같도록 농도를 .38·.55 로 낮췄다.
+ * 편집기 뒤 마켓이 비쳐 보이도록 옅게 흐린 막을 깐다. 투명도 줄이기 설정이면 흐림 없이 조금 더 짙게 깐다.
+ * 공용 배경막(bg-black/80)에는 막 색 역할이 없어 여기서만 덮어쓴다.
  */
 const OVERLAY_CLASS =
   'bg-black/[0.38] backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
 
-/** 와이어프레임 `.md .na>div`(647행): 칸마다 70vh 까지만 늘고 넘치면 칸 안에서 굴린다. */
+/** 칸마다 70vh 까지만 늘고 넘치면 칸 안에서 굴린다. */
 const COLUMN_CLASS = 'min-h-0 overflow-auto px-5 py-4 md:max-h-[70vh]';
 
 function draftStatusKey(draft: BuilderSession['draft']): TranslationKeys | null {
@@ -185,7 +184,7 @@ type PeekRowProps = {
   onCopy: (peer: PeerExample) => void;
 };
 
-/** 와이어프레임 `pk1 .by`: 작성자 · 부서 · 실행 수. 「By」와 응용 수는 적지 않는다. */
+/** 작성자 · 부서 · 실행 수. 「By」와 응용 수는 적지 않는다. */
 function peerByLine(skill: PeerExample['skill'], localize: ReturnType<typeof useLocalize>) {
   return [
     skill.authorName,
@@ -304,7 +303,7 @@ export default function Builder({
   const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
   const statusText =
     askText && empty ? ('com_skills_builder_test_needs_text' as TranslationKeys) : draftStatus;
-  /** 와이어프레임처럼 처음부터 누를 수 있다. 글이 없으면 저장이 실패하므로 요청 대신 글칸으로 안내한다. */
+  /** 처음부터 누를 수 있다. 글이 없으면 저장이 실패하므로 요청 대신 글칸으로 안내한다. */
   const runTest = () => {
     if (empty) {
       setAskText(true);

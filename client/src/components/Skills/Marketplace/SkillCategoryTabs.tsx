@@ -7,7 +7,7 @@ interface SkillCategoryTabsProps {
   onChange: (value: string) => void;
 }
 
-/** 와이어프레임 `.cats`: 가운데 정렬 알약 탭, 스크롤해도 위에 붙어 있다. */
+/** 가운데 정렬한 알약 모양 탭. 스크롤해도 위에 붙어 있다. */
 export default function SkillCategoryTabs({ tabs, activeTab, onChange }: SkillCategoryTabsProps) {
   return (
     <div

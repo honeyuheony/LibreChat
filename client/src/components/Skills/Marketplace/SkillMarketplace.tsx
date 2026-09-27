@@ -32,7 +32,7 @@ const CREATE_PATH = '/skills/new';
 const POPULAR_LIMIT = 10;
 
 /**
- * Agent 마켓(와이어프레임 v29 `renderAgents`): 머리 · 누적 지표 · 분류 탭 · 순위 목록 · 상세 창.
+ * Agent 마켓: 머리 · 누적 지표 · 분류 탭 · 순위 목록 · 상세 창.
  * 목록 전체를 한 번 불러와 탭과 지표를 클라이언트에서 계산한다.
  */
 export default function SkillMarketplace() {
@@ -53,7 +53,7 @@ export default function SkillMarketplace() {
   const { data, isLoading, isError, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useSkillsInfiniteQuery({ limit: 100 });
 
-  /* Load every page so tabs, ranks and totals cover the full catalog (same as SkillsCommand). */
+  /** 탭·순위·합계가 목록 전체를 다루도록 모든 쪽을 불러온다(SkillsCommand 와 같다). */
   useEffect(() => {
     if (!isError && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();

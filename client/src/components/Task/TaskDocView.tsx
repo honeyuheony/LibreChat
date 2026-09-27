@@ -14,10 +14,10 @@ import TaskFootnote from './TaskFootnote';
 const FOOTNOTE_HREF = '#task-fn-';
 const FOOTNOTE_MARKER = /\[\^(\d+)\]/g;
 
-/** `[^n]` becomes a link react-markdown hands to the `a` override below, which draws the footnote. */
+/** `[^n]` 을 링크로 바꿔 두면 react-markdown 이 아래 `a` 대체 컴포넌트에 넘기고, 거기서 각주를 그린다. */
 const linkFootnotes = (body: string) => body.replace(FOOTNOTE_MARKER, `[$1](${FOOTNOTE_HREF}$1)`);
 
-/** Body plus one `[^n]: file — "quote"` line per footnote, as markdown for the clipboard. */
+/** 클립보드에 넣을 마크다운: 본문 뒤에 각주마다 `[^n]: 파일 — "인용"` 한 줄을 붙인다. */
 export function taskDocToMarkdown(result: TaskDocResult): string {
   if (result.footnotes.length === 0) {
     return result.body;

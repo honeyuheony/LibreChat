@@ -3,7 +3,7 @@ import { Controller, useFormContext } from 'react-hook-form';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
-/** 와이어프레임 만들기 편집기의 아이콘 선택지(`icopick`)와 같은 10개. */
+/** 만들기 편집기의 아이콘 선택지와 같은 10개. */
 export const SKILL_ICON_CHOICES = ['🤖', '📈', '🌍', '📅', '✈️', '🗓️', '📋', '📊', '🎤', '🧾'];
 
 const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';

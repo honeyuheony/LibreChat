@@ -289,11 +289,11 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(aiTag).toHaveClass('text-accent-primary');
   });
 
-  /** The wireframe draws empty hints in its gray-400 (166,166,182). The theme
-   *  has no role at that value, so the hints fade the muted role to 60%, which
-   *  lands on about (166,166,176) over white. The class has to name a color
-   *  the Tailwind config really defines: an unknown role emits no CSS and the
-   *  hint inherits the black body text. */
+  /**
+   * 빈 칸 안내는 회색(166,166,182)에 가깝게 보여야 하는데 테마에 그 값의 역할이 없어, muted 역할을
+   * 60% 로 옅게 해 흰 바탕 위 (166,166,176) 정도를 낸다. 클래스는 Tailwind 설정에 실제로 있는 색을
+   * 가리켜야 한다. 없는 역할이면 CSS 가 나오지 않아 안내가 검은 본문 색을 물려받는다.
+   */
   it('fades empty preview hints from a color the theme defines', () => {
     render(<Harness />);
     const { theme } = jest.requireActual<{
@@ -365,8 +365,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     render(<Harness />);
 
     const skillRow = screen.getByRole('treeitem', { name: /SKILL\.md/ });
-    /** The wireframe fills the selected row with brand-100 (237,233,254); the
-     *  theme carries that exact value as the user-bubble surface. */
+    /** 고른 행은 brand-100(237,233,254)으로 채운다. 테마에서는 사용자 말풍선 바탕이 바로 그 값이다. */
     expect(skillRow).toHaveClass('bg-surface-message-user', 'text-accent-primary-hover');
     expect(skillRow).not.toHaveClass('bg-surface-brand-subtle');
     expect(within(skillRow).getByText('com_skills_builder_folder_main')).toHaveClass(

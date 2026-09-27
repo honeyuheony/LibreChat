@@ -17,7 +17,7 @@ interface SkillIconProps {
   className?: string;
 }
 
-/** 이모지를 이름으로 정한 옅은 색 원 안에 둔다(와이어프레임 `aico`). */
+/** 이모지를 이름으로 정한 옅은 색 원 안에 둔다. */
 export default function SkillIcon({ skill, size = 's', className }: SkillIconProps) {
   return (
     <span
