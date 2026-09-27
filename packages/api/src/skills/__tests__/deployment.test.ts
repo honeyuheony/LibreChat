@@ -13,6 +13,7 @@ import {
   loadDeploymentSkillsFromDirectory,
   mergeDeploymentSkillIds,
   resolveDeploymentSkillDirectory,
+  findDeploymentTeamDepartments,
 } from '../deployment';
 
 const DESCRIPTION = 'Use this skill when the deployment needs a shared testing fixture.';
@@ -766,5 +767,59 @@ describe('createDeploymentSkillMethods', () => {
     expect(second?.skills.map((skill) => skill.name)).toEqual(['db-next', 'analysis-kit']);
     expect(second?.has_more).toBe(false);
     warnSpy.mockRestore();
+  });
+});
+
+describe('department-scoped deployment skill ids', () => {
+  async function loadScopedSkills(): Promise<{ teamId: string; allId: string }> {
+    const root = await makeTempRoot();
+    const scoped = (name: string, scope: string) =>
+      writeDeploymentSkill(root, {
+        name,
+        frontmatter: [
+          '---',
+          `name: ${name}`,
+          `description: ${DESCRIPTION}`,
+          'metadata:',
+          '  department: "교육센터"',
+          `  scope: ${scope}`,
+          '---',
+          '',
+          `# ${name}`,
+        ].join('\n'),
+      });
+    await scoped('center-rollup', '팀');
+    await scoped('shared-report', '전 부서');
+    const registry = await initializeDeploymentSkills({ projectRoot: root, env: {} });
+    const byName = new Map(registry.list().map((skill) => [skill.name, skill._id.toString()]));
+    return { teamId: byName.get('center-rollup') ?? '', allId: byName.get('shared-report') ?? '' };
+  }
+
+  const ids = (merged: Types.ObjectId[]) => merged.map((id) => id.toString());
+
+  it('keeps a team deployment skill out of another department user ids', async () => {
+    const { teamId, allId } = await loadScopedSkills();
+    const merged = ids(mergeDeploymentSkillIds([], { department: '통일교육팀' }));
+    expect(merged).toContain(allId);
+    expect(merged).not.toContain(teamId);
+  });
+
+  it('merges a team deployment skill for a user in the authoring department', async () => {
+    const { teamId, allId } = await loadScopedSkills();
+    const merged = ids(mergeDeploymentSkillIds([], { department: '교육센터' }));
+    expect(merged).toEqual(expect.arrayContaining([teamId, allId]));
+  });
+
+  it('leaves team deployment skills out when no user is given', async () => {
+    const { teamId, allId } = await loadScopedSkills();
+    const merged = ids(mergeDeploymentSkillIds([]));
+    expect(merged).toContain(allId);
+    expect(merged).not.toContain(teamId);
+  });
+
+  it('reports the authoring department of team deployment skills only', async () => {
+    const { teamId, allId } = await loadScopedSkills();
+    const departments = findDeploymentTeamDepartments([teamId, allId, new Types.ObjectId()]);
+    expect(Object.fromEntries(departments)).toEqual({ [teamId]: '교육센터' });
   });
 });

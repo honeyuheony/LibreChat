@@ -3845,6 +3845,7 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(response.data).toHaveLength(1);
       expect(response.data[0].skills_enabled).toBe(true);
       expect(response.data[0].skills).toEqual([deploymentSkillId.toString()]);
+      expect(mergeDeploymentSkillIds).toHaveBeenCalledWith([], mockReq.user);
     });
 
     test('should preserve enabled skill scope for VIEW list callers with an empty allowlist', async () => {

@@ -1,3 +1,6 @@
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const request = require('supertest');
 const mongoose = require('mongoose');
@@ -49,6 +52,7 @@ let app;
 let mongoServer;
 let owner;
 let stranger;
+let ownerDepartment;
 
 const scheduleBody = (overrides = {}) => ({
   name: '주간보고 hwp 작성',
@@ -97,7 +101,12 @@ beforeAll(async () => {
   app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.user = { id: owner._id.toString(), _id: owner._id, role: owner.role };
+    req.user = {
+      id: owner._id.toString(),
+      _id: owner._id,
+      role: owner.role,
+      department: ownerDepartment,
+    };
     next();
   });
   app.use('/api/schedules', require('./schedules'));
@@ -137,5 +146,58 @@ describe('schedule skills', () => {
       .send(scheduleBody({ skills: ['private-report'] }));
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe('schedule deployment skills', () => {
+  const { initializeDeploymentSkills } = require('@librechat/api');
+  let root;
+
+  beforeAll(async () => {
+    root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'schedule-deployment-skills-'));
+    const skillDir = path.join(root, 'skill', 'center-rollup');
+    await fs.promises.mkdir(skillDir, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(skillDir, 'SKILL.md'),
+      [
+        '---',
+        'name: center-rollup',
+        'description: Rolls up the education center weekly figures for the team.',
+        'metadata:',
+        '  department: "교육센터"',
+        '  scope: 팀',
+        '---',
+        '',
+        '# Center rollup',
+      ].join('\n'),
+    );
+    await initializeDeploymentSkills({ projectRoot: root, env: {} });
+  });
+
+  afterAll(async () => {
+    ownerDepartment = undefined;
+    await initializeDeploymentSkills({ projectRoot: path.join(root, 'empty'), env: {} });
+    await fs.promises.rm(root, { recursive: true, force: true });
+  });
+
+  it('refuses a team deployment skill for an owner in another department', async () => {
+    ownerDepartment = '통일교육팀';
+
+    const res = await request(app)
+      .post('/api/schedules')
+      .send(scheduleBody({ skills: ['center-rollup'] }));
+
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a team deployment skill for an owner in the authoring department', async () => {
+    ownerDepartment = '교육센터';
+
+    const res = await request(app)
+      .post('/api/schedules')
+      .send(scheduleBody({ skills: ['center-rollup'] }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.skills).toEqual(['center-rollup']);
   });
 });

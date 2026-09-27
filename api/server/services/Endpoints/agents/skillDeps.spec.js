@@ -71,7 +71,16 @@ const mockDb = {
 
 jest.mock('~/models', () => mockDb);
 
-const { getSkillToolDeps } = require('./skillDeps');
+const { mergeDeploymentSkillIds } = require('@librechat/api');
+const { getSkillToolDeps, withDeploymentSkillIds } = require('./skillDeps');
+
+describe('withDeploymentSkillIds', () => {
+  it('passes the requesting user so team deployment skills are scoped to it', () => {
+    const user = { id: 'user-1', department: '교육센터' };
+    withDeploymentSkillIds(['skill-1'], user);
+    expect(mergeDeploymentSkillIds).toHaveBeenCalledWith(['skill-1'], user);
+  });
+});
 
 describe('skillDeps saveSkillFileContent', () => {
   beforeEach(() => {

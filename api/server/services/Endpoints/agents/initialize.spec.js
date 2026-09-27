@@ -1,3 +1,6 @@
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const {
   ResourceType,
@@ -636,6 +639,71 @@ describe('initializeClient — processAgent ACL gate', () => {
     const initializeParams = mockInitializeAgent.mock.calls[0][0];
     expect(initializeParams.accessibleSkillIds.map(String)).toContain(skill._id.toString());
     expect(initializeParams.skillAuthoringAvailable).toBe(false);
+  });
+
+  describe('team deployment skills', () => {
+    const { initializeDeploymentSkills, getDeploymentSkillIds } =
+      jest.requireActual('@librechat/api');
+    let root;
+    let teamSkillId;
+
+    beforeAll(async () => {
+      root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'initialize-deployment-skills-'));
+      const skillDir = path.join(root, 'skill', 'center-rollup');
+      await fs.promises.mkdir(skillDir, { recursive: true });
+      await fs.promises.writeFile(
+        path.join(skillDir, 'SKILL.md'),
+        [
+          '---',
+          'name: center-rollup',
+          'description: Rolls up the education center weekly figures for the team.',
+          'metadata:',
+          '  department: "교육센터"',
+          '  scope: 팀',
+          '---',
+          '',
+          '# Center rollup',
+        ].join('\n'),
+      );
+      await initializeDeploymentSkills({ projectRoot: root, env: {} });
+      teamSkillId = getDeploymentSkillIds()[0].toString();
+    });
+
+    afterAll(async () => {
+      await initializeDeploymentSkills({ projectRoot: path.join(root, 'empty'), env: {} });
+      await fs.promises.rm(root, { recursive: true, force: true });
+    });
+
+    const resolveAccessibleSkillIds = async (department) => {
+      const endpointOption = makeEndpointOption();
+      endpointOption.agent = Promise.resolve({
+        id: PRIMARY_ID,
+        name: 'Primary',
+        provider: 'openai',
+        model: 'gpt-4',
+        tools: [],
+        skills_enabled: true,
+      });
+      mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+      const req = makeReq();
+      req.user.department = department;
+      req.config.endpoints.agents = { capabilities: ['skills'] };
+      await initializeClient({
+        req,
+        res: {},
+        signal: new AbortController().signal,
+        endpointOption,
+      });
+      return mockInitializeAgent.mock.calls[0][0].accessibleSkillIds.map(String);
+    };
+
+    it('keeps a team deployment skill out of another department user turn', async () => {
+      expect(await resolveAccessibleSkillIds('통일교육팀')).not.toContain(teamSkillId);
+    });
+
+    it('lets a user in the authoring department run a team deployment skill', async () => {
+      expect(await resolveAccessibleSkillIds('교육센터')).toContain(teamSkillId);
+    });
   });
 
   it('enables skill authoring when model specs enable skills for an ephemeral agent', async () => {

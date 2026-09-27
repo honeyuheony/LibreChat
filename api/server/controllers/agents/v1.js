@@ -1887,7 +1887,7 @@ const getListAgentsHandler = async (req, res) => {
 
     const accessibleSkillSet = canReturnSkillConfig
       ? null
-      : new Set(mergeDeploymentSkillIds(accessibleSkillIds).map((oid) => oid.toString()));
+      : new Set(mergeDeploymentSkillIds(accessibleSkillIds, req.user).map((oid) => oid.toString()));
 
     const publicSet = new Set(publiclyAccessibleIds.map((oid) => oid.toString()));
     /** Null for EDIT-scoped requests, where every matched agent is editable by definition. */
