@@ -315,12 +315,15 @@ describe('Builder laid out like the wireframe editor', () => {
     }
   });
 
-  it('shows only the AI-set badge and the report label for the output while empty', () => {
+  it('shows the empty report field preview while the input is blank', () => {
     render(<Harness />);
     const output = block('com_skills_builder_output') as HTMLElement;
     expect(within(output).getByText('com_skills_builder_source_ai')).toBeVisible();
     expect(within(output).getByText('com_skills_builder_output_report')).toBeVisible();
-    expect(within(output).queryByRole('table')).not.toBeInTheDocument();
+    expect(within(output).getByRole('table')).toBeVisible();
+    const [heading] = within(output).getAllByRole('columnheader');
+    expect(heading).toHaveTextContent('com_skills_builder_fields_label');
+    expect(within(output).getByText('…', { selector: 'td' })).toBeVisible();
   });
 
   it('highlights the preview block that the focused input fills', () => {
@@ -463,10 +466,21 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
       .forEach((row) => expect(row).toHaveClass('h-[22px]'));
   });
 
-  it('uses 14px corners for the preview blocks', () => {
+  it('uses reference padding and muted headings for preview blocks', () => {
     render(<Harness />);
 
-    expect(block('com_skills_builder_share')).toHaveClass('rounded-[14px]');
+    const share = block('com_skills_builder_share') as HTMLElement;
+    expect(share).toHaveClass('rounded-[14px]', 'px-[14px]', 'py-3');
+    expect(share.querySelector('h5')).toHaveClass('text-text-muted');
+  });
+
+  it('uses reference text sizes and color for empty hints and the input placeholder', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('com_skills_builder_output_report')).toHaveClass('text-[15.5px]');
+    expect(screen.getByText('com_skills_builder_when_ghost')).toHaveClass('text-[15.5px]');
+    expect(screen.getByText('com_skills_builder_how_ghost')).toHaveClass('text-[15.5px]');
+    expect(textarea()).toHaveClass('text-[15.5px]', 'placeholder:text-text-muted');
   });
 
   it('draws the draft icon with an emoji font so the circle is not left blank', () => {
@@ -488,7 +502,28 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
 });
 
 describe('Share step matches the reference screen (12)', () => {
-  it('fills selected time and scope options with the brand color', () => {
+  it('sizes scope pills like the reference and emphasizes the selected scope', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={{ ...chat, manualMinutes: 30, scope: 'team' }} />);
+
+    const scope = within(screen.getByRole('radiogroup', { name: 'com_skills_builder_scope' }));
+    const selected = scope.getByRole('radio', { name: 'com_skills_scope_team' });
+    expect(selected).toHaveAttribute('aria-checked', 'true');
+    expect(selected).toHaveClass(
+      '!h-[30px]',
+      '!px-[12.5px]',
+      'font-normal',
+      'aria-checked:font-semibold',
+    );
+    expect(selected).not.toHaveClass('!font-normal');
+  });
+
+  it('styles selected time and scope options like the reference', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
       fields: [],
@@ -501,10 +536,12 @@ describe('Share step matches the reference screen (12)', () => {
     const minutes = within(share).getByRole('button', { name: 'com_skills_builder_minutes_30' });
     expect(minutes).toHaveClass(
       'rounded-full',
-      'bg-surface-submit',
+      'border-border-brand',
+      'bg-surface-brand-subtle',
       'font-semibold',
-      'text-text-on-status',
+      'text-text-primary',
     );
+    expect(minutes).not.toHaveClass('bg-surface-submit', 'text-text-on-status');
     expect(minutes.parentElement).toHaveClass('inline-flex', 'gap-1.5');
 
     const scope = within(share).getByRole('radiogroup', { name: 'com_skills_builder_scope' });
@@ -518,6 +555,24 @@ describe('Share step matches the reference screen (12)', () => {
       'aria-checked:bg-surface-submit',
       'aria-checked:font-semibold',
       'aria-checked:text-text-on-status',
+    );
+  });
+
+  it('uses the reference size for share guidance labels', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={{ ...chat, manualMinutes: 30 }} />);
+
+    const share = block('com_skills_builder_share') as HTMLElement;
+    expect(
+      within(share).getByRole('group', { name: 'com_skills_builder_todo_minutes' }),
+    ).toHaveClass('text-[13.5px]');
+    expect(within(share).getByText('com_skills_builder_scope').parentElement).toHaveClass(
+      'text-[13.5px]',
     );
   });
 

@@ -39,7 +39,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
       <div
         role="group"
         aria-label={localize('com_skills_builder_todo_minutes')}
-        className="mb-1.5 flex flex-wrap items-center gap-2 text-sm"
+        className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px]"
       >
         <span className="text-text-secondary">{localize('com_skills_builder_minutes_before')}</span>
         <div className="inline-flex flex-wrap gap-1.5">
@@ -52,7 +52,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
               className={cn(
                 'rounded-full border px-3 py-1 text-[13px]',
                 manualMinutes === minutes
-                  ? 'border-border-brand bg-surface-submit font-semibold text-text-on-status'
+                  ? 'border-border-brand bg-surface-brand-subtle font-semibold text-text-primary'
                   : 'border-border-light bg-surface-primary text-text-secondary hover:border-border-medium',
               )}
             >
@@ -62,7 +62,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
         </div>
         <span className="text-text-secondary">{localize('com_skills_builder_minutes_after')}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-[13.5px]">
         <span id="builder-scope-label" className="text-text-secondary">
           {localize('com_skills_builder_scope')}
         </span>
@@ -77,7 +77,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
             { value: 'me', label: localize('com_skills_builder_scope_me') },
           ]}
           className="!rounded-full !border !border-border-light !bg-surface-primary !px-0 [&>div:first-child]:hidden"
-          buttonClassName="!h-7 !rounded-full !px-3 !text-[13px] !font-normal border-e border-border-light last:border-e-0 aria-checked:bg-surface-submit aria-checked:font-semibold aria-checked:text-text-on-status"
+          buttonClassName="!h-[30px] !rounded-full !px-[12.5px] !text-[13px] font-normal border-e border-border-light last:border-e-0 aria-checked:bg-surface-submit aria-checked:font-semibold aria-checked:text-text-on-status"
         />
       </div>
     </Block>

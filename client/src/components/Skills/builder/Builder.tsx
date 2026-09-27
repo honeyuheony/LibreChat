@@ -395,7 +395,7 @@ export default function Builder({
                 }}
                 onFocus={() => setActiveBlock('how')}
                 placeholder={localize('com_skills_builder_text_placeholder')}
-                className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-ring-primary focus:outline-none focus:ring-[3px] focus:ring-border-brand md:min-h-[297px]"
+                className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15.5px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-ring-primary focus:outline-none focus:ring-[3px] focus:ring-border-brand md:min-h-[297px]"
               />
               <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
                 {statusText ? localize(statusText) : ''}
