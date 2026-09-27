@@ -166,6 +166,16 @@ describe('ToolsMenu', () => {
     ).toHaveAttribute('aria-checked', 'true');
   });
 
+  it('heads the connector group as data sources and MCP servers', async () => {
+    const user = userEvent.setup();
+    render(<ToolsMenu showBuiltinTools={true} />);
+
+    await user.click(screen.getByTestId('tools-menu-button'));
+
+    const group = screen.getByRole('group', { name: 'com_ui_tools_data_sources' });
+    expect(within(group).getByRole('menuitemcheckbox', { name: 'Shared files' })).toBeVisible();
+  });
+
   it('toggles a connector without closing the menu', async () => {
     const user = userEvent.setup();
     render(<ToolsMenu showBuiltinTools={true} />);
