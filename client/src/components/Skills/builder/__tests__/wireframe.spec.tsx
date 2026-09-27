@@ -535,8 +535,9 @@ describe('Share step matches the reference screen (12)', () => {
     const share = block('com_skills_builder_share') as HTMLElement;
     const minutes = within(share).getByRole('button', { name: 'com_skills_builder_minutes_30' });
     expect(minutes).toHaveClass(
+      'h-[30px]',
       'rounded-full',
-      'border-border-brand',
+      'border-surface-submit',
       'bg-surface-brand-subtle',
       'font-semibold',
       'text-text-primary',
@@ -556,6 +557,18 @@ describe('Share step matches the reference screen (12)', () => {
       'aria-checked:font-semibold',
       'aria-checked:text-text-on-status',
     );
+  });
+
+  it('outlines the share card after selecting a time', () => {
+    render(<Harness />);
+
+    const share = block('com_skills_builder_share') as HTMLElement;
+    expect(share).toHaveAttribute('data-active', 'false');
+
+    fireEvent.click(within(share).getByRole('button', { name: 'com_skills_builder_minutes_10' }));
+
+    expect(share).toHaveAttribute('data-active', 'true');
+    expect(share).toHaveClass('border-ring-primary', 'ring-[3px]', 'ring-border-brand');
   });
 
   it('uses the reference size for share guidance labels', () => {
