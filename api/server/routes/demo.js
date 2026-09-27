@@ -3,6 +3,7 @@ const express = require('express');
 const cookies = require('cookie');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const { MeiliSearch } = require('meilisearch');
 const { SystemRoles, CacheKeys } = require('librechat-data-provider');
 const { logger, runAsSystem, DEFAULT_REFRESH_TOKEN_EXPIRY } = require('@librechat/data-schemas');
 const {
@@ -10,6 +11,7 @@ const {
   shouldUseSecureCookie,
   invalidateCachedAuthUserDoc,
   createDemoFileDeleter,
+  createDemoSearchIndex,
 } = require('@librechat/api');
 const { requireJwtAuth, requireSameOrigin, checkBan } = require('~/server/middleware');
 const { setAuthTokens, logoutUser } = require('~/server/services/AuthService');
@@ -17,7 +19,7 @@ const { processDeleteRequest } = require('~/server/services/Files/process');
 const { getAppConfig } = require('~/server/services/Config');
 const { getLogStores } = require('~/cache');
 const { findUser } = require('~/models');
-const { File } = require('~/db/models');
+const { File, Conversation, Message } = require('~/db/models');
 const { createDemoData, resolveProtectedEmails } = require(
   path.resolve(__dirname, '..', '..', '..', 'config', 'demo-data'),
 );
@@ -194,6 +196,12 @@ router.post('/reset', requireSameOrigin, async (req, res) => {
         runAsSystem,
         logger,
         appConfig,
+      }),
+      searchIndex: createDemoSearchIndex({
+        env: process.env,
+        createClient: (config) => new MeiliSearch(config),
+        models: { Conversation, Message },
+        runAsSystem,
       }),
       warn: (message) => logger.warn(`[demo] ${message}`),
     });
