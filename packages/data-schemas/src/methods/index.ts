@@ -39,6 +39,7 @@ import { createAccessRoleMethods, type AccessRoleMethods } from './accessRole';
 import {
   createUserGroupMethods,
   runAfterTransaction,
+  DEPARTMENT_GROUP_PREFIX,
   type UserGroupMethods,
   type UserGroupDeps,
 } from './userGroup';
@@ -185,6 +186,7 @@ import { createInsightsMethods, type InsightsMethods } from './insights';
 
 export {
   runAfterTransaction,
+  DEPARTMENT_GROUP_PREFIX,
   RoleConflictError,
   MCPAuthorityProofError,
   MAX_MCP_AUTHORITY_TARGETS,

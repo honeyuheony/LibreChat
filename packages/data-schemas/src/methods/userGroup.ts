@@ -32,7 +32,7 @@ const DEFAULT_STALE_EVICTION_DELAY_MS = 3000;
  * 부서 그룹은 `department:<부서>` 를 키로 하는 로컬 그룹이다. 사용자는 `memberIds` 가 아니라
  * 권한을 판정할 때 `user.department` 로 그룹에 속한다.
  */
-const DEPARTMENT_GROUP_PREFIX = 'department:';
+export const DEPARTMENT_GROUP_PREFIX = 'department:';
 const DEPARTMENT_GROUP_PATTERN = /^department:/;
 
 function readDepartment(value: unknown): string | undefined {

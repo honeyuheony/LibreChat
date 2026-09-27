@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { PrincipalType } from 'librechat-data-provider';
-import { logger, isValidObjectIdString } from '@librechat/data-schemas';
+import { logger, isValidObjectIdString, DEPARTMENT_GROUP_PREFIX } from '@librechat/data-schemas';
 import type {
   IGroup,
   IUser,
@@ -15,11 +15,10 @@ import type { ValidationError } from '~/types/error';
 import type { ServerRequest } from '~/types/http';
 import { parsePagination } from './pagination';
 
-/** Skill 「우리 팀」 공개가 부여하는 부서 그룹의 키. 관리자가 같은 키로 그룹을 만들면 부서 판정을 흉내 낼 수 있다. */
-const DEPARTMENT_GROUP_PREFIX = 'department:';
 const DEPARTMENT_MEMBERS_ERROR =
   'Department groups follow user.department; their members cannot be read or changed';
 
+/** 관리자가 부서 그룹 키로 그룹을 만들면 Skill 「우리 팀」 공개의 부서 판정을 흉내 낼 수 있어서 막는다. */
 function isDepartmentGroupDocument(group: Pick<IGroup, 'source' | 'idOnTheSource'>): boolean {
   return group.source === 'local' && !!group.idOnTheSource?.startsWith(DEPARTMENT_GROUP_PREFIX);
 }
