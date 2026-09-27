@@ -13,7 +13,6 @@ import {
   Switch,
 } from '@librechat/client';
 import type { TSkillSummary } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import {
   formatCount,
   getCategoryLabel,
@@ -219,7 +218,7 @@ export default function SkillDetailContent({
     }),
     profile?.version,
     skill.category ? getCategoryLabel(skill.category, localize) : null,
-    localize('com_skills_detail_model_auto' as TranslationKeys),
+    localize('com_skills_detail_model_auto'),
   ].filter(Boolean);
 
   return (

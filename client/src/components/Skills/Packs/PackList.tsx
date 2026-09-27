@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Spinner } from '@librechat/client';
 import type { TSkillPackSummary, TSkillSummary } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import { useListSkillPacksQuery, useSkillsInfiniteQuery } from '~/data-provider';
 import { formatCount } from '../Marketplace/skillCategories';
 import { useLocalize } from '~/hooks';
@@ -76,10 +75,10 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
   return (
     <section className="mt-8">
       <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-        {localize('com_skills_pack_tab_title' as TranslationKeys, { count: packs.length })}
+        {localize('com_skills_pack_tab_title', { count: packs.length })}
       </h2>
       <div className="mb-3.5 text-[13.5px] text-text-muted">
-        {localize('com_skills_pack_tab_desc' as TranslationKeys)}
+        {localize('com_skills_pack_tab_desc')}
       </div>
       {isError && (
         <div className="mb-3 text-sm text-text-secondary" role="alert">
@@ -106,7 +105,7 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
               {localize('com_skills_pack_create')}
             </b>
             <span className="text-[13.5px] text-text-tertiary">
-              {localize('com_skills_pack_create_hint' as TranslationKeys)}
+              {localize('com_skills_pack_create_hint')}
             </span>
           </span>
         </button>

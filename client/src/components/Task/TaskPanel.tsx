@@ -548,7 +548,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   const toggle = (name: keyof typeof sections) => () =>
     setSections((current) => ({ ...current, [name]: !current[name] }));
 
-  const showResult = panel.view === 'result' && panel.resultId != null;
+  const openResultId = panel.view === 'result' ? panel.resultId : null;
 
   return (
     <aside
@@ -575,9 +575,9 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
           <X className="size-4" aria-hidden="true" />
         </button>
       </header>
-      {showResult ? (
+      {openResultId != null ? (
         <ResultView
-          resultId={panel.resultId as string}
+          resultId={openResultId}
           onBack={() => setPanel((current) => ({ ...current, view: 'overview', resultId: null }))}
         />
       ) : (

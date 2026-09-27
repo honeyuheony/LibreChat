@@ -219,7 +219,7 @@ export function collectTaskOutputs(messages: TMessage[] | undefined): TaskOutput
   const outputs: TaskOutput[] = [];
   for (const message of messages ?? []) {
     for (const attachment of message.attachments ?? []) {
-      const output = toTaskOutput(attachment, message.createdAt as string | undefined);
+      const output = toTaskOutput(attachment, message.createdAt);
       if (output == null || seen.has(output.resultId)) {
         continue;
       }

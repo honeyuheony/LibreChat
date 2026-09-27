@@ -404,7 +404,7 @@ export default function Preview({
   const showFields = FIELD_OUTPUTS.has(values.output);
   const displayFields =
     showFields && values.fields.length === 0
-      ? [localize('com_skills_builder_fields_label' as TranslationKeys)]
+      ? [localize('com_skills_builder_fields_label')]
       : values.fields;
   const connectors = [
     ...new Set([

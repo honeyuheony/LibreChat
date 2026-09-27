@@ -93,17 +93,14 @@ function headerText(
   };
 }
 
-/** 대화에서 가져온 문서 이름과 종류. 번역 파일에 아직 없는 키라 형을 맞춘다. */
+/** 대화에서 가져온 문서 이름과 종류. 종류 문구는 번역 파일에 `examples` 만 있어 키의 형을 맞춘다. */
 function FileChips({ files }: { files: BuilderFile[] }) {
   const localize = useLocalize();
   if (files.length === 0) {
     return null;
   }
   return (
-    <ul
-      aria-label={localize('com_skills_builder_files_list' as TranslationKeys)}
-      className="contents"
-    >
+    <ul aria-label={localize('com_skills_builder_files_list')} className="contents">
       {files.map((file) => (
         <li
           key={file.name}
@@ -226,7 +223,7 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
           )}
           {peers?.length === 0 && (
             <p className="text-sm text-text-secondary">
-              {localize('com_skills_builder_peek_empty' as TranslationKeys)}
+              {localize('com_skills_builder_peek_empty')}
             </p>
           )}
           {peers != null && peers.length > 0 && (
@@ -253,7 +250,7 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                         onCopy(peer);
                       }}
                     >
-                      {localize('com_skills_builder_peek_copy' as TranslationKeys)}
+                      {localize('com_skills_builder_peek_copy')}
                     </Button>
                   </div>
                   <ol className="mt-2 list-decimal ps-5 font-sans text-[13px] leading-relaxed text-text-secondary">
@@ -301,8 +298,7 @@ export default function Builder({
   const textChanged = session.changed.has('text');
   const draftStatus = draftStatusKey(session.draft);
   const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
-  const statusText =
-    askText && empty ? ('com_skills_builder_test_needs_text' as TranslationKeys) : draftStatus;
+  const statusText = askText && empty ? 'com_skills_builder_test_needs_text' : draftStatus;
   /** 처음부터 누를 수 있다. 글이 없으면 저장이 실패하므로 요청 대신 글칸으로 안내한다. */
   const runTest = () => {
     if (empty) {
@@ -320,12 +316,12 @@ export default function Builder({
     const name = getSkillTitle(skill);
     session.copyText(
       splitSentences(text).join('\n'),
-      localize('com_skills_builder_source_copied' as TranslationKeys, { name }),
+      localize('com_skills_builder_source_copied', { name }),
     );
     setActiveBlock('how');
     showToast({
       status: 'success',
-      message: localize('com_skills_builder_peek_copied' as TranslationKeys, { name }),
+      message: localize('com_skills_builder_peek_copied', { name }),
     });
   };
 
