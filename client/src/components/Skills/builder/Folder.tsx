@@ -1,5 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { PluginFile } from './state';
+import type { PluginFile } from './markdown';
 import { folderIndent, folderRows } from '../utils/tree';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';

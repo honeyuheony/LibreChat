@@ -2,7 +2,7 @@ import { Radio } from '@librechat/client';
 import type { TSkillPublishScope } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import { useLocalize } from '~/hooks';
-import { Block } from './Preview';
+import { Block } from './Blocks';
 import { cn } from '~/utils';
 
 /** 「직접 하면 보통」 선택지(분). */

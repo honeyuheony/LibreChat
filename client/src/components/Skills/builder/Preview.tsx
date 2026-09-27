@@ -1,202 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { TSkillDraftExtra, TSkillDraftOutput } from 'librechat-data-provider';
-import type { ReactNode } from 'react';
-import type { BuilderField, BuilderState, BuilderStep, BuilderValues, ChangedField } from './state';
 import type { TranslationKeys } from '~/hooks';
-import { EMOJI_FONT, DEFAULT_SKILL_ICON, SKILL_ICON_CHOICES } from '../Marketplace/SkillIcon';
+import type { BuilderStep } from './state';
+import type { HeadProps } from './Head';
+import {
+  Block,
+  Ghost,
+  ListInput,
+  NO_CHANGES,
+  NO_CHOICES,
+  EditButton,
+  useEditing,
+  ignoreActivate,
+} from './Blocks';
 import { FIELD_OUTPUTS, OUTPUTS, SOURCE_AI, SOURCE_ME } from './state';
 import SourceTag, { ChangedMark } from './SourceTag';
+import ConnectorsBlock from './Connectors';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
-type EditTarget = BuilderField;
-
-/** 미리보기 블록 이름. 입력칸에 초점이 가면 그 칸이 채우는 블록을 강조한다. */
-export type PreviewBlock = 'head' | 'when' | 'how' | 'out' | 'data';
-
-const BLOCK_OF: Record<EditTarget, PreviewBlock> = {
-  title: 'head',
-  description: 'head',
-  icon: 'head',
-  triggers: 'when',
-  output: 'out',
-  extras: 'out',
-  fields: 'out',
-};
-
-type PreviewProps = {
-  state: BuilderState;
+type PreviewProps = Pick<HeadProps, 'state' | 'onEdit' | 'changed' | 'active' | 'onActivate'> & {
   steps: BuilderStep[];
-  author: string;
-  onEdit: <K extends BuilderField>(field: K, value: BuilderValues[K]) => void;
   onStepOff: (step: string) => void;
   onStepsRestore: () => void;
   onToggleConnector: (name: string) => void;
-  /** 응용 편집에서 원본과 달라진 칸. 새로 만들 때는 비어 있다. */
-  changed?: ReadonlySet<ChangedField>;
-  active?: PreviewBlock | null;
-  onActivate?: (block: PreviewBlock) => void;
   /** 「내부 시스템도 봐야 하면」을 눌렀을 때 펼치는, 쓸 수 있는 MCP 서버 이름 전체. */
   connectorChoices?: string[];
 };
-
-type HeadProps = Pick<
-  PreviewProps,
-  'state' | 'author' | 'onEdit' | 'changed' | 'active' | 'onActivate'
-> & { department?: string };
-
-export const EMOJI_STYLE = { fontFamily: EMOJI_FONT };
-
-const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
-const NO_CHOICES: string[] = [];
-const ignoreActivate = () => undefined;
-
-const blockFrame = (active: boolean) =>
-  cn(
-    'rounded-[14px] border-[1.5px] bg-surface-primary transition-[border-color,box-shadow] motion-reduce:transition-none',
-    active ? 'border-ring-primary ring-[3px] ring-border-brand' : 'border-border-light',
-  );
-
-/** 강조된 블록이 보이도록 오른쪽 칸을 필요한 만큼만 굴린다. */
-function useRevealWhenActive(active: boolean) {
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (active) {
-      ref.current?.scrollIntoView?.({ block: 'nearest' });
-    }
-  }, [active]);
-  return ref;
-}
-
-/** 편집을 시작한 칸의 블록을 함께 강조한다. */
-function useEditing(onActivate: (block: PreviewBlock) => void) {
-  const [editing, setEditing] = useState<EditTarget | null>(null);
-  const startEdit = (target: EditTarget | null) => {
-    setEditing(target);
-    if (target) {
-      onActivate(BLOCK_OF[target]);
-    }
-  };
-  return [editing, startEdit] as const;
-}
-
-const splitList = (value: string) =>
-  value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-export function Block({
-  title,
-  children,
-  active = false,
-}: {
-  title: ReactNode;
-  children: ReactNode;
-  active?: boolean;
-}) {
-  const ref = useRevealWhenActive(active);
-  return (
-    <section ref={ref} data-active={active} className={cn(blockFrame(active), 'px-[14px] py-3')}>
-      <h5 className="mb-1.5 flex items-center gap-1 text-xs font-bold text-text-muted">{title}</h5>
-      {children}
-    </section>
-  );
-}
-
-function Ghost({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn('text-text-muted/60', className)}>{children}</span>;
-}
-
-function EditButton({
-  label,
-  onClick,
-  children,
-  className,
-}: {
-  label: string;
-  onClick: () => void;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      onClick={onClick}
-      className={cn(
-        'border-b border-dashed border-border-medium text-start hover:border-border-heavy hover:bg-surface-hover',
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function InlineInput({
-  label,
-  value,
-  placeholder,
-  onChange,
-  onDone,
-}: {
-  label: string;
-  value: string;
-  placeholder: string;
-  onChange: (value: string) => void;
-  onDone: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => inputRef.current?.focus(), []);
-  return (
-    <input
-      ref={inputRef}
-      type="text"
-      aria-label={label}
-      value={value}
-      placeholder={placeholder}
-      onChange={(event) => onChange(event.target.value)}
-      onBlur={onDone}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === 'Escape') {
-          onDone();
-        }
-      }}
-      className="w-full rounded-lg border border-border-medium bg-surface-primary px-2 py-1 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-    />
-  );
-}
-
-/** 목록 필드는 입력 중인 글(쉼표 뒤 빈칸 포함)을 따로 들고 있다가 목록으로 바꿔 올린다. */
-function ListInput({
-  label,
-  values,
-  placeholder,
-  onChange,
-  onDone,
-}: {
-  label: string;
-  values: string[];
-  placeholder: string;
-  onChange: (values: string[]) => void;
-  onDone: () => void;
-}) {
-  const [typed, setTyped] = useState(values.join(', '));
-  return (
-    <InlineInput
-      label={label}
-      value={typed}
-      placeholder={placeholder}
-      onChange={(value) => {
-        setTyped(value);
-        onChange(splitList(value));
-      }}
-      onDone={onDone}
-    />
-  );
-}
 
 const OUTPUT_CARD: Record<
   TSkillDraftOutput,
@@ -234,114 +64,6 @@ const EXTRA_LABEL: Record<TSkillDraftExtra, TranslationKeys> = {
   polish: 'com_skills_builder_extra_polish',
   law: 'com_skills_builder_extra_law',
 };
-
-export function PreviewHead({
-  state,
-  author,
-  department,
-  onEdit,
-  changed = NO_CHANGES,
-  active = null,
-  onActivate = ignoreActivate,
-}: HeadProps) {
-  const localize = useLocalize();
-  const [editing, setEditing] = useEditing(onActivate);
-  const { values, sources } = state;
-  const clickLabel = localize('com_skills_builder_click_to_edit');
-  const done = () => setEditing(null);
-  const highlighted = active === 'head';
-  const ref = useRevealWhenActive(highlighted);
-
-  return (
-    <section
-      ref={ref}
-      data-active={highlighted}
-      className={cn(blockFrame(highlighted), 'flex items-center gap-3.5 px-4 py-3')}
-    >
-      <div className="flex flex-col items-start gap-2">
-        <button
-          type="button"
-          title={localize('com_skills_builder_icon_change')}
-          aria-label={localize('com_skills_builder_icon_change')}
-          onClick={() => setEditing(editing === 'icon' ? null : 'icon')}
-          className="flex size-[68px] items-center justify-center rounded-full bg-status-success-subtle text-[34px]"
-        >
-          <span aria-hidden="true" style={EMOJI_STYLE}>
-            {values.icon || DEFAULT_SKILL_ICON}
-          </span>
-        </button>
-      </div>
-      <div className="min-w-0 flex-1">
-        {editing === 'icon' && (
-          <div className="mb-2 flex flex-wrap gap-1.5" role="group">
-            {SKILL_ICON_CHOICES.map((icon) => (
-              <button
-                key={icon}
-                type="button"
-                aria-pressed={values.icon === icon}
-                onClick={() => {
-                  onEdit('icon', icon);
-                  done();
-                }}
-                className={cn(
-                  'flex size-9 items-center justify-center rounded-full border text-lg',
-                  values.icon === icon
-                    ? 'border-border-brand bg-surface-brand-subtle'
-                    : 'border-border-light bg-surface-primary',
-                )}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center gap-1">
-          {editing === 'title' ? (
-            <InlineInput
-              label={localize('com_skills_builder_name_placeholder')}
-              value={values.title}
-              placeholder={localize('com_skills_builder_name_placeholder')}
-              onChange={(value) => onEdit('title', value)}
-              onDone={done}
-            />
-          ) : (
-            <h3 className="text-[19px] font-bold text-text-primary">
-              <EditButton label={clickLabel} onClick={() => setEditing('title')}>
-                {values.title || <Ghost>{localize('com_skills_builder_name_ghost')}</Ghost>}
-              </EditButton>
-            </h3>
-          )}
-          <SourceTag source={sources.title} />
-          <ChangedMark show={changed.has('title') || changed.has('icon')} />
-        </div>
-        <div className="text-xs text-text-secondary">
-          {department
-            ? localize('com_skills_builder_by_dept', { name: author, dept: department })
-            : localize('com_skills_builder_by', { name: author })}
-        </div>
-        <div className="mt-1 flex items-center gap-1">
-          {editing === 'description' ? (
-            <InlineInput
-              label={localize('com_skills_builder_desc_placeholder')}
-              value={values.description}
-              placeholder={localize('com_skills_builder_desc_placeholder')}
-              onChange={(value) => onEdit('description', value)}
-              onDone={done}
-            />
-          ) : (
-            <p className="text-sm text-text-secondary">
-              <EditButton label={clickLabel} onClick={() => setEditing('description')}>
-                {values.description || <Ghost>{localize('com_skills_builder_desc_ghost')}</Ghost>}
-              </EditButton>
-            </p>
-          )}
-          <SourceTag source={sources.description} />
-          <ChangedMark show={changed.has('description')} />
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function StepTag({ by, onRemove }: { by: string; onRemove: () => void }) {
   const localize = useLocalize();
@@ -391,10 +113,9 @@ export default function Preview({
   active = null,
   onActivate = ignoreActivate,
   connectorChoices = NO_CHOICES,
-}: Omit<PreviewProps, 'author'>) {
+}: PreviewProps) {
   const localize = useLocalize();
   const [editing, setEditing] = useEditing(onActivate);
-  const [allConnectors, setAllConnectors] = useState(false);
   const { values, sources } = state;
   const empty = state.text.trim().length === 0;
   const clickLabel = localize('com_skills_builder_click_to_edit');
@@ -404,13 +125,6 @@ export default function Preview({
     showFields && values.fields.length === 0
       ? [localize('com_skills_builder_fields_label')]
       : values.fields;
-  const connectors = [
-    ...new Set([
-      ...values.connectors,
-      ...state.recommended,
-      ...(allConnectors ? connectorChoices : NO_CHOICES),
-    ]),
-  ];
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -596,69 +310,14 @@ export default function Preview({
         {showFields && <SourceTag source={sources.fields} />}
       </Block>
 
-      <Block
+      <ConnectorsBlock
+        state={state}
+        changed={changed}
         active={active === 'data'}
-        title={
-          <>
-            {localize('com_skills_builder_data')}
-            <SourceTag source={sources.connectors} />
-            <ChangedMark show={changed.has('connectors')} />
-          </>
-        }
-      >
-        <ul className="ms-5 list-disc text-sm text-text-primary">
-          <li>{localize('com_skills_builder_data_chat')}</li>
-        </ul>
-        {connectors.length > 0 && (
-          <div className="mt-2 flex flex-col">
-            {connectors.map((name) => {
-              const on = values.connectors.includes(name);
-              return (
-                <label
-                  key={name}
-                  className="flex items-center gap-2 border border-b-0 border-border-light bg-surface-primary px-2.5 py-1.5 text-sm first:rounded-t-lg last:rounded-b-lg last:border-b"
-                >
-                  <span className="flex-1">{name}</span>
-                  {!on && state.recommended.includes(name) && (
-                    <span className="rounded-full border border-border-brand px-1.5 text-xs">
-                      {localize('com_skills_builder_ai_recommended')}
-                    </span>
-                  )}
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-checked={on}
-                    checked={on}
-                    onChange={() => onToggleConnector(name)}
-                  />
-                </label>
-              );
-            })}
-          </div>
-        )}
-        <p className="mt-1.5 text-xs text-text-secondary">
-          {localize(
-            values.connectors.length > 0
-              ? 'com_skills_builder_connectors_on'
-              : 'com_skills_builder_connectors_off',
-          )}{' '}
-          <button
-            type="button"
-            aria-expanded={allConnectors}
-            onClick={() => {
-              setAllConnectors(!allConnectors);
-              onActivate('data');
-            }}
-            className="underline hover:text-text-primary"
-          >
-            {localize(
-              allConnectors
-                ? 'com_skills_builder_connectors_less'
-                : 'com_skills_builder_connectors_more',
-            )}
-          </button>
-        </p>
-      </Block>
+        onActivate={onActivate}
+        onToggleConnector={onToggleConnector}
+        connectorChoices={connectorChoices}
+      />
     </div>
   );
 }

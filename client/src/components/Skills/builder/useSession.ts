@@ -20,16 +20,14 @@ import {
   todoItems,
   composeSteps,
   SOURCE_ME,
-  toSavePayload,
-  starterPrompt,
   firstSentence,
   changedFields,
   isPublishReady,
   SOURCE_ORIGIN,
-  contentSignature,
   toggleConnector,
   createBuilderState,
 } from './state';
+import { contentSignature, starterPrompt, toSavePayload } from './markdown';
 import { getResponseStatus } from '~/utils/errors';
 import { runTrial } from './trial';
 import useDraft from './useDraft';
