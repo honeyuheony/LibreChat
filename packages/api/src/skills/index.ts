@@ -15,3 +15,4 @@ export * from './usage';
 export * from './fork';
 export * from './draft';
 export * from './publish';
+export * from './metrics';
