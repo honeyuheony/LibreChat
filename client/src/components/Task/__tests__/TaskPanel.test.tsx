@@ -333,6 +333,36 @@ describe('TaskPanel', () => {
     expect(rows[2]).not.toHaveTextContent('"count"');
   });
 
+  it('names a table output by its title head and row count, not its joined columns', () => {
+    mockMessages = [
+      toolCall('t1', 'extract_table', { output: 'ok' }),
+      {
+        messageId: 'm-out',
+        isCreatedByUser: false,
+        attachments: [
+          {
+            type: 'task_result',
+            resultId: 'r-table',
+            kind: 'table',
+            title: '비교표 · 보고서 월 · 곡물 반입량 (만 t) · 다음 달 전망',
+            stats: { docs: 3, none: 3 },
+          },
+          {
+            type: 'task_result',
+            resultId: 'r-summary',
+            kind: 'summary',
+            title: '통합 요약 · 위험 요인 중심',
+          },
+        ],
+      } as unknown as TMessage,
+    ];
+    renderPanel();
+    const titles = screen
+      .getAllByTestId('task-output-row')
+      .map((row) => row.querySelector('b')?.textContent);
+    expect(titles).toEqual(['비교표 · 3건', '통합 요약 · 위험 요인 중심']);
+  });
+
   it('explains the empty outputs list', () => {
     mockMessages = [toolCall('t1', 'extract_table')];
     renderPanel();

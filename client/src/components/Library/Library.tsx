@@ -17,6 +17,7 @@ import type { TranslationKeys } from '~/hooks';
 import { useTaskResultsInfiniteQuery } from '~/data-provider/Tasks';
 import { RESULT_QUERY_PARAM } from '~/components/Task/useTaskPanel';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { shortResultTitle } from '~/utils/results';
 import { useLocalize } from '~/hooks';
 
 /** New keys that DA adds to the translation files; drop the cast in `useLibraryLocalize` then. */
@@ -35,17 +36,6 @@ type LibraryKey =
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HWP_FILE = /\.hwpx?$/i;
-
-const libraryTitle = (item: TTaskResultListItem) => {
-  if (item.kind !== 'table') {
-    return item.title;
-  }
-  const [title] = item.title.split(' · ', 1);
-  if (item.rows === undefined) {
-    return title;
-  }
-  return `${title} · ${item.rows}건`;
-};
 
 const resultPath = (item: TTaskResultListItem) =>
   `/c/${encodeURIComponent(item.conversationId)}?${RESULT_QUERY_PARAM}=${encodeURIComponent(item.resultId)}`;
@@ -162,7 +152,7 @@ export default function Library() {
                         {item.kind === 'table' ? '▦' : '≡'}
                       </span>
                       <Link to={resultPath(item)} className="hover:underline">
-                        {libraryTitle(item)}
+                        {shortResultTitle(item)}
                       </Link>
                     </TableCell>
                     <TableCell className="whitespace-nowrap px-2 py-2 text-text-secondary">
