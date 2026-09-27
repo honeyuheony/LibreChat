@@ -77,7 +77,7 @@ describe('Library', () => {
     );
     renderLibrary();
 
-    await screen.findByText('분야별 비교표');
+    await screen.findByText('분야별 비교표 · 12건');
     const [table, report, summary] = bodyRows().map(cellTexts);
     expect(table[1]).toBe('com_ui_library_kind_table {"0":"12"}');
     expect(table[4]).toBe('com_ui_task_excel');
@@ -88,6 +88,54 @@ describe('Library', () => {
     expect(table[2]).toBe('정세 비교');
     expect(table[3]).toMatch(/^com_ui_date_today \d{2}:\d{2}$/);
     expect(screen.getByText('com_ui_library_intro {"0":"3"}')).toBeInTheDocument();
+  });
+
+  it('shows a concise table title with its row count', async () => {
+    getTaskResults.mockResolvedValue(
+      page([
+        item({
+          title:
+            '비교표 · 보고서 월 · 곡물 반입량 (만 t) · 비료 반입량 (만 t) · 북중 교역액 (백만 달러) · 쌀 가격 (원/kg) · 옥수수 가격 (원/kg) · 환율 (원/달러) · 다음 달 전망',
+          rows: 3,
+        }),
+      ]),
+    );
+    renderLibrary();
+
+    expect(await screen.findByRole('link', { name: '비교표 · 3건' })).toBeInTheDocument();
+  });
+
+  it('keeps only the table title prefix when its row count is missing', async () => {
+    getTaskResults.mockResolvedValue(
+      page([
+        item({
+          title: '비교표 · 보고서 월 · 곡물 반입량 (만 t) · 다음 달 전망',
+        }),
+      ]),
+    );
+    renderLibrary();
+
+    expect(await screen.findByRole('link', { name: '비교표' })).toBeInTheDocument();
+  });
+
+  it('uses compact columns and rows for the library list', async () => {
+    getTaskResults.mockResolvedValue(page([item({ rows: 12 })]));
+    renderLibrary();
+
+    const table = await screen.findByRole('table');
+    const [name, type, conversation, created, action] = within(table).getAllByRole('columnheader');
+
+    expect(table).toHaveClass('table-fixed');
+    expect(name).toHaveClass('w-[38%]');
+    expect(type).toHaveClass('w-[13%]', 'whitespace-nowrap');
+    expect(conversation).toHaveClass('w-[27%]');
+    expect(created).toHaveClass('w-[14%]');
+    expect(action).toHaveClass('w-[8%]', 'whitespace-nowrap');
+    expect(table.querySelector('thead')).toHaveClass('bg-surface-secondary');
+    expect(bodyRows()[0]).toHaveClass('h-9');
+    const cells = within(bodyRows()[0]).getAllByRole('cell');
+    expect(cells[1]).toHaveClass('whitespace-nowrap');
+    expect(cells[4]).toHaveClass('whitespace-nowrap');
   });
 
   it('shows the empty line when there are no results', async () => {
