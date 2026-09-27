@@ -20,6 +20,7 @@ import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
 import { useGetFiles, useGetStartupConfig } from '~/data-provider';
 import { useSchedulesQuery } from '~/data-provider/Schedules';
+import { isSchedulesEnabled } from '~/hooks/Nav/schedules';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useHasAccess, useLocalize } from '~/hooks';
 
@@ -71,7 +72,8 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
     permissionType: PermissionTypes.SCHEDULES,
     permission: Permissions.USE,
   });
-  const schedulesEnabled = startupConfig?.interface?.schedules === true && hasScheduleAccess;
+  const schedulesEnabled =
+    isSchedulesEnabled(startupConfig?.interface?.schedules) && hasScheduleAccess;
   const { data: schedulesData } = useSchedulesQuery({
     enabled: !!isAuthenticated && isOpen && schedulesEnabled,
   });

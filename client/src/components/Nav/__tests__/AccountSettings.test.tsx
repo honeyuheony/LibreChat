@@ -1,6 +1,7 @@
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import type { TInterfaceConfig } from 'librechat-data-provider';
 import AccountSettings from '../AccountSettings';
 
 const mockLogout = jest.fn();
@@ -28,7 +29,12 @@ const mockAuthState = {
 const mockSchedulesQuery = {
   current: { data: { schedules: [{ id: 'schedule-1' }] } },
 };
-const mockStartupConfig = {
+const mockStartupConfig: {
+  current: {
+    balance: { enabled: boolean };
+    interface: { schedules: TInterfaceConfig['schedules'] };
+  };
+} = {
   current: { balance: { enabled: false }, interface: { schedules: true } },
 };
 const mockSchedulePermission = { current: true };
@@ -149,6 +155,14 @@ describe('account menu', () => {
     expect(items[3]).toHaveTextContent('com_ui_settings_hint');
     expect(items[4]).toHaveTextContent('이협력');
     expect(items.map((item) => item.textContent).join(' ')).not.toContain('com_nav_archived_chats');
+  });
+
+  it('shows schedule navigation when an object interface setting enables use', () => {
+    mockStartupConfig.current.interface.schedules = { use: true, create: true };
+    const items = renderAccountMenu();
+
+    expect(items.map((item) => item.textContent).join(' ')).toContain('com_ui_schedules_title');
+    expect(mockScheduleQueryHook).toHaveBeenCalledWith({ enabled: true });
   });
 
   it('opens each account-menu destination', () => {
