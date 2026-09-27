@@ -628,7 +628,8 @@ const ChatForm = memo(function ChatForm({
   const baseClasses = useMemo(
     () =>
       cn(
-        'm-0 w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
+        /* inline-block 기본값이면 감싸는 줄의 글자 아래 여백이 입력 줄 높이에 더해진다. */
+        'm-0 block w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
         /* 빈 대화 화면의 유일한 입력창을 더 크게 표시한다. */
         isLandingPage ? 'text-[17px]' : 'text-base',
         isCollapsed ? 'max-h-[52px]' : 'max-h-[45vh] md:max-h-[55vh]',

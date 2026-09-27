@@ -154,3 +154,18 @@ describe('ChatView composer column', () => {
     expect(composerColumn).not.toHaveClass('scrollbar-gutter-stable');
   });
 });
+
+describe('ChatView landing column', () => {
+  beforeEach(() => {
+    mockParams.mockReturnValue({});
+    mockConversation.mockReturnValue(null);
+  });
+
+  /* 인사말 묶음은 높이가 0 이고 입력창 아래 여백은 안내 문구의 음수 여백과 상쇄되므로,
+     입력창을 내리는 것은 세로 가운데 맞춤 영역의 위쪽 여백뿐이다. */
+  test('pads the top of the centred landing column so the composer sits lower', () => {
+    const { container } = render(<ChatView />);
+
+    expect(container.querySelector('.scrollbar-gutter-spacer')).toHaveClass('sm:pt-8');
+  });
+});

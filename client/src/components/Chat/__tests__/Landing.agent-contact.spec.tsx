@@ -23,10 +23,13 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/components/ui/BrandMark', () => () => <span data-testid="brand-mark" />);
 
-function renderLanding({ isTemporary = false }: { isTemporary?: boolean } = {}) {
+function renderLanding({
+  isTemporary = false,
+  centered = false,
+}: { isTemporary?: boolean; centered?: boolean } = {}) {
   return render(
     <RecoilRoot initializeState={({ set }) => set(temporaryStore.isTemporary, isTemporary)}>
-      <Landing centerFormOnLanding={false} />
+      <Landing centerFormOnLanding={centered} />
     </RecoilRoot>,
   );
 }
@@ -50,6 +53,14 @@ describe('Landing greeting', () => {
 
     expect(screen.getAllByRole('heading')).toHaveLength(1);
     expect(screen.queryByText('Contact:')).not.toBeInTheDocument();
+  });
+
+  /* 가운데 놓인 홈에서는 인사말 묶음의 높이가 아래 여백뿐이라, 그 여백이 인사말 가운데와
+     입력창 윗변 사이 거리가 된다. */
+  it('keeps a 44px band between the greeting and the centred composer', () => {
+    const { container } = renderLanding({ centered: true });
+
+    expect(container.firstElementChild).toHaveClass('sm:max-h-0', 'sm:pb-11');
   });
 });
 

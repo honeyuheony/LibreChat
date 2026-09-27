@@ -336,6 +336,14 @@ describe('ChatForm attachments', () => {
     }
   }, 20000);
 
+  /* textarea 는 기본이 inline-block 이라 감싸는 줄의 글자 아래 여백만큼 입력 줄이 높아진다. */
+  test('lays the textarea out as a block so the input row stays at the button height', async () => {
+    renderComposer({ landing: true });
+    const textarea = await screen.findByTestId('text-input');
+
+    expect(textarea).toHaveClass('block');
+  }, 20000);
+
   test('raises the landing composer on the surface elevation shadow', async () => {
     renderComposer({ landing: true });
     await screen.findByTestId('text-input');
