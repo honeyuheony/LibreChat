@@ -17,7 +17,7 @@ import { Conversations } from '~/components/Conversations';
 import store from '~/store';
 
 /** 대화 목록과 제목의 개수가 같은 query를 공유하도록 검색 조건을 맞춘다. */
-export function useSidebarConversationsQuery() {
+function useSidebarConversationsQuery() {
   const { isAuthenticated } = useAuthContext();
   const tags = useAtomValue(chatFilterTagsAtom);
   const sort = useAtomValue(chatSortAtom);

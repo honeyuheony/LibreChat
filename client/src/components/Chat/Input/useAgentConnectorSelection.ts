@@ -16,7 +16,7 @@ import { getTimestampedValue, setTimestampedValue } from '~/utils/timestamps';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import { isEphemeralAgent } from '~/common';
 
-export interface AgentConnectorSelection {
+interface AgentConnectorSelection {
   /** 서버가 도구 접근을 제한하는 saved agent 대화인지 나타낸다. */
   isSavedAgent: boolean;
   agentServerNames: ReadonlySet<string>;

@@ -5,7 +5,7 @@ import { useApprovalContext, useResumeSubmit } from '../ApprovalContext';
 import { taskDecisionByToolCallId } from '~/store/task';
 
 /** 변경이 없으면 approve, 수정했으면 edit로 보내고 정책이 허용하지 않으면 null을 반환한다. */
-export function runResolution(
+function runResolution(
   toolCallId: string,
   allowed: Agents.ToolApprovalDecisionType[],
   editedArguments: Record<string, unknown>,

@@ -2,7 +2,7 @@ import { dataService } from 'librechat-data-provider';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { TTaskResultsResponse } from 'librechat-data-provider';
 
-export const taskResultsQueryKey = ['taskResults'] as const;
+const taskResultsQueryKey = ['taskResults'] as const;
 
 /** 저장된 결과를 최신순으로 페이지당 50개 가져온다. */
 export const useTaskResultsInfiniteQuery = () =>

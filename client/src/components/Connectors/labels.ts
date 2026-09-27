@@ -1,6 +1,6 @@
 import type { TranslationKeys } from '~/hooks';
 
-export interface ToolLabel {
+interface ToolLabel {
   title: TranslationKeys;
   description: TranslationKeys;
 }

@@ -4,7 +4,7 @@ import type { QueryObserverResult } from '@tanstack/react-query';
 import type { TaskResult } from 'librechat-data-provider';
 
 /** 오른쪽 패널과 메시지 결과 카드가 같은 query를 공유한다. */
-export const taskResultQueryKey = (resultId: string) => [QueryKeys.taskResult, resultId];
+const taskResultQueryKey = (resultId: string) => [QueryKeys.taskResult, resultId];
 
 /** hook과 단발 조회가 같은 query 설정을 사용한다. */
 export const taskResultQuery = (resultId: string) => ({
@@ -37,7 +37,7 @@ export async function downloadTaskReportFile(
   saveBlob(response.data as Blob, file.filename);
 }
 
-export function saveBlob(blob: Blob, filename: string) {
+function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

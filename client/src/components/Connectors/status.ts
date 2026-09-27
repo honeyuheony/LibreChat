@@ -11,7 +11,7 @@ export type ConnectorAction =
   | 'cancel'
   | 'details';
 
-export interface ConnectorState {
+interface ConnectorState {
   labelKey: TranslationKeys;
   tone: PillTone;
   action: ConnectorAction;

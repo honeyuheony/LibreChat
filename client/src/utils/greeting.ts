@@ -203,7 +203,7 @@ export const getMsUntilNextGreeting = (date: Date = new Date()): number => {
 /** 시간대별 시작 시각은 현지 시간이며, 저녁은 다음 날 아침까지 이어진다. */
 const daypartStarts = { morning: 5, afternoon: 12, evening: 18 } as const;
 
-export type Daypart = keyof typeof daypartStarts;
+type Daypart = keyof typeof daypartStarts;
 
 const daypartOptions: Record<Daypart, GreetingOption> = {
   morning: {

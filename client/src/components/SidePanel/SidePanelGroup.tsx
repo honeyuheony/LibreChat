@@ -4,7 +4,7 @@ import { ResizablePanel, ResizablePanelGroup, useMediaQuery } from '@librechat/c
 import type { PanelSlot } from './ArtifactsPanel';
 import ArtifactsPanel from './ArtifactsPanel';
 
-export type SidePanelKind = 'artifacts' | 'task';
+type SidePanelKind = 'artifacts' | 'task';
 
 const PANEL_IDS_SINGLE = ['messages-view'];
 

@@ -32,7 +32,7 @@ import store from '~/store';
 
 type Localize = ReturnType<typeof useLocalize>;
 
-export function topValueCounts(result: TaskTableResult, localize: Localize): string[] {
+function topValueCounts(result: TaskTableResult, localize: Localize): string[] {
   return result.fields.map((field, column) => {
     const counts = new Map<string, number>();
     for (const row of result.rows) {

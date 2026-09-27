@@ -54,7 +54,7 @@ export function directionParticle(word: string): string {
   return finalSound(word) === 'other' ? '으로' : '로';
 }
 
-export function parseToolArgs(args: unknown): Args {
+function parseToolArgs(args: unknown): Args {
   if (args != null && typeof args === 'object' && !Array.isArray(args)) {
     return args as Args;
   }
@@ -131,7 +131,7 @@ const searchFiles: PhraseBuilder = (args, localize) => {
 const webSearch: PhraseBuilder = (args, localize) =>
   withObject('com_ui_tool_step_web_search', stringArg(args, 'query', 'q'), localize);
 
-export const TOOL_STEP_PHRASES: Record<string, PhraseBuilder> = {
+const TOOL_STEP_PHRASES: Record<string, PhraseBuilder> = {
   list_folder: listFolder,
   read_file: readFile,
   search_files: searchFiles,

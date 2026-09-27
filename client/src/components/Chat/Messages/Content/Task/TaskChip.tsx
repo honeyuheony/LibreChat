@@ -39,7 +39,7 @@ export function TaskChip({
   );
 }
 
-export function TaskApprovalStatus({ status }: { status: string }) {
+function TaskApprovalStatus({ status }: { status: string }) {
   const localize = useLocalize();
   if (status !== 'expired' && status !== 'error') {
     return null;

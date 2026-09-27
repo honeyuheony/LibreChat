@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import type { Agents, TaskProgressEvent } from 'librechat-data-provider';
 
-export type TaskPanelState = {
+type TaskPanelState = {
   open: boolean;
   view: 'overview' | 'result';
   resultId: string | null;

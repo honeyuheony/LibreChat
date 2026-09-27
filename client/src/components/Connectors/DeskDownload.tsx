@@ -19,7 +19,7 @@ const INSTALL_STEPS: TranslationKeys[] = [
   'com_ui_desk_download_step_sign_in',
 ];
 
-export function describeRelease(release: DeskAppReleaseResponse, localize: Localize): string {
+function describeRelease(release: DeskAppReleaseResponse, localize: Localize): string {
   const parts = [
     release.version ? localize('com_ui_desk_download_version', { 0: release.version }) : '',
     release.sizeBytes ? `${Math.round(release.sizeBytes / MEBIBYTE)}MB` : '',
