@@ -98,11 +98,11 @@ describe('Builder laid out like the wireframe editor', () => {
   it('dims the page behind the editor with a light, blurred scrim like the wireframe .ov', () => {
     render(<Harness />);
     const overlay = document.querySelector('[data-state="open"].fixed.inset-0');
-    expect(overlay).toHaveClass('bg-black/40', 'backdrop-blur-[6px]');
+    expect(overlay).toHaveClass('bg-black/[0.38]', 'backdrop-blur-[6px]');
     expect(overlay).not.toHaveClass('bg-black/80');
     expect(overlay).toHaveClass(
       '[@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none',
-      '[@media(prefers-reduced-transparency:reduce)]:bg-black/60',
+      '[@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55]',
     );
   });
 
@@ -259,5 +259,82 @@ describe('Builder laid out like the wireframe editor', () => {
     fireEvent.click(within(block('com_skills_builder_when') as HTMLElement).getByRole('button'));
     expect(block('com_skills_builder_when')).toHaveAttribute('data-active', 'true');
     expect(how).toHaveAttribute('data-active', 'false');
+  });
+});
+
+describe('Builder sized and styled like the wireframe editor (07)', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('splits the columns .9 : 1.1 and caps each at 70vh so the modal ends where its content does', () => {
+    render(<Harness />);
+    const grid = textarea().closest('section')?.parentElement?.parentElement as HTMLElement;
+    expect(grid).toHaveClass('md:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]');
+    const columns = Array.from(grid.children);
+    expect(columns).toHaveLength(2);
+    columns.forEach((column) => expect(column).toHaveClass('md:max-h-[70vh]'));
+  });
+
+  it('shows the unnamed draft folder as agent-draft/', () => {
+    render(<Harness />);
+    expect(screen.getByText('skills/agent-draft/SKILL.md')).toBeInTheDocument();
+    expect(screen.getAllByText('▾ agent-draft/')).toHaveLength(2);
+    expect(screen.queryByText(/new-agent/)).not.toBeInTheDocument();
+  });
+
+  it('still saves an unnamed draft under a generated agent- name, not the draft folder name', async () => {
+    (deps.requestDraft as jest.Mock).mockResolvedValueOnce({ ...draft, slug: '' });
+    render(<Harness />);
+    await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_test_run' }));
+    });
+    const [[payload]] = (deps.createSkill as jest.Mock).mock.calls.slice(-1);
+    expect(payload.name).toMatch(/^agent-[0-9a-z]+$/);
+    expect(payload.name).not.toBe('agent-draft');
+  });
+
+  it('lets the test button be pressed before any text, then asks for the text instead of saving', () => {
+    (deps.createSkill as jest.Mock).mockClear();
+    render(<Harness />);
+    const test = screen.getByRole('button', { name: 'com_skills_builder_test_run' });
+    expect(test).toBeEnabled();
+    expect(test).toHaveClass('bg-surface-submit');
+
+    fireEvent.click(test);
+    expect(deps.createSkill).not.toHaveBeenCalled();
+    expect(screen.getByText('com_skills_builder_test_needs_text')).toBeVisible();
+    expect(textarea()).toHaveFocus();
+
+    fireEvent.change(textarea(), { target: { value: '회의록을 정리한다.' } });
+    expect(screen.queryByText('com_skills_builder_test_needs_text')).not.toBeInTheDocument();
+  });
+
+  it('frames the attach row with a solid line and a small pill button carrying the clip icon', () => {
+    render(<Harness />);
+    const button = screen.getByRole('button', { name: /com_skills_builder_files_attach/ });
+    const row = button.parentElement as HTMLElement;
+    expect(row).not.toHaveClass('border-dashed');
+    expect(row).toHaveClass('border-solid');
+    expect(button).toHaveClass('rounded-full', 'h-auto');
+    const clip = within(button).getByText('📎');
+    expect(clip.style.fontFamily).toContain('Noto Color Emoji');
+  });
+
+  it('draws the draft icon with an emoji font so the circle is not left blank', () => {
+    render(<Harness />);
+    const icon = within(
+      screen.getByRole('button', { name: 'com_skills_builder_icon_change' }),
+    ).getByText('🤖');
+    expect(icon.style.fontFamily).toContain('Noto Color Emoji');
+  });
+
+  it('dims the page as lightly as the wireframe scrim', () => {
+    render(<Harness />);
+    const overlay = document.querySelector('[data-state="open"].fixed.inset-0');
+    expect(overlay).toHaveClass(
+      'bg-black/[0.38]',
+      '[@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55]',
+    );
   });
 });

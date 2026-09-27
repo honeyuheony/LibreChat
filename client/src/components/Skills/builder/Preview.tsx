@@ -45,6 +45,11 @@ type HeadProps = Pick<
   'state' | 'author' | 'onEdit' | 'changed' | 'active' | 'onActivate'
 > & { department?: string };
 
+/** 이모지 글꼴을 먼저 고른다. 없으면 본문 글꼴이 빈칸을 그려 아이콘 자리가 빈 원으로 보인다(`SkillIcon` 과 같은 순서). */
+export const EMOJI_STYLE = {
+  fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
+};
+
 const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
 const NO_CHOICES: string[] = [];
 const ignoreActivate = () => undefined;
@@ -265,7 +270,9 @@ export function PreviewHead({
           onClick={() => setEditing(editing === 'icon' ? null : 'icon')}
           className="flex size-[68px] items-center justify-center rounded-full bg-status-success-subtle text-[34px]"
         >
-          <span aria-hidden="true">{values.icon || '🤖'}</span>
+          <span aria-hidden="true" style={EMOJI_STYLE}>
+            {values.icon || '🤖'}
+          </span>
         </button>
       </div>
       <div className="min-w-0 flex-1">
