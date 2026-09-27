@@ -521,6 +521,7 @@ export type TSkillPackSummary = {
   authorName: string;
   createdAt: string;
   updatedAt: string;
+  skillIds?: string[];
 };
 
 export type TSkillPack = TSkillPackSummary & {
