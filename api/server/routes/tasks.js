@@ -180,10 +180,7 @@ router.get('/results', async (req, res, next) => {
     const hasMore =
       listEntries.length > TASK_RESULTS_PAGE_SIZE || taskResults.length > TASK_RESULTS_PAGE_SIZE;
     const lastReturned = pageEntries[pageEntries.length - 1];
-    const cursorResult =
-      listEntries.length > TASK_RESULTS_PAGE_SIZE
-        ? pageEntries[pageEntries.length - 1].taskResult
-        : (lastReturned?.taskResult ?? taskResults[TASK_RESULTS_PAGE_SIZE]);
+    const cursorResult = lastReturned?.taskResult ?? taskResults[TASK_RESULTS_PAGE_SIZE];
     return res.json({
       results: pageEntries.map(({ item }) => item),
       nextCursor: hasMore && cursorResult ? encodeTaskResultsCursor(cursorResult) : null,

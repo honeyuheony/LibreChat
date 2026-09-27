@@ -466,7 +466,6 @@ module.exports = {
   PROTECTED_EMAILS,
   DEFAULT_AGENT_ID,
   ACCOUNT_COLLECTIONS,
-  USER_FIELDS,
   parseEmails,
   parseCliArgs,
   resolveProtectedEmails,
