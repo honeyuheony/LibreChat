@@ -25,6 +25,7 @@ export { default as sessionSchema } from './session';
 export { default as shareSchema } from './share';
 export { default as skillSyncCredentialSchema } from './skillSyncCredential';
 export { default as skillSyncStatusSchema } from './skillSyncStatus';
+export { default as skillPackSchema } from './skillPack';
 export { default as deploymentSkillUsageSchema } from './deploymentSkillUsage';
 export { default as tokenSchema } from './token';
 export { default as toolCallSchema } from './toolCall';

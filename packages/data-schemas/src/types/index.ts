@@ -33,6 +33,7 @@ export * from './favorite';
 export * from './prompts';
 /* Skills */
 export * from './skill';
+export * from './skillPack';
 export * from './skillSync';
 export * from './triggerDelivery';
 export * from './queuedTurn';
