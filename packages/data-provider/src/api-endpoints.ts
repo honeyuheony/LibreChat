@@ -457,6 +457,9 @@ export const schedules = () => `${BASE_URL}/api/schedules`;
 export const schedule = (id: string) => `${schedules()}/${encodeURIComponent(id)}`;
 export const runSchedule = (id: string) => `${schedule(id)}/run`;
 
+/* 데모 사용자 전환 */
+export const demoSwitchUser = () => `${BASE_URL}/api/demo/switch-user`;
+
 /* Skills */
 export const skills = () => `${BASE_URL}/api/skills`;
 export const importSkill = () => `${skills()}/import`;

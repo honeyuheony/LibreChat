@@ -1,4 +1,6 @@
+import { useAtomValue } from 'jotai';
 import { MemoryRouter } from 'react-router-dom';
+import { SettingsTabValues } from 'librechat-data-provider';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type {
   TUpdateWorkspacePreferencesRequest,
@@ -6,6 +8,7 @@ import type {
   TWorkspacePreferences,
 } from 'librechat-data-provider';
 import type { UseMutationOptions } from '@tanstack/react-query';
+import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import UserSettings from '../index';
 
 const mockShowToast = jest.fn();
@@ -71,10 +74,16 @@ jest.mock('~/data-provider/User', () => ({
   },
 }));
 
+function SettingsTabProbe() {
+  const tab = useAtomValue(settingsDialogTabAtom);
+  return <span data-testid="legacy-settings-tab">{tab ?? ''}</span>;
+}
+
 function renderSettings() {
   return render(
     <MemoryRouter>
       <UserSettings />
+      <SettingsTabProbe />
     </MemoryRouter>,
   );
 }
@@ -116,6 +125,13 @@ describe('UserSettings', () => {
     expect(
       screen.getByRole('option', { name: 'com_ui_user_settings_approval_auto' }),
     ).toBeInTheDocument();
+  });
+
+  it('opens the existing settings dialog from the bottom link', () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_account_settings_more' }));
+
+    expect(screen.getByTestId('legacy-settings-tab')).toHaveTextContent(SettingsTabValues.GENERAL);
   });
 
   it('saves changed instructions on blur and confirms the save', () => {

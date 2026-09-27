@@ -1,3 +1,4 @@
+import { SystemRoles } from 'librechat-data-provider';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import {
   Login,
@@ -10,11 +11,11 @@ import {
 } from '~/components/Auth';
 import SkillMarketplace from '~/components/Skills/Marketplace/SkillMarketplace';
 import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
+import { AuthContextProvider, useAuthContext } from '~/hooks/AuthContext';
 import DeskDownload from '~/components/Connectors/DeskDownload';
 import AgentMarketplace from '~/components/Agents/Marketplace';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
 import DataHub from '~/components/Connectors/Hub/DataHub';
-import { AuthContextProvider } from '~/hooks/AuthContext';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import StartupLayout from './Layouts/Startup';
 import LoginLayout from './Layouts/Login';
@@ -62,6 +63,32 @@ const loadProjectsView = () =>
 const loadProjectWorkspace = () =>
   import('~/components/Projects').then((m) => ({
     Component: m.ProjectWorkspace,
+  }));
+
+const loadLibraryView = () =>
+  import('~/components/Library').then((m) => ({
+    Component: m.default,
+  }));
+
+const loadSchedulesView = () =>
+  import('~/components/Schedules').then((m) => ({
+    Component: m.default,
+  }));
+
+const loadMetricsView = () =>
+  import('~/components/Metrics/MetricsView').then((m) => ({
+    Component: function AdminMetricsView() {
+      const { user } = useAuthContext();
+      if (user?.role !== SystemRoles.ADMIN) {
+        return <Navigate to="/c/new" replace={true} />;
+      }
+      return <m.default />;
+    },
+  }));
+
+const loadUserSettingsView = () =>
+  import('~/components/UserSettings').then((m) => ({
+    Component: m.default,
   }));
 
 const baseEl = document.querySelector('base');
@@ -216,6 +243,22 @@ export const router = createBrowserRouter(
             {
               path: 'connectors/:serverName',
               element: <DataHub />,
+            },
+            {
+              path: 'library',
+              lazy: loadLibraryView,
+            },
+            {
+              path: 'schedules',
+              lazy: loadSchedulesView,
+            },
+            {
+              path: 'metrics',
+              lazy: loadMetricsView,
+            },
+            {
+              path: 'settings',
+              lazy: loadUserSettingsView,
             },
             {
               path: 'skills-market',
