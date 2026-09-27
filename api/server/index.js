@@ -448,6 +448,7 @@ const startServer = async () => {
   app.use('/api/mcp', routes.mcp);
   app.use('/api/connectors', routes.connectors);
   app.use('/api/rum', routes.rum);
+  app.use('/api/demo', routes.demo);
 
   app.use('/metrics', metricsRouter);
 
