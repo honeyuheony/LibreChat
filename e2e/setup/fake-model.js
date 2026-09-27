@@ -15,6 +15,7 @@ const { AIMessageChunk } = require('@langchain/core/messages');
 const { tryBindReplay } = require('./model-replay');
 const { runFileDeliveryResponses } = require('./run-files-model');
 const { createRunFileLifecycleResponses } = require('./run-files-lifecycle-model');
+const taskModeFixture = require('../fixtures/task-mode/documents.json');
 
 const runFileLifecycle = createRunFileLifecycleResponses({
   findLastToolMessage,
@@ -80,7 +81,7 @@ const TASK_TABLE_MARKER = 'E2E_TASK_TABLE:';
 const TASK_SUMMARY_MARKER = 'E2E_TASK_SUMMARY:';
 const TASK_REPORT_MARKER = 'E2E_TASK_REPORT:';
 const TASK_FILE_CONTEXT_MARKER = 'E2E_TASK_FILE_CONTEXT:';
-/** What the result card's 「hwp 보고서로」 button sends (`com_ui_task_to_report_prompt`, ko and en). */
+/** 결과 카드의 「hwp 보고서로」 버튼이 보내는 문구(`com_ui_task_to_report_prompt` 의 ko·en). */
 const TASK_TO_REPORT_PROMPTS = [
   '이 표를 근거로 hwp 보고서 초안 만들어줘',
   'Draft an HWP report based on this table',
@@ -90,7 +91,7 @@ const TASK_TABLE_FIELDS = ['정세 전망', '전월 대비', '위험도'];
 const TASK_TABLE_SUGGESTED_FIELDS = ['출처 매체', '관련 지표'];
 const TASK_SUMMARY_VIEWS = ['위험 요인 중심', '간부 보고용', '정책 시사점 중심'];
 const TASK_REPORT_TEMPLATE_ID = 'hwp-report';
-/** Header line `extract_table` puts before its per-field counts (packages/api/src/tasks/tools.ts). */
+/** `extract_table` 이 항목별 건수 앞에 붙이는 머리 줄(packages/api/src/tasks/tools.ts). */
 const TASK_TABLE_COUNTS_HEADER = '항목별 상위 값(건수, 코드 집계):';
 const TASK_FINAL_TEXT = 'E2E task done';
 const TASK_FILE_CONTEXT_FINAL_TEXT = 'E2E task file context';
@@ -2772,7 +2773,7 @@ function taskToolCall(name, label, args) {
   };
 }
 
-/** Fields of the latest `extract_table` result in history, read from its per-field count lines. */
+/** 기록에서 가장 최근 `extract_table` 결과의 항목을 항목별 건수 줄에서 읽는다. */
 function latestTableFields(messages) {
   for (let index = (messages?.length ?? 0) - 1; index >= 0; index--) {
     const message = messages[index];
@@ -2796,11 +2797,10 @@ function latestTableFields(messages) {
 }
 
 function taskFixtureDocument(filename) {
-  const fixture = require('../fixtures/task-mode/documents.json');
-  return fixture.documents.find((doc) => doc.filename === filename);
+  return taskModeFixture.documents.find((doc) => doc.filename === filename);
 }
 
-/** Whether the uploaded file's first paragraph reached the model without a Hangul tool call. */
+/** 한글 도구를 부르지 않고도 올린 파일의 첫 문단이 모델에 들어갔는지 답한다. */
 function taskFileContextResponses({ messages, text }) {
   const filename = getMarkerValue(text, TASK_FILE_CONTEXT_MARKER);
   const firstParagraph = taskFixtureDocument(filename)?.text.split('\n\n')[0];
@@ -2813,9 +2813,8 @@ function taskFileContextResponses({ messages, text }) {
 }
 
 /**
- * Scripted calls for the document task tools. Each returns before any tool runs;
- * the reply after the tool (and after a card approval resumes the run) comes from
- * `taskOutcomeResponses`, because resume rebuilds the model without the prompt.
+ * 문서 작업 도구를 부르는 정해진 응답. 도구가 돌기 전에 돌려주며, 도구 뒤(카드 승인으로 실행을
+ * 이어 간 뒤 포함)의 답은 `taskOutcomeResponses` 가 맡는다. 이어 가기는 프롬프트 없이 모델을 다시 만들기 때문이다.
  */
 function taskToolResponses({ messages, text, toolNames }) {
   const request = (() => {
@@ -2850,7 +2849,7 @@ function taskToolResponses({ messages, text, toolNames }) {
   return { responses: ['', ''], toolCalls: [request] };
 }
 
-/** The closing reply once a task tool of the current turn returned (or was rejected). */
+/** 이번 turn 의 작업 도구가 결과를 돌려준(또는 거절된) 뒤의 마지막 답. */
 function taskOutcomeResponses(messages) {
   let latestHumanIndex = -1;
   for (let index = 0; index < (messages ?? []).length; index++) {

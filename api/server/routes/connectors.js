@@ -34,7 +34,7 @@ router.get(
         .lean(),
   }),
 );
-// No auth: the sign-in screen links to the download page, which reads this.
+// 로그인 화면에서 여는 다운로드 페이지가 읽으므로 인증을 걸지 않는다.
 router.get('/desk-app', createDeskAppReleaseHandler(getDeskRelayConfig()));
 
 module.exports = router;

@@ -20,8 +20,8 @@ const dynamicMcpServerPath = path.resolve(rootPath, 'e2e/setup/fake-mcp-dynamic-
 const MCP_HTTP_PORT = process.env.E2E_MCP_HTTP_PORT || '8765';
 /** Must match the protected OAuth MCP fixture in e2e/config/librechat.e2e.yaml. */
 const MCP_OAUTH_PORT = process.env.E2E_MCP_OAUTH_PORT || '8767';
-/** Must match the dynamic Streamable HTTP and SSE URLs written below. 8766 is left free
- *  because a local deployment's desk relay listens there. */
+/** 아래에서 쓰는 동적 Streamable HTTP·SSE URL 과 같아야 한다. 8766 은 로컬 배포의 desk relay 가
+ *  쓰므로 비워 둔다. */
 const MCP_DYNAMIC_PORT = process.env.E2E_MCP_DYNAMIC_PORT || '8768';
 const MCP_STATE_PATH =
   process.env.E2E_MCP_STATE_PATH ||
@@ -38,9 +38,9 @@ const CODE_API_PORT = process.env.E2E_CODE_API_PORT || '8790';
 const RAG_API_PORT = process.env.E2E_RAG_API_PORT || '8791';
 const taskModelServerPath = path.resolve(rootPath, 'e2e/setup/fake-task-model-server.js');
 const hwpMcpServerPath = path.resolve(rootPath, 'e2e/setup/fake-hwp-mcp-server.js');
-/** The `Mock Tasks` endpoint's `baseURL` in the template hard-codes 8893; an override is substituted below. */
+/** 템플릿의 `Mock Tasks` 엔드포인트 `baseURL` 은 8893 으로 고정돼 있고, 다른 값을 주면 아래에서 바꿔 넣는다. */
 const TASK_MODEL_PORT = process.env.E2E_TASK_MODEL_PORT || '8893';
-/** Fake hwp-mcp service port (the server's `HWP_MCP_URL`) and its test control port. */
+/** 가짜 hwp-mcp 의 서비스 포트(서버의 `HWP_MCP_URL`)와 테스트 제어 포트. */
 const HWP_MCP_PORT = process.env.E2E_HWP_MCP_PORT || '8894';
 const HWP_CONTROL_PORT = process.env.E2E_HWP_CONTROL_PORT || '8895';
 const fakeModelHookPath = path.resolve(rootPath, 'e2e/setup/fake-model.js');
@@ -129,7 +129,7 @@ const vanillaOverrides = {
   STREAM_KEEP_COMPLETED_JOBS: 'true',
   FORK_IP_MAX: '100',
   FORK_USER_MAX: '100',
-  /** task-mode.spec.ts uploads twelve documents per test; the default window allows far fewer. */
+  /** task-mode.spec.ts 는 테스트마다 문서 12개를 올리는데 기본 한도는 그보다 훨씬 적다. */
   FILE_UPLOAD_IP_MAX: '1000',
   FILE_UPLOAD_USER_MAX: '1000',
   /** A local `.env` may enable balance enforcement, which `neutralizeCredentialEnv`
@@ -173,7 +173,7 @@ const baseEnv = {
   ...(externalCodeBaseUrl ? { LIBRECHAT_CODE_BASEURL_STATEFUL: externalCodeBaseUrl } : {}),
   ...codeApiKeyEnv,
   RAG_API_URL: `http://127.0.0.1:${RAG_API_PORT}`,
-  /** Read by the HWP upload parser and the report renderer (packages/api). */
+  /** HWP 업로드 파서와 보고서 렌더러(packages/api)가 읽는다. */
   HWP_MCP_URL: `http://127.0.0.1:${HWP_MCP_PORT}`,
   ...vanillaOverrides,
 };
@@ -460,7 +460,7 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      // Per-document model calls of the task tools (the `Mock Tasks` endpoint's baseURL).
+      // 작업 도구의 문서별 모델 호출(`Mock Tasks` 엔드포인트의 baseURL).
       command: `node ${taskModelServerPath}`,
       cwd: rootPath,
       env: { ...process.env, E2E_TASK_MODEL_PORT: TASK_MODEL_PORT },
@@ -470,7 +470,7 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      // hwp-mcp `/extract` and `/render`; health and on/off switching go through the control port.
+      // hwp-mcp 의 `/extract`·`/render`. 상태 확인과 켜고 끄기는 제어 포트로 한다.
       command: `node ${hwpMcpServerPath}`,
       cwd: rootPath,
       env: {

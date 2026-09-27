@@ -11,12 +11,9 @@ import { uniqueAgentName } from './agents.helpers';
 import { withMongo } from './db';
 
 /**
- * Acceptance checks for document task mode (extract_table · summarize_documents ·
- * write_report) against the fake chat model, the fake per-document model
- * (e2e/setup/fake-task-model-server.js) and the fake hwp-mcp
- * (e2e/setup/fake-hwp-mcp-server.js). Titles carry the condition numbers of
- * docs/design-task-mode.md §4.4 so `-g` selects one condition.
- * The screen runs in Korean, the language the deployment ships with.
+ * 문서 작업 모드(extract_table · summarize_documents · write_report)를 가짜 대화 모델, 가짜 문서별 모델
+ * (e2e/setup/fake-task-model-server.js), 가짜 hwp-mcp(e2e/setup/fake-hwp-mcp-server.js)로 확인한다.
+ * 화면은 배포 기본 언어인 한국어로 띄운다.
  */
 
 type FixtureCell = { value: string; quote: string } | null;
@@ -81,7 +78,7 @@ function mimeTypeOf(filename: string): string {
   return 'text/plain';
 }
 
-/** Hangul files carry placeholder bytes; the fake hwp-mcp answers with the fixture text by name. */
+/** 한글 파일은 자리표시 바이트만 담고, 본문은 가짜 hwp-mcp 가 이름으로 찾아 돌려준다. */
 function fixtureFile(filename: string) {
   let buffer: Buffer;
   if (filename.endsWith('.hwpx')) {
@@ -149,7 +146,7 @@ async function openTaskChat(page: Page): Promise<string> {
 
 async function deleteAgent(page: Page, agentId: string) {
   const token = await getAccessToken(page);
-  // Cleanup only: a failed delete must not hide the test's own result
+  // 정리용일 뿐이라 삭제가 실패해도 테스트 결과를 가리지 않게 한다.
   await requestJson(page, {
     path: `/api/agents/${encodeURIComponent(agentId)}`,
     token,
@@ -161,7 +158,7 @@ const isFilesUpload = (response: Response) =>
   response.request().method() === 'POST' &&
   /\/api\/files(?:\?|$)/.test(new URL(response.url()).pathname);
 
-/** Attaches files through the composer and returns every upload response in order. */
+/** 입력창으로 파일을 붙이고 업로드 응답을 순서대로 모두 돌려준다. */
 async function attachFiles(page: Page, filenames: readonly string[]): Promise<Response[]> {
   const responses: Response[] = [];
   const collect = (response: Response) => {
@@ -277,7 +274,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     }
   });
 
-  test('비교표: 12개 문서로 머리표시·12행·없음 칸·엑셀 두 시트·칸 단위 저장 (7·15·16)', async ({
+  test('비교표: 12개 문서로 머리표시·12행·없음 칸·엑셀 두 시트·칸 단위 저장', async ({
     page,
   }, testInfo) => {
     const uploaded = await uploadAll(page);
@@ -313,7 +310,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     expect(stored).toBe(fixture.documents.length * TABLE_FIELDS.length);
   });
 
-  test('항목 변경: 칩 하나를 끄고 하나를 켜면 표 열이 바뀐 항목과 같다 (8)', async ({ page }) => {
+  test('항목 변경: 칩 하나를 끄고 하나를 켜면 표 열이 바뀐 항목과 같다', async ({ page }) => {
     await uploadAll(page);
     const result = await runTable(page, { off: '위험도', on: '관련 지표' });
     const table = await openTableInPanel(page, result);
@@ -325,7 +322,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     ]);
   });
 
-  test('추출 캐시: 같은 항목을 다시 요청하면 추출 호출이 0회이고 캐시 사용이 보인다 (9)', async ({
+  test('추출 캐시: 같은 항목을 다시 요청하면 추출 호출이 0회이고 캐시 사용이 보인다', async ({
     page,
   }) => {
     await uploadAll(page);
@@ -338,7 +335,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     expect((await modelCalls(page)).extract).toBe(0);
   });
 
-  test('요약: 관점을 고르기 전엔 실행이 비활성이고, 12개 반영·한 줄 12개·모델 13회 (10)', async ({
+  test('요약: 관점을 고르기 전엔 실행이 비활성이고, 12개 반영·한 줄 12개·모델 13회', async ({
     page,
   }) => {
     await uploadAll(page);
@@ -363,7 +360,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     expect(calls.summary + calls.merge).toBe(fixture.documents.length + 1);
   });
 
-  test('보고서: 비교표의 hwp 보고서로는 추출 호출 0회로 HWP 다운로드를 낸다 (11·12·13)', async ({
+  test('보고서: 비교표의 hwp 보고서로는 추출 호출 0회로 HWP 다운로드를 낸다', async ({
     page,
   }, testInfo) => {
     await uploadAll(page);
@@ -423,9 +420,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     }
   });
 
-  test('작업 패널: 세 흐름 뒤 산출물 3줄·종류 아이콘·부가 정보·단계 이름 (17)', async ({
-    page,
-  }) => {
+  test('작업 패널: 세 흐름 뒤 산출물 3줄·종류 아이콘·부가 정보·단계 이름', async ({ page }) => {
     await uploadAll(page);
     await runTable(page);
 
@@ -475,7 +470,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     }
   });
 
-  test('사이드바: 항목 카드가 떠 있으면 승인 대기, 실행하면 회전 표시 (19)', async ({ page }) => {
+  test('사이드바: 항목 카드가 떠 있으면 승인 대기, 실행하면 회전 표시', async ({ page }) => {
     await uploadAll(page);
     await page.request.post(`${TASK_MODEL_BASE}/__debug/delay`, { data: { ms: 400 } });
     await sendText(page, `E2E_TASK_TABLE:${uniqueLabel()}`);
@@ -497,7 +492,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     await expect(resultCard(page, 'table')).toBeVisible({ timeout: RUN_COMPLETE_TIMEOUT });
   });
 
-  test('일반 대화 한글 문서: 올린 HWP 본문 첫 문단이 모델 요청에 들어가고 한글 도구 호출은 없다 (22)', async ({
+  test('일반 대화 한글 문서: 올린 HWP 본문 첫 문단이 모델 요청에 들어가고 한글 도구 호출은 없다', async ({
     page,
   }) => {
     const [upload] = await attachFiles(page, ['sample_1.hwp']);
@@ -523,7 +518,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     expect(toolCalls).toHaveLength(0);
   });
 
-  test('변환 서버 꺼짐 업로드: HWP 는 연결 실패 안내, 함께 올린 DOCX 는 올라간다 (24)', async ({
+  test('변환 서버 꺼짐 업로드: HWP 는 연결 실패 안내, 함께 올린 DOCX 는 올라간다', async ({
     page,
   }) => {
     await page.request.post(`${HWP_CONTROL_BASE}/down`);
@@ -538,7 +533,7 @@ test.describe('작업 모드 목 모델 인수 조건', () => {
     await expect(page.getByText(HWP_CONNECTION_ERROR).first()).toBeVisible();
   });
 
-  test('변환 서버 꺼짐 보고서: 본문·각주는 남고 안내가 뜨며 HWP 다운로드가 없다 (26)', async ({
+  test('변환 서버 꺼짐 보고서: 본문·각주는 남고 안내가 뜨며 HWP 다운로드가 없다', async ({
     page,
   }) => {
     await uploadAll(page);

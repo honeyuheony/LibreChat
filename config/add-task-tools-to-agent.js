@@ -1,17 +1,15 @@
 /**
- * Adds the document task tools (extract_table, summarize_documents, write_report) to one agent.
- * Usage: node config/add-task-tools-to-agent.js [agent_id] [--dry-run]
+ * 문서 작업 도구(extract_table, summarize_documents, write_report)를 agent 하나에 더한다.
+ * 사용법: node config/add-task-tools-to-agent.js [agent_id] [--dry-run]
  */
 const path = require('path');
 const mongoose = require('mongoose');
 const { TaskTools } = require('librechat-data-provider');
 const { Agent } = require('@librechat/data-schemas').createModels(mongoose);
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
+const { DEFAULT_AGENT_ID } = require('./demo-data');
 const { silentExit } = require('./helpers');
 const connect = require('./connect');
-
-/** Demo default agent (`librechat.yaml` modelSpecs); pass another id as the first argument. */
-const DEFAULT_AGENT_ID = 'agent_mFf0h9SHTwJ6za2e8HUiv';
 
 (async () => {
   await connect();

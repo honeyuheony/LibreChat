@@ -422,10 +422,9 @@ router.get('/chat/stream/:streamId', async (req, res) => {
 
 /**
  * @route GET /chat/active
- * @desc Get all active generation jobs for the current user. `jobs` carries each
- *   job's status so the sidebar can show a run paused for approval
- *   (`requires_action`) apart from a running one; `activeJobIds` stays for
- *   callers that only need the ids.
+ * @desc 현재 사용자의 진행 중인 생성 작업 목록. 사이드바가 승인을 기다리는 실행
+ *   (`requires_action`)을 도는 실행과 구분해 보이도록 `jobs` 에 상태를 싣고,
+ *   id 만 쓰는 호출부를 위해 `activeJobIds` 도 그대로 둔다.
  * @access Private
  * @returns { activeJobIds: string[], jobs: { id: string, status: 'running' | 'requires_action' }[] }
  */

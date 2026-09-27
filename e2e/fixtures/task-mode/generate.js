@@ -1,6 +1,6 @@
 /**
- * Regenerates the task-mode fixtures: `node e2e/fixtures/task-mode/generate.js`.
- * documents.json is the single source for the uploaded text, the fake models' answers and the spec's expectations.
+ * 작업 모드 픽스처를 다시 만든다: `node e2e/fixtures/task-mode/generate.js`.
+ * 올리는 본문, 가짜 모델의 답, spec 의 기댓값은 모두 documents.json 한 곳에서 나온다.
  */
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,7 @@ const JSZip = require('jszip');
 const OUT = __dirname;
 const FIELDS = ['정세 전망', '전월 대비', '위험도', '출처 매체', '관련 지표'];
 
-/** [filename, topic, 정세 전망, 전월 대비, 위험도, 출처 매체, 관련 지표] — null = the document does not state it. */
+/** [filename, topic, 정세 전망, 전월 대비, 위험도, 출처 매체, 관련 지표]. null 은 문서에 그 값이 없다는 뜻이다. */
 const rows = [
   [
     '2026-09-01_정치동향.txt',
@@ -149,7 +149,7 @@ fs.writeFileSync(
   `${JSON.stringify({ fields: FIELDS, documents }, null, 2)}\n`,
 );
 
-/* HWP 5.0 files start with the Compound File Binary signature; the fake extractor ignores the rest. */
+/* HWP 5.0 파일은 Compound File Binary 서명으로 시작한다. 가짜 추출기는 나머지를 보지 않는다. */
 const cfb = Buffer.alloc(512);
 Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]).copy(cfb);
 fs.writeFileSync(path.join(OUT, 'fixture.hwp'), cfb);
@@ -161,7 +161,7 @@ zip.file(
   '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"/>',
 );
 
-/* Smallest DOCX mammoth reads: content types, package relationship and one paragraph. */
+/* mammoth 가 읽는 가장 작은 DOCX: content types, 패키지 관계, 문단 하나. */
 const docx = new JSZip();
 docx.file(
   '[Content_Types].xml',

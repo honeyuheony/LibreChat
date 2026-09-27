@@ -29,7 +29,7 @@ jest.mock('@librechat/api', () => ({
   loadConversationDocuments: (...args) => mockLoadConversationDocuments(...args),
 }));
 
-// The real model module, not a stand-in: the route must read its models from where they are defined.
+// 대역이 아니라 실제 모델 모듈을 쓴다. 경로가 모델을 정의된 곳에서 읽는지 보려는 것이다.
 const { Conversation, TaskExtraction, TaskResult } = require('~/db/models');
 const router = require('./tasks');
 const app = express();

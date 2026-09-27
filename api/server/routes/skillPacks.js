@@ -40,6 +40,22 @@ function serializeSkillPack(pack, skillIds) {
   return serializedPack;
 }
 
+async function findViewableSkillIdSet(user) {
+  const skillIds = await findAccessibleResources({
+    userId: user.id,
+    role: user.role,
+    resourceType: ResourceType.SKILL,
+    requiredPermissions: PermissionBits.VIEW,
+  });
+  return new Set(skillIds.map((skillId) => skillId.toString()));
+}
+
+function toVisibleSkillIds(pack, viewableSkillIdSet) {
+  return pack.skillIds
+    .filter((skillId) => viewableSkillIdSet.has(skillId.toString()))
+    .map((skillId) => skillId.toString());
+}
+
 function resolvePackAuthorName(user) {
   const emailPrefix = typeof user.email === 'string' ? user.email.split('@')[0] : undefined;
   const authorName = [user.name, user.username, emailPrefix].find(
@@ -67,25 +83,12 @@ router.use(checkSkillAccess);
 
 router.get('/', async (req, res) => {
   try {
-    const [packs, accessibleSkillIds] = await Promise.all([
+    const [packs, viewableSkillIdSet] = await Promise.all([
       listSkillPacks(),
-      findAccessibleResources({
-        userId: req.user.id,
-        role: req.user.role,
-        resourceType: ResourceType.SKILL,
-        requiredPermissions: PermissionBits.VIEW,
-      }),
+      findViewableSkillIdSet(req.user),
     ]);
-    const accessibleSkillIdSet = new Set(accessibleSkillIds.map((skillId) => skillId.toString()));
     return res.json(
-      packs.map((pack) =>
-        serializeSkillPack(
-          pack,
-          pack.skillIds
-            .filter((skillId) => accessibleSkillIdSet.has(skillId.toString()))
-            .map((skillId) => skillId.toString()),
-        ),
-      ),
+      packs.map((pack) => serializeSkillPack(pack, toVisibleSkillIds(pack, viewableSkillIdSet))),
     );
   } catch (error) {
     logger.error('[skill-packs] Failed to list packs:', error);
@@ -154,24 +157,14 @@ router.get('/:id', async (req, res) => {
   }
 
   try {
-    const [pack, accessibleSkillIds] = await Promise.all([
+    const [pack, viewableSkillIdSet] = await Promise.all([
       getSkillPackById(req.params.id),
-      findAccessibleResources({
-        userId: req.user.id,
-        role: req.user.role,
-        resourceType: ResourceType.SKILL,
-        requiredPermissions: PermissionBits.VIEW,
-      }),
+      findViewableSkillIdSet(req.user),
     ]);
     if (!pack) {
       return res.status(404).json({ error: 'Pack not found' });
     }
-
-    const accessibleSkillIdSet = new Set(accessibleSkillIds.map((skillId) => skillId.toString()));
-    const visibleSkillIds = pack.skillIds
-      .filter((skillId) => accessibleSkillIdSet.has(skillId.toString()))
-      .map((skillId) => skillId.toString());
-    return res.json(serializeSkillPack(pack, visibleSkillIds));
+    return res.json(serializeSkillPack(pack, toVisibleSkillIds(pack, viewableSkillIdSet)));
   } catch (error) {
     logger.error('[skill-packs] Failed to read pack:', error);
     return res.status(500).json({ error: 'Failed to read pack' });

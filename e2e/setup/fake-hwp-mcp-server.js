@@ -1,14 +1,12 @@
 /**
- * Stand-in for hwp-mcp's HTTP routes (`POST /extract`, `POST /render`) in mock e2e.
+ * 목 e2e 에서 hwp-mcp 의 HTTP 경로(`POST /extract`, `POST /render`)를 대신한다.
  *
- * `/extract` answers with the fixture body of the uploaded file's name from
- * e2e/fixtures/task-mode/documents.json, so the committed .hwp/.hwpx fixtures need
- * no real Hangul content. `/render` returns placeholder bytes; it is NOT a valid
- * HWPX, so specs must not validate it. When `E2E_HWP_RENDER_UPSTREAM` names a real
- * hwp-mcp, `/render` is forwarded there instead and the file can be validated.
+ * `/extract` 는 올린 파일 이름에 맞는 본문을 e2e/fixtures/task-mode/documents.json 에서 찾아
+ * 돌려주므로, 저장소에 넣은 .hwp/.hwpx 픽스처에는 실제 한글 내용이 없어도 된다. `/render` 는
+ * 자리표시 바이트를 돌려줄 뿐 올바른 HWPX 가 아니므로 spec 에서 검증하면 안 된다.
+ * `E2E_HWP_RENDER_UPSTREAM` 에 실제 hwp-mcp 를 주면 `/render` 를 그리로 넘기므로 파일을 검증할 수 있다.
  *
- * A separate control port lets a spec take the service port down (`POST /down`
- * closes the listener, so connections are refused) and bring it back (`POST /up`).
+ * 별도 제어 포트로 spec 이 서비스 포트를 내리고(`POST /down`, 연결을 거부한다) 다시 올린다(`POST /up`).
  */
 const http = require('http');
 const path = require('path');
@@ -18,7 +16,7 @@ const CONTROL_PORT = Number(process.env.E2E_HWP_CONTROL_PORT) || 8895;
 const RENDER_UPSTREAM = process.env.E2E_HWP_RENDER_UPSTREAM?.trim() || '';
 const HOST = '127.0.0.1';
 const fixture = require(path.resolve(__dirname, '../fixtures/task-mode/documents.json'));
-/** Longest name first, so `sample_1.hwp` never matches inside a longer fixture name. */
+/** `sample_1.hwp` 가 더 긴 픽스처 이름 안에서 맞지 않도록 긴 이름부터 찾는다. */
 const hangulDocuments = fixture.documents
   .filter((doc) => /\.hwpx?$/i.test(doc.filename))
   .sort((a, b) => b.filename.length - a.filename.length);
@@ -44,7 +42,7 @@ function sendJson(res, status, payload) {
   res.end(body);
 }
 
-/** The multipart body carries the original name in the `filename` field. */
+/** multipart 본문의 `filename` 필드에 원래 이름이 들어 있다. */
 function findUploadedDocument(body) {
   return hangulDocuments.find((doc) => body.includes(Buffer.from(doc.filename, 'utf8')));
 }
