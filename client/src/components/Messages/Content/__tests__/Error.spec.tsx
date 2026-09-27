@@ -179,6 +179,17 @@ describe('Error — reader-facing provider and fallback copy', () => {
     expectReadable();
   });
 
+  it('uses the configured limit for AI draft requests', () => {
+    renderError({ type: ViolationTypes.SKILL_DRAFT_LIMIT, max: 3, windowInMinutes: 1 });
+
+    expect(
+      screen.getByText(
+        localized('com_error_skill_draft_limit', '3', catalog.com_error_window_minute),
+      ),
+    ).toBeInTheDocument();
+    expectReadable();
+  });
+
   it('renders the localized copy for a rejected Google video', () => {
     renderError({ type: ErrorTypes.GOOGLE_VIDEO_UNPROCESSABLE });
 

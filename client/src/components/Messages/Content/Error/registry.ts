@@ -71,6 +71,7 @@ export const errorRenderers: Record<string, ComponentType<ErrorRendererProps>> =
   [ErrorTypes.COMPACTION_SKIPPED]: ContextError,
   [ViolationTypes.TOKEN_BALANCE]: BalanceError,
   [ViolationTypes.MESSAGE_LIMIT]: LimitError,
+  [ViolationTypes.SKILL_DRAFT_LIMIT]: LimitError,
   [ViolationTypes.CONCURRENT]: LimitError,
   [ViolationTypes.FILE_UPLOAD_LIMIT]: LimitError,
   [ViolationTypes.TTS_LIMIT]: LimitError,
