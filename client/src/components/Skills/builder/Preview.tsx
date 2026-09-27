@@ -110,7 +110,7 @@ export function Block({
 }
 
 function Ghost({ children }: { children: ReactNode }) {
-  return <span className="text-text-tertiary">{children}</span>;
+  return <span className="text-text-disabled">{children}</span>;
 }
 
 function EditButton({

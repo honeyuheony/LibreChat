@@ -166,6 +166,15 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(screen.queryByRole('list', { name: 'com_skills_builder_peek' })).not.toBeInTheDocument();
   });
 
+  it('uses normal weight for the close-examples button', () => {
+    render(<Harness peers={[peer]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+
+    expect(screen.getByRole('button', { name: 'com_skills_builder_peek_close' })).toHaveClass(
+      'font-normal',
+    );
+  });
+
   it('says there is nothing to show when no example is visible', () => {
     render(<Harness peers={[]} />);
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
@@ -269,6 +278,19 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(aiTag).toHaveClass('text-accent-primary');
   });
 
+  it('uses disabled text color for empty preview hints', () => {
+    render(<Harness />);
+
+    for (const hint of [
+      'com_skills_builder_name_ghost',
+      'com_skills_builder_desc_ghost',
+      'com_skills_builder_when_ghost',
+      'com_skills_builder_how_ghost',
+    ]) {
+      expect(screen.getByText(hint)).toHaveClass('text-text-disabled');
+    }
+  });
+
   it('shows only the AI-set badge and the report label for the output while empty', () => {
     render(<Harness />);
     const output = block('com_skills_builder_output') as HTMLElement;
@@ -312,6 +334,16 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(screen.queryByText(/new-agent/)).not.toBeInTheDocument();
   });
 
+  it('highlights the selected SKILL.md row and its agent-body label', () => {
+    render(<Harness />);
+
+    const skillRow = screen.getByRole('treeitem', { name: /SKILL\.md/ });
+    expect(skillRow).toHaveClass('text-accent-primary');
+    expect(within(skillRow).getByText('com_skills_builder_folder_main')).toHaveClass(
+      'text-accent-primary',
+    );
+  });
+
   it('still saves an unnamed draft under a generated agent- name, not the draft folder name', async () => {
     (deps.requestDraft as jest.Mock).mockResolvedValueOnce({ ...draft, slug: '' });
     render(<Harness />);
@@ -349,6 +381,18 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(button).toHaveClass('rounded-full', 'h-auto');
     const clip = within(button).getByText('📎');
     expect(clip.style.fontFamily).toContain('Noto Color Emoji');
+  });
+
+  it('uses pill-shaped buttons in the editor footer', () => {
+    render(<Harness />);
+
+    const footer = screen
+      .getByRole('dialog', { name: 'com_skills_new_agent' })
+      .querySelector('footer');
+    expect(footer).not.toBeNull();
+    const buttons = within(footer as HTMLElement).getAllByRole('button');
+    expect(buttons).toHaveLength(3);
+    buttons.forEach((button) => expect(button).toHaveClass('rounded-theme-control-round'));
   });
 
   it('draws the draft icon with an emoji font so the circle is not left blank', () => {

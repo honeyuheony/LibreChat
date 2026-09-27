@@ -207,7 +207,13 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
   return (
     <>
       <div>
-        <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => toggle(!open)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={open}
+          onClick={() => toggle(!open)}
+          className="font-normal"
+        >
           {localize(open ? 'com_skills_builder_peek_close' : 'com_skills_builder_peek')}
         </Button>
       </div>
@@ -452,12 +458,13 @@ export default function Builder({
         <footer className="flex flex-wrap items-center gap-2 border-t border-border-light bg-surface-secondary px-5 py-3">
           <Todo items={session.todos} />
           <span className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="ghost" size="sm" shape="round" onClick={onCancel}>
             {localize('com_ui_cancel')}
           </Button>
           <Button
             variant={session.tested ? 'outline' : 'submit'}
             size="sm"
+            shape="round"
             disabled={running}
             onClick={runTest}
           >
@@ -466,6 +473,7 @@ export default function Builder({
           <Button
             variant="submit"
             size="sm"
+            shape="round"
             disabled={!session.ready || session.publishing}
             onClick={onPublish}
           >

@@ -148,13 +148,13 @@ export default function Folder({
               onClick={() => onSelect(row.path)}
               className={cn(
                 'block w-full py-0.5 text-start text-text-secondary hover:bg-surface-hover',
-                row.path === current.path && 'bg-surface-brand-subtle text-text-primary',
+                row.path === current.path && 'bg-surface-brand-subtle text-accent-primary',
               )}
               style={{ paddingInlineStart: row.depth * 16 + 8 }}
             >
               {row.name}
               {isSkillFile(row.path) && (
-                <span className="ms-1.5 font-sans text-[11px] text-text-secondary">
+                <span className="ms-1.5 font-sans text-[11px] text-accent-primary">
                   {localize('com_skills_builder_folder_main')}
                 </span>
               )}
