@@ -1,26 +1,44 @@
 import React from 'react';
 import { createStore } from 'jotai';
-import { dataService } from 'librechat-data-provider';
+import { dataService, EModelEndpoint } from 'librechat-data-provider';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { TaskDocResult, TaskStats, TaskTableResult } from 'librechat-data-provider';
+import type {
+  TConversation,
+  TMessage,
+  TaskDocResult,
+  TaskStats,
+  TaskTableResult,
+} from 'librechat-data-provider';
 import type { TaskResultAttachment } from '../api';
-import { createTaskWrapper } from 'test/task-test-utils';
+import { CONVERSATION_ID, createTaskWrapper } from 'test/task-test-utils';
+import { ChatContext } from '~/Providers/ChatContext';
 import TaskResultCard from '../TaskResultCard';
 import { taskPanelState } from '~/store/task';
 
 const mockSubmitMessage = jest.fn();
 const mockShowToast = jest.fn();
+const mockCreateSchedule = jest.fn();
+const mockHasSchedulePermission = jest.fn(() => true);
+let mockSchedulesEnabled = true;
 const mockCopy = jest.fn((_text: string, _options?: unknown) => true);
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<string, unknown>) =>
     values == null ? key : `${key}:${Object.values(values).join('|')}`,
   useAuthContext: () => ({ user: { id: 'user-1' } }),
+  useHasAccess: () => mockHasSchedulePermission(),
   useSubmitMessage: () => ({ submitMessage: mockSubmitMessage }),
 }));
 jest.mock('~/data-provider', () => ({
   useSubmitToolApprovalMutation: () => ({ mutate: jest.fn() }),
   useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
+  useGetStartupConfig: () => ({ data: { interface: { schedules: mockSchedulesEnabled } } }),
+}));
+jest.mock('~/data-provider/Schedules', () => ({
+  useCreateScheduleMutation: () => ({ mutate: mockCreateSchedule, isLoading: false }),
+}));
+jest.mock('~/data-provider/Skills', () => ({
+  useListSkillsQuery: () => ({ data: undefined }),
 }));
 jest.mock('~/store/agents', () => ({ useGetEphemeralAgent: () => () => undefined }));
 jest.mock('@librechat/client', () => ({
@@ -119,10 +137,50 @@ function renderCard(
   return jotaiStore;
 }
 
+function renderCardWithMessages(result: TaskResultAttachment, messages: TMessage[]) {
+  const BaseWrapper = createTaskWrapper({ inChat: false });
+  const conversation: TConversation = {
+    conversationId: CONVERSATION_ID,
+    endpoint: EModelEndpoint.agents,
+    title: 'New Chat',
+    agent_id: 'agent-1',
+    chatProjectId: 'project-1',
+    file_ids: ['file-1'],
+    createdAt: '2026-09-26T08:00:00.000Z',
+    updatedAt: '2026-09-26T08:00:00.000Z',
+  };
+  const chatContext = {
+    conversation,
+    getMessages: () => messages,
+  } as React.ContextType<typeof ChatContext>;
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <BaseWrapper>
+        <ChatContext.Provider value={chatContext}>{children}</ChatContext.Provider>
+      </BaseWrapper>
+    );
+  }
+  render(<TaskResultCard result={result} />, { wrapper: Wrapper });
+}
+
+function userMessage(messageId: string, createdAt: string, manualSkills: string[]): TMessage {
+  return {
+    messageId,
+    conversationId: CONVERSATION_ID,
+    parentMessageId: null,
+    text: '보고서를 작성해 주세요.',
+    isCreatedByUser: true,
+    createdAt,
+    manualSkills,
+  };
+}
+
 const buttonNames = () => screen.getAllByRole('button').map((button) => button.textContent ?? '');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockHasSchedulePermission.mockReturnValue(true);
+  mockSchedulesEnabled = true;
   mockFetchResult.mockResolvedValue(tableResult);
 });
 
@@ -136,6 +194,7 @@ describe('TaskResultCard', () => {
       'com_ui_task_open_table',
       'com_ui_task_excel',
       'com_ui_task_to_report',
+      'com_ui_task_schedule_weekly',
     ]);
   });
 
@@ -144,6 +203,74 @@ describe('TaskResultCard', () => {
 
     expect(screen.getByTestId('task-result-scope')).toHaveTextContent(
       'com_ui_task_scope:12|12|38 · com_ui_task_scope_cached',
+    );
+  });
+
+  test('offers weekly schedule creation for a result shown in chat', () => {
+    renderCard(attachment());
+
+    expect(screen.getByRole('button', { name: 'com_ui_task_schedule_weekly' })).toBeInTheDocument();
+  });
+
+  test('hides weekly schedule creation when schedules are disabled', () => {
+    mockSchedulesEnabled = false;
+    renderCard(attachment());
+
+    expect(
+      screen.queryByRole('button', { name: 'com_ui_task_schedule_weekly' }),
+    ).not.toBeInTheDocument();
+  });
+
+  test('hides weekly schedule creation without create permission', () => {
+    mockHasSchedulePermission.mockReturnValue(false);
+    renderCard(attachment());
+
+    expect(
+      screen.queryByRole('button', { name: 'com_ui_task_schedule_weekly' }),
+    ).not.toBeInTheDocument();
+  });
+
+  test('creates a Monday schedule with the current chat agent', async () => {
+    renderCard(attachment());
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_schedule_weekly' }));
+
+    await waitFor(() =>
+      expect(mockCreateSchedule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: '비교표 · 3건',
+          prompt: '비교표 · 3건을 실행해 주세요.',
+          agent_id: 'agent-1',
+          cadence: { frequency: 'weekly', daysOfWeek: [1], hour: 9, minute: 0 },
+          timezone: 'Asia/Seoul',
+          target: 'new',
+          enabled: true,
+          clientRequestId: expect.any(String),
+        }),
+        expect.any(Object),
+      ),
+    );
+  });
+
+  test('uses the task result turn skill, project and files for its repeated schedule', async () => {
+    renderCardWithMessages(attachment(), [
+      userMessage('user-before-result', '2026-09-26T09:00:00.000Z', ['skill-at-result-time']),
+      userMessage('user-after-result', '2026-09-26T11:00:00.000Z', ['later-skill']),
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_task_schedule_weekly' }));
+
+    await waitFor(() =>
+      expect(mockCreateSchedule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'skill-at-result-time',
+          prompt: 'skill-at-result-time을 실행해 주세요.',
+          skills: ['skill-at-result-time'],
+          chatProjectId: 'project-1',
+          file_ids: ['file-1'],
+        }),
+        expect.any(Object),
+      ),
     );
   });
 
@@ -270,7 +397,7 @@ describe('TaskResultCard', () => {
 
     expect(screen.getByText(notice)).toBeInTheDocument();
     expect(screen.queryByText('com_ui_task_result_report_no_file')).not.toBeInTheDocument();
-    expect(buttonNames()).toEqual(['com_ui_task_open']);
+    expect(buttonNames()).toEqual(['com_ui_task_open', 'com_ui_task_schedule_weekly']);
   });
 
   test('falls back to the stock text when a report without a file carries no notice', () => {
