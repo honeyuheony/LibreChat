@@ -64,9 +64,9 @@ function skillPath(skillId: string): string {
 function MetricCard({ label, value, detail }: MetricCardProps) {
   return (
     <section className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3.5 py-3 dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
-      <h2 className="text-[12.5px] font-normal text-text-secondary">{label}</h2>
+      <h2 className="text-[12.5px] font-normal text-text-muted">{label}</h2>
       <p className="mt-0.5 text-2xl font-semibold text-accent-primary">{value}</p>
-      <p className="text-xs text-text-tertiary">{detail}</p>
+      <p className="text-xs text-text-muted">{detail}</p>
     </section>
   );
 }
@@ -75,7 +75,7 @@ function PageHeader({ localize }: { localize: MetricsLocalize }) {
   return (
     <header className="mb-5">
       <h1 className="text-2xl font-bold text-text-primary">{localize('com_metrics_title')}</h1>
-      <p className="mt-2 text-sm text-text-tertiary">{localize('com_metrics_formula')}</p>
+      <p className="mt-2 text-[13px] text-text-muted">{localize('com_metrics_formula')}</p>
     </header>
   );
 }
@@ -145,17 +145,17 @@ function AgentRanking({
   return (
     <section aria-labelledby="metrics-agent-ranking" className="mb-6">
       <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-        <h2 id="metrics-agent-ranking" className="text-lg font-semibold text-text-primary">
+        <h2 id="metrics-agent-ranking" className="text-[15.5px] font-bold text-text-primary">
           {localize('com_metrics_agent_ranking')}
         </h2>
-        <p className="text-sm text-text-tertiary">
+        <p className="text-[13px] text-text-muted">
           {localize('com_metrics_staff_agent_ranking_note')}
         </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light bg-surface-secondary text-left text-xs text-text-secondary">
+            <tr className="border-b border-border-light bg-surface-primary text-left text-[11.5px] text-text-muted">
               <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_agent_name')}
               </th>
@@ -196,7 +196,7 @@ function AgentRanking({
                       {title}
                     </Link>
                   </td>
-                  <td className="px-2 py-1.5 text-text-tertiary">
+                  <td className="px-2 py-1.5 text-text-muted">
                     {agent.authorDepartment
                       ? `${agent.authorName} · ${agent.authorDepartment}`
                       : agent.authorName || '–'}
@@ -218,7 +218,7 @@ function AgentRanking({
                 </tr>
               );
             })}
-            <tr className="border-b border-border-light bg-surface-secondary text-text-secondary">
+            <tr className="border-b border-border-light text-text-muted">
               <td className="px-2 py-1.5">
                 {localize('com_metrics_base_total', {
                   value: formatNumber(report.baseTotal.count, locale),
@@ -254,17 +254,17 @@ function ContributorRanking({
   return (
     <section aria-labelledby="metrics-contributor-ranking">
       <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-        <h2 id="metrics-contributor-ranking" className="text-lg font-semibold text-text-primary">
+        <h2 id="metrics-contributor-ranking" className="text-[15.5px] font-bold text-text-primary">
           {localize('com_metrics_contributor_ranking')}
         </h2>
-        <p className="text-sm text-text-tertiary">
+        <p className="text-[13px] text-text-muted">
           {localize('com_metrics_staff_contributor_note')}
         </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light bg-surface-secondary text-left text-xs text-text-secondary">
+            <tr className="border-b border-border-light bg-surface-primary text-left text-[11.5px] text-text-muted">
               <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_author')}
               </th>
@@ -298,7 +298,7 @@ function ContributorRanking({
                   key={`${contributor.authorName}-${contributor.department ?? ''}`}
                   className="border-b border-border-light text-text-primary"
                 >
-                  <td className="px-2 py-1.5 text-text-tertiary">
+                  <td className="px-2 py-1.5">
                     {contributor.department
                       ? `${contributor.authorName} · ${contributor.department}`
                       : contributor.authorName || '–'}
@@ -337,7 +337,7 @@ export default function MetricsView() {
     return (
       <main className="h-full w-full overflow-y-auto bg-presentation">
         <MetricsTopBar localize={localize} />
-        <div className="mx-auto w-full max-w-[960px] px-4 pb-8 pt-4">
+        <div className="mx-auto w-full max-w-[960px] px-6 pb-8 pt-4">
           <PageHeader localize={localize} />
           <StatusPanel
             localize={localize}
@@ -382,7 +382,7 @@ export default function MetricsView() {
   return (
     <main className="h-full w-full overflow-y-auto bg-presentation">
       <MetricsTopBar localize={localize} />
-      <div className="mx-auto w-full max-w-[960px] px-4 pb-8 pt-4">
+      <div className="mx-auto w-full max-w-[960px] px-6 pb-8 pt-4">
         <PageHeader localize={localize} />
         {isError && (
           <div className="mb-4">
