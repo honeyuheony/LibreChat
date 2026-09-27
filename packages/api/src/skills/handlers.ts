@@ -15,6 +15,7 @@ import type {
   TListSkillFilesResponse,
   TDeleteSkillResponse,
   TDeleteSkillFileResponse,
+  TSkillPublishScope,
   TSkillConflictResponse,
   TSkillFileContentResponse,
 } from 'librechat-data-provider';
@@ -33,6 +34,7 @@ import type {
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
+import type { DepartmentGroups } from '~/user/department';
 import type { SkillUsageCountersInput } from './market';
 import {
   applyDeploymentUsage,
@@ -135,6 +137,8 @@ export interface SkillsHandlersDeps {
   getSkillAuthorDepartments?: (
     authorIds: Array<string | Types.ObjectId>,
   ) => Promise<Record<string, string>>;
+  /** 작성자 부서 그룹 부여 확인. 없으면 비공개 스킬의 `scope` 는 'me' 로 싣는다. */
+  departmentGroups?: Pick<DepartmentGroups, 'findTeamDepartments'>;
 }
 
 /**
@@ -213,12 +217,35 @@ function serializeLastTest(lastTest: ISkill['lastTest']): TSkill['lastTest'] {
   return { ...lastTest, at: new Date(lastTest.at).toISOString() };
 }
 
+function hasId(ids: boolean | Set<string>, id: Types.ObjectId): boolean {
+  return typeof ids === 'boolean' ? ids : ids.has(id.toString());
+}
+
+/** `teamDepartments`(스킬 id → 부여받은 부서)를 넘긴 호출만 `scope` 를 싣는다. */
+function serializeScope(
+  pub: boolean,
+  teamDepartments: Map<string, string> | undefined,
+  id: Types.ObjectId,
+): { scope?: TSkillPublishScope; scopeDepartment?: string } {
+  if (teamDepartments === undefined) {
+    return {};
+  }
+  if (pub) {
+    return { scope: 'all' };
+  }
+  const department = teamDepartments.get(id.toString());
+  return department === undefined
+    ? { scope: 'me' }
+    : { scope: 'team', scopeDepartment: department };
+}
+
 /** Converts a skill document to the wire format returned by the API. */
 export function serializeSkill(
   skill: ISkill & { _id: Types.ObjectId },
   isPublic: boolean | Set<string>,
+  teamDepartments?: Map<string, string>,
 ): TSkill {
-  const pub = typeof isPublic === 'boolean' ? isPublic : isPublic.has(skill._id.toString());
+  const pub = hasId(isPublic, skill._id);
   return {
     _id: skill._id.toString(),
     name: skill.name,
@@ -246,6 +273,7 @@ export function serializeSkill(
     fileCount: skill.fileCount,
     alwaysApply: skill.alwaysApply,
     isPublic: pub,
+    ...serializeScope(pub, teamDepartments, skill._id),
     tenantId: skill.tenantId,
     createdAt: (skill.createdAt ?? new Date()).toISOString(),
     updatedAt: (skill.updatedAt ?? new Date()).toISOString(),
@@ -255,8 +283,9 @@ export function serializeSkill(
 function serializeSkillSummary(
   skill: ISkillSummary & { frontmatter?: Record<string, unknown>; _id: Types.ObjectId },
   isPublic: boolean | Set<string>,
+  teamDepartments?: Map<string, string>,
 ): TSkillSummary {
-  const pub = typeof isPublic === 'boolean' ? isPublic : isPublic.has(skill._id.toString());
+  const pub = hasId(isPublic, skill._id);
   return {
     _id: skill._id.toString(),
     name: skill.name,
@@ -281,6 +310,7 @@ function serializeSkillSummary(
     fileCount: skill.fileCount,
     alwaysApply: skill.alwaysApply,
     isPublic: pub,
+    ...serializeScope(pub, teamDepartments, skill._id),
     tenantId: skill.tenantId,
     createdAt: (skill.createdAt ?? new Date()).toISOString(),
     updatedAt: (skill.updatedAt ?? new Date()).toISOString(),
@@ -489,6 +519,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     countPublishedForks,
     getDeploymentSkillUsage,
     getSkillAuthorDepartments,
+    departmentGroups,
   } = deps;
 
   async function withForkCounts<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
@@ -565,6 +596,25 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
   }
 
+  async function findTeamShared(skillIds: Types.ObjectId[]): Promise<Map<string, string>> {
+    if (!departmentGroups || skillIds.length === 0) {
+      return new Map();
+    }
+    return departmentGroups.findTeamDepartments(ResourceType.SKILL, skillIds);
+  }
+
+  /** 응답에 싣는 공개 여부와 부서 공개 여부. `includePublicStatus: false` 면 둘 다 계산하지 않는다. */
+  async function readVisibility(
+    skill: { _id: Types.ObjectId },
+    options?: SkillResponseOptions,
+  ): Promise<{ pub: boolean; team?: Map<string, string> }> {
+    if (options?.includePublicStatus === false) {
+      return { pub: false };
+    }
+    const [pub, team] = await Promise.all([isSkillPublic(skill._id), findTeamShared([skill._id])]);
+    return { pub, team };
+  }
+
   async function listHandler(req: ServerRequest, res: Response, options?: SkillListOptions) {
     try {
       const user = req.user;
@@ -618,8 +668,11 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       const frontmatterById = new Map(
         visibleRows.map((skill) => [skill._id.toString(), skill.frontmatter] as const),
       );
+      const teamSet = await findTeamShared(
+        visibleRows.filter((row) => !publicSet.has(row._id.toString())).map((row) => row._id),
+      );
       const skills = await withCountsAndMarketFields(
-        visibleRows.map((s) => serializeSkillSummary(s, publicSet)),
+        visibleRows.map((s) => serializeSkillSummary(s, publicSet, teamSet)),
         frontmatterById,
       );
 
@@ -739,8 +792,8 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (!skill) {
         return res.status(404).json({ error: 'Skill not found' });
       }
-      const pub = options?.includePublicStatus === false ? false : await isSkillPublic(skill._id);
-      const [serialized] = await withCountsAndMarketFields([serializeSkill(skill, pub)]);
+      const { pub, team } = await readVisibility(skill, options);
+      const [serialized] = await withCountsAndMarketFields([serializeSkill(skill, pub, team)]);
       return res.status(200).json(serialized);
     } catch (error) {
       logger.error('[GET /skills/:id] Error fetching skill', error);
@@ -816,15 +869,20 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Skill not found' });
       }
-      const pub = options?.includePublicStatus === false ? false : await isSkillPublic(id);
+      const { pub, team } = await readVisibility(
+        result.status === 'conflict' ? result.current : result.skill,
+        options,
+      );
       if (result.status === 'conflict') {
         const conflict: TSkillConflictResponse = {
           error: 'skill_version_conflict',
-          current: serializeSkill(result.current, pub),
+          current: serializeSkill(result.current, pub, team),
         };
         return res.status(409).json(conflict);
       }
-      const [serialized] = await withCountsAndMarketFields([serializeSkill(result.skill, pub)]);
+      const [serialized] = await withCountsAndMarketFields([
+        serializeSkill(result.skill, pub, team),
+      ]);
       return res.status(200).json(attachWarnings(serialized, result.warnings));
     } catch (error) {
       logger.error('[PATCH /skills/:id] Error updating skill', error);

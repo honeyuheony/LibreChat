@@ -16,6 +16,7 @@ import { isContentFilterError } from '../middleware/contentFilter';
 import { checkAccessWithRequestCache } from '../middleware/access';
 import { assertSkillFileContentAllowed } from './protection';
 import { getDeploymentSkillById } from './deployment';
+import { isDeploymentSkillVisibleTo } from './market';
 import { resolveSkillFilePathParam } from './path';
 
 const idSchema = z.string().regex(/^[a-f\d]{24}$/i);
@@ -247,6 +248,8 @@ export function createSkillManagementHandlers(
           ]);
           const deployment = getDeploymentSkillById(req.params.id);
           if (!skill || (!deployment && skill.tenantId !== req.user.tenantId))
+            return sendError(res, 'not_found');
+          if (deployment && !isDeploymentSkillVisibleTo(deployment, req.user))
             return sendError(res, 'not_found');
           if (
             !deployment &&

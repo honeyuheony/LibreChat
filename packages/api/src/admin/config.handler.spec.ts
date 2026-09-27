@@ -369,6 +369,54 @@ describe('createAdminConfigHandlers', () => {
     });
   });
 
+  describe('department group targets', () => {
+    const groupId = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+    const departmentError = {
+      error: 'Department groups cannot receive grants or config overrides',
+    };
+
+    it.each([
+      [
+        'upsertConfigOverrides',
+        { overrides: { interface: { modelSelect: false } } },
+        'upsertConfig',
+      ],
+      [
+        'patchConfigField',
+        { entries: [{ fieldPath: 'registration.enabled', value: false }] },
+        'patchConfigFields',
+      ],
+      ['tombstoneConfigField', { fieldPath: 'mcpServers.github' }, 'tombstoneConfigField'],
+    ] as const)('%s refuses a department group', async (handler, body, write) => {
+      const isDepartmentGroup = jest.fn().mockResolvedValue(true);
+      const { handlers, deps } = createHandlers({ isDepartmentGroup });
+      const req = mockReq({ params: { principalType: 'group', principalId: groupId }, body });
+      const res = mockRes();
+
+      await handlers[handler](req, res);
+
+      expect(isDepartmentGroup).toHaveBeenCalledWith(groupId);
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toEqual(departmentError);
+      expect(deps[write]).not.toHaveBeenCalled();
+    });
+
+    it('still accepts an ordinary group', async () => {
+      const isDepartmentGroup = jest.fn().mockResolvedValue(false);
+      const { handlers, deps } = createHandlers({ isDepartmentGroup });
+      const req = mockReq({
+        params: { principalType: 'group', principalId: groupId },
+        body: { overrides: { interface: { modelSelect: false } } },
+      });
+      const res = mockRes();
+
+      await handlers.upsertConfigOverrides(req, res);
+
+      expect(res.statusCode).toBe(201);
+      expect(deps.upsertConfig).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('upsertConfigOverrides', () => {
     it('returns 201 when creating a new config (configVersion === 1)', async () => {
       const { handlers } = createHandlers({

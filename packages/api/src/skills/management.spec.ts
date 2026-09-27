@@ -1,6 +1,9 @@
 /* eslint jest/expect-expect: [warn, { assertFunctionNames: ['expect', '**.expect'] }] */
+import os from 'os';
+import path from 'path';
 import express from 'express';
 import request from 'supertest';
+import { promises as fs } from 'fs';
 import mongoose, { Types } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createModels, createMethods, tenantStorage } from '@librechat/data-schemas';
@@ -9,7 +12,13 @@ import type { AllMethods, IRole, IUser } from '@librechat/data-schemas';
 import type { FiltersConfig } from 'librechat-data-provider';
 import type { RequestHandler } from 'express';
 import type { SkillManagementDeps } from './management';
+import type { SkillsHandlersDeps } from './handlers';
 import type { ServerRequest } from '~/types';
+import {
+  createDeploymentSkillMethods,
+  getDeploymentSkillRegistry,
+  initializeDeploymentSkills,
+} from './deployment';
 import { createSkillManagementHandlers } from './management';
 import { createSkillsHandlers } from './handlers';
 
@@ -463,4 +472,89 @@ it('starts independent capability checks while waiting for the tenant-scoped Ski
   expect(readSkill).toHaveBeenCalledTimes(1);
   releaseSkill(null);
   expect((await response).status).toBe(404);
+});
+
+describe('team-scoped deployment skills', () => {
+  let root: string;
+  let deploymentId: string;
+
+  beforeAll(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'management-deployment-'));
+    const dir = path.join(root, 'skill', 'team-rollup');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'SKILL.md'),
+      [
+        '---',
+        'name: team-rollup',
+        'description: A deployment skill shown only to one department.',
+        'category: 정리·분석',
+        'metadata:',
+        '  department: "통일교육팀"',
+        '  scope: 팀',
+        '---',
+        '',
+        '# team-rollup',
+      ].join('\n'),
+    );
+    await initializeDeploymentSkills({ projectRoot: root, env: {} });
+    deploymentId = getDeploymentSkillRegistry().list()[0]._id.toString();
+  });
+
+  afterAll(async () => {
+    const emptyRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'management-empty-'));
+    await initializeDeploymentSkills({ projectRoot: emptyRoot, env: {} });
+    await fs.rm(root, { recursive: true, force: true });
+    await fs.rm(emptyRoot, { recursive: true, force: true });
+  });
+
+  function appFor(department?: string): express.Express {
+    const withDeployments = createDeploymentSkillMethods({ getSkillById: db.getSkillById });
+    const management = createSkillManagementHandlers({
+      handlers: createSkillsHandlers({
+        ...db,
+        getSkillById: withDeployments.getSkillById,
+        findAccessibleResources: async () => [],
+        findPubliclyAccessibleResources: async () => [],
+        hasPublicPermission: async () => true,
+        grantPermission: async () => undefined,
+        getStrategyFunctions: () => ({}),
+        isValidObjectIdString: (id: unknown) => typeof id === 'string' && /^[a-f\d]{24}$/i.test(id),
+      } as unknown as SkillsHandlersDeps),
+      beforeList: jest.fn(),
+      fileWriteLimiters: [],
+      getSkillById: withDeployments.getSkillById as SkillManagementDeps['getSkillById'],
+      getRoleByName: async () =>
+        ({
+          permissions: { [PermissionTypes.SKILLS]: { [Permissions.USE]: true } },
+        }) as IRole,
+      checkPermission: async () => true,
+      saveFile,
+      hasCapability: async () => false,
+    });
+    const deploymentApp = express();
+    deploymentApp.use((req, _res, next) => {
+      req.user = { ...user, ...(department && { department }) } as IUser;
+      tenantStorage.run({ tenantId }, next);
+    });
+    deploymentApp.get('/skills/:id', async (req, res) => {
+      await management.get(req, res);
+    });
+    deploymentApp.get('/skills/:id/files', async (req, res) => {
+      await management.listFiles(req, res);
+    });
+    return deploymentApp;
+  }
+
+  it('hides a team-scoped deployment skill and its files from another department', async () => {
+    const other = appFor('운영지원팀');
+    await request(other).get(`/skills/${deploymentId}`).expect(404);
+    await request(other).get(`/skills/${deploymentId}/files`).expect(404);
+    await request(appFor()).get(`/skills/${deploymentId}`).expect(404);
+  });
+
+  it('serves a team-scoped deployment skill to its department', async () => {
+    const res = await request(appFor('통일교육팀')).get(`/skills/${deploymentId}`).expect(200);
+    expect(res.body.name).toBe('team-rollup');
+  });
 });

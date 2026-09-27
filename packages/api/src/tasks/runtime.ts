@@ -1,16 +1,19 @@
+import path from 'path';
 import { logger } from '@librechat/data-schemas';
 import type { TaskProgressEvent, TaskResult } from 'librechat-data-provider';
 import type { Readable } from 'stream';
 import type { Model } from 'mongoose';
 import type { EndpointDbMethods, ServerRequest } from '~/types';
+import type { DeploymentSkill } from '~/skills/deployment';
 import type { TaskAgentModel, TaskLLM } from './llm';
 import type { TaskDocument } from './documents';
 import type { TaskToolDeps } from './tools';
+import { loadReportTemplate, resolveReportTemplatePath } from './report';
 import { getDeploymentSkillRegistry } from '~/skills/deployment';
+import { isDeploymentSkillVisibleTo } from '~/skills/market';
 import { createHwpService } from './hwpService';
 import { createMongoTaskCache } from './cache';
 import { prepareDocument } from './documents';
-import { loadReportTemplate } from './report';
 import { createTaskLLM } from './llm';
 
 export interface StoredFile {
@@ -174,6 +177,14 @@ function deploymentSkillDirectory(): string {
   return directory;
 }
 
+/** The deployment skill that registered this exact file; a template nobody owns has none. */
+function findFileOwner(filepath: string): DeploymentSkill | undefined {
+  const target = path.resolve(filepath);
+  return getDeploymentSkillRegistry()
+    .list()
+    .find((skill) => skill.files.some((file) => path.resolve(file.filepath) === target));
+}
+
 /** Wires the task tools to the request: user-scoped files, cache, model and storage. */
 export function createTaskToolDeps(params: TaskRuntimeParams): TaskToolDeps {
   const { req, agent, db, models } = params;
@@ -218,7 +229,14 @@ export function createTaskToolDeps(params: TaskRuntimeParams): TaskToolDeps {
         result,
       });
     },
-    loadTemplate: (templateId) => loadReportTemplate(templateId, deploymentSkillDirectory()),
+    loadTemplate: async (templateId) => {
+      const skillsDir = deploymentSkillDirectory();
+      const owner = findFileOwner(resolveReportTemplatePath(templateId, skillsDir));
+      if (!owner || !isDeploymentSkillVisibleTo(owner, req.user)) {
+        throw new Error(`Unknown report template "${templateId}".`);
+      }
+      return loadReportTemplate(templateId, skillsDir);
+    },
     hwp: createHwpService(),
     saveReportFile: ({ buffer, filename }) =>
       params.saveFile({ buffer, filename, type: HWPX_MIME_TYPE }),

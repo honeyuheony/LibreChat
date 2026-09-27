@@ -618,6 +618,24 @@ describe('createAdminGrantsHandlers', () => {
       expect(json).toHaveBeenCalledWith({ grant });
     });
 
+    it('refuses a system grant to any group, department groups included', async () => {
+      const deps = createDeps();
+      const handlers = createAdminGrantsHandlers(deps);
+      const { req, res, status, json } = createReqRes({
+        body: {
+          principalType: PrincipalType.GROUP,
+          principalId: new Types.ObjectId().toString(),
+          capability: SystemCapabilities.READ_USERS,
+        },
+      });
+
+      await handlers.assignGrant(req, res);
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(json).toHaveBeenCalledWith({ error: 'Invalid principal type' });
+      expect(deps.grantCapability).not.toHaveBeenCalled();
+    });
+
     it('passes grantedBy from the authenticated user', async () => {
       const userId = new Types.ObjectId();
       const deps = createDeps();

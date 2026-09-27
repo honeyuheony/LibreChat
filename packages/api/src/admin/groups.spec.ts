@@ -488,6 +488,65 @@ describe('createAdminGroupsHandlers', () => {
     });
   });
 
+  describe('createGroup with a department key', () => {
+    it.each([
+      ['a local group', 'local'],
+      ['an entra group', 'entra'],
+    ])('rejects %s whose idOnTheSource is a department key', async (_label, source) => {
+      const deps = createDeps();
+      const handlers = createAdminGroupsHandlers(deps);
+      const { req, res, status, json } = createReqRes({
+        body: { name: '정세분석팀', source, idOnTheSource: 'department:정세분석팀' },
+      });
+
+      await handlers.createGroup(req, res);
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(json).toHaveBeenCalledWith({
+        error: 'idOnTheSource must not start with department: (reserved for department groups)',
+      });
+      expect(deps.createGroup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('department group members', () => {
+    const departmentGroup = () =>
+      mockGroup({ idOnTheSource: 'department:정세분석팀', memberIds: [] });
+    const memberError = {
+      error: 'Department groups follow user.department; their members cannot be read or changed',
+    };
+
+    it('refuses to add a member to a department group', async () => {
+      const deps = createDeps({ findGroupById: jest.fn().mockResolvedValue(departmentGroup()) });
+      const handlers = createAdminGroupsHandlers(deps);
+      const { req, res, status, json } = createReqRes({
+        params: { id: validId },
+        body: { userId: validUserId },
+      });
+
+      await handlers.addGroupMember(req, res);
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(json).toHaveBeenCalledWith(memberError);
+      expect(deps.addUserToGroup).not.toHaveBeenCalled();
+    });
+
+    it('refuses to list or remove members of a department group', async () => {
+      const deps = createDeps({ findGroupById: jest.fn().mockResolvedValue(departmentGroup()) });
+      const handlers = createAdminGroupsHandlers(deps);
+      const listed = createReqRes({ params: { id: validId } });
+      await handlers.getGroupMembers(listed.req, listed.res);
+      const removed = createReqRes({ params: { id: validId, userId: validUserId } });
+      await handlers.removeGroupMember(removed.req, removed.res);
+
+      expect(listed.status).toHaveBeenCalledWith(400);
+      expect(removed.status).toHaveBeenCalledWith(400);
+      expect(removed.json).toHaveBeenCalledWith(memberError);
+      expect(deps.removeUserFromGroup).not.toHaveBeenCalled();
+      expect(deps.removeMemberById).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateGroup', () => {
     it('updates group and returns 200', async () => {
       const group = mockGroup({ name: 'Updated' });
@@ -827,7 +886,7 @@ describe('createAdminGroupsHandlers', () => {
   });
 
   describe('getGroupMembers', () => {
-    it('fetches group with memberIds projection only', async () => {
+    it('fetches group with memberIds and department key projection only', async () => {
       const group = mockGroup({ memberIds: [] });
       const deps = createDeps({ findGroupById: jest.fn().mockResolvedValue(group) });
       const handlers = createAdminGroupsHandlers(deps);
@@ -835,7 +894,11 @@ describe('createAdminGroupsHandlers', () => {
 
       await handlers.getGroupMembers(req, res);
 
-      expect(deps.findGroupById).toHaveBeenCalledWith(validId, { memberIds: 1 });
+      expect(deps.findGroupById).toHaveBeenCalledWith(validId, {
+        memberIds: 1,
+        source: 1,
+        idOnTheSource: 1,
+      });
     });
 
     it('returns empty members for group with no memberIds', async () => {

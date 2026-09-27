@@ -3,9 +3,10 @@ import { AsyncLocalStorage } from 'async_hooks';
 import { CacheKeys, PrincipalType, SystemRoles } from 'librechat-data-provider';
 import type { TPrincipalSearchResult } from 'librechat-data-provider';
 import type { Model, ClientSession, FilterQuery } from 'mongoose';
-import type { CacheStore, IGroup, IRole, IUser } from '~/types';
+import type { CacheStore, IAclEntry, IGroup, IRole, IUser } from '~/types';
 import { isValidObjectIdString } from '~/utils/objectId';
 import { scopedCacheKey } from '~/config/tenantContext';
+import { permissionBitSupersets } from './aclEntry';
 import { escapeRegExp } from '~/utils/string';
 
 export interface UserGroupDeps {
@@ -27,6 +28,20 @@ const GROUP_LOCK_POLL_MS = 50;
 const INVALIDATION_CLEAR_THRESHOLD = 1000;
 /** Fallback delay for the second invalidation pass when the store sets none. */
 const DEFAULT_STALE_EVICTION_DELAY_MS = 3000;
+/**
+ * Department groups are local groups keyed `department:<department>`. A user belongs to one
+ * through `user.department` at permission time, never through `memberIds`.
+ */
+const DEPARTMENT_GROUP_PREFIX = 'department:';
+const DEPARTMENT_GROUP_PATTERN = /^department:/;
+
+function readDepartment(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 const isCachedGroupId = (value: unknown): value is string =>
   typeof value === 'string' && isValidObjectIdString(value);
@@ -233,6 +248,7 @@ export function createUserGroupMethods(
       userId: string | Types.ObjectId;
       role?: string | null;
       idOnTheSource?: string | null;
+      department?: string | null;
     },
     session?: ClientSession,
   ) => Promise<Array<{ principalType: PrincipalType; principalId?: string | Types.ObjectId }>>;
@@ -279,6 +295,14 @@ export function createUserGroupMethods(
     memberId: string,
     session?: ClientSession,
   ) => Promise<IGroup | null>;
+  ensureDepartmentGroup: (department: string) => Promise<string>;
+  listDepartmentGroupIds: () => Promise<Types.ObjectId[]>;
+  isDepartmentGroup: (groupId: string | Types.ObjectId) => Promise<boolean>;
+  findDepartmentGrants: (
+    resourceType: string,
+    resourceIds: Array<string | Types.ObjectId>,
+    permissionBit: number,
+  ) => Promise<Array<{ resourceId: string; department: string }>>;
 } {
   const getPrincipalsCache = (): CacheStore | undefined =>
     deps.getCache?.(CacheKeys.USER_PRINCIPALS);
@@ -289,7 +313,10 @@ export function createUserGroupMethods(
     readPrimary = false,
   ): Promise<Types.ObjectId[]> {
     const Group = mongoose.models.Group as Model<IGroup>;
-    const groupsQuery = Group.find({ memberIds: memberId }, { _id: 1 });
+    const groupsQuery = Group.find(
+      { memberIds: memberId, idOnTheSource: { $not: DEPARTMENT_GROUP_PATTERN } },
+      { _id: 1 },
+    );
     if (session) {
       groupsQuery.session(session);
     }
@@ -628,6 +655,8 @@ export function createUserGroupMethods(
     const regex = new RegExp(escapeRegExp(namePattern), 'i');
     const query: Record<string, unknown> = {
       $or: [{ name: regex }, { email: regex }, { description: regex }],
+      /** Department groups exist only to receive skill 「우리 팀」 grants; they are not shareable targets. */
+      idOnTheSource: { $not: DEPARTMENT_GROUP_PATTERN },
     };
 
     if (source) {
@@ -857,10 +886,11 @@ export function createUserGroupMethods(
       userId: string | Types.ObjectId;
       role?: string | null;
       idOnTheSource?: string | null;
+      department?: string | null;
     },
     session?: ClientSession,
   ): Promise<Array<{ principalType: PrincipalType; principalId?: string | Types.ObjectId }>> {
-    const { userId, role, idOnTheSource } = params;
+    const { userId, role, idOnTheSource, department } = params;
     /** `userId` must be an `ObjectId` for USER principal since ACL entries store `ObjectId`s */
     const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
     const principals: Array<{
@@ -870,20 +900,28 @@ export function createUserGroupMethods(
 
     let userRole = role;
     let memberIdOnTheSource = idOnTheSource;
+    let userDepartment = department;
 
     /** Single fallback lookup, only for whichever identity fields the caller omitted. */
-    if (userRole === undefined || memberIdOnTheSource === undefined) {
+    if (
+      userRole === undefined ||
+      memberIdOnTheSource === undefined ||
+      userDepartment === undefined
+    ) {
       const User = mongoose.models.User as Model<IUser>;
-      const query = User.findById(userId).select('role idOnTheSource');
+      const query = User.findById(userId).select('role idOnTheSource department');
       if (session) {
         query.session(session);
       }
-      const user = await query.lean<Pick<IUser, 'role' | 'idOnTheSource'>>();
+      const user = await query.lean<Pick<IUser, 'role' | 'idOnTheSource' | 'department'>>();
       if (userRole === undefined) {
         userRole = user?.role;
       }
       if (memberIdOnTheSource === undefined) {
         memberIdOnTheSource = user?.idOnTheSource ?? null;
+      }
+      if (userDepartment === undefined) {
+        userDepartment = user?.department ?? null;
       }
     }
 
@@ -893,9 +931,15 @@ export function createUserGroupMethods(
 
     /** `memberIds` stores `idOnTheSource` for external users, else the raw user id. */
     const memberId = memberIdOnTheSource || userId.toString();
-    const groupIds = await getMemberGroupIds(memberId, session);
+    const [groupIds, departmentGroupId] = await Promise.all([
+      getMemberGroupIds(memberId, session),
+      findDepartmentGroupId(userDepartment, session),
+    ]);
     for (const groupId of groupIds) {
       principals.push({ principalType: PrincipalType.GROUP, principalId: groupId });
+    }
+    if (departmentGroupId) {
+      principals.push({ principalType: PrincipalType.GROUP, principalId: departmentGroupId });
     }
 
     principals.push({ principalType: PrincipalType.PUBLIC });
@@ -1397,6 +1441,116 @@ export function createUserGroupMethods(
     return group;
   }
 
+  /** Uncached on purpose: a department change must show up in the next permission check. */
+  async function findDepartmentGroupId(
+    department: string | null | undefined,
+    session?: ClientSession,
+  ): Promise<Types.ObjectId | null> {
+    const name = readDepartment(department);
+    if (!name) {
+      return null;
+    }
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const query = Group.findOne(
+      { source: 'local', idOnTheSource: `${DEPARTMENT_GROUP_PREFIX}${name}` },
+      { _id: 1 },
+    );
+    if (session) {
+      query.session(session);
+    }
+    const group = await query.lean<Pick<IGroup, '_id'>>();
+    return group?._id ?? null;
+  }
+
+  /** Returns the id of the department's group, creating it (with no members) on first use. */
+  async function ensureDepartmentGroup(department: string): Promise<string> {
+    const name = readDepartment(department);
+    if (!name) {
+      throw new Error('department is required');
+    }
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const filter = { source: 'local', idOnTheSource: `${DEPARTMENT_GROUP_PREFIX}${name}` };
+    const upsert = () =>
+      Group.findOneAndUpdate(
+        filter,
+        { $setOnInsert: { name, memberIds: [] } },
+        { upsert: true, new: true },
+      ).lean<IGroup>();
+    /** Two first publishes of one department can race on the unique index; the loser re-reads. */
+    const group = await upsert().catch((error: { code?: number }) => {
+      if (error?.code === 11000) {
+        return upsert();
+      }
+      throw error;
+    });
+    if (!group) {
+      throw new Error(`Could not create the department group for ${name}`);
+    }
+    return group._id.toString();
+  }
+
+  async function isDepartmentGroup(groupId: string | Types.ObjectId): Promise<boolean> {
+    if (typeof groupId === 'string' && !isValidObjectIdString(groupId)) {
+      return false;
+    }
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const group = await Group.exists({
+      _id: groupId,
+      source: 'local',
+      idOnTheSource: DEPARTMENT_GROUP_PATTERN,
+    });
+    return group !== null;
+  }
+
+  /** Each department-group grant carrying `permissionBit` on the given resources, with its department. */
+  async function findDepartmentGrants(
+    resourceType: string,
+    resourceIds: Array<string | Types.ObjectId>,
+    permissionBit: number,
+  ): Promise<Array<{ resourceId: string; department: string }>> {
+    if (resourceIds.length === 0) {
+      return [];
+    }
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const groups = await Group.find(
+      { source: 'local', idOnTheSource: DEPARTMENT_GROUP_PATTERN },
+      { _id: 1, idOnTheSource: 1 },
+    ).lean<Array<Pick<IGroup, '_id' | 'idOnTheSource'>>>();
+    if (groups.length === 0) {
+      return [];
+    }
+    const departmentByGroup = new Map(
+      groups.map((group) => [
+        group._id.toString(),
+        (group.idOnTheSource ?? '').slice(DEPARTMENT_GROUP_PREFIX.length),
+      ]),
+    );
+    const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
+    const entries = await AclEntry.find(
+      {
+        resourceType,
+        resourceId: { $in: resourceIds.map((id) => new Types.ObjectId(id.toString())) },
+        principalType: PrincipalType.GROUP,
+        principalId: { $in: groups.map((group) => group._id) },
+        permBits: { $in: permissionBitSupersets(permissionBit) },
+      },
+      { resourceId: 1, principalId: 1 },
+    ).lean<Array<Pick<IAclEntry, 'resourceId' | 'principalId'>>>();
+    return entries.map((entry) => ({
+      resourceId: entry.resourceId.toString(),
+      department: departmentByGroup.get(String(entry.principalId)) ?? '',
+    }));
+  }
+
+  async function listDepartmentGroupIds(): Promise<Types.ObjectId[]> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const groups = await Group.find(
+      { source: 'local', idOnTheSource: DEPARTMENT_GROUP_PATTERN },
+      { _id: 1 },
+    ).lean<Array<Pick<IGroup, '_id'>>>();
+    return groups.map((group) => group._id);
+  }
+
   return {
     findGroupById,
     findGroupByExternalId,
@@ -1421,6 +1575,10 @@ export function createUserGroupMethods(
     countGroups,
     deleteGroup,
     removeMemberById,
+    ensureDepartmentGroup,
+    listDepartmentGroupIds,
+    isDepartmentGroup,
+    findDepartmentGrants,
   };
 }
 

@@ -48,17 +48,21 @@ const TITLE_PLACEHOLDER = /\{\{([^}]+)\}\}/g;
  * Reads `<skillsDir>/<templateId>/assets/slots.json`, or the `slots-<variant>.json` a
  * `TEMPLATE_VARIANTS` id names; the same files hwp-mcp fills from.
  */
-export async function loadReportTemplate(
-  templateId: string,
-  skillsDir: string,
-): Promise<ReportTemplate> {
+export function resolveReportTemplatePath(templateId: string, skillsDir: string): string {
   if (!TEMPLATE_ID_PATTERN.test(templateId)) {
     throw new Error(`Unknown report template "${templateId}".`);
   }
   const target = TEMPLATE_VARIANTS.get(templateId);
   const folder = target?.folder ?? templateId;
   const slotsFile = target ? `slots-${target.variant}.json` : 'slots.json';
-  const slotsPath = path.join(skillsDir, folder, 'assets', slotsFile);
+  return path.join(skillsDir, folder, 'assets', slotsFile);
+}
+
+export async function loadReportTemplate(
+  templateId: string,
+  skillsDir: string,
+): Promise<ReportTemplate> {
+  const slotsPath = resolveReportTemplatePath(templateId, skillsDir);
   let raw: string;
   try {
     raw = await fs.readFile(slotsPath, 'utf8');

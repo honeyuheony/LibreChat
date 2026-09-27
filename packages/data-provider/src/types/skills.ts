@@ -184,6 +184,10 @@ export type TSkill = {
    */
   alwaysApply?: boolean;
   isPublic?: boolean;
+  /** 지금 ACL 로 본 공개 범위. 서버가 계산할 때만 싣는다. */
+  scope?: TSkillPublishScope;
+  /** scope 가 'team' 일 때 부여받은 부서. 작성자가 부서를 옮겼으면 작성자 부서와 다르다. */
+  scopeDepartment?: string;
   tenantId?: string;
   createdAt: string;
   updatedAt: string;
@@ -493,8 +497,8 @@ export type TSkillTestResultRequest = {
   version: number;
 };
 
-/** 게시 범위. 전 부서(public viewer)와 나만(공개 항목 없음)이다. */
-export type TSkillPublishScope = 'all' | 'me';
+/** 게시 범위. 전 부서(public viewer), 우리 팀(작성자 부서 그룹 viewer), 나만(공개 항목 없음)이다. */
+export type TSkillPublishScope = 'all' | 'team' | 'me';
 
 /** POST `/api/skills/:id/publish` 요청 본문. */
 export type TSkillPublishRequest = {
