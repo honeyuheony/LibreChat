@@ -20,10 +20,10 @@ export default function Todo({ items }: { items: TodoItem[] }) {
           key={item.key}
           data-done={item.done}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs',
+            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12.5px]',
             item.done
               ? 'border-status-success-border text-status-success'
-              : 'border-border-light text-text-secondary',
+              : 'border-border-light text-text-tertiary',
           )}
         >
           <span

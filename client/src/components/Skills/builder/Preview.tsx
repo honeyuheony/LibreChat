@@ -56,7 +56,7 @@ const ignoreActivate = () => undefined;
 
 const blockFrame = (active: boolean) =>
   cn(
-    'rounded-xl border-[1.5px] bg-surface-primary transition-[border-color,box-shadow] motion-reduce:transition-none',
+    'rounded-[14px] border-[1.5px] bg-surface-primary transition-[border-color,box-shadow] motion-reduce:transition-none',
     active ? 'border-ring-primary ring-[3px] ring-border-brand' : 'border-border-light',
   );
 

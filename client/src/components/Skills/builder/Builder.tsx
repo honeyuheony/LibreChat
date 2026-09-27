@@ -356,7 +356,7 @@ export default function Builder({
 
         <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
           <div className={COLUMN_CLASS}>
-            <section className="flex flex-col gap-2 rounded-xl border border-border-brand bg-surface-primary px-4 py-3.5 ring-[3px] ring-surface-brand-subtle">
+            <section className="flex flex-col gap-1.5 rounded-[14px] border border-border-brand bg-surface-primary px-[14px] py-3 ring-[3px] ring-surface-brand-subtle">
               <div className="flex items-center gap-2">
                 <label htmlFor="builder-text" className="text-[15.5px] font-bold text-text-primary">
                   {localize(
@@ -395,7 +395,7 @@ export default function Builder({
                 }}
                 onFocus={() => setActiveBlock('how')}
                 placeholder={localize('com_skills_builder_text_placeholder')}
-                className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-ring-primary focus:outline-none focus:ring-[3px] focus:ring-border-brand"
+                className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-ring-primary focus:outline-none focus:ring-[3px] focus:ring-border-brand md:min-h-[297px]"
               />
               <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
                 {statusText ? localize(statusText) : ''}
@@ -459,13 +459,14 @@ export default function Builder({
         <footer className="flex flex-wrap items-center gap-2 border-t border-border-light bg-surface-secondary px-5 py-3">
           <Todo items={session.todos} />
           <span className="flex-1" />
-          <Button variant="ghost" size="sm" shape="round" onClick={onCancel}>
+          <Button variant="ghost" size="pill" onClick={onCancel} className="text-text-tertiary">
             {localize('com_ui_cancel')}
           </Button>
           <Button
             variant={session.tested ? 'outline' : 'submit'}
             size="sm"
             shape="round"
+            className="h-[37px] w-[109px] px-0 text-[14.5px] font-normal"
             disabled={running}
             onClick={runTest}
           >
@@ -475,6 +476,7 @@ export default function Builder({
             variant="submit"
             size="sm"
             shape="round"
+            className="h-[37px] w-[65px] px-0 text-[14.5px] font-normal"
             disabled={!session.ready || session.publishing}
             onClick={onPublish}
           >
