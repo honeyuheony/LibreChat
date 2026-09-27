@@ -7,11 +7,9 @@ const mongoose = require('mongoose');
 const { TaskTools } = require('librechat-data-provider');
 const { Agent } = require('@librechat/data-schemas').createModels(mongoose);
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
+const { DEFAULT_AGENT_ID } = require('./demo-data');
 const { silentExit } = require('./helpers');
 const connect = require('./connect');
-
-/** 첫 인자로 다른 id 를 주지 않으면 데모 기본 agent 에 더한다. */
-const DEFAULT_AGENT_ID = 'agent_mFf0h9SHTwJ6za2e8HUiv';
 
 (async () => {
   await connect();

@@ -94,6 +94,10 @@ function toTaskResultListItem(taskResult, conversationTitle) {
   return listItem;
 }
 
+function findOwnTaskResult(req) {
+  return TaskResult.findOne({ user: req.user.id, resultId: req.params.resultId }).lean();
+}
+
 router.get('/estimate', async (req, res, next) => {
   const { conversationId, kind } = req.query;
   if (typeof conversationId !== 'string' || kind !== 'table') {
@@ -191,10 +195,7 @@ router.get('/results', async (req, res, next) => {
 
 router.get('/results/:resultId/export.xlsx', async (req, res, next) => {
   try {
-    const taskResult = await TaskResult.findOne({
-      user: req.user.id,
-      resultId: req.params.resultId,
-    }).lean();
+    const taskResult = await findOwnTaskResult(req);
     if (!taskResult || taskResult.kind !== 'table') {
       return res.status(404).json({ error: 'Task result not found.' });
     }
@@ -209,10 +210,7 @@ router.get('/results/:resultId/export.xlsx', async (req, res, next) => {
 
 router.get('/results/:resultId', async (req, res, next) => {
   try {
-    const taskResult = await TaskResult.findOne({
-      user: req.user.id,
-      resultId: req.params.resultId,
-    }).lean();
+    const taskResult = await findOwnTaskResult(req);
     if (!taskResult) {
       return res.status(404).json({ error: 'Task result not found.' });
     }
