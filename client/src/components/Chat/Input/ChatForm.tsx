@@ -638,13 +638,13 @@ const ChatForm = memo(function ChatForm({
   );
 
   /* From `sm` up the band leaves room under itself for the disclaimer, which only
-     the landing page carries — doubled while the centred landing composer floats,
+     the landing page carries — taller while the centred landing composer floats,
      and dropped back the moment a submission starts the thread. A started
      conversation has nothing beneath it, so it keeps only enough to clear the
      surface's own shadow. Below `sm` the composer runs to the viewport floor in
      every state. */
   const landingClearance =
-    centerFormOnLanding && !isSubmitting ? 'transition-all duration-200 sm:mb-28' : 'sm:mb-10';
+    centerFormOnLanding && !isSubmitting ? 'transition-all duration-200 sm:mb-16' : 'sm:mb-10';
   let bottomClearance = 'sm:mb-4';
   if (isLandingPage) {
     bottomClearance = landingClearance;
@@ -814,7 +814,9 @@ const ChatForm = memo(function ChatForm({
                    band of padding under the buttons. */
                 'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
-                isTextAreaFocused ? 'shadow-md' : 'shadow-sm',
+                /* 가운데 놓인 홈 입력창만 떠 보이도록 surface elevation을 준다. */
+                isLandingPage && 'shadow-theme-surface',
+                !isLandingPage && (isTextAreaFocused ? 'shadow-md' : 'shadow-sm'),
                 'gap-1.5 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
