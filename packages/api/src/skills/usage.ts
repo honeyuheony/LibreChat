@@ -12,6 +12,21 @@ function roundToTenth(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+export function computeSkillSavedTime(params: {
+  runs: number;
+  averageRunSeconds: number;
+  manualMinutes: number;
+}): { savedMinutesPerRun: number; savedHours: number } {
+  const savedMinutesPerRun = Math.max(
+    0,
+    Math.round(params.manualMinutes - params.averageRunSeconds / 60),
+  );
+  return {
+    savedMinutesPerRun,
+    savedHours: Math.round((Math.max(0, params.runs) * savedMinutesPerRun) / 60),
+  };
+}
+
 /** 절감 시간 = 실행 수 × max(0, 수작업 분 − 평균 실행 초 / 60). 평균은 측정된 실행만으로 낸다. */
 export function computeSkillUsageMetrics(counters: SkillUsageCounters): TSkillUsageMetrics {
   const runs = Math.max(0, counters.useCount ?? 0);
