@@ -2,7 +2,9 @@ import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-quer
 import {
   QueryKeys,
   dataService,
+  Permissions,
   EModelEndpoint,
+  PermissionTypes,
   isAgentsEndpoint,
   defaultOrderQuery,
   defaultAssistantsVersion,
@@ -32,6 +34,7 @@ import type {
 import type t from 'librechat-data-provider';
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
+import useHasAccess from '~/hooks/Roles/useHasAccess';
 
 export const useGetPresetsQuery = (
   config?: UseQueryOptions<TPreset[]>,
@@ -244,6 +247,11 @@ export const useSharedLinksQuery = (
 export const useConversationTagsQuery = (
   config?: UseQueryOptions<t.TConversationTagsResponse>,
 ): QueryObserverResult<t.TConversationTagsResponse> => {
+  const hasBookmarkAccess = useHasAccess({
+    permissionType: PermissionTypes.BOOKMARKS,
+    permission: Permissions.USE,
+  });
+
   return useQuery<t.TConversationTag[]>(
     [QueryKeys.conversationTags],
     () => dataService.getConversationTags(),
@@ -252,6 +260,7 @@ export const useConversationTagsQuery = (
       refetchOnReconnect: false,
       refetchOnMount: false,
       ...config,
+      enabled: hasBookmarkAccess && config?.enabled !== false,
     },
   );
 };
