@@ -1,15 +1,24 @@
+const path = require('path');
 const express = require('express');
 const cookies = require('cookie');
 const jwt = require('jsonwebtoken');
-const { SystemRoles } = require('librechat-data-provider');
-const { math, shouldUseSecureCookie } = require('@librechat/api');
-const { logger, DEFAULT_REFRESH_TOKEN_EXPIRY } = require('@librechat/data-schemas');
+const mongoose = require('mongoose');
+const { SystemRoles, CacheKeys } = require('librechat-data-provider');
+const { logger, runAsSystem, DEFAULT_REFRESH_TOKEN_EXPIRY } = require('@librechat/data-schemas');
+const { math, shouldUseSecureCookie, invalidateCachedAuthUserDoc } = require('@librechat/api');
 const { requireJwtAuth, requireSameOrigin, checkBan } = require('~/server/middleware');
 const { setAuthTokens, logoutUser } = require('~/server/services/AuthService');
+const { processDeleteRequest } = require('~/server/services/Files/process');
+const { getAppConfig } = require('~/server/services/Config');
+const { getLogStores } = require('~/cache');
 const { findUser } = require('~/models');
+const { createDemoData, resolveProtectedEmails } = require(
+  path.resolve(__dirname, '..', '..', '..', 'config', 'demo-data'),
+);
 
 const SWITCH_ORIGIN_COOKIE = 'demo_switch_origin';
 const SWITCH_ORIGIN_AUDIENCE = 'librechat-demo-switch';
+const DEFAULT_BASELINE_DIR = '/app/demo-baseline';
 
 const router = express.Router();
 
@@ -122,6 +131,81 @@ router.post('/switch-user', requireSameOrigin, async (req, res) => {
   } catch (error) {
     logger.error('[demo] Failed to switch user', error);
     return res.status(500).json({ message: 'Failed to switch user' });
+  }
+});
+
+/** Admins named in DEMO_SWITCH_USERS may reset; the list's other accounts are the targets. */
+const canReset = (user) =>
+  user.role === SystemRoles.ADMIN && getSwitchUsers().includes(user.email?.toLowerCase());
+
+const getResetTargets = () => {
+  const protectedEmails = resolveProtectedEmails(process.env.DEMO_RESET_PROTECTED);
+  return {
+    emails: getSwitchUsers().filter((email) => !protectedEmails.has(email)),
+    protectedEmails,
+  };
+};
+
+/** Deletes originals the way `config/reset-demo.js` does, outside the caller's tenant scope. */
+const createFileDeleter = (appConfig) => (user, files) =>
+  runAsSystem(() =>
+    processDeleteRequest({
+      req: {
+        user: { id: String(user._id), email: user.email, tenantId: user.tenantId },
+        config: appConfig,
+        body: {},
+      },
+      files,
+    }),
+  );
+
+/** Reset rewrites profile fields on the user document, so cached `req.user` copies must go. */
+const invalidateResetUsers = async (rows) => {
+  const emails = [...new Set(rows.filter((row) => row.collection === 'users').map((r) => r.email))];
+  const store = getLogStores(CacheKeys.AUTH_USER_DOC);
+  const users = await Promise.all(emails.map((email) => findUser({ email }, '_id')));
+  await Promise.all(
+    users
+      .filter(Boolean)
+      .map((user) => invalidateCachedAuthUserDoc(store, { userId: user._id.toString() })),
+  );
+};
+
+/** One reset per process; a second request while one runs gets 409. */
+let resetInProgress = false;
+
+router.post('/reset', requireSameOrigin, async (req, res) => {
+  if (!canReset(req.user)) {
+    return res.status(403).json({ message: 'Demo reset is not allowed' });
+  }
+  const { emails, protectedEmails } = getResetTargets();
+  if (emails.length === 0) {
+    return res.status(409).json({ message: 'No demo account to reset' });
+  }
+  if (resetInProgress) {
+    return res.status(409).json({ message: 'Demo reset already in progress' });
+  }
+
+  resetInProgress = true;
+  try {
+    const appConfig = await getAppConfig({ baseOnly: true });
+    const rows = await createDemoData(mongoose).resetDemo({
+      dir: process.env.DEMO_BASELINE_DIR || DEFAULT_BASELINE_DIR,
+      emails,
+      includeShared: false,
+      dryRun: false,
+      protectedEmails,
+      deleteFiles: createFileDeleter(appConfig),
+      warn: (message) => logger.warn(`[demo] ${message}`),
+    });
+    await invalidateResetUsers(rows);
+    logger.info(`[demo] reset by ${req.user.email}: ${emails.join(', ')}`);
+    return res.status(200).json({ rows });
+  } catch (error) {
+    logger.error('[demo] Failed to reset the demo accounts', error);
+    return res.status(500).json({ message: 'Failed to reset the demo accounts' });
+  } finally {
+    resetInProgress = false;
   }
 });
 

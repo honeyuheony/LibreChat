@@ -1,9 +1,16 @@
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const { SystemRoles, ViolationTypes } = require('librechat-data-provider');
+const { SystemRoles, ViolationTypes, CacheKeys } = require('librechat-data-provider');
+const { setCachedAuthUserDoc, getCachedAuthUserDoc } = require('@librechat/api');
+const { createDemoData, DEFAULT_AGENT_ID } = require(
+  path.resolve(__dirname, '..', '..', '..', 'config', 'demo-data'),
+);
 
 jest.mock('~/server/middleware', () => ({
   requireJwtAuth: async (req, res, next) => {
@@ -31,6 +38,8 @@ let hong;
 let lee;
 let guarded;
 let outsider;
+let demo;
+let otherAdmin;
 
 const readCookie = (response, name) => {
   const header = (response.headers['set-cookie'] ?? []).find((value) =>
@@ -79,6 +88,21 @@ beforeAll(async () => {
     department: '기타팀',
     provider: 'local',
     role: SystemRoles.USER,
+  });
+
+  demo = await User.create({
+    name: '데모',
+    email: 'demo@example.com',
+    department: '데모팀',
+    provider: 'local',
+    role: SystemRoles.USER,
+  });
+  otherAdmin = await User.create({
+    name: '다른관리자',
+    email: 'other-admin@example.com',
+    department: '운영팀',
+    provider: 'local',
+    role: SystemRoles.ADMIN,
   });
 
   app = express();
@@ -364,5 +388,222 @@ describe('demo switch-user routes', () => {
       expect.stringContaining('admin@admin.com -> lee@example.com'),
     );
     info.mockRestore();
+  });
+});
+
+describe('demo reset route', () => {
+  let baselineDir;
+
+  const raw = (name) => mongoose.connection.db.collection(name);
+
+  const makeConvo = (user, conversationId, title) => ({
+    _id: new mongoose.Types.ObjectId(),
+    conversationId,
+    user: user.id,
+    title,
+    endpoint: 'agents',
+  });
+
+  const makeTextFile = (user, fileId) => ({
+    _id: new mongoose.Types.ObjectId(),
+    user: user._id,
+    file_id: fileId,
+    filename: `${fileId}.txt`,
+    filepath: `/uploads/${fileId}.txt`,
+    type: 'text/plain',
+    bytes: 1,
+    object: 'file',
+    usage: 0,
+    source: 'text',
+  });
+
+  const protectedState = async () => {
+    const ids = [hong._id, demo._id];
+    const owners = [...ids, ...ids.map(String)];
+    return {
+      users: await raw('users')
+        .find({ _id: { $in: ids } })
+        .sort({ _id: 1 })
+        .toArray(),
+      conversations: await raw('conversations')
+        .find({ user: { $in: owners } })
+        .sort({ _id: 1 })
+        .toArray(),
+    };
+  };
+
+  const resetAs = (user) =>
+    request(app).post('/api/demo/reset').set('authorization', loginAs(user));
+
+  beforeEach(async () => {
+    await Promise.all(
+      ['conversations', 'files', 'agents', 'deploymentskillusages'].map((name) =>
+        raw(name).deleteMany({}),
+      ),
+    );
+    await raw('conversations').insertMany([
+      makeConvo(lee, 'lee-convo-1', '이협력 시나리오'),
+      makeConvo(hong, 'hong-convo-1', '관리자 시나리오'),
+      makeConvo(demo, 'demo-convo-1', '데모 시나리오'),
+    ]);
+    await raw('agents').insertOne({
+      _id: new mongoose.Types.ObjectId(),
+      id: DEFAULT_AGENT_ID,
+      name: '업무 도우미',
+      author: hong._id,
+      instructions: '기준 지시문',
+      tools: ['a'],
+      provider: 'openAI',
+      model: 'gpt',
+    });
+
+    baselineDir = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-reset-route-'));
+    await createDemoData(mongoose).exportBaseline({
+      dir: baselineDir,
+      emails: ['lee@example.com'],
+      includeShared: true,
+      warn: () => undefined,
+    });
+    process.env.DEMO_BASELINE_DIR = baselineDir;
+    process.env.DEMO_SWITCH_USERS = 'admin@admin.com,lee@example.com,other-admin@example.com';
+  });
+
+  afterEach(() => {
+    delete process.env.DEMO_BASELINE_DIR;
+    fs.rmSync(baselineDir, { recursive: true, force: true });
+  });
+
+  test('is not attached when DEMO_SWITCH_USERS is empty', async () => {
+    delete process.env.DEMO_SWITCH_USERS;
+
+    const response = await resetAs(hong);
+
+    expect(response.status).toBe(404);
+  });
+
+  test('requires authentication', async () => {
+    const response = await request(app).post('/api/demo/reset');
+
+    expect(response.status).toBe(401);
+  });
+
+  test('refuses a listed user who is not an admin', async () => {
+    const response = await resetAs(lee);
+
+    expect(response.status).toBe(403);
+  });
+
+  test('refuses an admin outside the list', async () => {
+    process.env.DEMO_SWITCH_USERS = 'admin@admin.com,lee@example.com';
+
+    const response = await resetAs(otherAdmin);
+
+    expect(response.status).toBe(403);
+  });
+
+  test('refuses a user outside the list who is not an admin', async () => {
+    const response = await resetAs(outsider);
+
+    expect(response.status).toBe(403);
+  });
+
+  test('restores only the non-protected listed accounts, leaving shared data alone', async () => {
+    await raw('conversations').insertMany([
+      makeConvo(lee, 'lee-convo-2', '이협력 새 대화'),
+      makeConvo(hong, 'hong-convo-2', '관리자 새 대화'),
+      makeConvo(demo, 'demo-convo-2', '데모 새 대화'),
+    ]);
+    await raw('conversations').updateOne(
+      { conversationId: 'lee-convo-1' },
+      { $set: { title: '바뀐 제목' } },
+    );
+    await raw('files').insertOne(makeTextFile(lee, 'lee-file-new'));
+    await raw('users').updateOne({ _id: lee._id }, { $set: { department: '바뀐 부서' } });
+    await raw('users').updateOne({ _id: hong._id }, { $set: { organization: '관리자 기관' } });
+    await raw('agents').updateOne(
+      { id: DEFAULT_AGENT_ID },
+      { $set: { instructions: '바뀐 지시문', tools: ['a', 'b'] } },
+    );
+    const protectedBefore = await protectedState();
+
+    const response = await request(app)
+      .post('/api/demo/reset')
+      .set('authorization', loginAs(hong))
+      .send({ emails: ['admin@admin.com', 'demo@example.com'], includeShared: true });
+
+    expect(response.status).toBe(200);
+    expect(response.body.rows.length).toBeGreaterThan(0);
+    expect(response.body.rows.every((row) => row.email === 'lee@example.com')).toBe(true);
+    expect(response.body.rows).toContainEqual(
+      expect.objectContaining({ collection: 'conversations', deleted: 1, replaced: 1 }),
+    );
+
+    const leeConvos = await raw('conversations')
+      .find({ user: lee.id })
+      .sort({ conversationId: 1 })
+      .toArray();
+    expect(leeConvos.map((c) => [c.conversationId, c.title])).toEqual([
+      ['lee-convo-1', '이협력 시나리오'],
+    ]);
+    expect(await raw('files').countDocuments({ user: lee._id })).toBe(0);
+    expect((await raw('users').findOne({ _id: lee._id })).department).toBe('교류협력팀');
+
+    expect(await protectedState()).toEqual(protectedBefore);
+    const agent = await raw('agents').findOne({ id: DEFAULT_AGENT_ID });
+    expect(agent.instructions).toBe('바뀐 지시문');
+    expect(agent.tools).toEqual(['a', 'b']);
+  });
+
+  test('drops the cached auth user document of a reset account', async () => {
+    const store = require('~/cache').getLogStores(CacheKeys.AUTH_USER_DOC);
+    const leeDoc = await User.findById(lee._id).lean();
+    await setCachedAuthUserDoc(store, 'lee-cache-key', { ...leeDoc, id: lee.id });
+    expect(await getCachedAuthUserDoc(store, 'lee-cache-key')).toBeDefined();
+
+    const response = await resetAs(hong);
+
+    expect(response.status).toBe(200);
+    expect(await getCachedAuthUserDoc(store, 'lee-cache-key')).toBeUndefined();
+  });
+
+  test('answers 409 when the list names only protected accounts', async () => {
+    process.env.DEMO_SWITCH_USERS = 'admin@admin.com,demo@example.com';
+
+    const response = await resetAs(hong);
+
+    expect(response.status).toBe(409);
+    expect(await raw('conversations').countDocuments({})).toBe(3);
+  });
+
+  test('answers 500 and logs when the baseline folder is missing', async () => {
+    const { logger } = require('@librechat/data-schemas');
+    const error = jest.spyOn(logger, 'error');
+    process.env.DEMO_BASELINE_DIR = path.join(baselineDir, 'missing');
+
+    const response = await resetAs(hong);
+
+    expect(response.status).toBe(500);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('[demo]'), expect.any(Error));
+    error.mockRestore();
+  });
+
+  test('refuses a second reset while one is running', async () => {
+    const [first, second] = await Promise.all([resetAs(hong), resetAs(hong)]);
+
+    expect([first.status, second.status].sort()).toEqual([200, 409]);
+
+    const after = await resetAs(hong);
+    expect(after.status).toBe(200);
+  });
+
+  test('rejects a cross-site POST', async () => {
+    await raw('conversations').insertOne(makeConvo(lee, 'lee-convo-2', '이협력 새 대화'));
+
+    const response = await resetAs(hong)
+      .set('Origin', 'https://attacker.example')
+      .set('Sec-Fetch-Site', 'cross-site');
+
+    expect(response.status).toBe(403);
+    expect(await raw('conversations').countDocuments({ user: lee.id })).toBe(2);
   });
 });
