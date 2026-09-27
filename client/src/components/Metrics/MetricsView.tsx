@@ -188,7 +188,7 @@ function AgentRanking({
                   }}
                   className="cursor-pointer border-b border-border-light text-text-primary hover:bg-surface-hover"
                 >
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-[7.5px]">
                     <Link
                       to={path}
                       className="font-normal underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
@@ -196,12 +196,12 @@ function AgentRanking({
                       {title}
                     </Link>
                   </td>
-                  <td className="px-2 py-1.5 text-text-muted">
+                  <td className="px-2 py-[7.5px] text-text-muted">
                     {agent.authorDepartment
                       ? `${agent.authorName} · ${agent.authorDepartment}`
                       : agent.authorName || '–'}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     <span
                       aria-hidden="true"
                       className="me-1.5 inline-block h-1.5 rounded-sm bg-gradient-to-r from-accent-primary to-accent-primary-hover align-middle"
@@ -209,29 +209,29 @@ function AgentRanking({
                     />
                     {formatNumber(agent.runs, locale)}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     {formatNumber(agent.forks, locale)}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     {formatHours(agent.savedHours, locale)}
                   </td>
                 </tr>
               );
             })}
             <tr className="border-b border-border-light text-text-muted">
-              <td className="px-2 py-1.5">
+              <td className="px-2 py-[7.5px]">
                 {localize('com_metrics_base_total', {
                   value: formatNumber(report.baseTotal.count, locale),
                 })}
               </td>
-              <td className="px-2 py-1.5">{report.baseTotal.authorName || '–'}</td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
+              <td className="px-2 py-[7.5px]">{report.baseTotal.authorName || '–'}</td>
+              <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                 {formatNumber(report.baseTotal.runs, locale)}
               </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
+              <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                 {formatNumber(report.baseTotal.forks, locale)}
               </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
+              <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                 {formatHours(report.baseTotal.savedHours, locale)}
               </td>
             </tr>
@@ -287,7 +287,7 @@ function ContributorRanking({
               <tr>
                 <td
                   colSpan={5}
-                  className="border-b border-border-light px-2 py-1.5 text-center text-text-tertiary"
+                  className="border-b border-border-light px-2 py-[7.5px] text-center text-text-tertiary"
                 >
                   {localize('com_metrics_empty_contributors')}
                 </td>
@@ -298,21 +298,21 @@ function ContributorRanking({
                   key={`${contributor.authorName}-${contributor.department ?? ''}`}
                   className="border-b border-border-light text-text-primary"
                 >
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-[7.5px]">
                     {contributor.department
                       ? `${contributor.authorName} · ${contributor.department}`
                       : contributor.authorName || '–'}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     {formatNumber(contributor.agents, locale)}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     {formatNumber(contributor.runs, locale)}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     {formatNumber(contributor.forks, locale)}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     {formatHours(contributor.savedHours, locale)}
                   </td>
                 </tr>

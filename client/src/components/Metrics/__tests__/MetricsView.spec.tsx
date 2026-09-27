@@ -196,7 +196,12 @@ describe('MetricsView', () => {
     expect(contributorName.closest('tr')).toHaveClass('text-text-primary');
     expect(contributorName).not.toHaveClass('text-text-tertiary', 'text-text-muted');
     const runsCell = within(firstAgentRow).getByRole('cell', { name: '5,422' });
-    expect(runsCell).toHaveClass('px-2', 'py-1.5');
+    expect(runsCell).toHaveClass('px-2', 'py-[7.5px]', 'align-middle');
+    tables.forEach((table) =>
+      Array.from(table.querySelectorAll('tbody td')).forEach((cell) =>
+        expect(cell).toHaveClass('py-[7.5px]'),
+      ),
+    );
     const runBar = runsCell.querySelector('span[aria-hidden="true"]');
     expect(runBar).toHaveStyle({ width: '90px' });
     expect(runBar?.classList.contains('bg-gradient-to-r')).toBe(true);
@@ -240,7 +245,7 @@ describe('MetricsView', () => {
       'border-b',
       'border-border-light',
       'px-2',
-      'py-1.5',
+      'py-[7.5px]',
     );
   });
 
