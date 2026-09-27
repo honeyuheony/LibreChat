@@ -67,6 +67,29 @@ describe('SkillDetailContent', () => {
     expect(screen.getByText('41')).toBeInTheDocument();
   });
 
+  it('shows the response scope and previous department in the visibility note', () => {
+    const { rerender } = render(
+      <SkillDetailContent
+        skill={{ ...weekly, scope: 'team', scopeDepartment: '옛 부서' }}
+        allSkills={ALL_SKILLS}
+        onSelectSkill={jest.fn()}
+      />,
+    );
+    const scopeNote = () => screen.getByText((text) => text.includes('com_skills_detail_scope:'));
+
+    expect(scopeNote()).toHaveTextContent('com_skills_scope_team_department');
+    expect(scopeNote()).toHaveTextContent('옛 부서');
+
+    rerender(
+      <SkillDetailContent
+        skill={{ ...weekly, scope: 'me', scopeDepartment: undefined }}
+        allSkills={ALL_SKILLS}
+        onSelectSkill={jest.fn()}
+      />,
+    );
+    expect(scopeNote()).toHaveTextContent('com_skills_scope_me');
+  });
+
   it('shows triggers, output and the instructions without frontmatter', () => {
     renderDetail();
     expect(screen.getByText('주간보고')).toBeInTheDocument();

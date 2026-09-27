@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import { Spinner, useToastContext } from '@librechat/client';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
@@ -42,6 +43,22 @@ export type BuilderEntryState = {
 };
 
 const MARKET_PATH = '/skills-market';
+
+export function getPublishErrorMessageKey(
+  error: unknown,
+): 'com_skills_builder_department_required' | 'com_skills_builder_publish_failed' {
+  if (!axios.isAxiosError<unknown>(error) || error.response?.status !== 400) {
+    return 'com_skills_builder_publish_failed';
+  }
+  const data = error.response.data;
+  return data != null &&
+    typeof data === 'object' &&
+    'code' in data &&
+    data.code === 'DEPARTMENT_REQUIRED'
+    ? 'com_skills_builder_department_required'
+    : 'com_skills_builder_publish_failed';
+}
+
 /** 상세 창 「응용하기」가 여는 주소의 쿼리 이름(`skills/new?forkOf=<id>`). */
 export const FORK_PARAM = 'forkOf';
 
@@ -122,8 +139,8 @@ function EditorPage({ entry, fork, forkTitle, chat }: EditorPageProps) {
         ),
       });
       navigate(`${MARKET_PATH}/mine`);
-    } catch {
-      showToast({ status: 'error', message: localize('com_skills_builder_publish_failed') });
+    } catch (error) {
+      showToast({ status: 'error', message: localize(getPublishErrorMessageKey(error)) });
     }
   };
 

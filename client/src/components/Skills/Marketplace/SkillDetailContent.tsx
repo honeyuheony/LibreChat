@@ -12,8 +12,8 @@ import {
   runsOf,
   savedHoursOf,
 } from './skillCategories';
+import { SkillTags, Tag, authorLine, byLine, visibilityLabel } from './SkillMeta';
 import SkillMarkdownRenderer from '../display/SkillMarkdownRenderer';
-import { SkillTags, Tag, authorLine, byLine } from './SkillMeta';
 import { useLocalize, useSkillActiveState } from '~/hooks';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { useGetSkillQuery } from '~/data-provider';
@@ -136,7 +136,7 @@ export default function SkillDetailContent({
           perRun: Math.round(perRun),
         }),
     localize('com_skills_detail_scope', {
-      scope: profile?.scope ?? localize('com_skills_scope_all'),
+      scope: visibilityLabel(skill, localize),
     }),
     profile?.version,
     skill.category ? getCategoryLabel(skill.category, localize) : null,

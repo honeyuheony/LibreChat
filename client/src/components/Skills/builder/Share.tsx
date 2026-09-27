@@ -21,7 +21,6 @@ type ShareProps = {
   onScope: (scope: TSkillPublishScope) => void;
 };
 
-/** 공유 블록: 직접 하면 걸리는 시간과 공개 범위(전 부서·나만). */
 export default function Share({ manualMinutes, scope, onMinutes, onScope }: ShareProps) {
   const localize = useLocalize();
   return (
@@ -71,6 +70,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
           onChange={(value) => onScope(value as TSkillPublishScope)}
           options={[
             { value: 'all', label: localize('com_skills_scope_all') },
+            { value: 'team', label: localize('com_skills_scope_team') },
             { value: 'me', label: localize('com_skills_builder_scope_me') },
           ]}
         />

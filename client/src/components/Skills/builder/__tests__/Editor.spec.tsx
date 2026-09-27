@@ -2,7 +2,7 @@ import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { TSkill, TSkillDraft, TaskTableResult } from 'librechat-data-provider';
-import Editor, { MarketEditor } from '../Editor';
+import Editor, { getPublishErrorMessageKey, MarketEditor } from '../Editor';
 import { DRAFT_DEBOUNCE_MS } from '../useDraft';
 
 const mockUseGetSkillQuery = jest.fn();
@@ -315,6 +315,22 @@ describe('Editor', () => {
 
       expect(mockUseTaskResultQuery).not.toHaveBeenCalledWith(expect.any(String));
       expect(screen.getByLabelText('com_skills_builder_text_heading')).toHaveValue(chatEntry.text);
+    });
+
+    it('maps only the department-required 400 response to its localized message', () => {
+      const departmentRequired = Object.assign(new Error('department required'), {
+        isAxiosError: true,
+        response: { status: 400, data: { code: 'DEPARTMENT_REQUIRED' } },
+      });
+      const otherError = Object.assign(new Error('other error'), {
+        isAxiosError: true,
+        response: { status: 400, data: { code: 'OTHER_ERROR' } },
+      });
+
+      expect(getPublishErrorMessageKey(departmentRequired)).toBe(
+        'com_skills_builder_department_required',
+      );
+      expect(getPublishErrorMessageKey(otherError)).toBe('com_skills_builder_publish_failed');
     });
   });
 });

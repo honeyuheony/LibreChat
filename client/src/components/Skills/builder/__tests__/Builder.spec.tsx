@@ -34,7 +34,7 @@ const spec = {
 } as TModelSpec;
 
 /** 서버 규칙을 흉내 내는 대역: 내용 PATCH 는 버전을 올리고, 시험 기록·게시는 올리지 않는다. */
-function fakeServer() {
+function fakeServer(publishedScope?: TSkill['scope']) {
   let current: TSkill | undefined;
   const bump = (patch: Partial<TSkill>) => {
     current = { ...(current as TSkill), ...patch, version: (current as TSkill).version + 1 };
@@ -77,7 +77,11 @@ function fakeServer() {
       };
       return current;
     }),
-    publish: jest.fn(async () => ({ ...(current as TSkill), publishedAt: '2026-09-27' })),
+    publish: jest.fn(async ({ payload }) => ({
+      ...(current as TSkill),
+      publishedAt: '2026-09-27',
+      scope: publishedScope ?? payload.scope,
+    })),
     transport,
     spec,
     wait: async () => undefined,
@@ -250,6 +254,43 @@ describe('Builder', () => {
 
     expect(deps.publish).toHaveBeenCalledTimes(1);
     expect(deps.publish).toHaveBeenCalledWith({ id: 'skill-1', payload: { scope: 'me' } });
+  });
+
+  it('offers the team scope and publishes it as team', async () => {
+    const { deps } = fakeServer();
+    render(<Harness deps={deps} />);
+    await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_minutes_30' }));
+    await passTest();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'com_skills_scope_team' }));
+    expect(screen.getByRole('radio', { name: 'com_skills_scope_team' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await act(async () => {
+      fireEvent.click(publishButton());
+    });
+
+    expect(deps.publish).toHaveBeenCalledWith({ id: 'skill-1', payload: { scope: 'team' } });
+  });
+
+  it('restores the scope from the published skill response', async () => {
+    const { deps } = fakeServer('me');
+    render(<Harness deps={deps} />);
+    await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_minutes_30' }));
+    await passTest();
+    fireEvent.click(screen.getByRole('radio', { name: 'com_skills_scope_team' }));
+
+    await act(async () => {
+      fireEvent.click(publishButton());
+    });
+
+    expect(screen.getByRole('radio', { name: 'com_skills_builder_scope_me' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 
   it('switches the SKILL.md view between the readable card and the raw text', async () => {

@@ -4,8 +4,44 @@ import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 type Localize = ReturnType<typeof useLocalize>;
+type PublicationScope = NonNullable<TSkillSummary['scope']>;
 
 const TAG_CLASS = 'whitespace-nowrap rounded-full px-[7px] py-px text-[10.5px] font-bold';
+
+function publicationScope(skill: TSkillSummary): PublicationScope | undefined {
+  if (skill.scope != null) {
+    return skill.scope;
+  }
+  switch (skill.marketProfile?.scope) {
+    case 'all':
+    case '전 부서':
+      return 'all';
+    case 'team':
+    case '팀':
+      return 'team';
+    case 'me':
+    case '나만':
+      return 'me';
+    default:
+      return undefined;
+  }
+}
+
+export function visibilityLabel(skill: TSkillSummary, localize: Localize): string {
+  const scope = publicationScope(skill);
+  if (scope === 'team') {
+    return skill.scopeDepartment
+      ? localize('com_skills_scope_team_department', { department: skill.scopeDepartment })
+      : localize('com_skills_scope_team');
+  }
+  if (scope === 'me') {
+    return localize('com_skills_scope_me');
+  }
+  if (scope === 'all') {
+    return localize('com_skills_scope_all');
+  }
+  return skill.marketProfile?.scope ?? localize('com_skills_scope_all');
+}
 
 export function Tag({
   tone,
@@ -29,17 +65,23 @@ export function Tag({
   );
 }
 
-/** 와이어프레임 `tagsOf`: 내 agent · 신규 · 응용 · 우리 팀. */
+/** 마켓에서 소유·상태·공개 범위를 보여 준다. */
 export function SkillTags({ skill, userId }: { skill: TSkillSummary; userId?: string }) {
   const localize = useLocalize();
+  const scope = publicationScope(skill);
   return (
     <>
       {isOwnSkill(skill, userId) && <Tag tone="mine">{localize('com_skills_tag_mine')}</Tag>}
       {isNewSkill(skill) && <Tag tone="new">{localize('com_skills_tag_new')}</Tag>}
       {skill.forkOf && <Tag tone="fork">{localize('com_skills_tag_fork')}</Tag>}
-      {skill.marketProfile?.scope === '팀' && (
-        <Tag tone="team">{localize('com_skills_tag_team')}</Tag>
+      {scope === 'team' && (
+        <Tag tone="team">
+          {skill.scopeDepartment
+            ? localize('com_skills_scope_team_department', { department: skill.scopeDepartment })
+            : localize('com_skills_tag_team')}
+        </Tag>
       )}
+      {scope === 'me' && <Tag tone="team">{localize('com_skills_scope_me')}</Tag>}
     </>
   );
 }
