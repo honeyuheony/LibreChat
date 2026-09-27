@@ -200,6 +200,13 @@ describe('DataHub', () => {
     expect(bar).toHaveTextContent('As seen by Hong · Analysis');
   });
 
+  it('sets the page title at 22px bold', () => {
+    renderHub();
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title).toHaveClass('text-[22px]', 'font-bold');
+    expect(title).not.toHaveClass('text-2xl');
+  });
+
   it('counts each observable status, reading the desktop app rather than its relay', () => {
     renderHub();
     expect(screen.getByTestId('data-hub-filter-available')).toHaveTextContent('1Available');

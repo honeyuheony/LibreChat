@@ -12,7 +12,8 @@ jest.mock('@librechat/client', () => {
 });
 
 const ARTIFACTS_KEY = 'react-resizable-panels:side-panel-layout:messages-view:artifacts-panel';
-const TASK_KEY = 'react-resizable-panels:side-panel-layout:messages-view:task-panel';
+const TASK_ID = 'task-side-panel';
+const TASK_KEY = `react-resizable-panels:side-panel-layout:messages-view:${TASK_ID}`;
 
 const slotProps = () =>
   (ResizablePanel as unknown as jest.Mock).mock.calls
@@ -53,8 +54,66 @@ describe('SidePanelGroup', () => {
         <div />
       </SidePanelGroup>,
     );
-    expect(slotProps().at(-1)).toMatchObject({ id: 'task-panel', defaultSize: '360px' });
+    expect(slotProps().at(-1)).toMatchObject({ id: TASK_ID, defaultSize: '360px' });
     expect(getItem).toHaveBeenCalledWith(TASK_KEY);
     expect(getItem).not.toHaveBeenCalledWith(ARTIFACTS_KEY);
+  });
+
+  describe('in a 1180px wide group', () => {
+    const GROUP_WIDTH = 1180;
+    let offsetWidth: PropertyDescriptor | undefined;
+
+    const taskPanelWidth = (container: HTMLElement) => {
+      const panel = container.querySelector<HTMLElement>(`[data-panel][id="${TASK_ID}"]`);
+      return (Number(panel?.style.flexGrow) / 100) * GROUP_WIDTH;
+    };
+
+    beforeEach(() => {
+      offsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.hasAttribute('data-panel') ? GROUP_WIDTH / 2 : 0;
+        },
+      });
+    });
+
+    afterEach(() => {
+      if (offsetWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', offsetWidth);
+      }
+    });
+
+    it('opens the task panel 360px wide on a first visit', () => {
+      const { container } = render(
+        <SidePanelGroup panel={<div />} panelKind="task">
+          <div />
+        </SidePanelGroup>,
+      );
+      expect(taskPanelWidth(container)).toBeCloseTo(360, 0);
+    });
+
+    it('still splits the artifact panel half and half', () => {
+      const { container } = render(
+        <SidePanelGroup panel={<div />}>
+          <div />
+        </SidePanelGroup>,
+      );
+      const panel = container.querySelector<HTMLElement>('[data-panel][id="artifacts-panel"]');
+      expect(Number(panel?.style.flexGrow)).toBeCloseTo(50, 1);
+    });
+
+    it('does not reuse a width saved under the earlier task panel key', () => {
+      localStorage.setItem(
+        'react-resizable-panels:side-panel-layout:messages-view:task-panel',
+        JSON.stringify({ 'messages-view': 62.106, 'task-panel': 37.894 }),
+      );
+      const { container } = render(
+        <SidePanelGroup panel={<div />} panelKind="task">
+          <div />
+        </SidePanelGroup>,
+      );
+      expect(taskPanelWidth(container)).toBeCloseTo(360, 0);
+    });
   });
 });

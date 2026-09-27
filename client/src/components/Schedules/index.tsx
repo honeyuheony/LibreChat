@@ -7,10 +7,12 @@ import { useChatProjectNames } from '../SidePanel/Schedules/useScheduleProjects'
 import ScheduleCardSkeleton from '../SidePanel/Schedules/ScheduleCardSkeleton';
 import { useSkillsInfiniteQuery } from '~/data-provider/Skills';
 import { useSchedulesQuery } from '~/data-provider/Schedules';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import useRunSync from '../SidePanel/Schedules/useRunSync';
 import { useHasAccess, useLocalize } from '~/hooks';
 import ScheduleDialog from './ScheduleDialog';
 import ScheduleCard from './ScheduleCard';
+import { cn } from '~/utils';
 
 export default function Schedules() {
   const localize = useLocalize();
@@ -94,7 +96,7 @@ export default function Schedules() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-surface-secondary">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+      <header className={cn(pageTopBarClassName, 'justify-between')}>
         <span className="font-semibold text-text-primary">
           {localize('com_ui_schedules_title')}
         </span>
@@ -116,7 +118,7 @@ export default function Schedules() {
         aria-label={localize('com_ui_schedules_title')}
         className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col gap-3 overflow-y-auto px-6 py-4"
       >
-        <h1 className="text-xl font-semibold text-text-primary">
+        <h1 className="text-[22px] font-bold text-text-primary">
           {localize('com_ui_schedules_title')}
         </h1>
         <p className="text-sm text-text-secondary">{localize('com_ui_schedules_description')}</p>

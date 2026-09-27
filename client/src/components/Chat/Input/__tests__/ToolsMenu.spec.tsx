@@ -166,6 +166,16 @@ describe('ToolsMenu', () => {
     ).toHaveAttribute('aria-checked', 'true');
   });
 
+  it('heads the connector group as data sources and MCP servers', async () => {
+    const user = userEvent.setup();
+    render(<ToolsMenu showBuiltinTools={true} />);
+
+    await user.click(screen.getByTestId('tools-menu-button'));
+
+    const group = screen.getByRole('group', { name: 'com_ui_tools_data_sources' });
+    expect(within(group).getByRole('menuitemcheckbox', { name: 'Shared files' })).toBeVisible();
+  });
+
   it('toggles a connector without closing the menu', async () => {
     const user = userEvent.setup();
     render(<ToolsMenu showBuiltinTools={true} />);
@@ -275,6 +285,78 @@ describe('ToolsMenu', () => {
     expect(
       screen.queryByRole('menuitemcheckbox', { name: 'com_ui_web_search' }),
     ).not.toBeInTheDocument();
+  });
+
+  describe('with less room above the composer than the menu is tall', () => {
+    const TRIGGER_TOP = 402;
+    const MENU_HEIGHT = 434;
+    const restores: Array<() => void> = [];
+
+    const stub = <T extends object>(target: T, key: string, descriptor: PropertyDescriptor) => {
+      const original = Object.getOwnPropertyDescriptor(target, key);
+      Object.defineProperty(target, key, { configurable: true, ...descriptor });
+      restores.push(() =>
+        original ? Object.defineProperty(target, key, original) : delete (target as never)[key],
+      );
+    };
+
+    beforeEach(() => {
+      stub(document.documentElement, 'clientWidth', { get: () => 1440 });
+      stub(document.documentElement, 'clientHeight', { get: () => 900 });
+      stub(HTMLElement.prototype, 'offsetHeight', {
+        get(this: HTMLElement) {
+          return this.querySelector('[role="menu"]') || this.getAttribute('role') === 'menu'
+            ? MENU_HEIGHT
+            : 0;
+        },
+      });
+      stub(HTMLElement.prototype, 'offsetWidth', {
+        get(this: HTMLElement) {
+          return this.querySelector('[role="menu"]') || this.getAttribute('role') === 'menu'
+            ? 340
+            : 0;
+        },
+      });
+    });
+
+    afterEach(() => {
+      restores
+        .splice(0)
+        .reverse()
+        .forEach((restore) => restore());
+    });
+
+    it('still opens upward and scrolls inside instead of dropping below', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={true} />);
+      const trigger = screen.getByTestId('tools-menu-button');
+      jest.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+        x: 481,
+        y: TRIGGER_TOP,
+        top: TRIGGER_TOP,
+        left: 481,
+        right: 519,
+        bottom: TRIGGER_TOP + 38,
+        width: 38,
+        height: 38,
+        toJSON: () => ({}),
+      });
+
+      await user.click(trigger);
+      const menu = screen.getByRole('menu', { name: 'com_ui_tools' });
+      let wrapper: HTMLElement | null = menu;
+      await waitFor(() => {
+        wrapper = menu;
+        while (wrapper && !wrapper.style.transform) {
+          wrapper = wrapper.parentElement;
+        }
+        expect(wrapper?.style.transform).toMatch(/translate3d/);
+      });
+
+      const y = Number(/translate3d\([^,]+,\s*(-?[\d.]+)px/.exec(wrapper!.style.transform)?.[1]);
+      expect(y).toBeLessThan(TRIGGER_TOP);
+      expect(menu.className).toContain('w-[340px]');
+    });
   });
 
   it('renders nothing when there is no connector or tool to offer', () => {

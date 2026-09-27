@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import Schedules from '../index';
 
 const mockRefetch = jest.fn();
@@ -65,6 +66,15 @@ test('places the create action in the top bar and keeps the content narrow', () 
   expect(content).toHaveClass('max-w-[760px]', 'px-6');
   expect(content.parentElement).toHaveClass('bg-surface-secondary');
   expect(content).not.toContainElement(createButton);
+});
+
+test('shares the sticky page top bar and the 22px bold page title', () => {
+  render(<Schedules />);
+
+  expect(screen.getByRole('banner')).toHaveClass(...pageTopBarClassName.split(' '));
+  const title = screen.getByRole('heading', { level: 1, name: 'com_ui_schedules_title' });
+  expect(title).toHaveClass('text-[22px]', 'font-bold');
+  expect(title).not.toHaveClass('text-xl', 'font-semibold');
 });
 
 test('does not show a schedule tile when the list is empty', () => {

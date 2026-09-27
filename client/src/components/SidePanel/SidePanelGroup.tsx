@@ -10,10 +10,12 @@ const PANEL_IDS_SINGLE = ['messages-view'];
 
 /** 기존 너비를 이어 쓰도록 artifact ID를 유지하고 panel ID마다 저장할 layout을 분리한다.
  * task panel은 기본 너비 360px로 열리고 artifact panel과 너비를 따로 저장한다.
+ * 대화 영역은 기본 크기 없이 남은 폭을 채운다. 50%를 주면 360px와 합이 100%가 아니어서
+ * 비율로 다시 나뉘며 task panel이 넓어진다. 그렇게 저장된 예전 너비는 읽지 않도록 task ID를 따로 둔다.
  */
 const PANEL_SLOTS: Record<SidePanelKind, PanelSlot> = {
   artifacts: { id: 'artifacts-panel', defaultSize: '50', minWidthClassName: 'min-w-[400px]' },
-  task: { id: 'task-panel', defaultSize: '360px' },
+  task: { id: 'task-side-panel', defaultSize: '360px' },
 };
 
 interface SidePanelProps {
@@ -43,7 +45,7 @@ const SidePanelGroup = memo(({ panel, panelKind = 'artifacts', children }: SideP
         onLayoutChanged={onLayoutChanged}
         className="relative flex-1 bg-presentation"
       >
-        <ResizablePanel defaultSize="50" minSize={minSizeMain} id="messages-view">
+        <ResizablePanel minSize={minSizeMain} id="messages-view">
           {children}
         </ResizablePanel>
 

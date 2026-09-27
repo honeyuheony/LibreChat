@@ -218,7 +218,7 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                           <p
                             className={cn(
                               'px-4 pt-4 text-center text-sm text-text-tertiary',
-                              centerFormOnLanding ? 'sm:-mt-24' : 'sm:-mt-6',
+                              centerFormOnLanding ? 'sm:-mt-12' : 'sm:-mt-6',
                             )}
                           >
                             <Trans

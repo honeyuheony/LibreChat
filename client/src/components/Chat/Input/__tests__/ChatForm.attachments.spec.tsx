@@ -66,7 +66,7 @@ class StubImage {
 
 let commits = 0;
 
-function Harness() {
+function Harness({ landing }: { landing: boolean }) {
   const [files, setFiles] = useRecoilState(store.filesByIndex(0));
   const [isSubmitting] = useRecoilState(store.isSubmittingFamily(0));
   const [, setFilesLoading] = useState(false);
@@ -112,9 +112,9 @@ function Harness() {
         <Profiler id="composer" onRender={() => (commits += 1)}>
           <ChatForm
             index={0}
-            isLandingPage={false}
+            isLandingPage={landing}
             footerBelow={false}
-            centerFormOnLanding={false}
+            centerFormOnLanding={landing}
           />
         </Profiler>
       </ChatContext.Provider>
@@ -125,7 +125,8 @@ function Harness() {
 function renderComposer({
   submitting = false,
   quotes = [],
-}: { submitting?: boolean; quotes?: string[] } = {}) {
+  landing = false,
+}: { submitting?: boolean; quotes?: string[]; landing?: boolean } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -149,7 +150,7 @@ function renderComposer({
         <Router>
           <AuthContextProvider authConfig={{ loginRedirect: '', test: true }}>
             <DndProvider backend={HTML5Backend}>
-              <Harness />
+              <Harness landing={landing} />
             </DndProvider>
           </AuthContextProvider>
         </Router>
@@ -333,6 +334,24 @@ describe('ChatForm attachments', () => {
     } finally {
       window.matchMedia = matchMedia;
     }
+  }, 20000);
+
+  test('raises the landing composer on the surface elevation shadow', async () => {
+    renderComposer({ landing: true });
+    await screen.findByTestId('text-input');
+
+    const surface = screen.getByTestId('composer-surface');
+    expect(surface).toHaveClass('shadow-theme-surface');
+    expect(surface).not.toHaveClass('shadow-sm');
+  }, 20000);
+
+  test('leaves a 64px band under the centred landing composer', async () => {
+    const { container } = renderComposer({ landing: true });
+    await screen.findByTestId('text-input');
+
+    const form = container.querySelector('form');
+    expect(form).toHaveClass('sm:mb-16');
+    expect(form).not.toHaveClass('sm:mb-28');
   }, 20000);
 
   test('focuses the textarea when clicking empty composer space', async () => {
