@@ -93,11 +93,11 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
         <button
           type="button"
           onClick={onCreate}
-          className="flex items-start gap-3.5 rounded-[18px] border-[1.5px] border-dashed border-border-medium px-4 py-3.5 text-left hover:bg-surface-hover"
+          className="flex items-center gap-3.5 rounded-[18px] border-[1.5px] border-dashed border-border-medium px-4 py-3.5 text-left hover:bg-surface-hover"
         >
           <span
             aria-hidden="true"
-            className="inline-flex size-[46px] flex-none items-center justify-center rounded-full bg-surface-tertiary text-[22px]"
+            className="inline-flex size-[68px] flex-none items-center justify-center rounded-full bg-surface-brand-subtle text-[34px] text-accent-primary"
           >
             {'＋'}
           </span>
