@@ -149,6 +149,13 @@ describe('SkillMarketplace', () => {
     expect(createAction?.nextElementSibling).toHaveTextContent('com_skills_create_agent_hint');
   });
 
+  it('positions the marketplace introduction at the wireframe offset on the pack tab', () => {
+    renderAt('/skills-market/packs');
+
+    const createAction = screen.getByRole('button', { name: 'com_skills_create_agent' });
+    expect(createAction.parentElement?.parentElement).toHaveClass('pt-4');
+  });
+
   it('lists every agent of a category, including base agents', () => {
     renderAt(`/skills-market/${encodeURIComponent('문서작성')}`);
     expect(rowTitles()).toEqual([

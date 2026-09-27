@@ -132,12 +132,15 @@ describe('UserSettings', () => {
 
     const note = screen.getByRole('note');
     expect(note).toHaveClass(
+      'rounded-lg',
       'border-accent-primary/20',
       'bg-surface-brand-subtle',
       'text-accent-primary',
     );
+    expect(note.parentElement).toHaveClass('space-y-3');
     expect(note.closest('div.mx-auto')).toHaveClass('max-w-[710px]');
     const settingsHeading = screen.getByRole('heading', { name: 'com_nav_settings' });
+    expect(settingsHeading).toHaveClass('mb-2.5');
     expect(settingsHeading.closest('div.px-4')).toHaveClass('md:pt-4');
 
     const instructions = screen.getByRole('textbox', {

@@ -119,10 +119,10 @@ export default function UserSettings() {
     );
   } else {
     settingsContent = (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p
           role="note"
-          className="rounded-md border border-accent-primary/20 bg-surface-brand-subtle px-2.5 py-2 text-[13px] text-accent-primary"
+          className="rounded-lg border border-accent-primary/20 bg-surface-brand-subtle px-2.5 py-2 text-[13px] text-accent-primary"
         >
           {localizeSetting('com_ui_user_settings_connection_prefix')}
           <Link to="/connectors" className="text-link hover:underline">
@@ -199,7 +199,7 @@ export default function UserSettings() {
       </header>
       <div className="px-4 pb-10 pt-6 md:pt-4">
         <div className="mx-auto w-full max-w-[710px]">
-          <h1 className="mb-4 text-2xl font-bold text-text-primary">
+          <h1 className="mb-2.5 text-2xl font-bold text-text-primary">
             {localize('com_nav_settings')}
           </h1>
           {settingsContent}

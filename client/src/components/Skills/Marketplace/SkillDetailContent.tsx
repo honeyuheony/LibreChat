@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Constants } from 'librechat-data-provider';
 import { Label, Spinner, Switch, OGDialogTitle, OGDialogContent } from '@librechat/client';
 import type { TSkillSummary } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import {
   formatCount,
   getCategoryLabel,
@@ -13,7 +14,6 @@ import {
   savedHoursOf,
 } from './skillCategories';
 import { SkillTags, Tag, authorLine, byLine, visibilityLabel } from './SkillMeta';
-import SkillMarkdownRenderer from '../display/SkillMarkdownRenderer';
 import { useLocalize, useSkillActiveState } from '~/hooks';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { useGetSkillQuery } from '~/data-provider';
@@ -34,6 +34,33 @@ interface SkillDetailContentProps {
 /** SKILL.md 본문은 보통 `# 제목` 으로 시작한다. 창 머리에 이미 제목이 있으니 첫 줄의 h1 은 뺀다. */
 export function stripLeadingTitle(body: string): string {
   return body.replace(/^\s*#[ \t]+[^\n]*\n?/, '');
+}
+
+const INSTRUCTION_SECTION_HEADING =
+  /^(?:일하는 방법|실행 단계|실행 방법|작업 순서|업무 절차|절차|steps?|workflow|process|instructions?)$/i;
+
+const SKILL_DETAIL_OVERLAY_CLASS =
+  'bg-text-primary/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-text-primary/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
+
+function extractInstructionSteps(content: string): string[] {
+  const instructionSection = content.split(/(?=^#{1,6}\s)/m).find((section) => {
+    const heading = section.match(/^#{1,6}\s+(.+)$/m)?.[1].trim();
+    return heading != null && INSTRUCTION_SECTION_HEADING.test(heading);
+  });
+  const lines = (instructionSection ?? content)
+    .split(/\r?\n/)
+    .filter((line) => !/^#{1,6}\s/.test(line));
+  const listItems = lines.flatMap((line) => {
+    const item = line.match(/^\s*(?:\d+[.)]|[-*+])\s+(.+)$/)?.[1].trim();
+    return item ? [item] : [];
+  });
+  if (listItems.length > 0) {
+    return listItems;
+  }
+  return lines
+    .flatMap((line) => line.split(/(?<=[.!?])\s+/))
+    .map((step) => step.replace(/^\s*\d+[.)]\s*/, '').trim())
+    .filter(Boolean);
 }
 
 function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
@@ -127,6 +154,27 @@ export default function SkillDetailContent({
   const instructions = detailQuery.data?.body
     ? stripLeadingTitle(parseFrontmatter(detailQuery.data.body).body)
     : '';
+  const instructionSteps = extractInstructionSteps(instructions);
+  let howContent: React.ReactNode;
+  if (detailQuery.isLoading) {
+    howContent = <Spinner className="size-4 text-text-primary" />;
+  } else if (instructionSteps.length > 0) {
+    howContent = (
+      <ol className="ml-4 list-decimal space-y-0.5 text-sm leading-[1.7] text-text-secondary">
+        {instructionSteps.map((step, index) => (
+          <li key={`${index}-${step}`}>{step}</li>
+        ))}
+      </ol>
+    );
+  } else if (profile?.pipeline) {
+    howContent = (
+      <div className="text-[13px] text-text-muted">
+        {localize('com_skills_pipeline', { pipeline: profile.pipeline })}
+      </div>
+    );
+  } else {
+    howContent = null;
+  }
   const footnote = [
     perRun == null
       ? null
@@ -140,10 +188,14 @@ export default function SkillDetailContent({
     }),
     profile?.version,
     skill.category ? getCategoryLabel(skill.category, localize) : null,
+    localize('com_skills_detail_model_auto' as TranslationKeys),
   ].filter(Boolean);
 
   return (
-    <OGDialogContent className="flex w-[580px] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 text-center">
+    <OGDialogContent
+      overlayClassName={SKILL_DETAIL_OVERLAY_CLASS}
+      className="flex w-[580px] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 text-center"
+    >
       <div className="min-h-0 flex-1 overflow-y-auto px-[34px] pb-3.5 pt-[34px]">
         <SkillIcon skill={skill} size="l" />
         <OGDialogTitle className="mb-1 mt-4 text-[25px] font-bold leading-tight">
@@ -210,24 +262,7 @@ export default function SkillDetailContent({
               </div>
             </InfoBlock>
           )}
-          <InfoBlock title={localize('com_skills_how')}>
-            {profile?.pipeline && (
-              <div className="mb-1.5 text-[13px] text-text-muted">
-                {localize('com_skills_pipeline', { pipeline: profile.pipeline })}
-              </div>
-            )}
-            {detailQuery.isLoading ? (
-              <Spinner className="size-4 text-text-primary" />
-            ) : (
-              <div className="max-h-72 overflow-y-auto text-sm [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold">
-                <SkillMarkdownRenderer
-                  content={instructions}
-                  skillId={skill._id}
-                  currentFilePath="SKILL.md"
-                />
-              </div>
-            )}
-          </InfoBlock>
+          <InfoBlock title={localize('com_skills_how')}>{howContent}</InfoBlock>
           {profile?.output && (
             <InfoBlock title={localize('com_skills_output')}>
               <b className="text-sm">{profile.output}</b>

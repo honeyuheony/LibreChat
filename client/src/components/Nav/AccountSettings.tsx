@@ -237,8 +237,8 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           overlayClassName={RESET_CONFIRMATION_OVERLAY_CLASS}
           className="w-11/12 max-w-[450px] gap-0 overflow-hidden p-0"
         >
-          <header className="relative border-b border-border-light px-4 py-3 pr-12 text-left">
-            <OGDialogTitle className="text-base font-bold leading-5">
+          <header className="relative border-b border-border-light px-4 pb-4 pr-12 pt-4 text-left">
+            <OGDialogTitle className="text-[16.5px] font-bold leading-[25px]">
               {localize('com_ui_demo_reset_title')}
             </OGDialogTitle>
             <OGDialogClose asChild>
@@ -256,7 +256,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           <OGDialogDescription className="border-b border-border-light px-4 py-3 text-left">
             {localize('com_ui_demo_reset_confirmation')}
           </OGDialogDescription>
-          <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-4 py-3">
+          <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-4 pb-3 pt-5">
             <OGDialogClose asChild>
               <Button type="button" variant="ghost" size="pill" className="text-text-tertiary">
                 {localize('com_ui_cancel')}
@@ -270,7 +270,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
                 size="pill"
                 disabled={resetDemoMutation.isLoading}
                 onClick={() => resetDemoMutation.mutate()}
-                className="focus-visible:ring-ring-primary"
+                className="focus:ring-2 focus:ring-ring-primary focus-visible:ring-ring-primary"
               >
                 {resetDemoMutation.isLoading ? (
                   <Spinner className="size-4 text-text-primary" />

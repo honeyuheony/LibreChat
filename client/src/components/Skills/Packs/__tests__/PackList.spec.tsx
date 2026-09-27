@@ -43,9 +43,12 @@ describe('PackList', () => {
 
     const createButton = screen.getByRole('button', { name: /com_skills_pack_create/ });
     expect(createButton).toHaveClass('items-center');
+    expect(within(createButton).getByText('com_skills_pack_create')).toHaveClass(
+      'text-text-primary',
+    );
     expect(within(createButton).getByText('＋')).toHaveClass(
       'size-[68px]',
-      'bg-surface-brand-subtle',
+      'bg-surface-message-user',
       'text-accent-primary',
       'text-[34px]',
     );
