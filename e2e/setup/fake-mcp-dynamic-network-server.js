@@ -9,7 +9,7 @@ const {
 } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { watchDynamicTool } = require('./dynamic-mcp-tools');
 
-const PORT = Number.parseInt(process.env.E2E_MCP_DYNAMIC_PORT || '8766', 10);
+const PORT = Number.parseInt(process.env.E2E_MCP_DYNAMIC_PORT || '8768', 10);
 const HOST = '127.0.0.1';
 
 function createMcpServer(name, transportLabel) {

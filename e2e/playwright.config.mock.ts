@@ -20,8 +20,9 @@ const dynamicMcpServerPath = path.resolve(rootPath, 'e2e/setup/fake-mcp-dynamic-
 const MCP_HTTP_PORT = process.env.E2E_MCP_HTTP_PORT || '8765';
 /** Must match the protected OAuth MCP fixture in e2e/config/librechat.e2e.yaml. */
 const MCP_OAUTH_PORT = process.env.E2E_MCP_OAUTH_PORT || '8767';
-/** Must match the dynamic Streamable HTTP and SSE URLs in the e2e config template. */
-const MCP_DYNAMIC_PORT = process.env.E2E_MCP_DYNAMIC_PORT || '8766';
+/** Must match the dynamic Streamable HTTP and SSE URLs written below. 8766 is left free
+ *  because a local deployment's desk relay listens there. */
+const MCP_DYNAMIC_PORT = process.env.E2E_MCP_DYNAMIC_PORT || '8768';
 const MCP_STATE_PATH =
   process.env.E2E_MCP_STATE_PATH ||
   path.resolve(rootPath, 'e2e/specs/.test-results/mcp-tool-state.json');
@@ -32,7 +33,7 @@ const LABEL_PORT = process.env.E2E_LABEL_PORT || '8889';
 const codeServerPath = path.resolve(rootPath, 'e2e/setup/fake-code-server.js');
 const ragServerPath = path.resolve(rootPath, 'e2e/setup/fake-rag-server.js');
 /** Ports the backend reaches via LIBRECHAT_CODE_BASEURL / RAG_API_URL below.
- *  Kept clear of the MCP (8765/8766) and label (8889) fixtures. */
+ *  Kept clear of the MCP (8765/8767/8768) and label (8889) fixtures. */
 const CODE_API_PORT = process.env.E2E_CODE_API_PORT || '8790';
 const RAG_API_PORT = process.env.E2E_RAG_API_PORT || '8791';
 const fakeModelHookPath = path.resolve(rootPath, 'e2e/setup/fake-model.js');
@@ -193,7 +194,7 @@ function writeRuntimeMockConfig() {
   );
   const dynamicMcpConfig = enableDynamicMcp
     ? {
-        allowedDomain: '- http://127.0.0.1:8766',
+        allowedDomain: `- http://127.0.0.1:${MCP_DYNAMIC_PORT}`,
         stdioEnv: [
           'env:',
           '      E2E_MCP_LIST_CHANGED: "true"',
@@ -202,13 +203,13 @@ function writeRuntimeMockConfig() {
         networkServers: [
           'e2e-streamable:',
           '    type: streamable-http',
-          '    url: http://127.0.0.1:8766/mcp',
+          `    url: http://127.0.0.1:${MCP_DYNAMIC_PORT}/mcp`,
           '    title: E2E Streamable HTTP',
           '    description: Dynamic real-SDK Streamable HTTP fixture for mock end-to-end tests.',
           '    timeout: 30000',
           '  e2e-sse:',
           '    type: sse',
-          '    url: http://127.0.0.1:8766/sse',
+          `    url: http://127.0.0.1:${MCP_DYNAMIC_PORT}/sse`,
           '    title: E2E SSE',
           '    description: Dynamic real-SDK legacy SSE fixture for mock end-to-end tests.',
           '    timeout: 30000',
@@ -279,9 +280,6 @@ function writeRuntimeMockConfig() {
    *  every activity-label request went to the wrong port. */
   if (LABEL_PORT !== '8889') {
     config = config.split('127.0.0.1:8889').join(`127.0.0.1:${LABEL_PORT}`);
-  }
-  if (enableDynamicMcp && MCP_DYNAMIC_PORT !== '8766') {
-    config = config.split('127.0.0.1:8766').join(`127.0.0.1:${MCP_DYNAMIC_PORT}`);
   }
   if (MCP_OAUTH_PORT !== '8767') {
     config = config.split('127.0.0.1:8767').join(`127.0.0.1:${MCP_OAUTH_PORT}`);
