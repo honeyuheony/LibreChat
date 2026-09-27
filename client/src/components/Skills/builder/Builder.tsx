@@ -3,11 +3,11 @@ import { X } from 'lucide-react';
 import { Button } from '@librechat/client';
 import type { BuilderSession } from './useSession';
 import type { TranslationKeys } from '~/hooks';
+import SourceTag, { ChangedMark } from './SourceTag';
 import Preview, { PreviewHead } from './Preview';
-import { pluginFiles } from './state';
+import { SOURCE_ME, pluginFiles } from './state';
 import TrialPanel from './TrialPanel';
 import { useLocalize } from '~/hooks';
-import SourceTag from './SourceTag';
 import Folder from './Folder';
 import Share from './Share';
 import Todo from './Todo';
@@ -16,6 +16,8 @@ type BuilderProps = {
   session: BuilderSession;
   author: string;
   fromChat?: boolean;
+  /** 응용 편집이면 원본 이름. */
+  forkTitle?: string;
   onCancel: () => void;
   onPublish: () => void;
 };
@@ -35,7 +37,37 @@ function testButtonKey(running: boolean, tested: boolean): TranslationKeys {
 }
 
 /** agent 만들기 편집기: 왼쪽 입력창 하나, 오른쪽 미리보기·폴더·테스트, 아래 할 일과 단추. */
-export default function Builder({ session, author, fromChat, onCancel, onPublish }: BuilderProps) {
+function headerText(
+  localize: ReturnType<typeof useLocalize>,
+  fromChat: boolean | undefined,
+  forkTitle: string | undefined,
+): { title: string; subtitle: string } {
+  if (forkTitle != null) {
+    return {
+      title: localize('com_skills_builder_fork_title', { name: forkTitle }),
+      subtitle: localize('com_skills_builder_fork_subtitle'),
+    };
+  }
+  if (fromChat) {
+    return {
+      title: localize('com_skills_chat_save_as_agent'),
+      subtitle: localize('com_skills_builder_from_chat_subtitle'),
+    };
+  }
+  return {
+    title: localize('com_skills_new_agent'),
+    subtitle: localize('com_skills_builder_subtitle'),
+  };
+}
+
+export default function Builder({
+  session,
+  author,
+  fromChat,
+  forkTitle,
+  onCancel,
+  onPublish,
+}: BuilderProps) {
   const localize = useLocalize();
   const { state } = session;
   const [selectedFile, setSelectedFile] = useState('');
@@ -45,19 +77,16 @@ export default function Builder({ session, author, fromChat, onCancel, onPublish
   const selected = files.some((file) => file.path === selectedFile) ? selectedFile : skillPath;
   const empty = state.text.trim().length === 0;
   const running = session.trial.status === 'running';
-  const title = localize(fromChat ? 'com_skills_chat_save_as_agent' : 'com_skills_new_agent');
+  const { title, subtitle } = headerText(localize, fromChat, forkTitle);
+  const textChanged = session.changed.has('text');
   const draftStatus = draftStatusKey(session.draft);
-  const textSource = state.direct ? state.textBy : 'me';
+  const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-presentation">
       <header className="flex items-center gap-3 border-b border-border-light px-5 py-3">
         <h1 className="flex-none text-base font-semibold text-text-primary">{title}</h1>
-        <span className="flex-1 text-sm text-text-secondary">
-          {localize(
-            fromChat ? 'com_skills_builder_from_chat_subtitle' : 'com_skills_builder_subtitle',
-          )}
-        </span>
+        <span className="flex-1 text-sm text-text-secondary">{subtitle}</span>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -81,9 +110,14 @@ export default function Builder({ session, author, fromChat, onCancel, onPublish
                 {!empty && (
                   <SourceTag
                     source={textSource}
-                    label={state.direct ? undefined : localize('com_skills_builder_source_wrote')}
+                    label={
+                      textSource === SOURCE_ME
+                        ? localize('com_skills_builder_source_wrote')
+                        : undefined
+                    }
                   />
                 )}
+                <ChangedMark show={textChanged} />
               </span>
             </div>
             <p className="text-sm text-text-secondary">
@@ -108,7 +142,12 @@ export default function Builder({ session, author, fromChat, onCancel, onPublish
         </div>
 
         <div className="min-h-0 overflow-auto border-border-light bg-surface-secondary px-5 py-4 md:border-s">
-          <PreviewHead state={state} author={author} onEdit={session.edit} />
+          <PreviewHead
+            state={state}
+            author={author}
+            onEdit={session.edit}
+            changed={session.changed}
+          />
           <Folder
             root={state.slug || 'new-agent'}
             files={files}
@@ -126,6 +165,7 @@ export default function Builder({ session, author, fromChat, onCancel, onPublish
                   onStepOff={session.stepOff}
                   onStepsRestore={session.stepsRestore}
                   onToggleConnector={session.connector}
+                  changed={session.changed}
                 />
                 <Share
                   manualMinutes={state.manualMinutes}
@@ -166,7 +206,7 @@ export default function Builder({ session, author, fromChat, onCancel, onPublish
           disabled={!session.ready || session.publishing}
           onClick={onPublish}
         >
-          {localize('com_skills_builder_publish')}
+          {localize(session.forkOf ? 'com_skills_builder_republish' : 'com_skills_builder_publish')}
         </Button>
       </footer>
     </div>

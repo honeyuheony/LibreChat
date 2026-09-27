@@ -2,14 +2,7 @@ import React, { useId, useState } from 'react';
 import { useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import { Constants } from 'librechat-data-provider';
-import {
-  Label,
-  Spinner,
-  Switch,
-  OGDialogTitle,
-  OGDialogContent,
-  useToastContext,
-} from '@librechat/client';
+import { Label, Spinner, Switch, OGDialogTitle, OGDialogContent } from '@librechat/client';
 import type { TSkillSummary } from 'librechat-data-provider';
 import {
   formatCount,
@@ -19,15 +12,14 @@ import {
   runsOf,
   savedHoursOf,
 } from './skillCategories';
-import { useForkSkillMutation, useGetSkillQuery } from '~/data-provider';
 import SkillMarkdownRenderer from '../display/SkillMarkdownRenderer';
 import { SkillTags, Tag, authorLine, byLine } from './SkillMeta';
 import { useLocalize, useSkillActiveState } from '~/hooks';
 import { parseFrontmatter } from '../utils/frontmatter';
+import { useGetSkillQuery } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 import SkillFolderTree from './SkillFolderTree';
 import SkillIcon from './SkillIcon';
-import { logger } from '~/utils';
 import store from '~/store';
 
 interface SkillDetailContentProps {
@@ -104,23 +96,9 @@ export default function SkillDetailContent({
   const navigate = useNavigate();
   const switchId = useId();
   const switchLabelId = useId();
-  const { showToast } = useToastContext();
   const [treeOpen, setTreeOpen] = useState(false);
   const { isActive, toggle, isLoading: statesLoading } = useSkillActiveState();
   const detailQuery = useGetSkillQuery(skill._id);
-  const forkMutation = useForkSkillMutation({
-    onSuccess: (forked) => {
-      showToast({
-        status: 'success',
-        message: localize('com_skills_fork_done', { title: getSkillTitle(forked) }),
-      });
-      navigate(`/skills/${forked._id}/edit`);
-    },
-    onError: (error) => {
-      logger.error('Error forking skill:', error);
-      showToast({ status: 'error', message: localize('com_skills_fork_failed') });
-    },
-  });
   const setEphemeralAgent = useSetRecoilState(ephemeralAgentByConvoId(Constants.NEW_CONVO));
   const setPendingManualSkills = useSetRecoilState(
     store.pendingManualSkillsByConvoId(Constants.NEW_CONVO),
@@ -325,9 +303,8 @@ export default function SkillDetailContent({
         <button
           type="button"
           title={localize('com_skills_fork_hint')}
-          disabled={forkMutation.isLoading}
-          onClick={() => forkMutation.mutate({ id: skill._id })}
-          className="rounded-full border border-border-medium bg-surface-primary px-3.5 py-1.5 text-[14.5px] text-text-secondary hover:bg-surface-hover disabled:opacity-60"
+          onClick={() => navigate(`/skills/new?forkOf=${encodeURIComponent(skill._id)}`)}
+          className="rounded-full border border-border-medium bg-surface-primary px-3.5 py-1.5 text-[14.5px] text-text-secondary hover:bg-surface-hover"
         >
           {localize('com_skills_fork')}
         </button>

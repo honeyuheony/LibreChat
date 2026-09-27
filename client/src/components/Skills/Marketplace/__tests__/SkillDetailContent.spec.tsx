@@ -5,9 +5,7 @@ import { ALL_SKILLS, weekly, weeklyFork } from '../__fixtures__/skills';
 
 const mockNavigate = jest.fn();
 const mockToggle = jest.fn();
-const mockMutate = jest.fn();
 const mockSetPendingSkills = jest.fn();
-let mockForkOptions: { onSuccess?: (skill: { _id: string; name: string }) => void } = {};
 
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('recoil', () => ({
@@ -36,7 +34,6 @@ jest.mock('@librechat/client', () => ({
   }) => <button role="switch" aria-checked={checked} onClick={onCheckedChange} {...props} />,
   OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   OGDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  useToastContext: () => ({ showToast: jest.fn() }),
 }));
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, options?: Record<string, unknown>) =>
@@ -48,10 +45,6 @@ jest.mock('~/data-provider', () => ({
     isLoading: false,
     data: { body: '---\nname: x\n---\n1. 양식을 따른다.' },
   }),
-  useForkSkillMutation: (options: typeof mockForkOptions) => {
-    mockForkOptions = options;
-    return { mutate: mockMutate, isLoading: false };
-  },
 }));
 jest.mock('../../display/SkillMarkdownRenderer', () => ({ content }: { content: string }) => (
   <div data-testid="instructions">{content}</div>
@@ -110,12 +103,17 @@ describe('SkillDetailContent', () => {
     ).toBeInTheDocument();
   });
 
-  it('forks the skill and opens the copy in the editor', () => {
+  it('opens the adapt editor on the original', () => {
     renderDetail();
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_fork' }));
-    expect(mockMutate).toHaveBeenCalledWith({ id: weekly._id });
-    mockForkOptions.onSuccess?.({ _id: 'copy-1', name: 'weekly-report-fork' });
-    expect(mockNavigate).toHaveBeenCalledWith('/skills/copy-1/edit');
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith(`/skills/new?forkOf=${weekly._id}`);
+  });
+
+  it('shows the fork count from the server even when more copies are listed', () => {
+    renderDetail({ ...weekly, forkCount: 0 });
+    const forks = screen.getByText('com_skills_stat_forks').parentElement as HTMLElement;
+    expect(forks).toHaveTextContent(/^0com_skills_stat_forks$/);
   });
 
   it('starts a chat with the example prefilled and the skill attached', () => {

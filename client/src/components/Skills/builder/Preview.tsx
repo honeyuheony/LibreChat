@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { TSkillDraftExtra, TSkillDraftOutput } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
-import type { BuilderField, BuilderState, BuilderStep, BuilderValues } from './state';
+import type { BuilderField, BuilderState, BuilderStep, BuilderValues, ChangedField } from './state';
 import type { TranslationKeys } from '~/hooks';
 import { FIELD_OUTPUTS, ICON_CHOICES, OUTPUTS, SOURCE_AI, SOURCE_ME } from './state';
+import SourceTag, { ChangedMark } from './SourceTag';
 import { useLocalize } from '~/hooks';
-import SourceTag from './SourceTag';
 import { cn } from '~/utils';
 
 type EditTarget = BuilderField;
@@ -19,9 +19,13 @@ type PreviewProps = {
   onStepOff: (step: string) => void;
   onStepsRestore: () => void;
   onToggleConnector: (name: string) => void;
+  /** 응용 편집에서 원본과 달라진 칸. 새로 만들 때는 비어 있다. */
+  changed?: ReadonlySet<ChangedField>;
 };
 
-type HeadProps = Pick<PreviewProps, 'state' | 'author' | 'onEdit'>;
+type HeadProps = Pick<PreviewProps, 'state' | 'author' | 'onEdit' | 'changed'>;
+
+const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
 
 const splitList = (value: string) =>
   value
@@ -170,7 +174,7 @@ const EXTRA_LABEL: Record<TSkillDraftExtra, TranslationKeys> = {
   law: 'com_skills_builder_extra_law',
 };
 
-export function PreviewHead({ state, author, onEdit }: HeadProps) {
+export function PreviewHead({ state, author, onEdit, changed = NO_CHANGES }: HeadProps) {
   const localize = useLocalize();
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const { values, sources } = state;
@@ -231,6 +235,7 @@ export function PreviewHead({ state, author, onEdit }: HeadProps) {
             </h3>
           )}
           <SourceTag source={sources.title} />
+          <ChangedMark show={changed.has('title') || changed.has('icon')} />
         </div>
         <div className="text-xs text-text-secondary">
           {localize('com_skills_builder_by', { name: author })}
@@ -252,6 +257,7 @@ export function PreviewHead({ state, author, onEdit }: HeadProps) {
             </p>
           )}
           <SourceTag source={sources.description} />
+          <ChangedMark show={changed.has('description')} />
         </div>
       </div>
     </section>
@@ -288,6 +294,7 @@ export default function Preview({
   onStepOff,
   onStepsRestore,
   onToggleConnector,
+  changed = NO_CHANGES,
 }: Omit<PreviewProps, 'author'>) {
   const localize = useLocalize();
   const [editing, setEditing] = useState<EditTarget | null>(null);
@@ -309,6 +316,7 @@ export default function Preview({
           <>
             {localize('com_skills_builder_when')}
             <SourceTag source={sources.triggers} />
+            <ChangedMark show={changed.has('triggers')} />
           </>
         }
       >
@@ -350,7 +358,14 @@ export default function Preview({
         )}
       </Block>
 
-      <Block title={localize('com_skills_builder_how')}>
+      <Block
+        title={
+          <>
+            {localize('com_skills_builder_how')}
+            <ChangedMark show={changed.has('text')} />
+          </>
+        }
+      >
         {steps.length > 0 ? (
           <ol className="ms-5 list-decimal text-sm leading-7 text-text-primary">
             {steps.map((step) => (
@@ -377,6 +392,9 @@ export default function Preview({
           <>
             {localize('com_skills_builder_output')}
             <SourceTag source={sources.output} />
+            <ChangedMark
+              show={changed.has('output') || changed.has('extras') || changed.has('fields')}
+            />
           </>
         }
       >
@@ -464,7 +482,14 @@ export default function Preview({
         {showFields && <SourceTag source={sources.fields} />}
       </Block>
 
-      <Block title={localize('com_skills_builder_data')}>
+      <Block
+        title={
+          <>
+            {localize('com_skills_builder_data')}
+            <ChangedMark show={changed.has('connectors')} />
+          </>
+        }
+      >
         <ul className="ms-5 list-disc text-sm text-text-primary">
           <li>
             {localize(

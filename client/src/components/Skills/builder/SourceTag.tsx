@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { SOURCE_AI, SOURCE_ME } from './state';
+import type { TranslationKeys } from '~/hooks';
+import { SOURCE_AI, SOURCE_ME, SOURCE_ORIGIN } from './state';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -14,6 +15,7 @@ export default function SourceTag({ source, label, children }: SourceTagProps) {
   const known: Record<string, string> = {
     [SOURCE_AI]: localize('com_skills_builder_source_ai'),
     [SOURCE_ME]: localize('com_skills_builder_source_me'),
+    [SOURCE_ORIGIN]: localize('com_skills_builder_source_origin' as TranslationKeys),
   };
   const text = label ?? known[source] ?? source;
   return (
@@ -27,6 +29,19 @@ export default function SourceTag({ source, label, children }: SourceTagProps) {
     >
       {text}
       {children}
+    </span>
+  );
+}
+
+/** 응용 편집에서 원본과 값이 달라진 칸에 붙는 표시. */
+export function ChangedMark({ show }: { show: boolean }) {
+  const localize = useLocalize();
+  if (!show) {
+    return null;
+  }
+  return (
+    <span className="ms-1.5 whitespace-nowrap align-middle text-[10.5px] font-bold text-status-warning">
+      {localize('com_skills_builder_changed' as TranslationKeys)}
     </span>
   );
 }

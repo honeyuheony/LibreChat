@@ -13,6 +13,19 @@ import {
 import SkillMarketplace from '../SkillMarketplace';
 
 const mockDetail = jest.fn((_props: { skill: TSkillSummary }) => null);
+const mockPacks = [
+  {
+    _id: 'pack-1',
+    name: '월말 팩',
+    slug: 'month-end',
+    description: '월말에 쓰는 묶음',
+    icon: '📦',
+    author: 'someone-else',
+    authorName: '박지원',
+    createdAt: '',
+    updatedAt: '',
+  },
+];
 
 jest.mock('@librechat/client', () => ({
   Spinner: () => <div data-testid="spinner" />,
@@ -33,6 +46,7 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/data-provider', () => ({
   useGetEndpointsQuery: () => ({}),
+  useListSkillPacksQuery: () => ({ data: mockPacks, isLoading: false, isError: false }),
   useSkillsInfiniteQuery: () => ({
     data: { pages: [{ skills: jest.requireActual('../__fixtures__/skills').ALL_SKILLS }] },
     isLoading: false,
@@ -47,6 +61,10 @@ jest.mock('~/components/Chat/Menus/OpenSidebar', () => () => null);
 jest.mock('~/components/SidePanel', () => ({
   SidePanelGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
+jest.mock('../../Packs/PackDetail', () => (props: { packId: string }) => (
+  <div data-testid="pack-detail">{props.packId}</div>
+));
+jest.mock('../../Packs/PackCreate', () => () => <div data-testid="pack-create" />);
 jest.mock('../SkillDetailContent', () => (props: { skill: TSkillSummary }) => {
   mockDetail(props);
   return <div data-testid="detail">{props.skill.name}</div>;
@@ -124,5 +142,23 @@ describe('SkillMarketplace', () => {
     expect(mockDetail).toHaveBeenLastCalledWith(
       expect.objectContaining({ skill: weekly, allSkills: ALL_SKILLS }),
     );
+  });
+
+  it('puts the pack tab right after the popular tab', () => {
+    renderAt('/skills-market');
+    const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
+    expect(tabs.slice(0, 2)).toEqual(['com_skills_tab_popular', 'com_skills_pack']);
+  });
+
+  it('lists packs on the pack tab and opens the clicked one', () => {
+    renderAt('/skills-market/packs');
+    fireEvent.click(screen.getByRole('button', { name: /월말 팩/ }));
+    expect(screen.getByTestId('pack-detail')).toHaveTextContent('pack-1');
+  });
+
+  it('opens pack creation from the pack tab', () => {
+    renderAt('/skills-market/packs');
+    fireEvent.click(screen.getByRole('button', { name: /com_skills_pack_create/ }));
+    expect(screen.getByTestId('pack-create')).toBeInTheDocument();
   });
 });
