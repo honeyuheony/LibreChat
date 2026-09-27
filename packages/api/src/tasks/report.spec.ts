@@ -1,9 +1,10 @@
 import os from 'os';
 import path from 'path';
 import { promises as fs } from 'fs';
-import type { ReportTemplate } from './report';
-import { assembleCodeSlots, composeReport, fillTitle, loadReportTemplate } from './report';
+import type { ReportTemplate } from './template';
 import { documentName, fakeLLM, makeDoc, memoryCache } from './__tests__/fakes.helper';
+import { assembleCodeSlots, composeReport } from './report';
+import { fillTitle, loadReportTemplate } from './template';
 import { extractFields, normalizeFields } from './extract';
 
 const briefing: ReportTemplate = {

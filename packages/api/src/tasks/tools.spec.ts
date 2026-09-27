@@ -2,7 +2,7 @@ import { TaskTools } from 'librechat-data-provider';
 import type { TaskProgressEvent, TaskResult } from 'librechat-data-provider';
 import type { HwpRenderOutcome, HwpRenderRequest } from './hwpService';
 import type { TaskResultArtifact, TaskToolDeps } from './tools';
-import type { ReportTemplate } from './report';
+import type { ReportTemplate } from './template';
 import { documentName, fakeLLM, makeDoc, memoryCache } from './__tests__/fakes.helper';
 import { createTaskTool, TASK_RESULT_ARTIFACT } from './tools';
 import { RENDER_UNAVAILABLE_NOTICE } from './report';

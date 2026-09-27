@@ -8,7 +8,7 @@ import type { DeploymentSkill } from '~/skills/deployment';
 import type { TaskAgentModel, TaskLLM } from './llm';
 import type { TaskDocument } from './documents';
 import type { TaskToolDeps } from './tools';
-import { loadReportTemplate, resolveReportTemplatePath } from './report';
+import { loadReportTemplate, resolveReportTemplatePath } from './template';
 import { getDeploymentSkillRegistry } from '~/skills/deployment';
 import { isDeploymentSkillVisibleTo } from '~/skills/market';
 import { createHwpService } from './hwpService';

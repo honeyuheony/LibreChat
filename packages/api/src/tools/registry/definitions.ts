@@ -1,8 +1,8 @@
 import { WebSearchToolDefinition, CalculatorToolDefinition } from '@librechat/agents';
 import type { ExtendedJsonSchema } from './schema';
 import { AskUserQuestionToolDefinition } from '~/agents/hitl/askUserQuestionTool';
+import { TASK_TOOL_DEFINITIONS } from '~/tasks/definitions';
 import { geminiToolkit } from '~/tools/toolkits/gemini';
-import { TASK_TOOL_DEFINITIONS } from '~/tasks/tools';
 import { oaiToolkit } from '~/tools/toolkits/oai';
 
 export type { ExtendedJsonSchema } from './schema';

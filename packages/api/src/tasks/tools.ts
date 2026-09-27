@@ -11,9 +11,8 @@ import type {
   SummarizeDocumentsArguments,
 } from 'librechat-data-provider';
 import type { StructuredToolInterface } from '@librechat/agents/langchain/tools';
-import type { ExtendedJsonSchema } from '~/tools/registry/schema';
+import type { ReportTemplate } from './template';
 import type { TaskDocument } from './documents';
-import type { ReportTemplate } from './report';
 import type { HwpService } from './hwpService';
 import type { TaskCache } from './cache';
 import type { TaskLLM } from './llm';
@@ -21,6 +20,7 @@ import { buildSummaryResult, mergeSummaries, summarizeDocuments } from './summar
 import { buildTableResult, countTopValues } from './aggregate';
 import { composeReport, renderFailureNotice } from './report';
 import { extractFields, normalizeFields } from './extract';
+import { TASK_TOOL_DEFINITIONS } from './definitions';
 import { normalizeKey } from './cache';
 
 /** tool artifact 를 담는 키다. `callbacks.js` 가 이 값을 메시지 첨부로 바꾼다. */
@@ -49,107 +49,6 @@ export const TASK_STAGES: Record<TaskToolName, ReadonlyArray<{ id: string; label
     { id: 'render', label: 'HWP 생성' },
     { id: 'save', label: '결과 저장·검수 안내' },
   ],
-};
-
-export const TASK_TOOL_NAMES: readonly TaskToolName[] = [
-  TaskTools.extract_table,
-  TaskTools.summarize_documents,
-  TaskTools.write_report,
-];
-
-export function isTaskToolName(name: unknown): name is TaskToolName {
-  return typeof name === 'string' && (TASK_TOOL_NAMES as readonly string[]).includes(name);
-}
-
-/** 권장하는 `endpoints.agents.toolApproval` 설정이다. 카드를 띄우는 두 tool 만 멈춰 승인을 받는다. */
-export const TASK_TOOL_APPROVAL_POLICY: { enabled: boolean; allow: string[]; ask: string[] } = {
-  enabled: true,
-  allow: ['*'],
-  ask: [TaskTools.extract_table, TaskTools.summarize_documents],
-};
-
-const fileIdsProperty = {
-  type: 'array',
-  items: { type: 'string' },
-  description:
-    'Leave empty to use every file uploaded to this conversation. Only list ids when the user picked specific files.',
-} as const;
-
-export const extractTableSchema: ExtendedJsonSchema = {
-  type: 'object',
-  properties: {
-    fields: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Column names to extract from every document, in the user language.',
-    },
-    suggested_fields: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Optional extra columns the user may turn on; shown switched off.',
-    },
-    file_ids: fileIdsProperty,
-  },
-  required: ['fields'],
-};
-
-export const summarizeDocumentsSchema: ExtendedJsonSchema = {
-  type: 'object',
-  properties: {
-    views: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Candidate viewpoints the user chooses from.',
-    },
-    view: {
-      type: 'string',
-      description: 'The chosen viewpoint. Only set it when the user named one.',
-    },
-    file_ids: fileIdsProperty,
-  },
-  required: ['views'],
-};
-
-export const writeReportSchema: ExtendedJsonSchema = {
-  type: 'object',
-  properties: {
-    template_id: {
-      type: 'string',
-      description:
-        'Report template id, e.g. "hwp-report", "weekly-report" or "nk-weekly-briefing", as named by the skill.',
-    },
-    fields: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Leave empty to extract the fields the template defines.',
-    },
-    file_ids: fileIdsProperty,
-  },
-  required: ['template_id'],
-};
-
-export const TASK_TOOL_DEFINITIONS: Record<
-  TaskToolName,
-  { name: TaskToolName; description: string; schema: ExtendedJsonSchema }
-> = {
-  [TaskTools.extract_table]: {
-    name: TaskTools.extract_table,
-    description:
-      'Reads EVERY document uploaded to the conversation and extracts the same fields from each into a comparison table. Counts are computed by code. Use for tables, lists, "how many", or "all documents" requests; use file_search for a single fact. The user confirms the fields before it runs.',
-    schema: extractTableSchema,
-  },
-  [TaskTools.summarize_documents]: {
-    name: TaskTools.summarize_documents,
-    description:
-      'Summarizes EVERY document uploaded to the conversation one by one from a chosen viewpoint, then merges them into one summary with a one-line entry per document. The user picks the viewpoint before it runs.',
-    schema: summarizeDocumentsSchema,
-  },
-  [TaskTools.write_report]: {
-    name: TaskTools.write_report,
-    description:
-      'Extracts the report template fields from EVERY document uploaded to the conversation, writes the prose sections, and fills the HWP report template (.hwpx) with footnotes. Use when the user asks for a report or an HWP draft.',
-    schema: writeReportSchema,
-  },
 };
 
 export interface TaskToolDeps {
