@@ -278,8 +278,16 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(aiTag).toHaveClass('text-accent-primary');
   });
 
-  it('uses disabled text color for empty preview hints', () => {
+  /** The wireframe draws empty hints in its gray-400 (166,166,182). The theme
+   *  has no role at that value, so the hints fade the muted role to 60%, which
+   *  lands on about (166,166,176) over white. The class has to name a color
+   *  the Tailwind config really defines: an unknown role emits no CSS and the
+   *  hint inherits the black body text. */
+  it('fades empty preview hints from a color the theme defines', () => {
     render(<Harness />);
+    const { theme } = jest.requireActual<{
+      theme: { extend: { colors: Record<string, string> } };
+    }>(`${process.cwd()}/tailwind.config.cjs`);
 
     for (const hint of [
       'com_skills_builder_name_ghost',
@@ -287,7 +295,12 @@ describe('Builder laid out like the wireframe editor', () => {
       'com_skills_builder_when_ghost',
       'com_skills_builder_how_ghost',
     ]) {
-      expect(screen.getByText(hint)).toHaveClass('text-text-disabled');
+      const ghost = screen.getByText(hint);
+      expect(ghost).toHaveClass('text-text-muted/60');
+      const roles = [...ghost.classList]
+        .filter((name) => name.startsWith('text-text-'))
+        .map((name) => name.slice('text-'.length).split('/')[0]);
+      roles.forEach((role) => expect(theme.extend.colors[role]).toBeDefined());
     }
   });
 
