@@ -10,7 +10,7 @@ type SearchDocument = {
 };
 
 type SearchIndexHandle = {
-  deleteDocuments: (ids: string[]) => Promise<{ taskUid: number }>;
+  deleteDocuments: (query: { filter: string }) => Promise<{ taskUid: number }>;
 };
 
 type SearchClient<TIndex extends SearchIndexHandle> = {
@@ -33,7 +33,8 @@ type SearchEnv = {
 };
 
 export type DemoSearchIndex = {
-  remove: (model: SearchModelName, ids: string[]) => Promise<void>;
+  /** Deletes every index document of `userId`; primary keys are not unique across users. */
+  remove: (model: SearchModelName, userId: string) => Promise<void>;
   add: (model: SearchModelName, documents: SearchDocument[]) => Promise<void>;
 };
 
@@ -43,6 +44,13 @@ const SEARCH_INDEXES: Record<SearchModelName, { uid: string; excludePath: keyof 
     Conversation: { uid: 'convos', excludePath: 'subagentThread' },
     Message: { uid: 'messages', excludePath: 'subagentTask' },
   };
+
+/** Same request timeout as the plugin's `meiliRequestTimeoutMs`; `waitForTask` only bounds polling. */
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+
+/** The plugin indexes `user` as the stored string id and marks it filterable. */
+const userFilter = (userId: string): string =>
+  `user = "${userId.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 const hasActiveExpiration = (expiredAt: SearchDocument['expiredAt']): boolean =>
   expiredAt == null || new Date(expiredAt).getTime() > Date.now();
@@ -63,23 +71,24 @@ export function createDemoSearchIndex<TIndex extends SearchIndexHandle>({
   createClient,
   models,
   runAsSystem,
+  requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
 }: {
   env: SearchEnv;
-  createClient: (config: { host: string; apiKey: string }) => SearchClient<TIndex>;
+  createClient: (config: { host: string; apiKey: string; timeout: number }) => SearchClient<TIndex>;
   models: Record<SearchModelName, SearchModel<TIndex>>;
   runAsSystem: <T>(action: () => Promise<T>) => Promise<T>;
+  requestTimeoutMs?: number;
 }): DemoSearchIndex | undefined {
   const { SEARCH, MEILI_HOST: host, MEILI_MASTER_KEY: apiKey } = env;
   if (!isEnabled(SEARCH) || !host || !apiKey) {
     return undefined;
   }
-  const client = createClient({ host, apiKey });
+  const client = createClient({ host, apiKey, timeout: requestTimeoutMs });
 
-  const remove = async (model: SearchModelName, ids: string[]): Promise<void> => {
-    if (ids.length === 0) {
-      return;
-    }
-    const { taskUid } = await client.index(SEARCH_INDEXES[model].uid).deleteDocuments(ids);
+  const remove = async (model: SearchModelName, userId: string): Promise<void> => {
+    const { taskUid } = await client
+      .index(SEARCH_INDEXES[model].uid)
+      .deleteDocuments({ filter: userFilter(userId) });
     const { status } = await client.waitForTask(taskUid, { timeOutMs: 10_000, intervalMs: 100 });
     if (status !== 'succeeded') {
       throw new Error(`Meili deletion task ${taskUid} ended with ${status}`);

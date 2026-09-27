@@ -675,14 +675,15 @@ describe('demo reset route', () => {
       Object.keys(searchEnv).forEach((key) => delete process.env[key]);
     });
 
-    test('removes the reset account conversations from the search index only', async () => {
+    test('removes only the reset account documents from the search index by user', async () => {
       await raw('conversations').insertOne(makeConvo(lee, 'lee-convo-2', '이협력 새 대화'));
 
       const response = await resetAs(hong);
 
       expect(response.status).toBe(200);
-      const removed = mockMeiliIndexes.get('convos').deleteDocuments.mock.calls.flat(2);
-      expect(removed.sort()).toEqual(['lee-convo-1', 'lee-convo-2']);
+      expect(mockMeiliIndexes.get('convos').deleteDocuments.mock.calls).toEqual([
+        [{ filter: `user = "${lee.id}"` }],
+      ]);
       const restored = await raw('conversations').findOne({ conversationId: 'lee-convo-1' });
       expect(restored._meiliIndex).toBe(false);
     });

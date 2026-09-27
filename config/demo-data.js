@@ -286,22 +286,52 @@ function createDemoData(mongoose) {
   }
 
   /**
-   * Raw writes skip the mongoMeili hooks: drop every id the account had or gets back from the
-   * index, then index the restored documents. The reset stands even if this fails.
+   * Restored ids another account also holds; the index keeps one document per id, so re-adding
+   * these would overwrite that account's entry.
+   */
+  async function findSharedSearchKeys({ collection, owner, searchKey, user, baselineDocs }) {
+    const keys = baselineDocs.map((doc) => doc[searchKey]);
+    const shared = await collection
+      .find(
+        { [searchKey]: { $in: keys }, [owner]: { $nin: [user._id, String(user._id)] } },
+        { projection: { [searchKey]: 1 } },
+      )
+      .toArray();
+    return new Set(shared.map((doc) => doc[searchKey]));
+  }
+
+  /**
+   * Raw writes skip the mongoMeili hooks: drop the account's index documents by user, then index
+   * the restored documents whose id no other account holds. The reset stands even if this fails.
    */
   async function syncSearchIndex({
+    collection,
     model,
+    owner,
     searchKey,
     searchIndex,
-    currentKeys,
     baselineDocs,
     user,
     warn,
   }) {
-    const keys = [...new Set([...currentKeys, ...baselineDocs.map((doc) => doc[searchKey])])];
     try {
-      await searchIndex.remove(model, keys);
-      await searchIndex.add(model, baselineDocs);
+      const sharedKeys = await findSharedSearchKeys({
+        collection,
+        owner,
+        searchKey,
+        user,
+        baselineDocs,
+      });
+      if (sharedKeys.size > 0) {
+        warn(
+          `${user.email}: ${model} ids also held by another account, left out of search: ${[...sharedKeys].join(', ')}`,
+        );
+      }
+      await searchIndex.remove(model, String(user._id));
+      await searchIndex.add(
+        model,
+        baselineDocs.filter((doc) => !sharedKeys.has(doc[searchKey])),
+      );
     } catch (error) {
       warn(`${user.email}: search index for ${model} not updated (${error.message}).`);
     }
@@ -314,12 +344,6 @@ function createDemoData(mongoose) {
       const filter = ownerFilter(owner, user._id);
       const ownDocs = baseline(collection).filter((doc) => idKey(doc[owner]) === idKey(user._id));
       const baselineDocs = searchKey ? ownDocs.map(asUnindexed) : ownDocs;
-      const trackSearch = searchKey && searchIndex && !dryRun;
-      const currentKeys = trackSearch
-        ? (await collection.find(filter, { projection: { [searchKey]: 1 } }).toArray()).map(
-            (doc) => doc[searchKey],
-          )
-        : [];
       const beforeDelete =
         model === 'File' ? fileDeleter({ collection, user, deleteFiles, warn }) : undefined;
       const counts = await syncDocuments({
@@ -329,12 +353,13 @@ function createDemoData(mongoose) {
         dryRun,
         beforeDelete,
       });
-      if (trackSearch) {
+      if (searchKey && searchIndex && !dryRun) {
         await syncSearchIndex({
+          collection,
           model,
+          owner,
           searchKey,
           searchIndex,
-          currentKeys,
           baselineDocs,
           user,
           warn,

@@ -1,8 +1,10 @@
 const os = require('os');
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const mongoose = require('mongoose');
 const { ObjectId } = require('mongodb');
+const { MeiliSearch } = require('meilisearch');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { createModels, logger } = require('@librechat/data-schemas');
 const {
@@ -523,8 +525,6 @@ describe('resetDemo', () => {
 });
 
 describe('resetDemo search index', () => {
-  const PROTECTED_KEY = /^(admin|demo)-/;
-
   const fakeSearchIndex = () => ({
     remove: jest.fn(async () => undefined),
     add: jest.fn(async () => undefined),
@@ -544,14 +544,12 @@ describe('resetDemo search index', () => {
   const callsFor = (mock, model) =>
     mock.mock.calls.filter(([name]) => name === model).map(([, value]) => value);
 
-  it('F6-1 removes deleted and restored ids, then re-adds the restored documents', async () => {
+  it('F6-1 removes the account documents by user, then re-adds the restored documents', async () => {
     const searchIndex = fakeSearchIndex();
     await run({ searchIndex });
 
-    const removedConvos = callsFor(searchIndex.remove, 'Conversation').flat();
-    const removedMessages = callsFor(searchIndex.remove, 'Message').flat();
-    expect(removedConvos.sort()).toEqual(['lee-convo-1', 'lee-convo-2']);
-    expect(removedMessages.sort()).toEqual(['lee-msg-1', 'lee-msg-2']);
+    expect(callsFor(searchIndex.remove, 'Conversation')).toEqual([String(ids.lee)]);
+    expect(callsFor(searchIndex.remove, 'Message')).toEqual([String(ids.lee)]);
 
     const addedConvos = callsFor(searchIndex.add, 'Conversation').flat();
     const addedMessages = callsFor(searchIndex.add, 'Message').flat();
@@ -571,15 +569,31 @@ describe('resetDemo search index', () => {
     const searchIndex = fakeSearchIndex();
     await run({ searchIndex });
 
-    const removed = searchIndex.remove.mock.calls.flatMap(([, keys]) => keys);
+    const removed = searchIndex.remove.mock.calls.map(([, userId]) => userId);
     const added = searchIndex.add.mock.calls.flatMap(([, docs]) => docs);
-    expect(removed.length).toBeGreaterThan(0);
-    expect(removed.filter((key) => PROTECTED_KEY.test(key))).toEqual([]);
+    expect(new Set(removed)).toEqual(new Set([String(ids.lee)]));
     expect(added.map((doc) => String(doc.user))).toEqual(
       expect.not.arrayContaining([String(ids.admin), String(ids.demo)]),
     );
     const protectedConvo = await col('Conversation').findOne({ conversationId: 'admin-convo-1' });
     expect(protectedConvo._meiliIndex).toBe(true);
+  });
+
+  it('F6-1 does not re-add a restored id another account also holds', async () => {
+    await col('Conversation').insertOne(makeConvo(ids.admin, 'lee-convo-1', '관리자 같은 id'));
+    await col('Message').insertOne(
+      makeMessage(ids.demo, 'lee-convo-1', 'lee-msg-1', '데모 같은 id'),
+    );
+    const searchIndex = fakeSearchIndex();
+    await run({ searchIndex });
+
+    const added = searchIndex.add.mock.calls.flatMap(([, docs]) => docs);
+    expect(added.map((doc) => doc.conversationId ?? doc.messageId)).toEqual([]);
+    expect(callsFor(searchIndex.remove, 'Conversation')).toEqual([String(ids.lee)]);
+    expect(warnings.join('\n')).toContain('lee-convo-1');
+    expect(warnings.join('\n')).toContain('lee-msg-1');
+    const restored = await col('Conversation').findOne({ user: String(ids.lee) });
+    expect(restored._meiliIndex).toBe(false);
   });
 
   it('F6-1 leaves restored documents marked unindexed so a later sync picks them up', async () => {
@@ -658,23 +672,57 @@ describe('createDemoSearchIndex', () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
-  it('deletes ids from the matching index and waits for Meilisearch', async () => {
+  it('deletes one user by filter from the matching index and waits for Meilisearch', async () => {
     const { searchIndex, client, createClient } = build();
-    await searchIndex.remove('Conversation', ['c1', 'c2']);
-    await searchIndex.remove('Message', []);
+    await searchIndex.remove('Conversation', 'u1');
 
     expect(createClient).toHaveBeenCalledWith({
       host: env.MEILI_HOST,
       apiKey: env.MEILI_MASTER_KEY,
+      timeout: 10_000,
     });
-    expect(client.indexes.get('convos').deleteDocuments).toHaveBeenCalledWith(['c1', 'c2']);
+    expect(client.indexes.get('convos').deleteDocuments).toHaveBeenCalledWith({
+      filter: 'user = "u1"',
+    });
     expect(client.indexes.has('messages')).toBe(false);
     expect(client.waitForTask).toHaveBeenCalledWith(7, expect.any(Object));
   });
 
   it('throws when Meilisearch does not finish the deletion', async () => {
     const { searchIndex } = build({ status: 'failed' });
-    await expect(searchIndex.remove('Message', ['m1'])).rejects.toThrow('failed');
+    await expect(searchIndex.remove('Message', 'u1')).rejects.toThrow('failed');
+  });
+
+  it('lets the reset finish with a warning when Meilisearch never answers', async () => {
+    const server = http.createServer(() => undefined);
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const searchIndex = createDemoSearchIndex({
+        env: { ...env, MEILI_HOST: `http://127.0.0.1:${server.address().port}` },
+        createClient: (config) => new MeiliSearch(config),
+        models: fakeModels(),
+        runAsSystem: (action) => action(),
+        requestTimeoutMs: 200,
+      });
+      await demoData.resetDemo({
+        dir: baselineDir,
+        emails: [LEE],
+        deleteFiles,
+        searchIndex,
+        warn,
+      });
+
+      const convos = await col('Conversation')
+        .find({ user: String(ids.lee) })
+        .toArray();
+      expect(convos.map((c) => c.conversationId)).toEqual(['lee-convo-1']);
+      expect(warnings.join('\n')).toMatch(
+        /search index for Conversation not updated \(.*timed out/i,
+      );
+    } finally {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 
   it('adds only documents the plugin would index', async () => {
