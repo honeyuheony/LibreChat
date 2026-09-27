@@ -117,13 +117,13 @@ export default function Folder({
       <div
         role="tree"
         aria-label={localize('com_skills_builder_folder')}
-        className="rounded-lg border border-border-light bg-surface-primary py-1 font-mono text-xs"
+        className="rounded-lg border border-border-light bg-surface-primary py-1 font-mono text-xs leading-4"
       >
         <div
           role="treeitem"
           aria-expanded
           aria-selected={false}
-          className="px-2 py-0.5 font-semibold text-text-primary"
+          className="flex h-[22px] items-center px-2 font-semibold text-text-primary"
         >
           {`▾ ${root}/`}
         </div>
@@ -134,7 +134,7 @@ export default function Folder({
               role="treeitem"
               aria-expanded
               aria-selected={false}
-              className="py-0.5 font-semibold text-text-primary"
+              className="flex h-[22px] items-center font-semibold text-text-primary"
               style={{ paddingInlineStart: row.depth * 16 + 8 }}
             >
               {`▾ ${row.name}/`}
@@ -147,7 +147,7 @@ export default function Folder({
               aria-selected={row.path === current.path}
               onClick={() => onSelect(row.path)}
               className={cn(
-                'block w-full py-0.5 text-start text-text-secondary hover:bg-surface-hover',
+                'flex h-[22px] w-full items-center text-start text-text-secondary hover:bg-surface-hover',
                 row.path === current.path && 'bg-surface-message-user text-accent-primary-hover',
               )}
               style={{ paddingInlineStart: row.depth * 16 + 8 }}

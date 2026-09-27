@@ -56,7 +56,7 @@ const ignoreActivate = () => undefined;
 
 const blockFrame = (active: boolean) =>
   cn(
-    'rounded-xl border-[1.5px] bg-surface-primary transition-[border-color,box-shadow] motion-reduce:transition-none',
+    'rounded-[14px] border-[1.5px] bg-surface-primary transition-[border-color,box-shadow] motion-reduce:transition-none',
     active ? 'border-ring-primary ring-[3px] ring-border-brand' : 'border-border-light',
   );
 
@@ -404,6 +404,10 @@ export default function Preview({
   const clickLabel = localize('com_skills_builder_click_to_edit');
   const done = () => setEditing(null);
   const showFields = FIELD_OUTPUTS.has(values.output) && !empty;
+  const displayFields =
+    showFields && values.fields.length === 0
+      ? [localize('com_skills_builder_fields_label' as TranslationKeys)]
+      : values.fields;
   const connectors = [
     ...new Set([
       ...values.connectors,
@@ -568,7 +572,7 @@ export default function Preview({
               <table className="w-full text-xs">
                 <thead className="bg-surface-tertiary">
                   <tr>
-                    {(values.fields.length > 0 ? values.fields : ['…']).slice(0, 5).map((field) => (
+                    {displayFields.slice(0, 5).map((field) => (
                       <th key={field} className="px-2 py-1 text-start font-semibold">
                         {field}
                       </th>
@@ -577,7 +581,7 @@ export default function Preview({
                 </thead>
                 <tbody>
                   <tr>
-                    {(values.fields.length > 0 ? values.fields : ['…']).slice(0, 5).map((field) => (
+                    {displayFields.slice(0, 5).map((field) => (
                       <td key={field} className="px-2 py-1 text-text-tertiary">
                         …
                       </td>

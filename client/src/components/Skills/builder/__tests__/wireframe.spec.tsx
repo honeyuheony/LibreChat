@@ -420,16 +420,53 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(clip.style.fontFamily).toContain('Noto Color Emoji');
   });
 
-  it('uses pill-shaped buttons in the editor footer', () => {
+  it('matches the editor footer controls to the wireframe sizes and type', () => {
     render(<Harness />);
 
     const footer = screen
       .getByRole('dialog', { name: 'com_skills_new_agent' })
       .querySelector('footer');
     expect(footer).not.toBeNull();
-    const buttons = within(footer as HTMLElement).getAllByRole('button');
-    expect(buttons).toHaveLength(3);
-    buttons.forEach((button) => expect(button).toHaveClass('rounded-theme-control-round'));
+    const [cancel, test, publish] = within(footer as HTMLElement).getAllByRole('button');
+
+    expect(cancel).toHaveClass(
+      'h-7',
+      'text-[13px]',
+      'font-normal',
+      'rounded-theme-control-round',
+      'text-text-tertiary',
+    );
+    expect(test).toHaveClass('h-[37px]', 'w-[109px]', 'text-[14.5px]', 'font-normal');
+    expect(publish).toHaveClass('h-[37px]', 'w-[65px]', 'text-[14.5px]', 'font-normal');
+    expect(within(footer as HTMLElement).getAllByRole('listitem')[0]).toHaveClass(
+      'text-[12.5px]',
+      'text-text-tertiary',
+    );
+  });
+
+  it('matches the input card width, spacing, and text area size to the wireframe', () => {
+    render(<Harness />);
+
+    const textArea = textarea();
+    const card = textArea.closest('section') as HTMLElement;
+    expect(card).toHaveClass('rounded-[14px]', 'gap-1.5', 'px-[14px]', 'py-3');
+    expect(textArea).toHaveClass('md:min-h-[297px]');
+  });
+
+  it('uses 22px rows in the generated file tree', async () => {
+    render(<Harness />);
+    await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
+
+    const tree = screen.getByRole('tree', { name: 'com_skills_builder_folder' });
+    within(tree)
+      .getAllByRole('treeitem')
+      .forEach((row) => expect(row).toHaveClass('h-[22px]'));
+  });
+
+  it('uses 14px corners for the preview blocks', () => {
+    render(<Harness />);
+
+    expect(block('com_skills_builder_share')).toHaveClass('rounded-[14px]');
   });
 
   it('draws the draft icon with an emoji font so the circle is not left blank', () => {
@@ -447,6 +484,66 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
       'bg-black/[0.38]',
       '[@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55]',
     );
+  });
+});
+
+describe('Share step matches the reference screen (12)', () => {
+  it('fills selected time and scope options with the brand color', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={{ ...chat, manualMinutes: 30, scope: 'team' }} />);
+
+    const share = block('com_skills_builder_share') as HTMLElement;
+    const minutes = within(share).getByRole('button', { name: 'com_skills_builder_minutes_30' });
+    expect(minutes).toHaveClass(
+      'rounded-full',
+      'bg-surface-submit',
+      'font-semibold',
+      'text-text-on-status',
+    );
+    expect(minutes.parentElement).toHaveClass('inline-flex', 'gap-1.5');
+
+    const scope = within(share).getByRole('radiogroup', { name: 'com_skills_builder_scope' });
+    expect(scope).toHaveClass(
+      '!rounded-full',
+      '!border',
+      '!border-border-light',
+      '!bg-surface-primary',
+    );
+    expect(within(scope).getByRole('radio', { name: 'com_skills_scope_team' })).toHaveClass(
+      'aria-checked:bg-surface-submit',
+      'aria-checked:font-semibold',
+      'aria-checked:text-text-on-status',
+    );
+  });
+
+  it('marks the missing time requirement with the error status color', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('com_skills_builder_minutes_required')).toHaveClass(
+      'rounded-full',
+      'bg-status-error-subtle',
+      'text-status-error',
+    );
+  });
+
+  it('shows a generic field heading when the report has no specified fields', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+
+    const output = block('com_skills_builder_output') as HTMLElement;
+    const [heading] = within(output).getAllByRole('columnheader');
+    expect(heading).toHaveTextContent('com_skills_builder_fields_label');
+    expect(within(output).getByText('…', { selector: 'td' })).toBeVisible();
   });
 });
 
