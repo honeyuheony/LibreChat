@@ -474,6 +474,33 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(share.querySelector('h5')).toHaveClass('text-text-muted');
   });
 
+  it('matches the empty result table rows to the reference', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+
+    const output = block('com_skills_builder_output') as HTMLElement;
+    const table = within(output).getByRole('table');
+    const header = within(table).getByRole('columnheader');
+    expect(header).toHaveClass(
+      'h-[30px]',
+      'text-[11.5px]',
+      'font-medium',
+      'text-text-muted',
+      'text-start',
+    );
+    expect(header.closest('thead')?.classList.contains('bg-surface-primary')).toBe(true);
+
+    const emptyCell = within(table).getByRole('cell');
+    expect(emptyCell).toHaveClass('text-[13px]', 'text-start');
+    expect(emptyCell.closest('tr')?.classList.contains('h-[37px]')).toBe(true);
+    expect(table.parentElement?.classList.contains('border-dashed')).toBe(false);
+  });
+
   it('uses reference text sizes and color for empty hints and the input placeholder', () => {
     render(<Harness />);
 

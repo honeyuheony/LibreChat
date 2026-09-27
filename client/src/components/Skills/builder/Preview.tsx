@@ -565,22 +565,28 @@ export default function Preview({
               type="button"
               title={localize('com_skills_builder_fields_edit')}
               onClick={() => setEditing('fields')}
-              className="mt-2 w-full overflow-hidden rounded-lg border border-dashed border-border-light hover:border-border-medium"
+              className="mt-2 w-full overflow-hidden rounded-lg border border-border-light hover:border-border-medium"
             >
-              <table className="w-full text-xs">
-                <thead className="bg-surface-tertiary">
+              <table className="w-full">
+                <thead className="bg-surface-primary">
                   <tr>
                     {displayFields.slice(0, 5).map((field) => (
-                      <th key={field} className="px-2 py-1 text-start font-semibold">
+                      <th
+                        key={field}
+                        className="h-[30px] px-2 py-1 text-start text-[11.5px] font-medium text-text-muted"
+                      >
                         {field}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
+                  <tr className="h-[37px]">
                     {displayFields.slice(0, 5).map((field) => (
-                      <td key={field} className="px-2 py-1 text-text-tertiary">
+                      <td
+                        key={field}
+                        className="px-2 py-1 text-start text-[13px] text-text-tertiary"
+                      >
                         …
                       </td>
                     ))}
