@@ -752,7 +752,7 @@ describe('Skill CRUD methods', () => {
       expect(result.status).toBe('not_found');
     });
 
-    it('lets a content edit invalidate a recorded test by bumping the version', async () => {
+    it('keeps the version when only manualMinutes changes', async () => {
       const { skill } = await methods.createSkill(makeSkillInput());
       await methods.setSkillPublicationState({
         id: skill._id.toString(),
@@ -763,7 +763,26 @@ describe('Skill CRUD methods', () => {
       const edited = await methods.updateSkill({
         id: skill._id.toString(),
         expectedVersion: 1,
-        update: { body: '# Changed instructions' },
+        update: { manualMinutes: 30 },
+      });
+
+      expect(edited.status).toBe('updated');
+      const reloaded = await methods.getSkillById(skill._id);
+      expect(reloaded).toMatchObject({ manualMinutes: 30, version: 1, lastTest });
+    });
+
+    it('lets a content edit with manualMinutes invalidate a recorded test', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput());
+      await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        lastTest,
+      });
+
+      const edited = await methods.updateSkill({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        update: { body: '# Changed instructions', manualMinutes: 30 },
       });
 
       expect(edited.status).toBe('updated');

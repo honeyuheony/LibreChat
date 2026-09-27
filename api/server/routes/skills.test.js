@@ -694,6 +694,7 @@ describe('Skill routes', () => {
         .send({ expectedVersion: 1, manualMinutes: 16 });
       expect(res.status).toBe(200);
       expect(res.body.manualMinutes).toBe(16);
+      expect(res.body.version).toBe(1);
       expect(res.body.usageMetrics).toEqual({
         averageRunSeconds: 60,
         savedMinutesPerRun: 15,

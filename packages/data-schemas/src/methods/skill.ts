@@ -80,6 +80,7 @@ const SKILL_BODY_MAX = SKILL_BODY_MAX_LENGTH;
 const SKILL_FILE_PATH_MAX = 500;
 const SKILL_NAME_PATTERN = SKILL_NAME_PATTERN_SHARED;
 const RELATIVE_PATH_CHARS = /^[a-zA-Z0-9._\-/]+$/;
+const NON_CONTENT_SKILL_UPDATE_FIELDS = new Set(['manualMinutes', 'publishedAt', 'lastTest']);
 
 /**
  * Brand namespaces reserved for Anthropic-published skills and first-party
@@ -1730,10 +1731,13 @@ export function createSkillMethods(
       setPayload.alwaysApply = derivedAlwaysApply;
     }
 
-    const updateOps: Record<string, unknown> = {
-      $set: setPayload,
-      $inc: { version: 1 },
-    };
+    const hasContentChanges =
+      Object.keys(setPayload).some((field) => !NON_CONTENT_SKILL_UPDATE_FIELDS.has(field)) ||
+      Object.keys(unsetPayload).some((field) => !NON_CONTENT_SKILL_UPDATE_FIELDS.has(field));
+    const updateOps: Record<string, unknown> = { $set: setPayload };
+    if (hasContentChanges) {
+      updateOps.$inc = { version: 1 };
+    }
     if (Object.keys(unsetPayload).length > 0) {
       updateOps.$unset = unsetPayload;
     }
