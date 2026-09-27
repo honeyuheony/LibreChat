@@ -3251,6 +3251,7 @@
   "com_ui_task_estimate": "About {{0}}–{{1}} min",
   "com_ui_task_estimate_cached": "Partly cached",
   "com_ui_task_estimate_first": "First run",
+  "com_ui_task_estimate_single": "About {{0}} min",
   "com_ui_task_view_intro": "Choose a perspective for the summary. Without one, the summary stays generic.",
   "com_ui_task_view_custom": "+ Enter your own",
   "com_ui_task_view_custom_placeholder": "Enter a perspective",
