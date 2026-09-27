@@ -1,4 +1,9 @@
-import type { CodeEnvRef, CodeEnvRefMap } from 'librechat-data-provider';
+import type {
+  CodeEnvRef,
+  CodeEnvRefMap,
+  TSkillBuilderState,
+  TSkillLastTest,
+} from 'librechat-data-provider';
 import type { Document, Types } from 'mongoose';
 
 /**
@@ -108,6 +113,9 @@ export interface ISkill {
   forkOf?: Types.ObjectId;
   /** 마켓 목록과 상세 창에 보이는 이모지 아이콘. 없으면 화면이 기본 아이콘을 쓴다. */
   icon?: string;
+  builder?: TSkillBuilderState;
+  publishedAt?: Date | null;
+  lastTest?: Omit<TSkillLastTest, 'at'> & { at: Date };
   createdAt?: Date;
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */

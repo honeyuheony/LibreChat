@@ -178,6 +178,37 @@ function serializeUsage(
   };
 }
 
+function serializeSkillExamples(skill: {
+  examples?: string[];
+  frontmatter?: Record<string, unknown>;
+}): string[] | undefined {
+  if (skill.examples !== undefined) {
+    return skill.examples;
+  }
+  const examples = skill.frontmatter?.examples;
+  if (!Array.isArray(examples)) {
+    return undefined;
+  }
+  return examples.filter((example): example is string => typeof example === 'string');
+}
+
+function toPublishedAtDate(publishedAt: string | null | undefined): Date | null | undefined {
+  if (publishedAt === null) {
+    return null;
+  }
+  if (publishedAt === undefined) {
+    return undefined;
+  }
+  return new Date(publishedAt);
+}
+
+function serializeLastTest(lastTest: ISkill['lastTest']): TSkill['lastTest'] {
+  if (!lastTest) {
+    return undefined;
+  }
+  return { ...lastTest, at: new Date(lastTest.at).toISOString() };
+}
+
 /** Converts a skill document to the wire format returned by the API. */
 export function serializeSkill(
   skill: ISkill & { _id: Types.ObjectId },
@@ -195,7 +226,10 @@ export function serializeSkill(
     disableModelInvocation: skill.disableModelInvocation,
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
-    examples: skill.examples,
+    examples: serializeSkillExamples(skill),
+    builder: skill.builder,
+    publishedAt: skill.publishedAt?.toISOString() ?? null,
+    lastTest: serializeLastTest(skill.lastTest),
     icon: skill.icon,
     ...serializeUsage(skill),
     reviewedAt: skill.reviewedAt ? new Date(skill.reviewedAt).toISOString() : undefined,
@@ -215,7 +249,7 @@ export function serializeSkill(
 }
 
 function serializeSkillSummary(
-  skill: ISkillSummary & { _id: Types.ObjectId },
+  skill: ISkillSummary & { frontmatter?: Record<string, unknown>; _id: Types.ObjectId },
   isPublic: boolean | Set<string>,
 ): TSkillSummary {
   const pub = typeof isPublic === 'boolean' ? isPublic : isPublic.has(skill._id.toString());
@@ -228,7 +262,10 @@ function serializeSkillSummary(
     disableModelInvocation: skill.disableModelInvocation,
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
-    examples: skill.examples,
+    examples: serializeSkillExamples(skill),
+    builder: skill.builder,
+    publishedAt: skill.publishedAt?.toISOString() ?? null,
+    lastTest: serializeLastTest(skill.lastTest),
     icon: skill.icon,
     ...serializeUsage(skill),
     reviewedAt: skill.reviewedAt ? new Date(skill.reviewedAt).toISOString() : undefined,
@@ -548,6 +585,11 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           category: body.category,
           alwaysApply: body.alwaysApply,
           icon: body.icon,
+          builder: body.builder,
+          publishedAt: toPublishedAtDate(body.publishedAt),
+          lastTest: body.lastTest
+            ? { ...body.lastTest, at: new Date(body.lastTest.at) }
+            : undefined,
           author: authorId,
           authorName,
           tenantId: user.tenantId,
@@ -655,6 +697,13 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (rest.category !== undefined) update.category = rest.category;
       if (rest.alwaysApply !== undefined) update.alwaysApply = rest.alwaysApply;
       if (rest.icon !== undefined) update.icon = rest.icon;
+      if (rest.builder !== undefined) update.builder = rest.builder;
+      if (rest.publishedAt !== undefined) {
+        update.publishedAt = toPublishedAtDate(rest.publishedAt);
+      }
+      if (rest.lastTest) {
+        update.lastTest = { ...rest.lastTest, at: new Date(rest.lastTest.at) };
+      }
       if (rest.manualMinutes !== undefined) {
         const minutes: unknown = rest.manualMinutes;
         if (typeof minutes !== 'number' || !Number.isInteger(minutes) || minutes < 0) {

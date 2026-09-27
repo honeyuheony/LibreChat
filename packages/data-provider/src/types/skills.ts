@@ -167,6 +167,9 @@ export type TSkill = {
    * skill marketplace card. Optional; falls back to nothing when absent.
    */
   examples?: string[];
+  builder?: TSkillBuilderState;
+  publishedAt?: string | null;
+  lastTest?: TSkillLastTest;
   author: string;
   authorName: string;
   version: number;
@@ -357,6 +360,21 @@ export type TGitHubSkillSyncManualRunResponse = {
   sources?: TGitHubSkillSyncSourceStatus[];
 };
 
+export type TSkillBuilderState = {
+  text: string;
+  direct: boolean;
+  textBy?: string;
+  sources: Record<string, string>;
+  aiOff: string[];
+};
+
+export type TSkillLastTest = {
+  version: number;
+  seconds: number;
+  conversationId: string;
+  at: string;
+};
+
 /** Request body for POST `/api/skills`. */
 export type TCreateSkill = {
   name: string;
@@ -369,6 +387,9 @@ export type TCreateSkill = {
   alwaysApply?: boolean;
   /** 이모지 아이콘. */
   icon?: string;
+  builder?: TSkillBuilderState;
+  publishedAt?: string | null;
+  lastTest?: TSkillLastTest;
 };
 
 /** Partial payload for PATCH `/api/skills/:id` — all fields optional. */
@@ -384,6 +405,9 @@ export type TUpdateSkillPayload = {
   manualMinutes?: number;
   /** 이모지 아이콘. */
   icon?: string;
+  builder?: TSkillBuilderState;
+  publishedAt?: string | null;
+  lastTest?: TSkillLastTest;
 };
 
 /** POST `/api/skills/:id/fork` 요청 본문. 이름을 비우면 원본 이름을 쓰고, 겹치면 `-fork` 꼬리를 붙인다. */

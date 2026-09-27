@@ -656,6 +656,9 @@ export type CreateSkillInput = {
   forkOf?: Types.ObjectId;
   /** 이모지 아이콘. */
   icon?: string;
+  builder?: ISkill['builder'];
+  publishedAt?: Date | null;
+  lastTest?: ISkill['lastTest'];
 };
 
 /** 배포 스킬 실행 기록의 원래 값. */
@@ -679,6 +682,9 @@ export type UpdateSkillInput = {
   manualMinutes?: number;
   /** 이모지 아이콘. */
   icon?: string;
+  builder?: ISkill['builder'];
+  publishedAt?: Date | null;
+  lastTest?: ISkill['lastTest'];
 };
 
 export type GetAuthorSkillByNameParams = {
@@ -1330,6 +1336,9 @@ export function createSkillMethods(
       manualMinutes: data.manualMinutes,
       forkOf: data.forkOf,
       icon: data.icon?.trim(),
+      builder: data.builder,
+      publishedAt: data.publishedAt,
+      lastTest: data.lastTest,
       ...derived,
     });
     return {
@@ -1453,24 +1462,15 @@ export function createSkillMethods(
     const rows = await Skill.find(filter)
       .sort({ updatedAt: -1, _id: 1 })
       .limit(limit + 1)
-      /* `frontmatter` is deliberately NOT projected: the structured
-         columns (disableModelInvocation / userInvocable / allowedTools /
-         alwaysApply) are always populated by `createSkill` / `updateSkill`
-         going forward, and the branch this code ships on never shipped
-         to main — so no legacy rows exist that would need a frontmatter
-         read-time backfill on summaries. Skipping it saves ~2KB/skill ×
-         100/page of wire traffic. `backfillDerivedFromFrontmatter` is
-         still called below as defensive code; it short-circuits when
-         `frontmatter` is undefined. */
+      /* Only `frontmatter.examples` is projected so list responses can expose
+         examples without loading the remaining frontmatter fields. */
       .select(
-        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon createdAt updatedAt',
+        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon builder publishedAt lastTest frontmatter.examples createdAt updatedAt',
       )
       .lean();
 
-    /* Defensive read-time fallback. With `frontmatter` excluded from the
-       projection, the helper short-circuits immediately; kept in the loop
-       so a future projection change (or legacy rows appearing via a
-       migration) continues to get runtime-column restoration for free. */
+    /* The examples-only projection does not contain invocation settings, so
+       the existing fallback leaves these summary fields unchanged. */
     for (const row of rows) {
       backfillDerivedFromFrontmatter(row as unknown as ISkill);
     }
@@ -1655,6 +1655,15 @@ export function createSkillMethods(
     if (update.category !== undefined) setPayload.category = update.category;
     if (update.manualMinutes !== undefined) setPayload.manualMinutes = update.manualMinutes;
     if (update.icon !== undefined) setPayload.icon = update.icon.trim();
+    if (update.builder !== undefined) setPayload.builder = update.builder;
+    if (update.publishedAt !== undefined) {
+      if (update.publishedAt === null) {
+        unsetPayload.publishedAt = '';
+      } else {
+        setPayload.publishedAt = update.publishedAt;
+      }
+    }
+    if (update.lastTest !== undefined) setPayload.lastTest = update.lastTest;
     /**
      * Keep the indexed `alwaysApply` column in sync with whatever the update
      * is carrying: an explicit top-level `alwaysApply` always wins; a

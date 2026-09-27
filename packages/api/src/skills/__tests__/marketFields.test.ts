@@ -2,7 +2,19 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { Types } from 'mongoose';
-import type { TSkillCategoriesResponse, TSkillListResponse } from 'librechat-data-provider';
+import type {
+  CreateSkillInput,
+  CreateSkillResult,
+  ISkill,
+  UpdateSkillInput,
+  UpdateSkillResult,
+} from '@librechat/data-schemas';
+import type {
+  TCreateSkill,
+  TSkillCategoriesResponse,
+  TSkillListResponse,
+  TUpdateSkillPayload,
+} from 'librechat-data-provider';
 import type { Response } from 'express';
 import type { SkillsHandlersDeps } from '../handlers';
 import type { ServerRequest } from '~/types';
@@ -77,12 +89,33 @@ afterAll(async () => {
   await fs.promises.rm(emptyRoot, { recursive: true, force: true });
 });
 
+function makeSkillRecord(overrides: Partial<ISkill> = {}): ISkill & { _id: Types.ObjectId } {
+  return {
+    _id: new Types.ObjectId(),
+    name: 'builder-skill',
+    description: 'A persisted skill used for builder handler tests.',
+    body: '# Builder skill',
+    frontmatter: { examples: ['Compare these reports.'] },
+    category: '정리·분석',
+    author: new Types.ObjectId(),
+    authorName: '홍길동',
+    version: 1,
+    source: 'inline',
+    fileCount: 0,
+    alwaysApply: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+    ...overrides,
+  };
+}
+
 function buildDeps(overrides: Partial<SkillsHandlersDeps> = {}) {
   const dbAuthor = new Types.ObjectId();
   const dbSkill = {
     _id: new Types.ObjectId(),
     name: 'my-draft',
     description: 'A persisted skill written by a coworker.',
+    frontmatter: { examples: ['Compare these reports.'] },
     category: '문서작성',
     icon: '✍️',
     author: dbAuthor,
@@ -160,6 +193,137 @@ describe('skill list market fields', () => {
       savedMinutesPerRun: 25.3,
       savedHours: 1321.5,
     });
+  });
+
+  it('serializes examples stored in a skill frontmatter', async () => {
+    const { deps } = buildDeps();
+    const skills = await listFor(undefined, deps);
+
+    expect(skills.find((skill) => skill.name === 'my-draft')).toMatchObject({
+      examples: ['Compare these reports.'],
+    });
+  });
+
+  it('passes builder timestamps through the create handler as dates', async () => {
+    const builder = {
+      text: 'Compare the reports.',
+      direct: false,
+      sources: { title: 'ai' },
+      aiOff: [],
+    };
+    const publishedAt = '2026-09-27T10:00:00.000Z';
+    const lastTest = {
+      version: 1,
+      seconds: 24,
+      conversationId: 'conversation-1',
+      at: '2026-09-27T09:59:00.000Z',
+    };
+    const savedSkill = makeSkillRecord({
+      builder,
+      publishedAt: new Date(publishedAt),
+      lastTest: { ...lastTest, at: new Date(lastTest.at) },
+    });
+    const createSkill = jest.fn(
+      async (_input: CreateSkillInput): Promise<CreateSkillResult> => ({
+        skill: savedSkill,
+        warnings: [],
+      }),
+    );
+    const { deps } = buildDeps({ createSkill });
+    const response = createResponse();
+    const handlers = createSkillsHandlers(deps);
+    const req = Object.assign(makeRequest(), {
+      body: {
+        name: savedSkill.name,
+        description: savedSkill.description,
+        body: savedSkill.body,
+        builder,
+        publishedAt,
+        lastTest,
+      } satisfies TCreateSkill,
+    });
+
+    await handlers.create(req, response as unknown as Response);
+
+    expect(createSkill).toHaveBeenCalledWith(
+      expect.objectContaining({
+        builder,
+        publishedAt: new Date(publishedAt),
+        lastTest: { ...lastTest, at: new Date(lastTest.at) },
+      }),
+    );
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        builder,
+        publishedAt,
+        lastTest,
+        examples: ['Compare these reports.'],
+      }),
+    );
+  });
+
+  it('passes builder timestamps through the patch handler as dates', async () => {
+    const builder = {
+      text: 'Compare the reports.',
+      direct: true,
+      sources: { title: 'me' },
+      aiOff: ['step-1'],
+    };
+    const publishedAt = '2026-09-27T10:00:00.000Z';
+    const lastTest = {
+      version: 2,
+      seconds: 18,
+      conversationId: 'conversation-2',
+      at: '2026-09-27T10:02:00.000Z',
+    };
+    const updatedSkill = makeSkillRecord({
+      builder,
+      publishedAt: new Date(publishedAt),
+      lastTest: { ...lastTest, at: new Date(lastTest.at) },
+    });
+    const updateSkill = jest.fn(
+      async (_input: {
+        id: string;
+        expectedVersion: number;
+        update: UpdateSkillInput;
+      }): Promise<UpdateSkillResult> => ({
+        status: 'updated',
+        skill: updatedSkill,
+        warnings: [],
+      }),
+    );
+    const { deps } = buildDeps({
+      updateSkill,
+      hasPublicPermission: jest.fn(async () => false),
+    });
+    const response = createResponse();
+    const handlers = createSkillsHandlers(deps);
+    const req = Object.assign(makeRequest(), {
+      params: { id: updatedSkill._id.toString() },
+      body: { expectedVersion: 1, builder, publishedAt, lastTest } satisfies TUpdateSkillPayload & {
+        expectedVersion: number;
+      },
+    });
+
+    await handlers.patch(req, response as unknown as Response);
+
+    expect(updateSkill).toHaveBeenCalledWith({
+      id: updatedSkill._id.toString(),
+      expectedVersion: 1,
+      update: {
+        builder,
+        publishedAt: new Date(publishedAt),
+        lastTest: { ...lastTest, at: new Date(lastTest.at) },
+      },
+    });
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        builder,
+        publishedAt,
+        lastTest,
+        examples: ['Compare these reports.'],
+      }),
+    );
   });
 
   it('reads the author department and icon of user skills', async () => {
