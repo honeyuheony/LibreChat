@@ -110,6 +110,27 @@ describe('SkillMarketplace', () => {
     expect(screen.getByText('com_skills_hours_unit:{"value":"2,463"}')).toBeInTheDocument();
   });
 
+  it('shows total and current-user agent counts in the market header', () => {
+    renderAt('/skills-market');
+
+    const marketTitle = screen.getByText('com_skills_marketplace');
+    const header = marketTitle.closest('header');
+    expect(header).not.toBeNull();
+    expect(within(header as HTMLElement).getByText('5')).toBeInTheDocument();
+    expect(
+      within(header as HTMLElement).getByRole('button', { name: 'com_skills_tab_mine 1' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the chat-to-agent hint below the creation action', () => {
+    renderAt('/skills-market');
+
+    const createAction = screen.getByRole('button', {
+      name: 'com_skills_create_agent',
+    }).parentElement;
+    expect(createAction?.nextElementSibling).toHaveTextContent('com_skills_create_agent_hint');
+  });
+
   it('lists every agent of a category, including base agents', () => {
     renderAt(`/skills-market/${encodeURIComponent('문서작성')}`);
     expect(rowTitles()).toEqual([
@@ -121,6 +142,12 @@ describe('SkillMarketplace', () => {
       'aria-selected',
       'true',
     );
+  });
+
+  it('uses the shared large radius for agent cards', () => {
+    renderAt('/skills-market');
+
+    expect(screen.getByRole('button', { name: weekly.displayTitle })).toHaveClass('rounded-3xl');
   });
 
   it('shows only the current user skills on the mine tab', () => {

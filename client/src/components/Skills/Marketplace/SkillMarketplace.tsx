@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { OGDialog, Spinner, useMediaQuery } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { TSkillSummary } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import {
   MINE_TAB,
   PACKS_TAB,
@@ -211,6 +212,21 @@ export default function SkillMarketplace() {
     <div className="relative flex w-full grow overflow-hidden bg-presentation">
       <SidePanelGroup>
         <main className="flex h-full flex-col overflow-hidden" role="main">
+          <header className="flex h-[50px] flex-none items-center border-b border-border-light px-6">
+            <div className="flex items-baseline gap-1.5 text-sm">
+              <span className="font-medium text-text-primary">
+                {localize('com_skills_marketplace')}
+              </span>
+              <span className="text-xs text-text-tertiary">{allSkills.length}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleTabChange(MINE_TAB)}
+              className="ml-auto text-sm text-text-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+            >
+              {localize('com_skills_tab_mine')} {mySkills.length}
+            </button>
+          </header>
           <div className="scrollbar-gutter-stable relative flex h-full flex-col overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-[1000px] px-6 pb-[70px]">
               {isSmallScreen && (
@@ -238,6 +254,9 @@ export default function SkillMarketplace() {
                     {localize('com_skills_create_agent')}
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-text-muted">
+                  {localize('com_skills_create_agent_hint' as TranslationKeys)}
+                </p>
                 <div className="mt-[18px] inline-flex flex-wrap justify-center gap-x-[22px] gap-y-1.5 rounded-full border border-border-light bg-surface-primary px-[18px] py-[9px] text-[13.5px] text-text-tertiary">
                   <span>
                     {localize('com_skills_impact_agents')}{' '}

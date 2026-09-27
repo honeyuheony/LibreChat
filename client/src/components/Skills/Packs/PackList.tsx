@@ -20,7 +20,7 @@ type PackCardProps = {
 
 const DEFAULT_PACK_ICON = '📦';
 const CARD_CLASS =
-  'flex items-start gap-3.5 rounded-[18px] border border-border-light bg-surface-primary px-4 py-3.5 text-left hover:border-border-medium hover:bg-surface-hover';
+  'flex items-start gap-3.5 rounded-3xl border border-border-light bg-surface-primary px-4 py-3.5 text-left hover:border-border-medium hover:bg-surface-hover';
 
 function PackCard({ pack, skills, onOpen }: PackCardProps) {
   const localize = useLocalize();
@@ -93,7 +93,7 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
         <button
           type="button"
           onClick={onCreate}
-          className="flex items-center gap-3.5 rounded-[18px] border-[1.5px] border-dashed border-border-medium px-4 py-3.5 text-left hover:bg-surface-hover"
+          className="flex items-center gap-3.5 rounded-3xl border-[1.5px] border-dashed border-border-medium px-4 py-3.5 text-left hover:bg-surface-hover"
         >
           <span
             aria-hidden="true"
