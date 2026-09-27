@@ -1205,3 +1205,302 @@ describe('Skill routes', () => {
     });
   });
 });
+
+describe('Skill builder routes', () => {
+  let Conversation;
+  let Message;
+  let errSpy;
+  let warnSpy;
+
+  beforeAll(() => {
+    ({ Conversation, Message } = require('~/db/models'));
+  });
+  beforeEach(() => {
+    errSpy = jest.spyOn(console, 'error').mockImplementation();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+  });
+  afterEach(async () => {
+    errSpy.mockRestore();
+    warnSpy.mockRestore();
+    await Conversation.deleteMany({});
+    await Message.deleteMany({});
+  });
+
+  async function insertTestTurn({ user, conversationId, skillName, response = {} }) {
+    const userId = user._id.toString();
+    await Conversation.collection.insertOne({ conversationId, user: userId, title: 'test' });
+    await Message.collection.insertMany([
+      {
+        messageId: `${conversationId}-user`,
+        conversationId,
+        user: userId,
+        parentMessageId: '00000000-0000-0000-0000-000000000000',
+        isCreatedByUser: true,
+        text: '시작해줘',
+        manualSkills: [skillName],
+        createdAt: new Date('2026-09-27T01:00:00.000Z'),
+        updatedAt: new Date('2026-09-27T01:00:00.000Z'),
+      },
+      {
+        messageId: `${conversationId}-response`,
+        conversationId,
+        user: userId,
+        parentMessageId: `${conversationId}-user`,
+        isCreatedByUser: false,
+        text: '결과입니다.',
+        error: false,
+        unfinished: false,
+        createdAt: new Date('2026-09-27T01:00:01.000Z'),
+        updatedAt: new Date('2026-09-27T01:00:12.000Z'),
+        ...response,
+      },
+    ]);
+  }
+
+  async function createTestedSkill() {
+    const created = await createSkillAsOwner();
+    const patched = await request(app)
+      .patch(`/api/skills/${created.body._id}`)
+      .send({ expectedVersion: 1, manualMinutes: 30 });
+    expect(patched.status).toBe(200);
+    await insertTestTurn({
+      user: testUsers.owner,
+      conversationId: 'convo-owner',
+      skillName: 'demo-skill',
+    });
+    const tested = await request(app)
+      .post(`/api/skills/${created.body._id}/test-result`)
+      .send({ conversationId: 'convo-owner', version: patched.body.version });
+    expect(tested.status).toBe(200);
+    return tested.body;
+  }
+
+  describe('POST /api/skills/draft', () => {
+    it('rejects a request without text', async () => {
+      const res = await request(app).post('/api/skills/draft').send({});
+      expect(res.status).toBe(400);
+    });
+
+    it('returns a rule-based draft when no default agent is configured', async () => {
+      const res = await request(app)
+        .post('/api/skills/draft')
+        .send({ text: '회의록을 보고서로 만들어줘. 결정 사항을 먼저 적는다.' });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(
+        expect.objectContaining({
+          slug: 'meeting-report',
+          output: 'report',
+          origin: 'rules',
+          steps: ['결정 사항을 먼저 적는다.'],
+        }),
+      );
+    });
+
+    it('suffixes a slug the caller already uses but not one another user owns', async () => {
+      await createSkillAsOwner({ name: 'meeting-report' });
+
+      const mine = await request(app)
+        .post('/api/skills/draft')
+        .send({ text: '회의록을 보고서로 만들어줘.' });
+      expect(mine.body.slug).toBe('meeting-report-2');
+
+      setTestUser(testUsers.editor);
+      const theirs = await request(app)
+        .post('/api/skills/draft')
+        .send({ text: '회의록을 보고서로 만들어줘.' });
+      expect(theirs.body.slug).toBe('meeting-report');
+    });
+
+    it("refuses to read another user's conversation", async () => {
+      await insertTestTurn({
+        user: testUsers.editor,
+        conversationId: 'convo-editor',
+        skillName: 'demo-skill',
+      });
+      const res = await request(app)
+        .post('/api/skills/draft')
+        .send({ text: '회의록 보고서', context: { conversationId: 'convo-editor' } });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/skills/:id/test-result', () => {
+    it('records the test on the version it bumps to', async () => {
+      const created = await createSkillAsOwner();
+      await insertTestTurn({
+        user: testUsers.owner,
+        conversationId: 'convo-owner',
+        skillName: 'demo-skill',
+      });
+
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-owner', version: 1 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.version).toBe(2);
+      expect(res.body.lastTest).toEqual(
+        expect.objectContaining({ version: 2, seconds: 12, conversationId: 'convo-owner' }),
+      );
+      const stored = await Skill.findById(created.body._id).lean();
+      expect(stored.version).toBe(2);
+      expect(stored.lastTest.version).toBe(2);
+    });
+
+    it('rejects a caller without edit access', async () => {
+      const created = await createSkillAsOwner();
+      setTestUser(testUsers.noAccess);
+      await insertTestTurn({
+        user: testUsers.noAccess,
+        conversationId: 'convo-intruder',
+        skillName: 'demo-skill',
+      });
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-intruder', version: 1 });
+      expect(res.status).toBe(403);
+      expect((await Skill.findById(created.body._id).lean()).lastTest).toBeUndefined();
+    });
+
+    it("rejects another user's conversation", async () => {
+      const created = await createSkillAsOwner();
+      await insertTestTurn({
+        user: testUsers.editor,
+        conversationId: 'convo-editor',
+        skillName: 'demo-skill',
+      });
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-editor', version: 1 });
+      expect(res.status).toBe(404);
+    });
+
+    it('rejects a stale version', async () => {
+      const created = await createSkillAsOwner();
+      await insertTestTurn({
+        user: testUsers.owner,
+        conversationId: 'convo-owner',
+        skillName: 'demo-skill',
+      });
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-owner', version: 7 });
+      expect(res.status).toBe(409);
+      expect(res.body.current.version).toBe(1);
+    });
+
+    it('rejects a turn whose response ended in an error', async () => {
+      const created = await createSkillAsOwner();
+      await insertTestTurn({
+        user: testUsers.owner,
+        conversationId: 'convo-owner',
+        skillName: 'demo-skill',
+        response: { error: true },
+      });
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-owner', version: 1 });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('RESPONSE_FAILED');
+    });
+  });
+
+  describe('POST /api/skills/:id/publish', () => {
+    function publicEntry(skillId) {
+      return AclEntry.findOne({
+        resourceType: ResourceType.SKILL,
+        resourceId: skillId,
+        principalType: PrincipalType.PUBLIC,
+      }).lean();
+    }
+
+    it('refuses to publish an untested skill', async () => {
+      const created = await createSkillAsOwner();
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/publish`)
+        .send({ scope: 'all' });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('TEST_REQUIRED');
+      expect(await publicEntry(created.body._id)).toBeNull();
+    });
+
+    it('publishes to everyone, then back to the owner only', async () => {
+      const tested = await createTestedSkill();
+
+      const shared = await request(app)
+        .post(`/api/skills/${tested._id}/publish`)
+        .send({ scope: 'all' });
+      expect(shared.status).toBe(200);
+      expect(shared.body.isPublic).toBe(true);
+      expect(typeof shared.body.publishedAt).toBe('string');
+      expect(shared.body.lastTest.version).toBe(shared.body.version);
+      const entry = await publicEntry(tested._id);
+      expect(entry.roleId.toString()).toBe(testRoles.viewer._id.toString());
+
+      const privateAgain = await request(app)
+        .post(`/api/skills/${tested._id}/publish`)
+        .send({ scope: 'me' });
+      expect(privateAgain.status).toBe(200);
+      expect(privateAgain.body.isPublic).toBe(false);
+      expect(await publicEntry(tested._id)).toBeNull();
+      const ownerEntry = await AclEntry.findOne({
+        resourceType: ResourceType.SKILL,
+        resourceId: tested._id,
+        principalType: PrincipalType.USER,
+        principalId: testUsers.owner._id,
+      }).lean();
+      expect(ownerEntry).toBeTruthy();
+    });
+
+    it('rejects the team scope', async () => {
+      const tested = await createTestedSkill();
+      const res = await request(app)
+        .post(`/api/skills/${tested._id}/publish`)
+        .send({ scope: 'team' });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('SCOPE_UNAVAILABLE');
+    });
+
+    it('rejects an editor who cannot share', async () => {
+      const tested = await createTestedSkill();
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: testUsers.editor._id,
+        resourceType: ResourceType.SKILL,
+        resourceId: tested._id,
+        accessRoleId: AccessRoleIds.SKILL_EDITOR,
+        grantedBy: testUsers.owner._id,
+      });
+      setTestUser(testUsers.editor);
+      const res = await request(app)
+        .post(`/api/skills/${tested._id}/publish`)
+        .send({ scope: 'all' });
+      expect(res.status).toBe(403);
+      expect(await publicEntry(tested._id)).toBeNull();
+      expect((await Skill.findById(tested._id).lean()).publishedAt).toBeUndefined();
+    });
+
+    it('rejects public publishing when the role lacks SHARE_PUBLIC', async () => {
+      const tested = await createTestedSkill();
+      const { getRoleByName } = require('~/models');
+      const permissive = getRoleByName.getMockImplementation();
+      getRoleByName.mockImplementation(() => ({
+        permissions: { SKILLS: { USE: true, CREATE: true, SHARE: true, SHARE_PUBLIC: false } },
+      }));
+      try {
+        const res = await request(app)
+          .post(`/api/skills/${tested._id}/publish`)
+          .send({ scope: 'all' });
+        expect(res.status).toBe(403);
+        expect(await publicEntry(tested._id)).toBeNull();
+
+        const owner = await request(app)
+          .post(`/api/skills/${tested._id}/publish`)
+          .send({ scope: 'me' });
+        expect(owner.status).toBe(200);
+      } finally {
+        getRoleByName.mockImplementation(permissive);
+      }
+    });
+  });
+});

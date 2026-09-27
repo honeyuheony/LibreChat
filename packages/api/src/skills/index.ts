@@ -13,3 +13,5 @@ export * from './management';
 export * from './review';
 export * from './usage';
 export * from './fork';
+export * from './draft';
+export * from './publish';

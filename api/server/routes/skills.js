@@ -13,6 +13,10 @@ const {
   createSkillCategoriesHandler,
   markSkillReviewed,
   clearSkillReview,
+  createSkillDraftHandler,
+  createSkillPublishHandler,
+  createSkillTestResultHandler,
+  createDefaultAgentLLMFactory,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
 const {
@@ -31,14 +35,24 @@ const {
   getRoleByName,
   listSkillsByAccess,
   updateSkillReview,
+  getAgent,
+  getConvo,
+  getUserKey,
+  getMessages,
+  updateSkill,
+  getUserKeyValues,
+  getAuthorSkillByName,
 } = require('~/models');
 const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
 const {
   grantPermission,
+  hasPublicPermission,
   findAccessibleResources,
+  bulkUpdateResourcePermissions,
   findPubliclyAccessibleResources,
 } = require('~/server/services/PermissionService');
+const sharePolicy = require('~/server/middleware/checkSharePublicAccess');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const { maybeRunGitHubSkillSyncForRequest } = require('~/server/services/Skills/sync');
@@ -182,6 +196,29 @@ const forkHandler = createForkSkillHandler({
 });
 
 // ---------------------------------------------------------------------------
+// 편집기: AI 초안, 시험 기록, 게시
+// ---------------------------------------------------------------------------
+const draftHandler = createSkillDraftHandler({
+  getDraftLLM: createDefaultAgentLLMFactory({ getAgent, db: { getUserKey, getUserKeyValues } }),
+  getConvo,
+  getMessages,
+  getAuthorSkillByName,
+});
+const testResultHandler = createSkillTestResultHandler({
+  getSkillById,
+  updateSkill,
+  getConvo,
+  getMessages,
+  hasPublicPermission,
+});
+const publishHandler = createSkillPublishHandler({
+  getSkillById,
+  updateSkill,
+  bulkUpdateResourcePermissions,
+  sharePolicy,
+});
+
+// ---------------------------------------------------------------------------
 // Per-file upload handler (add a single file to an existing skill)
 // ---------------------------------------------------------------------------
 async function uploadFileHandler(req, res) {
@@ -321,6 +358,9 @@ const categoriesHandler = createSkillCategoriesHandler({
 });
 router.get('/categories', categoriesHandler);
 
+// 저장하지 않고 칸 제안만 돌려주므로 만들기 권한만 본다.
+router.post('/draft', checkSkillCreate, draftHandler);
+
 // 검수 표시(마켓 카드의 "검수됨" 배지). 관리자만 켜고 끌 수 있으며 배포 폴더 스킬은 DB 문서가
 // 없어 대상이 아니다(docs/agent-market-plan.md 4.2절의 검수 항목을 통과한 뒤 누른다).
 router.post('/:id/review', checkAdmin, async (req, res) => {
@@ -364,6 +404,21 @@ router.post(
   fileUploadUserLimiter,
   restoreTenantContextFromReq,
   forkHandler,
+);
+
+router.post(
+  '/:id/test-result',
+  checkSkillCreate,
+  canAccessSkillResource({ requiredPermission: PermissionBits.EDIT }),
+  testResultHandler,
+);
+
+// 공유 대화상자(PUT /api/permissions)와 같은 규칙: ACL SHARE 는 여기서, 역할 SHARE·SHARE_PUBLIC 은 처리 함수가 본다.
+router.post(
+  '/:id/publish',
+  checkSkillCreate,
+  canAccessSkillResource({ requiredPermission: PermissionBits.SHARE }),
+  publishHandler,
 );
 
 router.patch(
