@@ -2601,6 +2601,7 @@
   "com_skills_hero_after": "s your coworkers built",
   "com_skills_hero_subtitle": "Use them right away, adapt them to your team, and share them again.",
   "com_skills_create_agent": "+ Create agent",
+  "com_skills_create_agent_hint": "Save a completed chat task as an agent, or say “Make an agent that …”.",
   "com_skills_impact_agents": "Agents by coworkers",
   "com_skills_impact_runs": "Total runs",
   "com_skills_impact_saved": "Time saved",

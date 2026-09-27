@@ -1145,6 +1145,7 @@
   "com_skills_hero_after": "를 찾아보세요",
   "com_skills_hero_subtitle": "찾아서 바로 쓰고, 우리 팀 방식으로 응용해 다시 공유합니다.",
   "com_skills_create_agent": "+ agent 만들기",
+  "com_skills_create_agent_hint": "채팅에서 끝낸 작업을 그대로 agent로 저장하거나, \"…하는 agent 만들어줘\"라고 말해도 됩니다.",
   "com_skills_impact_agents": "동료가 만든 agent",
   "com_skills_impact_runs": "누적 실행",
   "com_skills_impact_saved": "절감한 시간",
