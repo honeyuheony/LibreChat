@@ -33,22 +33,31 @@ jest.mock('@librechat/client', () => ({
     'aria-labelledby': string;
   }) => <button role="switch" aria-checked={checked} onClick={onCheckedChange} {...props} />,
   OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  OGDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  OGDialogContent: ({
+    children,
+    overlayClassName,
+  }: {
+    children: React.ReactNode;
+    overlayClassName?: string;
+  }) => (
+    <div data-testid="dialog-content" className={overlayClassName}>
+      {children}
+    </div>
+  ),
 }));
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, options?: Record<string, unknown>) =>
     options ? `${key}:${JSON.stringify(options)}` : key,
   useSkillActiveState: () => ({ isActive: () => true, toggle: mockToggle, isLoading: false }),
 }));
+let mockSkillBody = '---\nname: x\n---\n1. 양식을 따른다.';
+
 jest.mock('~/data-provider', () => ({
   useGetSkillQuery: () => ({
     isLoading: false,
-    data: { body: '---\nname: x\n---\n1. 양식을 따른다.' },
+    data: { body: mockSkillBody },
   }),
 }));
-jest.mock('../../display/SkillMarkdownRenderer', () => ({ content }: { content: string }) => (
-  <div data-testid="instructions">{content}</div>
-));
 jest.mock('../SkillFolderTree', () => () => <div data-testid="folder-tree" />);
 
 function renderDetail(skill = weekly, onSelectSkill = jest.fn()) {
@@ -57,7 +66,10 @@ function renderDetail(skill = weekly, onSelectSkill = jest.fn()) {
 }
 
 describe('SkillDetailContent', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSkillBody = '---\nname: x\n---\n1. 양식을 따른다.';
+  });
 
   it('shows the four impact numbers from the server metrics', () => {
     renderDetail();
@@ -90,11 +102,44 @@ describe('SkillDetailContent', () => {
     expect(scopeNote()).toHaveTextContent('com_skills_scope_me');
   });
 
-  it('shows triggers, output and the instructions without frontmatter', () => {
+  it('renders the instruction section as steps and labels the automatic model', () => {
+    mockSkillBody = [
+      '---',
+      'name: weekly-report',
+      '---',
+      '# 주간보고 작성',
+      '## 역할',
+      '회의 내용을 정리합니다.',
+      '## 실행 단계',
+      '1. 결정 사항을 추립니다.',
+      '2. 담당자별 할 일을 메일 초안으로 씁니다.',
+      '## 결과물',
+      '요약 문서',
+    ].join('\n');
+    renderDetail({
+      ...weekly,
+      marketProfile: { ...weekly.marketProfile, pipeline: '처리 방식 · 역할' },
+    });
+
+    const howBlock = screen.getByText('com_skills_how').parentElement as HTMLElement;
+    expect(howBlock.querySelectorAll('li')).toHaveLength(2);
+    expect(howBlock).toHaveTextContent('결정 사항을 추립니다.');
+    expect(howBlock).toHaveTextContent('담당자별 할 일을 메일 초안으로 씁니다.');
+    expect(howBlock).not.toHaveTextContent('회의 내용을 정리합니다.');
+    expect(howBlock).not.toHaveTextContent('처리 방식 · 역할');
+    expect(
+      screen.getByText((text) => text.includes('com_skills_detail_model_auto')),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /내보내기/ })).not.toBeInTheDocument();
+  });
+
+  it('blurs the background behind the detail window', () => {
     renderDetail();
-    expect(screen.getByText('주간보고')).toBeInTheDocument();
-    expect(screen.getByText('HWP 문서')).toBeInTheDocument();
-    expect(screen.getByTestId('instructions')).toHaveTextContent(/^1\. 양식을 따른다\.$/);
+
+    expect(screen.getByTestId('dialog-content')).toHaveClass(
+      'bg-text-primary/40',
+      'backdrop-blur-[6px]',
+    );
   });
 
   it('shows connector titles as sources and hides the block when there are none', () => {
