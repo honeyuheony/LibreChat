@@ -1,6 +1,8 @@
 import type { Agents, TToolApprovalPolicy } from 'librechat-data-provider';
 import {
   resolveToolApprovalPolicy,
+  applyUserApprovalMode,
+  USER_APPROVAL_MODE_TOOLS,
   isHITLEnabled,
   healToolApprovalPolicy,
   collectAliasMatcherNames,
@@ -70,6 +72,59 @@ describe('isToolDeniedByApprovalPolicy', () => {
     expect(
       isToolDeniedByApprovalPolicy({ enabled: false, deny: ['ask_*'] }, 'ask_user_question'),
     ).toBe(false);
+  });
+});
+
+describe('user approval mode', () => {
+  const FAKE_IMPORT_TOOL = 'fake_import_documents';
+  const deployedPolicy: TToolApprovalPolicy = {
+    enabled: true,
+    allow: ['*'],
+    ask: ['extract_table', 'summarize_documents', FAKE_IMPORT_TOOL],
+  };
+
+  it('runs a target tool without pausing under auto while other ask tools still pause', () => {
+    const policy = applyUserApprovalMode(deployedPolicy, 'auto', [FAKE_IMPORT_TOOL]);
+
+    expect(isToolApprovalPauseCapable(policy, false, [FAKE_IMPORT_TOOL])).toBe(false);
+    expect(isToolApprovalPauseCapable(policy, false, ['extract_table'])).toBe(true);
+    expect(isToolApprovalPauseCapable(policy, false, ['summarize_documents'])).toBe(true);
+  });
+
+  it('allows a target tool under auto even when unmatched tools would ask', () => {
+    const policy = applyUserApprovalMode({ enabled: true }, 'auto', [FAKE_IMPORT_TOOL]);
+
+    expect(isToolApprovalPauseCapable(policy, false, [FAKE_IMPORT_TOOL])).toBe(false);
+    expect(isToolApprovalPauseCapable(policy, false, ['other_tool'])).toBe(true);
+  });
+
+  it('keeps an administrator deny over the user auto approval mode', () => {
+    const policy = applyUserApprovalMode({ ...deployedPolicy, deny: [FAKE_IMPORT_TOOL] }, 'auto', [
+      FAKE_IMPORT_TOOL,
+    ]);
+
+    expect(isToolDeniedByApprovalPolicy(policy, FAKE_IMPORT_TOOL)).toBe(true);
+  });
+
+  it('pauses a target tool under the manual user approval mode', () => {
+    const policy = applyUserApprovalMode(deployedPolicy, 'manual', [FAKE_IMPORT_TOOL]);
+
+    expect(policy).toBe(deployedPolicy);
+    expect(isToolApprovalPauseCapable(policy, false, [FAKE_IMPORT_TOOL])).toBe(true);
+  });
+
+  it('leaves a disabled or absent policy alone under the user approval mode', () => {
+    const disabled: TToolApprovalPolicy = { enabled: false, ask: [FAKE_IMPORT_TOOL] };
+
+    expect(applyUserApprovalMode(disabled, 'auto', [FAKE_IMPORT_TOOL])).toBe(disabled);
+    expect(applyUserApprovalMode(undefined, 'auto', [FAKE_IMPORT_TOOL])).toBeUndefined();
+  });
+
+  it('changes nothing through the user approval mode layer while no tool honors it', () => {
+    expect(USER_APPROVAL_MODE_TOOLS).toEqual([]);
+    expect(
+      resolveToolApprovalPolicy({ endpoint: deployedPolicy, user: { approvalMode: 'auto' } }),
+    ).toEqual(deployedPolicy);
   });
 });
 
