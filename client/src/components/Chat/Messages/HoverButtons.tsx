@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilState } from 'recoil';
+import { BookmarkPlus } from 'lucide-react';
 import { Copy, Check, Ellipsis } from 'lucide';
-import { findMessageById, isUserInitiatedCompaction } from 'librechat-data-provider';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   EditIcon,
@@ -11,8 +12,15 @@ import {
   TooltipAnchor,
   RegenerateIcon,
 } from '@librechat/client';
+import {
+  Permissions,
+  PermissionTypes,
+  findMessageById,
+  isUserInitiatedCompaction,
+} from 'librechat-data-provider';
 import type { TConversation, TMessage, TFeedback } from 'librechat-data-provider';
-import { useGenerationsByLatest, useLocalize } from '~/hooks';
+import { useGenerationsByLatest, useHasAccess, useLocalize } from '~/hooks';
+import { BUILDER_PATH } from '~/components/Chat/Input/AgentSuggestChips';
 import { useOptionalMessagesOperations } from '~/Providers';
 import { hasEditablePart } from './Content/editableParts';
 import { revealedQueuedTurnFamily } from '~/store/steer';
@@ -149,6 +157,11 @@ const HoverButtons = ({
   const [TextToSpeech] = useRecoilState<boolean>(store.textToSpeech);
   const { getMessages } = useOptionalMessagesOperations();
   const pendingReveal = useAtomValue(revealedQueuedTurnFamily(conversation?.conversationId ?? ''));
+  const navigate = useNavigate();
+  const canCreateSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.CREATE,
+  });
 
   const endpoint = useMemo(() => {
     if (!conversation) {
@@ -176,6 +189,18 @@ const HoverButtons = ({
     }
     return findMessageById(messages, message.parentMessageId)?.isCreatedByUser === true;
   }, [getMessages, message.isCreatedByUser, message.parentMessageId]);
+
+  /** The request that produced this reply, which "save as agent" puts in the editor's text box. */
+  const requestText = useMemo(() => {
+    if (!canCreateSkills || message.isCreatedByUser === true) {
+      return undefined;
+    }
+    const parent = findMessageById(getMessages(), message.parentMessageId);
+    if (parent?.isCreatedByUser !== true) {
+      return undefined;
+    }
+    return extractMessageContent(parent).trim() || undefined;
+  }, [canCreateSkills, getMessages, message.isCreatedByUser, message.parentMessageId]);
 
   /** Resolved only if the row has nothing to replay, because the artifact check
    *  inside parses markdown. */
@@ -227,6 +252,13 @@ const HoverButtons = ({
   };
 
   const handleCopy = () => copyToClipboard(setIsCopied);
+
+  const showSaveAsAgent =
+    requestText != null && !error && !isActiveStreamingMessage && !isSubagentThreadReadOnly;
+  const saveAsAgent = () =>
+    navigate(BUILDER_PATH, {
+      state: { text: requestText, from: 'chat', conversationId: conversation.conversationId },
+    });
 
   const showReadAloud = TextToSpeech && !error && !isActiveStreamingMessage;
   const showEdit = !isSubagentThreadReadOnly && isEditableEndpoint && !hideEditButton;
@@ -300,6 +332,16 @@ const HoverButtons = ({
           isLast={isLast}
           dataTestId={isLast ? 'continue-generation-button' : undefined}
           className="active"
+        />
+      )}
+
+      {showSaveAsAgent && (
+        <HoverButton
+          onClick={saveAsAgent}
+          title={localize('com_skills_chat_save_as_agent')}
+          icon={<BookmarkPlus size={19} aria-hidden="true" />}
+          isLast={isLast}
+          dataTestId="save-as-agent-button"
         />
       )}
 
