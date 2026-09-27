@@ -2764,6 +2764,7 @@
   "com_skills_builder_test_reply": "Result preview",
   "com_skills_builder_test_failed": "The test did not finish. Check the text and run it again.",
   "com_skills_builder_test_no_agent": "No default agent is available for testing. Ask an administrator to check the model settings.",
+  "com_skills_builder_test_needs_text": "Write what the agent should do first. The test runs on that text.",
   "com_skills_builder_save_failed": "Could not save. Try again in a moment.",
   "com_skills_builder_save_conflict": "This agent was changed elsewhere. Reload and try again.",
   "com_skills_builder_published": "Published. It now appears in the marketplace and the / list.",

@@ -1308,6 +1308,7 @@
   "com_skills_builder_test_reply": "결과 미리보기",
   "com_skills_builder_test_failed": "테스트가 끝나지 않았습니다. 글을 확인하고 다시 실행해 주세요.",
   "com_skills_builder_test_no_agent": "시험에 쓸 기본 agent를 찾지 못했습니다. 관리자에게 모델 설정을 확인해 달라고 요청해 주세요.",
+  "com_skills_builder_test_needs_text": "할 일을 먼저 적어 주세요. 적은 글로 테스트합니다.",
   "com_skills_builder_save_failed": "저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요.",
   "com_skills_builder_save_conflict": "다른 곳에서 이 agent를 고쳤습니다. 새로 고친 뒤 다시 시도해 주세요.",
   "com_skills_builder_published": "게시했습니다. 마켓과 / 목록에 표시됩니다",
