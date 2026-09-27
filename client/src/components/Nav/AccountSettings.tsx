@@ -176,7 +176,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           </Menu.MenuItem>
         )}
         {user?.role === SystemRoles.ADMIN && (
-          <Menu.MenuItem onClick={() => navigate('/metrics')} className={itemClassName}>
+          <Menu.MenuItem onClick={() => navigate('/operations')} className={itemClassName}>
             <MenuGlyph glyph={GLYPHS.metrics} />
             <span className="flex-1">{localize('com_metrics_title')}</span>
             <span className="text-xs text-text-muted">{localize('com_ui_admin')}</span>

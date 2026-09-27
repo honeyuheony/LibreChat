@@ -253,7 +253,7 @@ export const router = createBrowserRouter(
               lazy: loadSchedulesView,
             },
             {
-              path: 'metrics',
+              path: 'operations',
               lazy: loadMetricsView,
             },
             {

@@ -168,7 +168,7 @@ describe('account menu', () => {
   it('opens each account-menu destination', () => {
     const destinations = [
       ['com_ui_schedules_title', '/schedules'],
-      ['com_metrics_title', '/metrics'],
+      ['com_metrics_title', '/operations'],
       ['com_nav_settings', '/settings'],
     ];
 

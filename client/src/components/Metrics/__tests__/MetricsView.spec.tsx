@@ -89,10 +89,10 @@ function renderMetrics() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createMemoryRouter(
     [
-      { path: '/metrics', element: <MetricsView /> },
+      { path: '/operations', element: <MetricsView /> },
       { path: '/skills/:skillId', element: <div data-testid="skill-detail" /> },
     ],
-    { initialEntries: ['/metrics'] },
+    { initialEntries: ['/operations'] },
   );
   render(
     <QueryClientProvider client={queryClient}>
