@@ -33,7 +33,7 @@ function StatCell({ value, label }: { value: string; label: string }) {
 }
 
 /** 꺼진 스킬을 켠 설정 전체. 켠 값이 기본값과 같으면 예외 목록에서 뺀다(useSkillActiveState 와 같은 규칙). */
-export function activateAll(
+function activateAll(
   states: TSkillStatesResponse,
   off: TSkillSummary[],
   userId: string,

@@ -3,10 +3,10 @@ import type { BuilderState } from './state';
 import { SOURCE_CHAT, createBuilderState } from './state';
 
 /** 「이 작업을 agent로 저장」이 대화에서 가져오는 문서 수. */
-export const CHAT_FILE_LIMIT = 3;
+const CHAT_FILE_LIMIT = 3;
 
 /** 작업 결과에서 읽은, 대화에서 이미 정한 값. */
-export type ChatConfirmed = { output: TSkillDraftOutput; fields: string[]; files: string[] };
+type ChatConfirmed = { output: TSkillDraftOutput; fields: string[]; files: string[] };
 
 const OUTPUT_OF_RESULT: Record<TaskResult['kind'], TSkillDraftOutput> = {
   table: 'organize',

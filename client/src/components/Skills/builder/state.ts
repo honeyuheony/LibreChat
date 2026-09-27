@@ -71,7 +71,7 @@ export const OUTPUTS: readonly TSkillDraftOutput[] = [
   'draft',
   'ask',
 ];
-export const EXTRAS: readonly TSkillDraftExtra[] = ['translate', 'polish', 'law'];
+const EXTRAS: readonly TSkillDraftExtra[] = ['translate', 'polish', 'law'];
 export const ICON_CHOICES: readonly string[] = [
   '🤖',
   '📈',
@@ -142,7 +142,7 @@ export function firstSentence(text: string): string {
 }
 
 /** 사람이 고치지 않았고 가져온 값도 아닌 필드만 AI 가 바꿀 수 있다. */
-export function isAiWritable(source: string | undefined): boolean {
+function isAiWritable(source: string | undefined): boolean {
   return !source || source === SOURCE_AI;
 }
 
@@ -284,7 +284,7 @@ export function toMarkdown(state: BuilderState): string {
 
 const FRONTMATTER_BLOCK = /^---\n[\s\S]*?\n---\n+/;
 
-export function toBuilderRecord(state: BuilderState): TSkillBuilderState {
+function toBuilderRecord(state: BuilderState): TSkillBuilderState {
   return {
     text: state.text,
     direct: state.direct,
@@ -320,7 +320,7 @@ export function contentSignature(state: BuilderState): string {
   return JSON.stringify(toSavePayload(state));
 }
 
-export type TodoKey = 'text' | 'minutes' | 'test';
+type TodoKey = 'text' | 'minutes' | 'test';
 export type TodoItem = { key: TodoKey; done: boolean };
 
 export function todoItems(state: BuilderState, tested: boolean): TodoItem[] {

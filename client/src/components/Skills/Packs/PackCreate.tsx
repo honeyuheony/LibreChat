@@ -17,7 +17,7 @@ import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 /** 팩에 담아야 하는 최소 agent 수. data-schemas `skillPack.ts` 스키마 검사와 같은 값이다. */
-export const PACK_MIN_SKILLS = 2;
+const PACK_MIN_SKILLS = 2;
 const NEW_PACK_ROOT = 'new-pack';
 
 type PackCreateProps = {

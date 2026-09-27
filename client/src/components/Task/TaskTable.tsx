@@ -8,7 +8,7 @@ import TaskFootnote from './TaskFootnote';
 import { useLocalize } from '~/hooks';
 
 /** 한 번에 그리는 행 수. 아래 끝 가까이 굴리면 그만큼 더 그린다. */
-export const TASK_TABLE_PAGE = 40;
+const TASK_TABLE_PAGE = 40;
 
 const stripExtension = (filename: string) => filename.replace(/\.[^.]+$/, '');
 

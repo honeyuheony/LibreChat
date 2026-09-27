@@ -60,7 +60,7 @@ export function getPublishErrorMessageKey(
 }
 
 /** 상세 창 「응용하기」가 여는 주소의 쿼리 이름(`skills/new?forkOf=<id>`). */
-export const FORK_PARAM = 'forkOf';
+const FORK_PARAM = 'forkOf';
 
 function readEntry(state: unknown): BuilderEntryState {
   if (state == null || typeof state !== 'object') {

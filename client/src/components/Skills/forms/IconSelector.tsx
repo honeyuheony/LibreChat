@@ -4,7 +4,7 @@ import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 /** 만들기 편집기의 아이콘 선택지와 같은 10개. */
-export const SKILL_ICON_CHOICES = ['🤖', '📈', '🌍', '📅', '✈️', '🗓️', '📋', '📊', '🎤', '🧾'];
+const SKILL_ICON_CHOICES = ['🤖', '📈', '🌍', '📅', '✈️', '🗓️', '📋', '📊', '🎤', '🧾'];
 
 const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
 

@@ -87,7 +87,7 @@ export type TaskStepView = { id: string; label: TranslationKeys; state: TaskStep
  * 결과 없이 끝난 호출이 멈춘 단계. 진행 이벤트가 닿은 마지막 단계, 없으면 확인에서 멈췄을 때
  * (거절했거나 바로 뒤에 멈춤) 확인 단계, 그것도 아니면 첫 단계다.
  */
-export function stoppedStepIndex(
+function stoppedStepIndex(
   stages: readonly TaskStage[],
   progress: TaskProgressEvent | null,
   hadApproval: boolean,
@@ -100,7 +100,7 @@ export function stoppedStepIndex(
   return Math.max(0, confirmIndex);
 }
 
-export type TaskPlanFacts = Pick<
+type TaskPlanFacts = Pick<
   TaskToolCallState,
   'awaitingApproval' | 'finished' | 'hasResult' | 'hadApproval'
 >;
@@ -173,7 +173,7 @@ export function isAwaitingTaskApproval(
   return progressIndex <= confirmIndex;
 }
 
-export type TaskOutputKind = 'table' | 'summary' | 'report';
+type TaskOutputKind = 'table' | 'summary' | 'report';
 
 /** `task_result` 첨부가 싣는 값. 본문은 서버에 있다. */
 export type TaskOutput = {
@@ -267,7 +267,7 @@ export function collectToolActivity(messages: TMessage[] | undefined): TaskActiv
   return activity;
 }
 
-export type TaskFile = { file_id: string; filename: string };
+type TaskFile = { file_id: string; filename: string };
 
 /** 사용자가 대화 어디에서든 붙인 파일을 겹치지 않게 모은다. */
 export function collectConversationFiles(messages: TMessage[] | undefined): TaskFile[] {

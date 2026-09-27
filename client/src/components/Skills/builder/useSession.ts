@@ -67,7 +67,7 @@ function withSlug(state: BuilderState): BuilderState {
 /** 응용할 원본 id 와 원본으로 채운 첫 상태. 첫 상태는 「원본에서 변경」 비교 기준이 된다. */
 export type ForkOrigin = { id: string; state: BuilderState };
 /** `chat` 은 대화에서 정한 칸을 채운 첫 상태다(「이 작업을 agent로 저장」). */
-export type SessionInit = { text?: string; fork?: ForkOrigin; chat?: BuilderState };
+type SessionInit = { text?: string; fork?: ForkOrigin; chat?: BuilderState };
 
 const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
 
