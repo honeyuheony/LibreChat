@@ -2718,6 +2718,7 @@
   "com_skills_builder_extra_law": "Legal check",
   "com_skills_builder_fields_edit": "Click to edit the fields",
   "com_skills_builder_fields_placeholder": "Fields to extract · comma separated",
+  "com_skills_builder_fields_label": "Field",
   "com_skills_builder_data": "What it reads",
   "com_skills_builder_data_chat": "What you type in the chat",
   "com_skills_builder_ai_recommended": "AI suggestion",

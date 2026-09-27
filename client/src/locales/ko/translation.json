@@ -1262,6 +1262,7 @@
   "com_skills_builder_extra_law": "법령 확인",
   "com_skills_builder_fields_edit": "눌러서 항목 고치기",
   "com_skills_builder_fields_placeholder": "뽑을 항목 · 쉼표로 구분",
+  "com_skills_builder_fields_label": "항목",
   "com_skills_builder_data": "읽는 자료",
   "com_skills_builder_data_chat": "채팅에 적은 내용",
   "com_skills_builder_ai_recommended": "AI 추천",
