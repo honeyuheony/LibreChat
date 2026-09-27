@@ -3,7 +3,6 @@ import { Plus } from 'lucide-react';
 import * as Ariakit from '@ariakit/react';
 import { useNavigate } from 'react-router-dom';
 import { TooltipAnchor } from '@librechat/client';
-import type { TranslationKeys } from '~/hooks';
 import type { MenuItemProps } from '~/common';
 import { BuiltinRow, ConnectorRow, UnavailableConnectorRow, UploadRows } from './ToolRows';
 import { DATA_HUB_PATH, DESK_SERVER_NAME } from '~/components/Connectors/status';
@@ -145,7 +144,7 @@ function ToolsMenu({
             {servers.length > 0 && manager && (
               <Ariakit.MenuGroup>
                 <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
-                  {localize('com_ui_tools_data_sources' as TranslationKeys)}
+                  {localize('com_ui_tools_data_sources')}
                 </Ariakit.MenuGroupLabel>
                 {switchableServers.map((server) => (
                   <ConnectorRow

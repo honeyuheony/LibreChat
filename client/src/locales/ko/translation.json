@@ -1590,7 +1590,7 @@
   "com_ui_connectors_tools_summary_with_write": "도구 {{0}}개 · 쓰기 포함",
   "com_ui_connection_required": "연결 필요",
   "com_ui_connector_unavailable_for_agent": "이 에이전트에서 쓸 수 없음",
-  "com_ui_connectors": "커넥터",
+  "com_ui_tools_data_sources": "데이터 소스 · MCP 서버",
   "com_ui_repository_instructions": "저장소 지침",
   "com_ui_repository_instructions_prefer": "저장소 규칙 우선",
   "com_ui_repository_instructions_defer": "에이전트 규칙 우선",
