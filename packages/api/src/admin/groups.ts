@@ -17,6 +17,12 @@ import { parsePagination } from './pagination';
 
 /** Skill 「우리 팀」 공개가 부여하는 부서 그룹의 키. 관리자가 같은 키로 그룹을 만들면 부서 판정을 흉내 낼 수 있다. */
 const DEPARTMENT_GROUP_PREFIX = 'department:';
+const DEPARTMENT_MEMBERS_ERROR =
+  'Department groups follow user.department; their members cannot be read or changed';
+
+function isDepartmentGroupDocument(group: Pick<IGroup, 'source' | 'idOnTheSource'>): boolean {
+  return group.source === 'local' && !!group.idOnTheSource?.startsWith(DEPARTMENT_GROUP_PREFIX);
+}
 
 type GroupListFilter = Pick<GroupFilterOptions, 'source' | 'search'>;
 
@@ -341,15 +347,24 @@ export function createAdminGroupsHandlers(deps: AdminGroupsDeps): {
     }
   }
 
+  /** 부서 그룹의 memberIds 는 권한 판정에 쓰이지 않으므로, 바꿔도 효과가 없는 조작을 막는다. */
+  async function refusesMemberChanges(groupId: string): Promise<boolean> {
+    const group = await findGroupById(groupId, { source: 1, idOnTheSource: 1 });
+    return group !== null && isDepartmentGroupDocument(group);
+  }
+
   async function getGroupMembersHandler(req: ServerRequest, res: Response) {
     try {
       const { id } = req.params as GroupIdParams;
       if (!isValidObjectIdString(id)) {
         return res.status(400).json({ error: 'Invalid group ID format' });
       }
-      const group = await findGroupById(id, { memberIds: 1 });
+      const group = await findGroupById(id, { memberIds: 1, source: 1, idOnTheSource: 1 });
       if (!group) {
         return res.status(404).json({ error: 'Group not found' });
+      }
+      if (isDepartmentGroupDocument(group)) {
+        return res.status(400).json({ error: DEPARTMENT_MEMBERS_ERROR });
       }
 
       /**
@@ -423,6 +438,9 @@ export function createAdminGroupsHandlers(deps: AdminGroupsDeps): {
           .status(400)
           .json({ error: 'Only native user ObjectIds can be added via this endpoint' });
       }
+      if (await refusesMemberChanges(id)) {
+        return res.status(400).json({ error: DEPARTMENT_MEMBERS_ERROR });
+      }
 
       const { group } = await addUserToGroup(userId, id);
       if (!group) {
@@ -463,6 +481,9 @@ export function createAdminGroupsHandlers(deps: AdminGroupsDeps): {
       const { id, userId } = req.params as GroupMemberParams;
       if (!isValidObjectIdString(id)) {
         return res.status(400).json({ error: 'Invalid group ID format' });
+      }
+      if (await refusesMemberChanges(id)) {
+        return res.status(400).json({ error: DEPARTMENT_MEMBERS_ERROR });
       }
 
       const group = isValidObjectIdString(userId)

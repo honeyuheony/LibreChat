@@ -186,6 +186,8 @@ export type TSkill = {
   isPublic?: boolean;
   /** 지금 ACL 로 본 공개 범위. 서버가 계산할 때만 싣는다. */
   scope?: TSkillPublishScope;
+  /** scope 가 'team' 일 때 부여받은 부서. 작성자가 부서를 옮겼으면 작성자 부서와 다르다. */
+  scopeDepartment?: string;
   tenantId?: string;
   createdAt: string;
   updatedAt: string;

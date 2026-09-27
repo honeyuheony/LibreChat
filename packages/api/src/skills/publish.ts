@@ -424,7 +424,13 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
       }
       return res
         .status(200)
-        .json(serializeSkill(published.skill, isPublic, publishScope === 'team'));
+        .json(
+          serializeSkill(
+            published.skill,
+            isPublic,
+            new Map(department ? [[skill._id.toString(), department]] : []),
+          ),
+        );
     } catch (error) {
       logger.error('[skillPublish] Failed to publish skill', error);
       return res.status(500).json({ error: 'Failed to publish skill' });

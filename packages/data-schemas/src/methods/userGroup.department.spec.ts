@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
-import { PrincipalType } from 'librechat-data-provider';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import { PermissionBits, PrincipalType, ResourceType } from 'librechat-data-provider';
 import type * as t from '~/types';
 import { createUserGroupMethods } from './userGroup';
+import aclEntrySchema from '~/schema/aclEntry';
 import groupSchema from '~/schema/group';
 import userSchema from '~/schema/user';
 
@@ -15,6 +16,7 @@ jest.mock('~/config/winston', () => ({
 let mongoServer: MongoMemoryServer;
 let Group: mongoose.Model<t.IGroup>;
 let User: mongoose.Model<t.IUser>;
+let AclEntry: mongoose.Model<t.IAclEntry>;
 let methods: ReturnType<typeof createUserGroupMethods>;
 
 beforeAll(async () => {
@@ -22,6 +24,7 @@ beforeAll(async () => {
   await mongoose.connect(mongoServer.getUri());
   Group = mongoose.models.Group || mongoose.model<t.IGroup>('Group', groupSchema);
   User = mongoose.models.User || mongoose.model<t.IUser>('User', userSchema);
+  AclEntry = mongoose.models.AclEntry || mongoose.model<t.IAclEntry>('AclEntry', aclEntrySchema);
   methods = createUserGroupMethods(mongoose);
 });
 
@@ -82,17 +85,6 @@ describe('ensureDepartmentGroup', () => {
   test('refuses a blank department', async () => {
     await expect(methods.ensureDepartmentGroup('  ')).rejects.toThrow('department is required');
     expect(await Group.countDocuments()).toBe(0);
-  });
-});
-
-describe('findDepartmentGroupIds', () => {
-  test('maps each department that has a group to its group id', async () => {
-    const id = await methods.ensureDepartmentGroup('정세분석팀');
-    await Group.create({ name: '운영지원팀', source: 'local' });
-
-    expect(await methods.findDepartmentGroupIds(['정세분석팀', '운영지원팀'])).toEqual({
-      정세분석팀: id,
-    });
   });
 });
 
@@ -171,5 +163,60 @@ describe('getUserPrincipals with department groups', () => {
 
     const principals = await methods.getUserPrincipals({ userId: user._id, role: null });
     expect(groupIdsOf(principals).sort()).toEqual([id, manual._id.toString()].sort());
+  });
+});
+
+describe('department groups stay out of principal search', () => {
+  test('searchPrincipals and findGroupsByNamePattern skip department groups', async () => {
+    await methods.ensureDepartmentGroup('정세분석팀');
+    const manual = await Group.create({ name: '정세분석팀 공부모임', source: 'local' });
+
+    const search = await methods.searchPrincipals('정세', 10, [PrincipalType.GROUP]);
+    expect(search.map((result) => result.id)).toEqual([manual._id.toString()]);
+    const byName = await methods.findGroupsByNamePattern('정세');
+    expect(byName.map((group) => group._id.toString())).toEqual([manual._id.toString()]);
+  });
+
+  test('isDepartmentGroup tells department groups from other groups', async () => {
+    const id = await methods.ensureDepartmentGroup('정세분석팀');
+    const manual = await Group.create({ name: 'manual', source: 'local' });
+
+    expect(await methods.isDepartmentGroup(id)).toBe(true);
+    expect(await methods.isDepartmentGroup(manual._id.toString())).toBe(false);
+    expect(await methods.isDepartmentGroup('not-an-id')).toBe(false);
+  });
+});
+
+describe('findDepartmentGrants', () => {
+  test('names the department of every department group grant with the permission', async () => {
+    const policy = await methods.ensureDepartmentGroup('정세분석팀');
+    const support = await methods.ensureDepartmentGroup('운영지원팀');
+    const manual = await Group.create({ name: 'manual', source: 'local' });
+    const [a, b, c, d] = [0, 1, 2, 3].map(() => new mongoose.Types.ObjectId());
+    const grant = (principalId: unknown, resourceId: unknown, permBits: number) =>
+      AclEntry.create({
+        principalType: PrincipalType.GROUP,
+        principalId,
+        principalModel: 'Group',
+        resourceType: ResourceType.SKILL,
+        resourceId,
+        permBits,
+      });
+    await grant(new mongoose.Types.ObjectId(policy), a, PermissionBits.VIEW);
+    await grant(new mongoose.Types.ObjectId(support), b, PermissionBits.VIEW | PermissionBits.EDIT);
+    await grant(manual._id, c, PermissionBits.VIEW);
+    await grant(new mongoose.Types.ObjectId(policy), d, PermissionBits.EDIT);
+
+    const grants = await methods.findDepartmentGrants(
+      ResourceType.SKILL,
+      [a, b, c, d],
+      PermissionBits.VIEW,
+    );
+    expect(grants.sort((x, y) => x.department.localeCompare(y.department))).toEqual(
+      [
+        { resourceId: b.toString(), department: '운영지원팀' },
+        { resourceId: a.toString(), department: '정세분석팀' },
+      ].sort((x, y) => x.department.localeCompare(y.department)),
+    );
   });
 });

@@ -239,6 +239,8 @@ export interface AdminConfigDeps {
   }) => Promise<AppConfig>;
   /** Invalidate all config-related caches after a mutation. */
   invalidateConfigCaches?: (tenantId?: string) => Promise<void>;
+  /** 부서 그룹(스킬 「우리 팀」 전용)이면 true. 없으면 검사하지 않는다. */
+  isDepartmentGroup?: (groupId: string) => Promise<boolean>;
 }
 
 // ── Validation helpers ───────────────────────────────────────────────
@@ -460,7 +462,17 @@ export function createAdminConfigHandlers(deps: AdminConfigDeps): {
     hasCapability = async () => false,
     getAppConfig,
     invalidateConfigCaches,
+    isDepartmentGroup,
   } = deps;
+
+  /** 부서 그룹은 스킬 「우리 팀」 부여 전용이라 설정 재정의 대상이 될 수 없다. */
+  async function isDepartmentTarget(principalType: string, principalId: string): Promise<boolean> {
+    return (
+      principalType === PrincipalType.GROUP &&
+      isDepartmentGroup !== undefined &&
+      (await isDepartmentGroup(principalId))
+    );
+  }
 
   /**
    * GET / — List all active config overrides.
@@ -577,6 +589,12 @@ export function createAdminConfigHandlers(deps: AdminConfigDeps): {
 
       if (!validatePrincipalType(principalType)) {
         return res.status(400).json({ error: `Invalid principalType: ${principalType}` });
+      }
+
+      if (await isDepartmentTarget(principalType, principalId)) {
+        return res
+          .status(400)
+          .json({ error: 'Department groups cannot receive grants or config overrides' });
       }
 
       const { overrides, priority } = req.body as {
@@ -781,6 +799,12 @@ export function createAdminConfigHandlers(deps: AdminConfigDeps): {
         return res.status(400).json({ error: `Invalid principalType: ${principalType}` });
       }
 
+      if (await isDepartmentTarget(principalType, principalId)) {
+        return res
+          .status(400)
+          .json({ error: 'Department groups cannot receive grants or config overrides' });
+      }
+
       const { entries, priority } = req.body as {
         entries?: Array<{ fieldPath: string; value: unknown }>;
         priority?: number;
@@ -946,6 +970,12 @@ export function createAdminConfigHandlers(deps: AdminConfigDeps): {
 
       if (!validatePrincipalType(principalType)) {
         return res.status(400).json({ error: `Invalid principalType: ${principalType}` });
+      }
+
+      if (await isDepartmentTarget(principalType, principalId)) {
+        return res
+          .status(400)
+          .json({ error: 'Department groups cannot receive grants or config overrides' });
       }
 
       const { fieldPath, priority } = req.body as {

@@ -31,6 +31,7 @@ const handlers = createAdminConfigHandlers({
   hasCapability,
   getAppConfig,
   invalidateConfigCaches,
+  isDepartmentGroup: db.isDepartmentGroup,
 });
 
 router.use(requireJwtAuth, requireAdminAccess);

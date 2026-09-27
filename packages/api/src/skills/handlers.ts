@@ -138,7 +138,7 @@ export interface SkillsHandlersDeps {
     authorIds: Array<string | Types.ObjectId>,
   ) => Promise<Record<string, string>>;
   /** 작성자 부서 그룹 부여 확인. 없으면 비공개 스킬의 `scope` 는 'me' 로 싣는다. */
-  departmentGroups?: Pick<DepartmentGroups, 'findSharedWithOwnDepartment'>;
+  departmentGroups?: Pick<DepartmentGroups, 'findTeamDepartments'>;
 }
 
 /**
@@ -221,26 +221,29 @@ function hasId(ids: boolean | Set<string>, id: Types.ObjectId): boolean {
   return typeof ids === 'boolean' ? ids : ids.has(id.toString());
 }
 
-/** `teamShared` 를 넘긴 호출만 `scope` 를 싣는다. 넘기지 않으면 범위를 모르는 응답이다. */
+/** `teamDepartments`(스킬 id → 부여받은 부서)를 넘긴 호출만 `scope` 를 싣는다. */
 function serializeScope(
   pub: boolean,
-  teamShared: boolean | Set<string> | undefined,
+  teamDepartments: Map<string, string> | undefined,
   id: Types.ObjectId,
-): { scope?: TSkillPublishScope } {
-  if (teamShared === undefined) {
+): { scope?: TSkillPublishScope; scopeDepartment?: string } {
+  if (teamDepartments === undefined) {
     return {};
   }
   if (pub) {
     return { scope: 'all' };
   }
-  return { scope: hasId(teamShared, id) ? 'team' : 'me' };
+  const department = teamDepartments.get(id.toString());
+  return department === undefined
+    ? { scope: 'me' }
+    : { scope: 'team', scopeDepartment: department };
 }
 
 /** Converts a skill document to the wire format returned by the API. */
 export function serializeSkill(
   skill: ISkill & { _id: Types.ObjectId },
   isPublic: boolean | Set<string>,
-  teamShared?: boolean | Set<string>,
+  teamDepartments?: Map<string, string>,
 ): TSkill {
   const pub = hasId(isPublic, skill._id);
   return {
@@ -270,7 +273,7 @@ export function serializeSkill(
     fileCount: skill.fileCount,
     alwaysApply: skill.alwaysApply,
     isPublic: pub,
-    ...serializeScope(pub, teamShared, skill._id),
+    ...serializeScope(pub, teamDepartments, skill._id),
     tenantId: skill.tenantId,
     createdAt: (skill.createdAt ?? new Date()).toISOString(),
     updatedAt: (skill.updatedAt ?? new Date()).toISOString(),
@@ -280,7 +283,7 @@ export function serializeSkill(
 function serializeSkillSummary(
   skill: ISkillSummary & { frontmatter?: Record<string, unknown>; _id: Types.ObjectId },
   isPublic: boolean | Set<string>,
-  teamShared?: Set<string>,
+  teamDepartments?: Map<string, string>,
 ): TSkillSummary {
   const pub = hasId(isPublic, skill._id);
   return {
@@ -307,7 +310,7 @@ function serializeSkillSummary(
     fileCount: skill.fileCount,
     alwaysApply: skill.alwaysApply,
     isPublic: pub,
-    ...serializeScope(pub, teamShared, skill._id),
+    ...serializeScope(pub, teamDepartments, skill._id),
     tenantId: skill.tenantId,
     createdAt: (skill.createdAt ?? new Date()).toISOString(),
     updatedAt: (skill.updatedAt ?? new Date()).toISOString(),
@@ -593,29 +596,22 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
   }
 
-  /** 작성자 부서 그룹에 VIEW 가 있는 스킬만 'team' 이다. 다른 부서 그룹에 준 공유는 세지 않는다. */
-  async function findTeamShared(
-    skills: Array<{ _id: Types.ObjectId; author: Types.ObjectId }>,
-  ): Promise<Set<string>> {
-    if (!departmentGroups || !getSkillAuthorDepartments || skills.length === 0) {
-      return new Set();
+  async function findTeamShared(skillIds: Types.ObjectId[]): Promise<Map<string, string>> {
+    if (!departmentGroups || skillIds.length === 0) {
+      return new Map();
     }
-    const departments = await getSkillAuthorDepartments(skills.map((skill) => skill.author));
-    return departmentGroups.findSharedWithOwnDepartment(
-      ResourceType.SKILL,
-      skills.map((skill) => ({ id: skill._id, department: departments[skill.author.toString()] })),
-    );
+    return departmentGroups.findTeamDepartments(ResourceType.SKILL, skillIds);
   }
 
   /** 응답에 싣는 공개 여부와 부서 공개 여부. `includePublicStatus: false` 면 둘 다 계산하지 않는다. */
   async function readVisibility(
-    skill: { _id: Types.ObjectId; author: Types.ObjectId },
+    skill: { _id: Types.ObjectId },
     options?: SkillResponseOptions,
-  ): Promise<{ pub: boolean; team?: Set<string> }> {
+  ): Promise<{ pub: boolean; team?: Map<string, string> }> {
     if (options?.includePublicStatus === false) {
       return { pub: false };
     }
-    const [pub, team] = await Promise.all([isSkillPublic(skill._id), findTeamShared([skill])]);
+    const [pub, team] = await Promise.all([isSkillPublic(skill._id), findTeamShared([skill._id])]);
     return { pub, team };
   }
 
@@ -673,7 +669,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         visibleRows.map((skill) => [skill._id.toString(), skill.frontmatter] as const),
       );
       const teamSet = await findTeamShared(
-        visibleRows.filter((row) => !publicSet.has(row._id.toString())),
+        visibleRows.filter((row) => !publicSet.has(row._id.toString())).map((row) => row._id),
       );
       const skills = await withCountsAndMarketFields(
         visibleRows.map((s) => serializeSkillSummary(s, publicSet, teamSet)),

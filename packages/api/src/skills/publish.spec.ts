@@ -479,6 +479,7 @@ describe('createSkillPublishHandler', () => {
     });
     const body = res.json.mock.calls[0][0];
     expect(body.scope).toBe('team');
+    expect(body.scopeDepartment).toBe('정세분석팀');
     expect(body.isPublic).toBe(false);
   });
 

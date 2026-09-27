@@ -50,39 +50,33 @@ describe('ensureGroup', () => {
   });
 });
 
-describe('findSharedWithOwnDepartment', () => {
-  it('counts only a grant to the department group of each resource', async () => {
+describe('findTeamDepartments', () => {
+  it('names the department group each resource was granted to', async () => {
     const groups = createDepartmentGroups(db);
-    const ownTeam = new Types.ObjectId();
-    const otherTeam = new Types.ObjectId();
+    const policyTeam = new Types.ObjectId();
+    const supportTeam = new Types.ObjectId();
     const publicOnly = new Types.ObjectId();
-    const noDepartment = new Types.ObjectId();
 
-    const shared = await inTenant(async () => {
+    const departments = await inTenant(async () => {
       const policy = new Types.ObjectId(await groups.ensureGroup('정세분석팀'));
       const support = new Types.ObjectId(await groups.ensureGroup('운영지원팀'));
-      await grantView(PrincipalType.GROUP, policy, ownTeam);
-      await grantView(PrincipalType.GROUP, support, otherTeam);
+      await grantView(PrincipalType.GROUP, policy, policyTeam);
+      await grantView(PrincipalType.GROUP, support, supportTeam);
       await grantView(PrincipalType.PUBLIC, null, publicOnly);
-      await grantView(PrincipalType.GROUP, policy, noDepartment);
-      return groups.findSharedWithOwnDepartment(ResourceType.SKILL, [
-        { id: ownTeam, department: '정세분석팀' },
-        { id: otherTeam, department: '정세분석팀' },
-        { id: publicOnly, department: '정세분석팀' },
-        { id: noDepartment },
-      ]);
+      return groups.findTeamDepartments(ResourceType.SKILL, [policyTeam, supportTeam, publicOnly]);
     });
 
-    expect([...shared]).toEqual([ownTeam.toString()]);
+    expect(Object.fromEntries(departments)).toEqual({
+      [policyTeam.toString()]: '정세분석팀',
+      [supportTeam.toString()]: '운영지원팀',
+    });
   });
 
-  it('returns nothing when the department has no group yet', async () => {
-    const shared = await inTenant(() =>
-      createDepartmentGroups(db).findSharedWithOwnDepartment(ResourceType.SKILL, [
-        { id: new Types.ObjectId(), department: '정세분석팀' },
-      ]),
+  it('returns nothing when no department group exists', async () => {
+    const departments = await inTenant(() =>
+      createDepartmentGroups(db).findTeamDepartments(ResourceType.SKILL, [new Types.ObjectId()]),
     );
-    expect(shared.size).toBe(0);
+    expect(departments.size).toBe(0);
   });
 });
 
