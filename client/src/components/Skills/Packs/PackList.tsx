@@ -3,6 +3,7 @@ import { Spinner } from '@librechat/client';
 import type { TSkillPackSummary, TSkillSummary } from 'librechat-data-provider';
 import { useListSkillPacksQuery, useSkillsInfiniteQuery } from '~/data-provider';
 import { formatCount } from '../Marketplace/skillCategories';
+import TabSection from '../Marketplace/TabSection';
 import { useLocalize } from '~/hooks';
 import usePackStats from './stats';
 
@@ -73,13 +74,10 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
   }
 
   return (
-    <section className="mt-8">
-      <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-        {localize('com_skills_pack_tab_title', { count: packs.length })}
-      </h2>
-      <div className="mb-3.5 text-[13.5px] text-text-muted">
-        {localize('com_skills_pack_tab_desc')}
-      </div>
+    <TabSection
+      title={localize('com_skills_pack_tab_title', { count: packs.length })}
+      subtitle={localize('com_skills_pack_tab_desc')}
+    >
       {isError && (
         <div className="mb-3 text-sm text-text-secondary" role="alert">
           {localize('com_ui_error')}
@@ -110,6 +108,6 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
           </span>
         </button>
       </div>
-    </section>
+    </TabSection>
   );
 }

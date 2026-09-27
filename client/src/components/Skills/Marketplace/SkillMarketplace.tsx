@@ -25,6 +25,7 @@ import { SidePanelGroup } from '~/components/SidePanel';
 import SkillDetailContent from './SkillDetailContent';
 import SkillCategoryTabs from './SkillCategoryTabs';
 import SkillRankRow from './SkillRankRow';
+import TabSection from './TabSection';
 
 const BASE_PATH = '/skills-market';
 const CREATE_PATH = '/skills/new';
@@ -141,19 +142,18 @@ export default function SkillMarketplace() {
     const runs = mySkills.reduce((sum, skill) => sum + runsOf(skill), 0);
     const forks = mySkills.reduce((sum, skill) => sum + (skill.forkCount ?? 0), 0);
     tabContent = (
-      <section className="mt-8">
-        <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-          {localize('com_skills_mine_title', { count: mySkills.length })}
-        </h2>
-        <div className="mb-3.5 text-[13.5px] text-text-muted">
-          {mySkills.length > 0
+      <TabSection
+        title={localize('com_skills_mine_title', { count: mySkills.length })}
+        subtitle={
+          mySkills.length > 0
             ? localize('com_skills_mine_summary', {
                 runs: formatCount(runs),
                 forks: formatCount(forks),
                 hours: formatCount(sumSavedHours(mySkills)),
               })
-            : localize('com_skills_mine_empty')}
-        </div>
+            : localize('com_skills_mine_empty')
+        }
+      >
         <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 md:grid-cols-2">
           <button
             type="button"
@@ -179,18 +179,15 @@ export default function SkillMarketplace() {
           originTitle={originTitle}
           onSelect={selectSkill}
         />
-      </section>
+      </TabSection>
     );
   } else {
     const list = sortByRuns(allSkills.filter((skill) => skill.category === activeTab));
     tabContent = (
-      <section className="mt-8">
-        <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-          {getCategoryLabel(activeTab, localize)}
-        </h2>
-        <div className="mb-3.5 text-[13.5px] text-text-muted">
-          {localize('com_skills_category_subtitle', { count: list.length })}
-        </div>
+      <TabSection
+        title={getCategoryLabel(activeTab, localize)}
+        subtitle={localize('com_skills_category_subtitle', { count: list.length })}
+      >
         <RankList
           skills={list}
           numbered
@@ -201,7 +198,7 @@ export default function SkillMarketplace() {
           onSelect={selectSkill}
           emptyLabel={localize('com_skills_empty')}
         />
-      </section>
+      </TabSection>
     );
   }
 
