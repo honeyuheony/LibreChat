@@ -170,7 +170,9 @@ describe('UserSettings', () => {
       'bg-surface-tertiary',
       'border-border-medium',
       'rounded-lg',
-      'py-[7.5px]',
+      'h-[39px]',
+      'px-2.5',
+      'py-[7px]',
       'text-[14.5px]',
     );
     expect(screen.getByRole('button', { name: 'com_ui_account_settings_more' })).toHaveClass(
