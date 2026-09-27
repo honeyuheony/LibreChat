@@ -7916,6 +7916,61 @@ describe('AgentClient - titleConvo', () => {
       expect(parallelAgent2.additional_instructions ?? '').not.toContain(memoryContent);
     });
 
+    describe('user instructions', () => {
+      const userInstructions = 'Answer in Korean. Cite every number.';
+      const heading = '# 사용자 전역 지침';
+
+      const buildWithParallelAgent = async () => {
+        client.useMemory = jest.fn().mockResolvedValue(undefined);
+        client.contextHandlers = {
+          createContext: jest.fn().mockResolvedValue('Retrieved context'),
+        };
+        const parallelAgent = {
+          id: 'parallel-agent-1',
+          name: 'Parallel Agent 1',
+          instructions: 'Parallel agent 1 instructions',
+          provider: EModelEndpoint.openAI,
+        };
+        client.agentConfigs = new Map([['parallel-agent-1', parallelAgent]]);
+        await client.buildMessages(
+          [
+            {
+              messageId: 'msg-1',
+              parentMessageId: null,
+              sender: 'User',
+              text: 'Hello',
+              isCreatedByUser: true,
+            },
+          ],
+          null,
+          { instructions: 'Base instructions', additional_instructions: null },
+        );
+        return parallelAgent;
+      };
+
+      it('adds the user instructions ahead of other shared context for every agent', async () => {
+        mockReq.user.personalization.instructions = userInstructions;
+
+        const parallelAgent = await buildWithParallelAgent();
+
+        for (const agent of [client.options.agent, parallelAgent]) {
+          const tail = agent.additional_instructions;
+          expect(tail).toContain(`${heading}\n${userInstructions}`);
+          expect(tail.indexOf(heading)).toBeLessThan(tail.indexOf('Retrieved context'));
+          expect(agent.instructions).not.toContain(userInstructions);
+        }
+      });
+
+      it('adds nothing when the user has no instructions', async () => {
+        const parallelAgent = await buildWithParallelAgent();
+
+        for (const agent of [client.options.agent, parallelAgent]) {
+          expect(agent.additional_instructions).toContain('Retrieved context');
+          expect(agent.additional_instructions).not.toContain(heading);
+        }
+      });
+    });
+
     it('applies scoped context to graph-only members without promoting them', async () => {
       client.useMemory = jest.fn().mockResolvedValue(undefined);
       const graphMember = {
@@ -9454,6 +9509,41 @@ describe('AgentClient - resumeCompletion content protection', () => {
     expect(context.attachmentMemoryContext.attachments).toEqual([retainedFile]);
   });
 
+  it('keeps the user instructions in the shared context of a resumed run', async () => {
+    mockGetAgentCheckpointer.mockResolvedValue({
+      getTuple: jest.fn().mockResolvedValue({
+        checkpoint: { channel_values: { messages: [] } },
+      }),
+    });
+    const resume = jest.fn().mockResolvedValue(undefined);
+    mockCreateRun.mockResolvedValue({ resume, getCalibrationRatio: jest.fn(() => 0) });
+    const context = makeContext(undefined);
+    context.options.req.user.personalization = { instructions: 'Answer in Korean.' };
+
+    await AgentClient.prototype.resumeCompletion.call(context, { resumeValue: {} });
+
+    expect(mockCreateRun).toHaveBeenCalledTimes(1);
+    expect(context.options.agent.additional_instructions).toBe(
+      '# 사용자 전역 지침\nAnswer in Korean.',
+    );
+  });
+
+  it('adds no user instructions heading to a resumed run without instructions', async () => {
+    mockGetAgentCheckpointer.mockResolvedValue({
+      getTuple: jest.fn().mockResolvedValue({
+        checkpoint: { channel_values: { messages: [] } },
+      }),
+    });
+    const resume = jest.fn().mockResolvedValue(undefined);
+    mockCreateRun.mockResolvedValue({ resume, getCalibrationRatio: jest.fn(() => 0) });
+    const context = makeContext(undefined);
+
+    await AgentClient.prototype.resumeCompletion.call(context, { resumeValue: {} });
+
+    expect(mockCreateRun).toHaveBeenCalledTimes(1);
+    expect(context.options.agent.additional_instructions ?? '').not.toContain('# 사용자 전역 지침');
+  });
+
   it('limits resume history to files retained by the checkpoint', async () => {
     const historicalFiles = Array.from({ length: 11 }, (_, index) => ({
       file_id: `old-history-${index}`,
@@ -9820,6 +9910,49 @@ describe('AgentClient - resumeCompletion content protection', () => {
 
     expect(resolvedChild.additional_instructions).toContain('Lazy resume private context');
     expect(resolveLazy).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the user instructions ahead of scoped context for a lazy resume agent', async () => {
+    mockGetAgentCheckpointer.mockResolvedValue({
+      getTuple: jest.fn().mockResolvedValue({
+        checkpoint: { channel_values: { messages: [] } },
+      }),
+    });
+    const resolvedChild = {
+      id: 'lazy-secondary',
+      endpoint: 'Moonshot',
+      model_parameters: { model: 'moonshot-v1' },
+      tools: [],
+      agentContextAttachments: [
+        {
+          file_id: 'lazy-private-context',
+          filename: 'lazy-private.txt',
+          source: 'text',
+          type: 'text/plain',
+          text: 'Lazy resume private context',
+          bytes: 27,
+        },
+      ],
+    };
+    const descriptor = {
+      id: 'lazy-secondary',
+      resolve: jest.fn().mockResolvedValue(resolvedChild),
+    };
+    const context = makeContext(undefined);
+    context.options.req.user.personalization = { instructions: 'Answer in Korean.' };
+    context.options.agent.lazySubagentConfigs = [descriptor];
+    mockCreateRun.mockImplementation(async () => ({
+      resume: jest.fn(async () => descriptor.resolve({ signal: new AbortController().signal })),
+      getCalibrationRatio: jest.fn(() => 0),
+    }));
+
+    await AgentClient.prototype.resumeCompletion.call(context, { resumeValue: {} });
+
+    const tail = resolvedChild.additional_instructions;
+    expect(tail).toContain('# 사용자 전역 지침\nAnswer in Korean.');
+    expect(tail.indexOf('# 사용자 전역 지침')).toBeLessThan(
+      tail.indexOf('Lazy resume private context'),
+    );
   });
 
   it('fails closed when a paused file reference cannot be rehydrated', async () => {

@@ -53,6 +53,7 @@ const {
   hasDurableAgentInterruptCheckpoint,
   isHITLEnabled,
   resolveToolApprovalPolicy,
+  formatUserInstructionsContext,
   buildToolApprovalHooks,
   buildToolApprovalExecutionConfig,
   collectAttachedCodeEnvironmentAgentIds,
@@ -2843,7 +2844,9 @@ class AgentClient extends BaseClient {
      * user message above; only side-channel context belongs here.
      * Memory context is handled separately and applied per-agent based on config.
      */
-    const sharedRunContextParts = [];
+    const sharedRunContextParts = [formatUserInstructionsContext(this.options.req.user)].filter(
+      Boolean,
+    );
     const [augmentedPrompt, [memories, configServers], agentScopedContext] = await Promise.all([
       this.contextHandlers?.createContext(),
       earlySharedContextPromise,
@@ -5504,6 +5507,7 @@ class AgentClient extends BaseClient {
         }),
         resolveConfigServers(this.options.req),
       ]);
+      const resumeUserInstructions = formatUserInstructionsContext(this.options.req.user);
       const resumeScopedAttachmentMap = buildAgentScopedAttachmentMap({
         agentIds: agents.map((agent) => agent?.id).filter(Boolean),
         attachmentsByAgentId: this.options.agentContextAttachmentsByAgentId,
@@ -5544,7 +5548,9 @@ class AgentClient extends BaseClient {
               logger,
               mcpManager: resumeMcpManager,
               configServers: resumeConfigServers,
-              sharedRunContext: scopedContext ?? '',
+              sharedRunContext: [resumeUserInstructions, scopedContext]
+                .filter(Boolean)
+                .join('\n\n'),
               ephemeralAgent:
                 agent === this.options.agent ? this.options.req.body.ephemeralAgent : undefined,
             });
@@ -5645,7 +5651,9 @@ class AgentClient extends BaseClient {
                   logger,
                   mcpManager: resumeMcpManager,
                   configServers: resumeConfigServers,
-                  sharedRunContext: scopedContext ?? '',
+                  sharedRunContext: [resumeUserInstructions, scopedContext]
+                    .filter(Boolean)
+                    .join('\n\n'),
                 });
                 assertModelBoundContent({
                   onTraversalFailure: reportLocatorTraversalFailure,

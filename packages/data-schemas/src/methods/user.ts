@@ -4,6 +4,7 @@ import {
   CacheKeys,
   type RefillIntervalUnit,
   type StatefulCodeEnvironment,
+  type TUpdateWorkspacePreferencesRequest,
 } from 'librechat-data-provider';
 import type { IUser, BalanceConfig, CreateUserRequest, UserDeleteResult } from '~/types';
 import type { CacheStore } from '~/types';
@@ -155,6 +156,10 @@ export function createUserMethods(
   updateUserConnectorDefaults: (
     userId: string,
     defaults: Record<string, boolean>,
+  ) => Promise<IUser | null>;
+  updateUserWorkspacePreferences: (
+    userId: string,
+    preferences: TUpdateWorkspacePreferencesRequest,
   ) => Promise<IUser | null>;
 } {
   /**
@@ -688,6 +693,33 @@ export function createUserMethods(
   }
 
   /**
+   * Sets the given workspace preferences (global instructions, approval mode) and leaves the
+   * fields left out as they were. Unlike `updateUser`, it keeps an unverified account's expiry.
+   */
+  async function updateUserWorkspacePreferences(
+    userId: string,
+    preferences: TUpdateWorkspacePreferencesRequest,
+  ): Promise<IUser | null> {
+    const User = mongoose.models.User;
+    const $set: Record<string, string> = {};
+    if (preferences.instructions !== undefined) {
+      $set['personalization.instructions'] = preferences.instructions;
+    }
+    if (preferences.approvalMode !== undefined) {
+      $set['personalization.approvalMode'] = preferences.approvalMode;
+    }
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      { $set },
+      { new: true, runValidators: true },
+    ).lean<IUser>();
+    if (updated) {
+      await invalidateAuthUserDocCache(userId);
+    }
+    return updated;
+  }
+
+  /**
    * Search for users by pattern matching on name, email, or username (case-insensitive)
    * @param searchPattern - The pattern to search for
    * @param limit - Maximum number of results to return
@@ -879,6 +911,7 @@ export function createUserMethods(
     toggleUserMemories,
     updateUserStatefulCodeEnvironment,
     updateUserConnectorDefaults,
+    updateUserWorkspacePreferences,
   };
 }
 

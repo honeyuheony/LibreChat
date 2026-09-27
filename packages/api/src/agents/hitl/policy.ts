@@ -1,6 +1,6 @@
 import { randomUUID, createHash } from 'crypto';
 import { openAIBaseSchema, googleBaseSchema, anthropicBaseSchema } from 'librechat-data-provider';
-import type { Agents, TToolApprovalPolicy } from 'librechat-data-provider';
+import type { Agents, UserApprovalMode, TToolApprovalPolicy } from 'librechat-data-provider';
 import type { ToolPolicyConfig } from '@librechat/agents';
 import type { MCPToolAlias } from '~/tools/classification';
 
@@ -39,6 +39,12 @@ export interface ToolApprovalPolicyLayers {
    */
   skills?: TToolApprovalPolicy[];
   /**
+   * The signed-in user's saved approval mode (`personalization.approvalMode`). Under `auto` it
+   * lets the tools in {@link USER_APPROVAL_MODE_TOOLS} run without asking; it never touches
+   * other tools, `deny`, or `enabled`.
+   */
+  user?: { approvalMode?: UserApprovalMode };
+  /**
    * At least one agent in this run executes in an attached, user-operated environment.
    * Attached environments get LibreChat's safe approval baseline without requiring
    * an administrator to opt the whole endpoint into prompts.
@@ -54,7 +60,8 @@ export interface ToolApprovalPolicyLayers {
  * rather than to `createRun`. Intended precedence once those layers are wired:
  *   - `endpoint` is the baseline and owns the `enabled` kill switch;
  *   - `agent` overrides `mode`/`allow`/`deny`/`ask`/`reason`;
- *   - `skills` may only tighten (add `ask`/`deny`), never loosen.
+ *   - `skills` may only tighten (add `ask`/`deny`), never loosen;
+ *   - `user` applies last and only lifts the approval-mode tools under `auto`.
  *
  * When no endpoint policy is active, BYOM adds `enabled: true, mode: 'bypass'` and
  * an agent-scoped hook supplies its coding decisions. An already-enabled endpoint
@@ -70,13 +77,46 @@ export function resolveToolApprovalPolicy(
     layers.endpoint?.enabled !== true &&
     layers.endpoint?.enabled !== false
   ) {
-    return {
-      ...layers.endpoint,
-      enabled: true,
-      mode: 'bypass',
-    };
+    return applyUserApprovalMode(
+      {
+        ...layers.endpoint,
+        enabled: true,
+        mode: 'bypass',
+      },
+      layers.user?.approvalMode,
+    );
   }
-  return layers.endpoint;
+  return applyUserApprovalMode(layers.endpoint, layers.user?.approvalMode);
+}
+
+/**
+ * Tools whose approval follows the user's approval mode: internal document import, source
+ * re-fetch, export and share. Empty until such a tool exists; the MCP document import tool
+ * (`import_documents`) joins when it ships. Item-confirmation and perspective cards are not
+ * tools here and keep asking under either mode.
+ */
+export const USER_APPROVAL_MODE_TOOLS: readonly string[] = [];
+
+/**
+ * Applies the user approval mode layer. Under `auto`, each target tool leaves `ask` and joins
+ * `allow` so it runs without pausing; `deny` still wins and every other tool keeps its rule.
+ * Only exact names are lifted from `ask` — an administrator glob that also matches keeps asking.
+ */
+export function applyUserApprovalMode(
+  policy: TToolApprovalPolicy | undefined,
+  approvalMode: UserApprovalMode | undefined,
+  tools: readonly string[] = USER_APPROVAL_MODE_TOOLS,
+): TToolApprovalPolicy | undefined {
+  if (approvalMode !== 'auto' || tools.length === 0 || !isHITLEnabled(policy)) {
+    return policy;
+  }
+  const targets = new Set(tools);
+  const allow = policy.allow ?? [];
+  return {
+    ...policy,
+    ask: policy.ask?.filter((name) => !targets.has(name)),
+    allow: [...allow, ...tools.filter((name) => !allow.includes(name))],
+  };
 }
 
 /**

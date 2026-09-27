@@ -1,5 +1,10 @@
 import { Schema } from 'mongoose';
-import { SystemRoles, STATEFUL_CODE_ENVIRONMENTS } from 'librechat-data-provider';
+import {
+  SystemRoles,
+  USER_APPROVAL_MODES,
+  STATEFUL_CODE_ENVIRONMENTS,
+  MAX_USER_INSTRUCTIONS_LENGTH,
+} from 'librechat-data-provider';
 import { IUser } from '~/types';
 
 // Session sub-schema
@@ -170,6 +175,15 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
           type: Map,
           of: Boolean,
           default: undefined,
+        },
+        /** Global instructions added to every conversation's shared context. */
+        instructions: {
+          type: String,
+          maxlength: MAX_USER_INSTRUCTIONS_LENGTH,
+        },
+        approvalMode: {
+          type: String,
+          enum: USER_APPROVAL_MODES,
         },
       },
       default: {},

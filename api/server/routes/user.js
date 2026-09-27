@@ -1,5 +1,10 @@
 const express = require('express');
-const { createUserPreferencesHandler, createConnectorDefaultsHandler } = require('@librechat/api');
+const {
+  createUserPreferencesHandler,
+  getWorkspacePreferencesHandler,
+  createConnectorDefaultsHandler,
+  createWorkspacePreferencesHandler,
+} = require('@librechat/api');
 const {
   updateUserPluginsController,
   resendVerificationController,
@@ -18,7 +23,11 @@ const {
 } = require('~/server/middleware');
 
 const settings = require('./settings');
-const { updateUserStatefulCodeEnvironment, updateUserConnectorDefaults } = require('~/models');
+const {
+  updateUserConnectorDefaults,
+  updateUserWorkspacePreferences,
+  updateUserStatefulCodeEnvironment,
+} = require('~/models');
 
 const router = express.Router();
 
@@ -28,11 +37,16 @@ const updateUserPreferences = createUserPreferencesHandler({
 const updateConnectorDefaults = createConnectorDefaultsHandler({
   updateConnectorDefaults: updateUserConnectorDefaults,
 });
+const updateWorkspacePreferences = createWorkspacePreferencesHandler({
+  updateWorkspacePreferences: updateUserWorkspacePreferences,
+});
 
 router.use('/settings', settings);
 router.get('/', requireJwtAuth, getUserController);
 router.patch('/preferences', requireJwtAuth, configMiddleware, updateUserPreferences);
 router.patch('/preferences/connectors', requireJwtAuth, updateConnectorDefaults);
+router.get('/preferences/workspace', requireJwtAuth, getWorkspacePreferencesHandler);
+router.patch('/preferences/workspace', requireJwtAuth, updateWorkspacePreferences);
 router.get('/terms', requireJwtAuth, getTermsStatusController);
 router.post('/terms/accept', requireJwtAuth, acceptTermsController);
 router.post('/plugins', requireJwtAuth, updateUserPluginsController);

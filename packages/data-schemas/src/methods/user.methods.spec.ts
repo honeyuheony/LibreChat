@@ -1296,6 +1296,63 @@ describe('User Methods - Database Tests', () => {
     });
   });
 
+  describe('updateUserWorkspacePreferences', () => {
+    test('sets only the given fields and keeps the other preferences', async () => {
+      const user = await User.create({
+        email: 'workspace-preferences@example.com',
+        provider: 'local',
+        personalization: { memories: false, connectorDefaults: { law: true } },
+      });
+      const userId = user._id?.toString() ?? '';
+
+      const first = await methods.updateUserWorkspacePreferences(userId, {
+        instructions: 'Answer in Korean.',
+      });
+      expect(first?.personalization?.instructions).toBe('Answer in Korean.');
+      expect(first?.personalization?.approvalMode).toBeUndefined();
+
+      const second = await methods.updateUserWorkspacePreferences(userId, { approvalMode: 'auto' });
+      expect(second?.personalization?.instructions).toBe('Answer in Korean.');
+      expect(second?.personalization?.approvalMode).toBe('auto');
+      expect(second?.personalization?.memories).toBe(false);
+      expect(second?.personalization?.connectorDefaults).toEqual({ law: true });
+    });
+
+    test('keeps the unverified-account expiry that updateUser clears', async () => {
+      const expiresAt = new Date(Date.now() + 60_000);
+      const user = await User.create({
+        email: 'workspace-expiry@example.com',
+        provider: 'local',
+        expiresAt,
+      });
+      const userId = user._id?.toString() ?? '';
+
+      await methods.updateUserWorkspacePreferences(userId, { instructions: '' });
+
+      const stored = await User.findById(userId).lean<t.IUser>();
+      expect(stored?.expiresAt?.getTime()).toBe(expiresAt.getTime());
+      expect(stored?.personalization?.instructions).toBe('');
+    });
+
+    test('rejects an approval mode outside the allowed values', async () => {
+      const user = await User.create({ email: 'workspace-invalid@example.com', provider: 'local' });
+      const userId = user._id?.toString() ?? '';
+
+      const invalid: Parameters<typeof methods.updateUserWorkspacePreferences>[1] = JSON.parse(
+        '{"approvalMode":"always"}',
+      );
+
+      await expect(methods.updateUserWorkspacePreferences(userId, invalid)).rejects.toThrow();
+    });
+
+    test('returns null for a missing user', async () => {
+      const userId = new mongoose.Types.ObjectId().toString();
+      await expect(
+        methods.updateUserWorkspacePreferences(userId, { approvalMode: 'manual' }),
+      ).resolves.toBeNull();
+    });
+  });
+
   describe('Email Normalization Edge Cases', () => {
     test('should handle email with multiple spaces', async () => {
       await User.create({
