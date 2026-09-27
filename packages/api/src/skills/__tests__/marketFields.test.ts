@@ -202,11 +202,11 @@ describe('skill list market fields', () => {
       forkCount: 41,
       marketProfile: { scope: '전 부서' },
     });
-    // 평균 125,400초 / 3,130회 = 40.06초, 회당 단축 26 − 0.67 = 25.33분, 3,130회 × 25.33분 = 1,321.5시간
+    // 평균 125,400초 / 3,130회 = 40.06초. 회당 26 − 0.67분을 25분으로, 누적 3,130 × 25 / 60시간을 1,304시간으로 반올림한다.
     expect(weekly?.usageMetrics).toEqual({
       averageRunSeconds: 40.1,
-      savedMinutesPerRun: 25.3,
-      savedHours: 1321.5,
+      savedMinutesPerRun: 25,
+      savedHours: 1304,
     });
   });
 

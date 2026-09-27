@@ -687,25 +687,25 @@ describe('Skill routes', () => {
       const created = await createSkillAsOwner();
       await Skill.updateOne(
         { _id: created.body._id },
-        { $set: { useCount: 12, runTimeTotalSeconds: 120, runTimeSampleCount: 2 } },
+        { $set: { useCount: 11, runTimeTotalSeconds: 90, runTimeSampleCount: 1 } },
       );
       const res = await request(app)
         .patch(`/api/skills/${created.body._id}`)
-        .send({ expectedVersion: 1, manualMinutes: 16 });
+        .send({ expectedVersion: 1, manualMinutes: 10 });
       expect(res.status).toBe(200);
-      expect(res.body.manualMinutes).toBe(16);
+      expect(res.body.manualMinutes).toBe(10);
       expect(res.body.version).toBe(1);
       expect(res.body.usageMetrics).toEqual({
-        averageRunSeconds: 60,
-        savedMinutesPerRun: 15,
-        savedHours: 3,
+        averageRunSeconds: 90,
+        savedMinutesPerRun: 9,
+        savedHours: 2,
       });
 
       const list = await request(app).get('/api/skills');
       expect(list.body.skills[0]).toMatchObject({
-        useCount: 12,
-        manualMinutes: 16,
-        usageMetrics: { averageRunSeconds: 60, savedMinutesPerRun: 15, savedHours: 3 },
+        useCount: 11,
+        manualMinutes: 10,
+        usageMetrics: { averageRunSeconds: 90, savedMinutesPerRun: 9, savedHours: 2 },
       });
     });
 

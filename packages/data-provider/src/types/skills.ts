@@ -239,15 +239,15 @@ export type TSkillMarketProfile = {
 };
 
 /**
- * 스킬 지표. 절감 시간 = 실행 수 × max(0, 수작업 분 − 평균 실행 초 / 60).
+ * 스킬 지표. 회당 단축 분은 정수로 반올림하고, 누적 절감 시간도 정수로 반올림한다.
  * 값을 낼 수 없으면(측정 기록이나 수작업 분이 없으면) `null`이다.
  */
 export type TSkillUsageMetrics = {
   /** 평균 실행 시간(초, 소수 첫째 자리). */
   averageRunSeconds: number | null;
-  /** 회당 단축 시간(분, 소수 첫째 자리). */
+  /** 회당 단축 시간(분, 정수). */
   savedMinutesPerRun: number | null;
-  /** 누적 절감 시간(시간, 소수 첫째 자리). */
+  /** 누적 절감 시간(시간, 정수). */
   savedHours: number | null;
 };
 
