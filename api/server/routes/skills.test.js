@@ -4,6 +4,10 @@ const JSZip = require('jszip');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
+/** 요청 수 제한 테스트가 적은 횟수로 한도에 닿도록, 경로 모듈을 불러오기 전에 정한다. */
+const DRAFT_USER_MAX_FOR_TEST = 5;
+process.env.DRAFT_USER_MAX = String(DRAFT_USER_MAX_FOR_TEST);
+
 jest.mock('librechat-data-provider', () => {
   const actual = jest.requireActual('librechat-data-provider');
   return {
@@ -1276,6 +1280,25 @@ describe('Skill builder routes', () => {
   }
 
   describe('POST /api/skills/draft', () => {
+    it('answers 429 in JSON once a user passes the draft limit', async () => {
+      setTestUser(testUsers.noAccess);
+      const send = () =>
+        request(app).post('/api/skills/draft').send({ text: '회의록을 보고서로 만들어줘.' });
+
+      for (let i = 0; i < DRAFT_USER_MAX_FOR_TEST; i++) {
+        const allowed = await send();
+        expect(allowed.status).toBe(200);
+      }
+      const limited = await send();
+      expect(limited.status).toBe(429);
+      expect(limited.headers['content-type']).toMatch(/application\/json/);
+      expect(limited.body.message).toEqual(expect.any(String));
+
+      setTestUser(testUsers.editor);
+      const otherUser = await send();
+      expect(otherUser.status).toBe(200);
+    }, 20000);
+
     it('rejects a request without text', async () => {
       const res = await request(app).post('/api/skills/draft').send({});
       expect(res.status).toBe(400);

@@ -56,6 +56,7 @@ const {
 const sharePolicy = require('~/server/middleware/checkSharePublicAccess');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
+const { createDraftLimiters } = require('~/server/middleware/limiters/draftLimiters');
 const { maybeRunGitHubSkillSyncForRequest } = require('~/server/services/Skills/sync');
 const {
   getSkillDbMethods,
@@ -121,6 +122,7 @@ const checkSkillCreate = generateCheckAccess({
 // Rate limiters (reuse existing file upload limiters)
 // ---------------------------------------------------------------------------
 const { fileUploadIpLimiter, fileUploadUserLimiter } = createFileLimiters();
+const { draftIpLimiter, draftUserLimiter } = createDraftLimiters();
 
 router.use(requireJwtAuth);
 router.use(configMiddleware);
@@ -361,7 +363,7 @@ const categoriesHandler = createSkillCategoriesHandler({
 router.get('/categories', categoriesHandler);
 
 // 저장하지 않고 칸 제안만 돌려주므로 만들기 권한만 본다.
-router.post('/draft', checkSkillCreate, draftHandler);
+router.post('/draft', checkSkillCreate, draftIpLimiter, draftUserLimiter, draftHandler);
 
 // 검수 표시(마켓 카드의 "검수됨" 배지). 관리자만 켜고 끌 수 있으며 배포 폴더 스킬은 DB 문서가
 // 없어 대상이 아니다(docs/agent-market-plan.md 4.2절의 검수 항목을 통과한 뒤 누른다).
