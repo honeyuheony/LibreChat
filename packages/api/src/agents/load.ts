@@ -263,6 +263,27 @@ export async function loadEphemeralAgent(
 }
 
 /**
+ * 선택한 modelSpec 프리셋이 이 저장 agent 에 모델을 지정했으면 그 모델 이름을 돌려준다.
+ * 도구·지침은 agent 한 곳에 두고 모델만 프리셋마다 달리 고르게 하려는 것이다. 요청 본문의
+ * model 은 쓰지 않는다. 관리자가 설정 파일에 적은 프리셋만 모델을 바꿀 수 있어야 하고,
+ * 고른 모델은 이후 validateAgentModel 이 엔드포인트 모델 목록과 대조한다.
+ */
+export function resolveSpecAgentModel(
+  modelSpecs: { list?: TModelSpec[] } | undefined,
+  spec: string | undefined,
+  agent_id: string,
+): string | undefined {
+  if (spec == null || spec === '') {
+    return undefined;
+  }
+  const preset = modelSpecs?.list?.find((s) => s.name === spec)?.preset;
+  if (!preset || !isAgentsEndpoint(preset.endpoint) || preset.agent_id !== agent_id) {
+    return undefined;
+  }
+  return typeof preset.model === 'string' && preset.model !== '' ? preset.model : undefined;
+}
+
+/**
  * Load an agent based on the provided ID.
  * For ephemeral agents, builds a synthetic agent from request parameters.
  * For persistent agents, fetches from the database.
@@ -278,11 +299,25 @@ export async function loadAgent(
   if (isEphemeralAgentId(agent_id)) {
     return loadEphemeralAgent({ req, spec, endpoint, model_parameters }, deps);
   }
-  const agent = await deps.getAgent({ id: agent_id });
+  const storedAgent = await deps.getAgent({ id: agent_id });
 
-  if (!agent) {
+  if (!storedAgent) {
     return null;
   }
+
+  const specModel = resolveSpecAgentModel(
+    req.config?.modelSpecs as { list?: TModelSpec[] } | undefined,
+    spec,
+    agent_id,
+  );
+  const agent: Agent =
+    specModel == null
+      ? storedAgent
+      : {
+          ...storedAgent,
+          model: specModel,
+          model_parameters: { ...storedAgent.model_parameters, model: specModel },
+        };
 
   // Set version count from versions array length
   const agentWithVersion = agent as Agent & { versions?: unknown[]; version?: number };

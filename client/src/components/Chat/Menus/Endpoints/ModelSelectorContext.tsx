@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import debounce from 'lodash/debounce';
+import { useToastContext } from '@librechat/client';
 import {
   EModelEndpoint,
   PermissionBits,
@@ -18,8 +19,8 @@ import {
 import { useAgentsMapContext, useAssistantsMapContext, useLiveAnnouncer } from '~/Providers';
 import { useGetEndpointsQuery, useListAgentsQuery } from '~/data-provider';
 import { useModelSelectorChatContext } from './ModelSelectorChatContext';
+import { filterItems, getSpecSelectionMessage } from './utils';
 import useSelectMention from '~/hooks/Input/useSelectMention';
-import { filterItems } from './utils';
 
 type ModelSelectorContextType = {
   // State
@@ -67,6 +68,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     useModelSelectorChatContext();
   const localize = useLocalize();
   const { announcePolite } = useLiveAnnouncer();
+  const { showToast } = useToastContext();
   const modelSpecs = useMemo(() => {
     /** Labels are normalized at the startup-config query boundary. */
     const specs = startupConfig?.modelSpecs?.list ?? [];
@@ -216,8 +218,9 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
         model,
         modelSpec: spec.name,
       });
+      showToast({ message: getSpecSelectionMessage(spec), status: 'info' });
     },
-    [onSelectSpec],
+    [onSelectSpec, showToast],
   );
 
   const handleSelectEndpoint = useCallback(

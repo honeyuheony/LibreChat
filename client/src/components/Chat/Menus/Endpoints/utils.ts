@@ -111,6 +111,9 @@ export function filterModels(
   });
 }
 
+export const getSpecSelectionMessage = (spec: TModelSpec): string =>
+  spec.description ? `${spec.label} · ${spec.description}` : spec.label;
+
 export const getDisplayValue = ({
   localize,
   mappedEndpoints,
@@ -135,15 +138,9 @@ export const getDisplayValue = ({
       return localize('com_ui_select_model');
     }
 
-    if (
-      isAgentsEndpoint(endpoint.value) &&
-      endpoint.agentNames &&
-      endpoint.agentNames[selectedValues.model]
-    ) {
-      return endpoint.agentNames[selectedValues.model];
-    } else if (isAgentsEndpoint(endpoint.value) && agentsMap) {
-      const agent = agentsMap[selectedValues.model];
-      return agent?.name || selectedValues.model;
+    /* 입력창의 이 자리는 모델을 보여 주는 곳이라 agent 이름 대신 그 agent 의 모델을 보인다. */
+    if (isAgentsEndpoint(endpoint.value)) {
+      return agentsMap?.[selectedValues.model]?.model || localize('com_ui_select_model');
     }
 
     if (
