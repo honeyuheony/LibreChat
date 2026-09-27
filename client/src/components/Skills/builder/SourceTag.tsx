@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { TranslationKeys } from '~/hooks';
 import { SOURCE_AI, SOURCE_ME, SOURCE_ORIGIN } from './state';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -15,7 +14,7 @@ export default function SourceTag({ source, label, children }: SourceTagProps) {
   const known: Record<string, string> = {
     [SOURCE_AI]: localize('com_skills_builder_source_ai'),
     [SOURCE_ME]: localize('com_skills_builder_source_me'),
-    [SOURCE_ORIGIN]: localize('com_skills_builder_source_origin' as TranslationKeys),
+    [SOURCE_ORIGIN]: localize('com_skills_builder_source_origin'),
   };
   const text = label ?? known[source] ?? source;
   return (
@@ -41,7 +40,7 @@ export function ChangedMark({ show }: { show: boolean }) {
   }
   return (
     <span className="ms-1.5 whitespace-nowrap align-middle text-[10.5px] font-bold text-status-warning">
-      {localize('com_skills_builder_changed' as TranslationKeys)}
+      {localize('com_skills_builder_changed')}
     </span>
   );
 }
