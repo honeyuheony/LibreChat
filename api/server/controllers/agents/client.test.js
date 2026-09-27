@@ -7916,6 +7916,61 @@ describe('AgentClient - titleConvo', () => {
       expect(parallelAgent2.additional_instructions ?? '').not.toContain(memoryContent);
     });
 
+    describe('user instructions', () => {
+      const userInstructions = 'Answer in Korean. Cite every number.';
+      const heading = '# 사용자 전역 지침';
+
+      const buildWithParallelAgent = async () => {
+        client.useMemory = jest.fn().mockResolvedValue(undefined);
+        client.contextHandlers = {
+          createContext: jest.fn().mockResolvedValue('Retrieved context'),
+        };
+        const parallelAgent = {
+          id: 'parallel-agent-1',
+          name: 'Parallel Agent 1',
+          instructions: 'Parallel agent 1 instructions',
+          provider: EModelEndpoint.openAI,
+        };
+        client.agentConfigs = new Map([['parallel-agent-1', parallelAgent]]);
+        await client.buildMessages(
+          [
+            {
+              messageId: 'msg-1',
+              parentMessageId: null,
+              sender: 'User',
+              text: 'Hello',
+              isCreatedByUser: true,
+            },
+          ],
+          null,
+          { instructions: 'Base instructions', additional_instructions: null },
+        );
+        return parallelAgent;
+      };
+
+      it('adds the user instructions ahead of other shared context for every agent', async () => {
+        mockReq.user.personalization.instructions = userInstructions;
+
+        const parallelAgent = await buildWithParallelAgent();
+
+        for (const agent of [client.options.agent, parallelAgent]) {
+          const tail = agent.additional_instructions;
+          expect(tail).toContain(`${heading}\n${userInstructions}`);
+          expect(tail.indexOf(heading)).toBeLessThan(tail.indexOf('Retrieved context'));
+          expect(agent.instructions).not.toContain(userInstructions);
+        }
+      });
+
+      it('adds nothing when the user has no instructions', async () => {
+        const parallelAgent = await buildWithParallelAgent();
+
+        for (const agent of [client.options.agent, parallelAgent]) {
+          expect(agent.additional_instructions).toContain('Retrieved context');
+          expect(agent.additional_instructions).not.toContain(heading);
+        }
+      });
+    });
+
     it('applies scoped context to graph-only members without promoting them', async () => {
       client.useMemory = jest.fn().mockResolvedValue(undefined);
       const graphMember = {

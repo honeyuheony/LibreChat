@@ -53,6 +53,7 @@ const {
   hasDurableAgentInterruptCheckpoint,
   isHITLEnabled,
   resolveToolApprovalPolicy,
+  formatUserInstructionsContext,
   buildToolApprovalHooks,
   buildToolApprovalExecutionConfig,
   collectAttachedCodeEnvironmentAgentIds,
@@ -2843,7 +2844,9 @@ class AgentClient extends BaseClient {
      * user message above; only side-channel context belongs here.
      * Memory context is handled separately and applied per-agent based on config.
      */
-    const sharedRunContextParts = [];
+    const sharedRunContextParts = [formatUserInstructionsContext(this.options.req.user)].filter(
+      Boolean,
+    );
     const [augmentedPrompt, [memories, configServers], agentScopedContext] = await Promise.all([
       this.contextHandlers?.createContext(),
       earlySharedContextPromise,
