@@ -1,14 +1,23 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { TSkill } from 'librechat-data-provider';
-import Editor from '../Editor';
+import Editor, { MarketEditor } from '../Editor';
 
 const mockUseGetSkillQuery = jest.fn();
 
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
   useToastContext: () => ({ showToast: jest.fn() }),
+}));
+
+jest.mock('~/components/Skills/Marketplace/SkillMarketplace', () => ({
+  __esModule: true,
+  default: () => <main data-testid="skill-market" />,
+}));
+
+jest.mock('~/components/Agents/MarketplaceContext', () => ({
+  MarketplaceProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 jest.mock('~/hooks', () => ({
@@ -34,6 +43,7 @@ jest.mock('~/data-provider', () => {
     useForkSkillMutation: mutation,
     useCreateSkillDraftMutation: mutation,
     useRecordSkillTestResultMutation: mutation,
+    useMCPServersQuery: () => ({ data: { confluence: {}, jira: {} } }),
     isSkillDraftRateLimited: () => false,
     postGenerationRequest: jest.fn(),
     generationProtocolHeaders: () => ({}),
@@ -97,5 +107,27 @@ describe('Editor', () => {
     renderAt('/skills/new');
     expect(screen.getByLabelText('com_skills_builder_text_heading')).toHaveValue('');
     expect(screen.getByText('com_skills_new_agent')).toBeInTheDocument();
+  });
+
+  it('shows the editor as a dialog over the marketplace on skills/new', () => {
+    mockUseGetSkillQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+    render(
+      <MemoryRouter initialEntries={['/skills/new']}>
+        <Routes>
+          <Route path="/skills/new" element={<MarketEditor />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('skill-market')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'com_skills_new_agent' })).toBeInTheDocument();
+  });
+
+  it('offers every MCP server the person can reach as a connector choice', () => {
+    mockUseGetSkillQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+    renderAt('/skills/new');
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_connectors_more' }));
+    expect(screen.getAllByRole('switch').map((item) => item.closest('label')?.textContent)).toEqual(
+      ['confluence', 'jira'],
+    );
   });
 });

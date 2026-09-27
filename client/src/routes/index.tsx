@@ -46,7 +46,7 @@ const loadSkillsView = () =>
 
 const loadSkillBuilder = () =>
   import('~/components/Skills/builder').then((m) => ({
-    Component: m.Editor,
+    Component: m.MarketEditor,
   }));
 
 const loadInsightsView = () =>

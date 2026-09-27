@@ -1,5 +1,4 @@
-import { Radio } from '@librechat/client';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import type { PluginFile } from './state';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -27,6 +26,58 @@ export function treeRows(files: PluginFile[]): Row[] {
     rows.push({ kind: 'file', name: segments[segments.length - 1], depth: segments.length, path });
   }
   return rows;
+}
+
+const VIEW_OPTIONS = [
+  { raw: false, label: 'com_skills_builder_view_readable' },
+  { raw: true, label: 'com_skills_builder_view_raw' },
+] as const;
+
+const ARROW_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
+/** SKILL.md 보기 전환. 고른 쪽은 보라색으로 채운 알약이며, 방향키로 오간다(radiogroup). */
+function ViewToggle({ raw, onRaw }: { raw: boolean; onRaw: (raw: boolean) => void }) {
+  const localize = useLocalize();
+  const moveWithArrow = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (!ARROW_KEYS.has(event.key)) {
+      return;
+    }
+    event.preventDefault();
+    const other =
+      event.currentTarget.parentElement?.querySelector<HTMLButtonElement>('[aria-checked="false"]');
+    onRaw(!raw);
+    other?.focus();
+  };
+  return (
+    <div
+      role="radiogroup"
+      aria-label={localize('com_skills_builder_view_mode')}
+      className="inline-flex flex-none overflow-hidden rounded-full border border-border-light bg-surface-primary"
+    >
+      {VIEW_OPTIONS.map((option) => {
+        const checked = option.raw === raw;
+        return (
+          <button
+            key={option.label}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            tabIndex={checked ? 0 : -1}
+            onClick={() => onRaw(option.raw)}
+            onKeyDown={moveWithArrow}
+            className={cn(
+              'px-2.5 py-0.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+              checked
+                ? 'bg-surface-submit font-semibold text-text-on-status'
+                : 'text-text-secondary hover:bg-surface-hover',
+            )}
+          >
+            {localize(option.label)}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 type FolderProps = {
@@ -113,19 +164,10 @@ export default function Folder({
       </div>
       <div className="mt-3">
         <div className="mb-2 flex items-center gap-2">
-          <span className="flex-1 truncate font-mono text-xs text-text-secondary">
+          <span className="min-w-0 truncate font-mono text-xs text-text-secondary">
             {current.path}
           </span>
-          {isSkillFile(current.path) && (
-            <Radio
-              value={raw ? 'raw' : 'readable'}
-              onChange={(value) => onRaw(value === 'raw')}
-              options={[
-                { value: 'readable', label: localize('com_skills_builder_view_readable') },
-                { value: 'raw', label: localize('com_skills_builder_view_raw') },
-              ]}
-            />
-          )}
+          {isSkillFile(current.path) && <ViewToggle raw={raw} onRaw={onRaw} />}
         </div>
         {showReadable ? (
           readable

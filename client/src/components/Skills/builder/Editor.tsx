@@ -5,6 +5,7 @@ import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { ForkOrigin } from './useSession';
 import {
   useGetSkillQuery,
+  useMCPServersQuery,
   useGetStartupConfig,
   useForkSkillMutation,
   useCreateSkillMutation,
@@ -14,10 +15,13 @@ import {
   useCreateSkillDraftMutation,
   useRecordSkillTestResultMutation,
 } from '~/data-provider';
+import SkillMarketplace from '~/components/Skills/Marketplace/SkillMarketplace';
+import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
 import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
 import { createTrialTransport } from './transport';
 import { pickTrialSpec } from './trial';
 import useSession from './useSession';
+import celebrate from './celebrate';
 import { forkState } from './state';
 import Builder from './Builder';
 
@@ -54,6 +58,8 @@ function EditorPage({ entry, fork, forkTitle }: EditorPageProps) {
   const recordMutation = useRecordSkillTestResultMutation();
   const publishMutation = usePublishSkillMutation();
   const forkMutation = useForkSkillMutation();
+  const { data: mcpServers } = useMCPServersQuery();
+  const connectorChoices = useMemo(() => Object.keys(mcpServers ?? {}), [mcpServers]);
   const transport = useMemo(() => createTrialTransport(token), [token]);
 
   const session = useSession(
@@ -80,7 +86,13 @@ function EditorPage({ entry, fork, forkTitle }: EditorPageProps) {
       if (!published) {
         return;
       }
-      showToast({ status: 'success', message: localize('com_skills_builder_published') });
+      celebrate();
+      showToast({
+        status: 'success',
+        message: localize(
+          session.forkOf ? 'com_skills_builder_republished' : 'com_skills_builder_published',
+        ),
+      });
       navigate(`${MARKET_PATH}/mine`);
     } catch {
       showToast({ status: 'error', message: localize('com_skills_builder_publish_failed') });
@@ -91,6 +103,8 @@ function EditorPage({ entry, fork, forkTitle }: EditorPageProps) {
     <Builder
       session={session}
       author={author}
+      department={user?.department}
+      connectorChoices={connectorChoices}
       fromChat={entry.from === 'chat'}
       forkTitle={forkTitle}
       onCancel={() => navigate(MARKET_PATH)}
@@ -102,7 +116,7 @@ function EditorPage({ entry, fork, forkTitle }: EditorPageProps) {
 function Loading() {
   const localize = useLocalize();
   return (
-    <div className="flex h-full w-full items-center justify-center bg-presentation">
+    <div className="fixed inset-0 z-[140] flex items-center justify-center">
       <Spinner className="text-text-secondary" aria-label={localize('com_ui_loading')} />
     </div>
   );
@@ -171,4 +185,16 @@ export default function Editor() {
     return <ForkEditorPage key={forkOf} forkOf={forkOf} entry={entry} />;
   }
   return <EditorPage entry={entry} />;
+}
+
+/** `skills/new` 화면: 마켓을 그대로 두고 그 위에 편집기를 모달로 띄운다. */
+export function MarketEditor() {
+  return (
+    <>
+      <MarketplaceProvider>
+        <SkillMarketplace />
+      </MarketplaceProvider>
+      <Editor />
+    </>
+  );
 }

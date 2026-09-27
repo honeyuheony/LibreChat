@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { Button } from '@librechat/client';
+import {
+  Button,
+  OGDialog,
+  OGDialogTitle,
+  OGDialogContent,
+  OGDialogDescription,
+} from '@librechat/client';
 import type { BuilderSession } from './useSession';
 import type { TranslationKeys } from '~/hooks';
+import type { PreviewBlock } from './Preview';
 import SourceTag, { ChangedMark } from './SourceTag';
 import Preview, { PreviewHead } from './Preview';
 import { SOURCE_ME, pluginFiles } from './state';
@@ -15,6 +22,9 @@ import Todo from './Todo';
 type BuilderProps = {
   session: BuilderSession;
   author: string;
+  department?: string;
+  /** 사용자가 쓸 수 있는 MCP 서버 이름. 「읽는 자료」에서 펼쳐 켤 수 있다. */
+  connectorChoices?: string[];
   fromChat?: boolean;
   /** 응용 편집이면 원본 이름. */
   forkTitle?: string;
@@ -36,7 +46,6 @@ function testButtonKey(running: boolean, tested: boolean): TranslationKeys {
   return tested ? 'com_skills_builder_test_again' : 'com_skills_builder_test_run';
 }
 
-/** agent 만들기 편집기: 왼쪽 입력창 하나, 오른쪽 미리보기·폴더·테스트, 아래 할 일과 단추. */
 function headerText(
   localize: ReturnType<typeof useLocalize>,
   fromChat: boolean | undefined,
@@ -60,9 +69,66 @@ function headerText(
   };
 }
 
+/** 양식·예시 문서 붙이기 줄. 첫 단계는 예시 없이 시험하므로 붙인 파일은 쓰지 않고 그렇다고 알린다. */
+function AttachRow() {
+  const localize = useLocalize();
+  const input = useRef<HTMLInputElement>(null);
+  const [attached, setAttached] = useState(false);
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-border-medium bg-surface-primary px-2.5 py-2">
+        <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
+          <span aria-hidden="true">📎</span>
+          {localize('com_skills_builder_files_attach')}
+        </Button>
+        <span className="text-xs text-text-secondary">
+          {localize('com_skills_builder_files_hint')}
+        </span>
+        <input
+          ref={input}
+          type="file"
+          multiple
+          hidden
+          data-testid="builder-files"
+          onChange={(event) => {
+            setAttached((event.target.files?.length ?? 0) > 0);
+            event.target.value = '';
+          }}
+        />
+      </div>
+      <p role="status" className="text-xs text-text-secondary empty:hidden">
+        {attached ? localize('com_skills_builder_files_later') : ''}
+      </p>
+    </>
+  );
+}
+
+/** 「다른 사람이 쓴 예 보기」: 마켓의 응용하기로 남의 글에서 시작하는 방법을 알려 준다. */
+function PeekRow() {
+  const localize = useLocalize();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div>
+        <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {localize(open ? 'com_skills_builder_peek_close' : 'com_skills_builder_peek')}
+        </Button>
+      </div>
+      {open && (
+        <p className="rounded-lg border border-border-light bg-surface-secondary px-3 py-2.5 text-sm text-text-secondary">
+          {localize('com_skills_builder_peek_hint')}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** agent 만들기 편집기(마켓 위 모달): 왼쪽 입력창 하나, 오른쪽 미리보기·폴더·테스트, 아래 할 일과 단추. */
 export default function Builder({
   session,
   author,
+  department,
+  connectorChoices,
   fromChat,
   forkTitle,
   onCancel,
@@ -72,6 +138,7 @@ export default function Builder({
   const { state } = session;
   const [selectedFile, setSelectedFile] = useState('');
   const [raw, setRaw] = useState(false);
+  const [activeBlock, setActiveBlock] = useState<PreviewBlock | null>(null);
   const files = pluginFiles(state, author);
   const skillPath = files.find((file) => file.path.endsWith('SKILL.md'))?.path ?? files[0].path;
   const selected = files.some((file) => file.path === selectedFile) ? selectedFile : skillPath;
@@ -83,132 +150,152 @@ export default function Builder({
   const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-presentation">
-      <header className="flex items-center gap-3 border-b border-border-light px-5 py-3">
-        <h1 className="flex-none text-base font-semibold text-text-primary">{title}</h1>
-        <span className="flex-1 text-sm text-text-secondary">{subtitle}</span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={localize('com_ui_close')}
-          onClick={onCancel}
-        >
-          <X className="size-4" aria-hidden="true" />
-        </Button>
-      </header>
+    <OGDialog open onOpenChange={(open) => !open && onCancel()}>
+      <OGDialogContent
+        showCloseButton={false}
+        className="flex w-[1180px] max-w-[97vw] flex-col gap-0 overflow-hidden rounded-[22px] bg-presentation p-0"
+      >
+        <header className="flex items-center gap-3 border-b border-border-light px-5 py-3">
+          <OGDialogTitle className="flex-none text-base font-semibold text-text-primary">
+            {title}
+          </OGDialogTitle>
+          <OGDialogDescription className="flex-1 text-sm text-text-secondary">
+            {subtitle}
+          </OGDialogDescription>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={localize('com_ui_close')}
+            onClick={onCancel}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <div className="min-h-0 overflow-auto px-5 py-4">
-          <section className="flex flex-col gap-2 rounded-xl border border-border-light bg-surface-primary px-4 py-3.5">
-            <div className="flex items-center gap-2">
-              <label htmlFor="builder-text" className="text-[15.5px] font-bold text-text-primary">
-                {localize(
-                  state.direct ? 'com_skills_builder_how' : 'com_skills_builder_text_heading',
-                )}
-              </label>
-              <span className="ms-auto">
-                {!empty && (
-                  <SourceTag
-                    source={textSource}
-                    label={
-                      textSource === SOURCE_ME
-                        ? localize('com_skills_builder_source_wrote')
-                        : undefined
-                    }
-                  />
-                )}
-                <ChangedMark show={textChanged} />
-              </span>
-            </div>
-            <p className="text-sm text-text-secondary">
-              {localize(
-                state.direct
-                  ? 'com_skills_builder_text_hint_direct'
-                  : 'com_skills_builder_text_hint',
-              )}
-            </p>
-            <textarea
-              id="builder-text"
-              rows={11}
-              value={state.text}
-              onChange={(event) => session.setText(event.target.value)}
-              placeholder={localize('com_skills_builder_text_placeholder')}
-              className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-            />
-            <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
-              {draftStatus ? localize(draftStatus) : ''}
-            </p>
-          </section>
-        </div>
-
-        <div className="min-h-0 overflow-auto border-border-light bg-surface-secondary px-5 py-4 md:border-s">
-          <PreviewHead
-            state={state}
-            author={author}
-            onEdit={session.edit}
-            changed={session.changed}
-          />
-          <Folder
-            root={state.slug || 'new-agent'}
-            files={files}
-            selected={selected}
-            onSelect={setSelectedFile}
-            raw={raw}
-            onRaw={setRaw}
-            empty={empty}
-            readable={
-              <div className="flex flex-col gap-2.5">
-                <Preview
-                  state={state}
-                  steps={session.steps}
-                  onEdit={session.edit}
-                  onStepOff={session.stepOff}
-                  onStepsRestore={session.stepsRestore}
-                  onToggleConnector={session.connector}
-                  changed={session.changed}
-                />
-                <Share
-                  manualMinutes={state.manualMinutes}
-                  scope={state.scope}
-                  onMinutes={session.setMinutes}
-                  onScope={session.setScope}
-                />
+        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+          <div className="min-h-0 overflow-auto px-5 py-4">
+            <section className="flex flex-col gap-2 rounded-xl border border-border-brand bg-surface-primary px-4 py-3.5 ring-[3px] ring-surface-brand-subtle">
+              <div className="flex items-center gap-2">
+                <label htmlFor="builder-text" className="text-[15.5px] font-bold text-text-primary">
+                  {localize(
+                    state.direct ? 'com_skills_builder_how' : 'com_skills_builder_text_heading',
+                  )}
+                </label>
+                <span className="ms-auto">
+                  {!empty && (
+                    <SourceTag
+                      source={textSource}
+                      label={
+                        textSource === SOURCE_ME
+                          ? localize('com_skills_builder_source_wrote')
+                          : undefined
+                      }
+                    />
+                  )}
+                  <ChangedMark show={textChanged} />
+                </span>
               </div>
-            }
-          />
-          <TrialPanel
-            view={session.trial}
-            tested={session.tested}
-            prompt={session.prompt}
-            seconds={session.skill?.lastTest?.seconds}
-            manualMinutes={state.manualMinutes}
-          />
-        </div>
-      </div>
+              <p className="text-sm text-text-secondary">
+                {localize(
+                  state.direct
+                    ? 'com_skills_builder_text_hint_direct'
+                    : 'com_skills_builder_text_hint',
+                )}
+              </p>
+              <textarea
+                id="builder-text"
+                rows={11}
+                value={state.text}
+                onChange={(event) => session.setText(event.target.value)}
+                onFocus={() => setActiveBlock('how')}
+                placeholder={localize('com_skills_builder_text_placeholder')}
+                className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-ring-primary focus:outline-none focus:ring-[3px] focus:ring-border-brand"
+              />
+              <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
+                {draftStatus ? localize(draftStatus) : ''}
+              </p>
+              <AttachRow />
+              <PeekRow />
+            </section>
+          </div>
 
-      <footer className="flex flex-wrap items-center gap-2 border-t border-border-light bg-surface-secondary px-5 py-3">
-        <Todo items={session.todos} />
-        <span className="flex-1" />
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          {localize('com_ui_cancel')}
-        </Button>
-        <Button
-          variant={session.tested ? 'outline' : 'submit'}
-          size="sm"
-          disabled={running || empty}
-          onClick={() => void session.runTest()}
-        >
-          {localize(testButtonKey(running, session.tested))}
-        </Button>
-        <Button
-          variant="submit"
-          size="sm"
-          disabled={!session.ready || session.publishing}
-          onClick={onPublish}
-        >
-          {localize(session.forkOf ? 'com_skills_builder_republish' : 'com_skills_builder_publish')}
-        </Button>
-      </footer>
-    </div>
+          <div className="min-h-0 overflow-auto border-border-light bg-surface-secondary px-5 py-4 md:border-s">
+            <PreviewHead
+              state={state}
+              author={author}
+              department={department}
+              onEdit={session.edit}
+              changed={session.changed}
+              active={activeBlock}
+              onActivate={setActiveBlock}
+            />
+            <Folder
+              root={state.slug || 'new-agent'}
+              files={files}
+              selected={selected}
+              onSelect={setSelectedFile}
+              raw={raw}
+              onRaw={setRaw}
+              empty={empty}
+              readable={
+                <div className="flex flex-col gap-2.5">
+                  <Preview
+                    state={state}
+                    steps={session.steps}
+                    onEdit={session.edit}
+                    onStepOff={session.stepOff}
+                    onStepsRestore={session.stepsRestore}
+                    onToggleConnector={session.connector}
+                    changed={session.changed}
+                    active={activeBlock}
+                    onActivate={setActiveBlock}
+                    connectorChoices={connectorChoices}
+                  />
+                  <Share
+                    manualMinutes={state.manualMinutes}
+                    scope={state.scope}
+                    onMinutes={session.setMinutes}
+                    onScope={session.setScope}
+                  />
+                </div>
+              }
+            />
+            <TrialPanel
+              view={session.trial}
+              tested={session.tested}
+              prompt={session.prompt}
+              seconds={session.skill?.lastTest?.seconds}
+              manualMinutes={state.manualMinutes}
+            />
+          </div>
+        </div>
+
+        <footer className="flex flex-wrap items-center gap-2 border-t border-border-light bg-surface-secondary px-5 py-3">
+          <Todo items={session.todos} />
+          <span className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {localize('com_ui_cancel')}
+          </Button>
+          <Button
+            variant={session.tested ? 'outline' : 'submit'}
+            size="sm"
+            disabled={running || empty}
+            onClick={() => void session.runTest()}
+          >
+            {localize(testButtonKey(running, session.tested))}
+          </Button>
+          <Button
+            variant="submit"
+            size="sm"
+            disabled={!session.ready || session.publishing}
+            onClick={onPublish}
+          >
+            {localize(
+              session.forkOf ? 'com_skills_builder_republish' : 'com_skills_builder_publish',
+            )}
+          </Button>
+        </footer>
+      </OGDialogContent>
+    </OGDialog>
   );
 }
