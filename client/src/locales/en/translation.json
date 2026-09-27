@@ -2659,6 +2659,7 @@
   "com_skills_file_binary": "This file cannot be shown as text.",
   "com_skills_detail_footnote": "{{manual}} min by hand − {{seconds}} s measured average run = {{perRun}} min saved per run",
   "com_skills_detail_scope": "Visible to {{scope}}",
+  "com_skills_detail_model_auto": "Model: automatic",
   "com_skills_scope_all": "all departments",
   "com_skills_scope_me": "only me",
   "com_skills_scope_team": "my team",

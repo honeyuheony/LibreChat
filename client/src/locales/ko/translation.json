@@ -1203,6 +1203,7 @@
   "com_skills_file_binary": "글자로 볼 수 없는 파일입니다.",
   "com_skills_detail_footnote": "직접 하면 {{manual}}분 − 실제 실행 평균 {{seconds}}초(시스템 측정) = 회당 {{perRun}}분 절감",
   "com_skills_detail_scope": "공개 {{scope}}",
+  "com_skills_detail_model_auto": "모델 자동",
   "com_skills_scope_all": "전 부서",
   "com_skills_scope_me": "나만",
   "com_skills_scope_team": "우리 팀",
