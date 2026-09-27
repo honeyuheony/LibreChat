@@ -10,7 +10,7 @@ import type {
   TSkillPublishVariables,
   TSkillTestResultVariables,
 } from 'librechat-data-provider';
-import type { BuilderField, BuilderState, BuilderValues } from './state';
+import type { BuilderField, BuilderState, BuilderValues, ChangedField } from './state';
 import type { TrialFailure, TrialView } from './TrialPanel';
 import type { TrialTransport } from './trial';
 import {
@@ -19,10 +19,13 @@ import {
   applyDraft,
   todoItems,
   composeSteps,
+  SOURCE_ME,
   toSavePayload,
   starterPrompt,
   firstSentence,
+  changedFields,
   isPublishReady,
+  SOURCE_ORIGIN,
   contentSignature,
   toggleConnector,
   createBuilderState,
@@ -38,6 +41,8 @@ export type SessionDeps = {
   requestDraft: (payload: TSkillDraftRequest) => Promise<TSkillDraft>;
   isRateLimited: (error: unknown) => boolean;
   createSkill: (payload: TCreateSkill) => Promise<TSkill>;
+  /** 응용 편집일 때 처음 저장에서 원본 사본을 만든다. */
+  forkSkill?: (variables: { id: string }) => Promise<TSkill>;
   updateSkill: (variables: TUpdateSkillVariables) => Promise<TSkill>;
   recordTest: (variables: TSkillTestResultVariables) => Promise<TSkill>;
   publish: (variables: TSkillPublishVariables) => Promise<TSkill>;
@@ -59,8 +64,17 @@ function withSlug(state: BuilderState): BuilderState {
   return state.slug ? state : { ...state, slug: `agent-${Date.now().toString(36)}` };
 }
 
-export default function useSession(deps: SessionDeps, initialText = '') {
-  const [state, setState] = useState<BuilderState>(() => createBuilderState(initialText));
+/** 응용할 원본 id 와 원본으로 채운 첫 상태. 첫 상태는 「원본에서 변경」 비교 기준이 된다. */
+export type ForkOrigin = { id: string; state: BuilderState };
+export type SessionInit = { text?: string; fork?: ForkOrigin };
+
+const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
+
+export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
+  const [fork] = useState(init.fork);
+  const [state, setState] = useState<BuilderState>(
+    () => fork?.state ?? createBuilderState(init.text ?? ''),
+  );
   const [skill, setSkill] = useState<TSkill | undefined>();
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [trial, setTrial] = useState<TrialView>({ status: 'idle' });
@@ -92,7 +106,22 @@ export default function useSession(deps: SessionDeps, initialText = '') {
   const signature = useMemo(() => contentSignature(state), [state]);
   const dirty = savedSignature !== signature;
   const tested = isTested(skill, dirty);
-  const steps = useMemo(() => composeSteps(state), [state]);
+  const changed = useMemo(
+    () => (fork ? changedFields(state, fork.state) : NO_CHANGES),
+    [fork, state],
+  );
+  const steps = useMemo(() => {
+    const composed = composeSteps(state);
+    if (!fork) {
+      return composed;
+    }
+    const originalSteps = new Set(composeSteps(fork.state).map((step) => step.text));
+    return composed.map((step) =>
+      step.by === SOURCE_ORIGIN && !originalSteps.has(step.text)
+        ? { ...step, by: SOURCE_ME }
+        : step,
+    );
+  }, [fork, state]);
   const todos = todoItems(state, tested);
   const ready = isPublishReady(state, tested);
   const prompt = starterPrompt(state.values) || firstSentence(state.text);
@@ -121,15 +150,32 @@ export default function useSession(deps: SessionDeps, initialText = '') {
     [],
   );
 
-  const save = async (current: BuilderState): Promise<TSkill> => {
-    const payload = toSavePayload(current);
-    const currentSignature = contentSignature(current);
-    if (skill && savedSignature === currentSignature) {
-      return skill;
+  /** 원본 사본을 만든다. 사본 위 저장이 실패해도 다시 만들지 않도록 곧바로 붙잡아 둔다. */
+  const forkOnce = async (origin: ForkOrigin): Promise<TSkill> => {
+    if (!depsRef.current.forkSkill) {
+      throw new SaveError('save');
     }
     try {
+      const copy = await depsRef.current.forkSkill({ id: origin.id });
+      setSkill(copy);
+      return copy;
+    } catch {
+      throw new SaveError('save');
+    }
+  };
+
+  /** 저장한 스킬과, 저장에 맞춰 이름(slug)이 바뀌었을 수 있는 편집기 상태를 돌려준다. */
+  const save = async (current: BuilderState): Promise<{ saved: TSkill; state: BuilderState }> => {
+    if (skill && savedSignature === contentSignature(current)) {
+      return { saved: skill, state: current };
+    }
+    const target = !skill && fork ? await forkOnce(fork) : skill;
+    const next =
+      fork && target && current.slug !== target.name ? { ...current, slug: target.name } : current;
+    const payload = toSavePayload(next);
+    try {
       let saved: TSkill;
-      if (!skill) {
+      if (!target) {
         const { manualMinutes, ...createPayload } = payload;
         saved = await depsRef.current.createSkill(createPayload);
         if (manualMinutes) {
@@ -142,14 +188,14 @@ export default function useSession(deps: SessionDeps, initialText = '') {
       } else {
         const { name: _name, ...updatePayload } = payload;
         saved = await depsRef.current.updateSkill({
-          id: skill._id,
-          expectedVersion: skill.version,
+          id: target._id,
+          expectedVersion: target.version,
           payload: updatePayload,
         });
       }
       setSkill(saved);
-      setSavedSignature(currentSignature);
-      return saved;
+      setSavedSignature(contentSignature(next));
+      return { saved, state: next };
     } catch (error) {
       throw new SaveError(getResponseStatus(error) === 409 ? 'conflict' : 'save');
     }
@@ -172,17 +218,21 @@ export default function useSession(deps: SessionDeps, initialText = '') {
     if (trial.status === 'running') {
       return;
     }
-    const current = withSlug(state);
+    const current = fork ? state : withSlug(state);
     if (current !== state) {
       setState(current);
     }
     setTrial({ status: 'running', reply: '' });
     let saved: TSkill;
+    let savedState: BuilderState;
     try {
-      saved = await save(current);
+      ({ saved, state: savedState } = await save(current));
     } catch (error) {
       setTrial({ status: 'failed', reason: error instanceof SaveError ? error.reason : 'save' });
       return;
+    }
+    if (savedState.slug !== current.slug) {
+      setState((prev) => (prev.slug === current.slug ? { ...prev, slug: savedState.slug } : prev));
     }
     const spec = depsRef.current.spec;
     if (!spec) {
@@ -192,7 +242,7 @@ export default function useSession(deps: SessionDeps, initialText = '') {
     try {
       const outcome = await runTrial(depsRef.current.transport, {
         skillName: saved.name,
-        prompt: starterPrompt(current.values) || firstSentence(current.text),
+        prompt: starterPrompt(savedState.values) || firstSentence(savedState.text),
         spec,
         onReply: (reply) => setTrial({ status: 'running', reply }),
       });
@@ -224,6 +274,8 @@ export default function useSession(deps: SessionDeps, initialText = '') {
   return {
     state,
     skill,
+    forkOf: fork?.id,
+    changed,
     steps,
     todos,
     ready,

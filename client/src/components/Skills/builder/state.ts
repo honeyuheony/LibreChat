@@ -2,6 +2,7 @@ import { composeSkillMarkdown } from 'librechat-data-provider';
 import type {
   TSkill,
   TSkillDraft,
+  SkillFrontmatterValue,
   TCreateSkill,
   TSkillDraftExtra,
   TSkillDraftOutput,
@@ -53,6 +54,7 @@ export type BuilderStep = { text: string; by: string };
 
 export const SOURCE_AI = 'ai';
 export const SOURCE_ME = 'me';
+export const SOURCE_ORIGIN = 'origin';
 
 export const OUTPUTS: readonly TSkillDraftOutput[] = [
   'report',
@@ -376,4 +378,93 @@ export function pluginFiles(state: BuilderState, author: string): PluginFile[] {
     ].join('\n'),
   });
   return files;
+}
+
+const BUILDER_FIELDS: readonly BuilderField[] = [
+  'title',
+  'description',
+  'triggers',
+  'output',
+  'fields',
+  'icon',
+  'extras',
+];
+
+const asStrings = (value: SkillFrontmatterValue | undefined): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.length > 0)
+    : [];
+
+function frontmatterMetadata(
+  skill: Pick<TSkill, 'frontmatter'>,
+): Record<string, SkillFrontmatterValue | undefined> {
+  const metadata = skill.frontmatter?.metadata;
+  return metadata != null && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata
+    : {};
+}
+
+/** SKILL.md `metadata` 아래 문자열 목록(`triggers`·`connectors` 등). 목록이 아니면 빈 배열이다. */
+export function metadataList(skill: Pick<TSkill, 'frontmatter'>, key: string): string[] {
+  return asStrings(frontmatterMetadata(skill)[key]);
+}
+
+/** 직접 모드로 쓴 원본은 글칸 원문을, 아니면 AI 줄까지 합쳐 저장된 본문 번호 목록을 쓴다. */
+function originalLines(skill: TSkill): string {
+  if (skill.builder?.direct && skill.builder.text.trim()) {
+    return skill.builder.text;
+  }
+  const lines = skill.body.trimStart().replace(FRONTMATTER_BLOCK, '').split('\n');
+  const numbered = lines
+    .map((line) => line.match(/^\s*\d+[.)]\s+(.*)$/)?.[1]?.trim())
+    .filter((line): line is string => !!line);
+  if (numbered.length > 0) {
+    return numbered.join('\n');
+  }
+  return (
+    skill.builder?.text ??
+    lines
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'))
+      .join('\n')
+  );
+}
+
+/** 응용: 원본 글과 설정을 채운 직접 모드 상태. 칸마다 출처는 「원본 그대로」이고 이름 뒤에 부서를 붙인다. */
+export function forkState(skill: TSkill, department?: string): BuilderState {
+  const metadata = frontmatterMetadata(skill);
+  const title = skill.displayTitle || skill.name;
+  const output = OUTPUTS.find((item) => item === metadata.output) ?? EMPTY_VALUES.output;
+  const icon = typeof metadata.icon === 'string' ? metadata.icon : '';
+  return {
+    ...createBuilderState(originalLines(skill)),
+    direct: true,
+    textBy: SOURCE_ORIGIN,
+    sources: Object.fromEntries(BUILDER_FIELDS.map((field) => [field, SOURCE_ORIGIN])),
+    values: {
+      title: department ? `${title} (${department})` : title,
+      description: skill.description.replace(/\s*다음 요청에 사용:.*$/s, ''),
+      triggers: asStrings(metadata.triggers),
+      output,
+      fields: asStrings(metadata.fields),
+      icon: skill.icon || icon,
+      extras: EXTRAS.filter((extra) => asStrings(metadata.extras).includes(extra)),
+      connectors: asStrings(metadata.connectors),
+    },
+    manualMinutes: skill.manualMinutes ?? 0,
+  };
+}
+
+export type ChangedField = BuilderField | 'text' | 'connectors';
+
+/** 원본과 값이 달라진 칸. 「원본에서 변경」 표시에 쓴다. */
+export function changedFields(state: BuilderState, orig: BuilderState): Set<ChangedField> {
+  const keys: Array<keyof BuilderValues> = [...BUILDER_FIELDS, 'connectors'];
+  const changed = new Set<ChangedField>(
+    keys.filter((key) => JSON.stringify(state.values[key]) !== JSON.stringify(orig.values[key])),
+  );
+  if (state.text !== orig.text) {
+    changed.add('text');
+  }
+  return changed;
 }
