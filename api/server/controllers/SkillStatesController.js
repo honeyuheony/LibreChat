@@ -36,6 +36,7 @@ function buildPruneDeps(user) {
           resourceType: ResourceType.SKILL,
           requiredPermissions: PermissionBits.VIEW,
         }),
+        user,
       ),
   };
 }

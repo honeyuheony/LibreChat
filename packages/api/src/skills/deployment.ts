@@ -18,7 +18,12 @@ import {
 } from '@librechat/data-schemas';
 import type { TSkillMarketProfile } from 'librechat-data-provider';
 import type { ValidationIssue } from '@librechat/data-schemas';
-import { readDeploymentMarketFields, type SkillSeedMetrics } from './market';
+import {
+  TEAM_SCOPE,
+  isDeploymentSkillVisibleTo,
+  readDeploymentMarketFields,
+  type SkillSeedMetrics,
+} from './market';
 import { parseFrontmatter, guessMimeType } from './import';
 
 export const DEPLOYMENT_SKILLS_DIR_ENV = 'DEPLOYMENT_SKILLS_DIR';
@@ -376,10 +381,18 @@ export function getDeploymentSkillIds(): Types.ObjectId[] {
   return registry.ids();
 }
 
-export function mergeDeploymentSkillIds(ids: Array<SkillId>): Types.ObjectId[] {
+/**
+ * 접근 가능한 id 에 `user` 가 볼 수 있는 배포 스킬 id 를 더한다. `user` 를 넘기지 않으면 부서를 알 수
+ * 없으므로 `scope: 팀` 배포 스킬은 더하지 않는다.
+ */
+export function mergeDeploymentSkillIds(ids: Array<SkillId>, user?: unknown): Types.ObjectId[] {
+  const visibleIds = registry
+    .list()
+    .filter((skill) => isDeploymentSkillVisibleTo(skill, user))
+    .map((skill) => skill._id);
   const seen = new Set<string>();
   const merged: Types.ObjectId[] = [];
-  for (const id of [...ids, ...registry.ids()]) {
+  for (const id of [...ids, ...visibleIds]) {
     const oid = typeof id === 'string' ? new Types.ObjectId(id) : id;
     const key = oid.toString();
     if (seen.has(key)) {
@@ -389,6 +402,18 @@ export function mergeDeploymentSkillIds(ids: Array<SkillId>): Types.ObjectId[] {
     merged.push(oid);
   }
   return merged;
+}
+
+/** `scope: 팀` 배포 스킬 id → 작성 부서. 부서 그룹 부여가 없는 배포 스킬의 「우리 팀」 배지에 쓴다. */
+export function findDeploymentTeamDepartments(ids: Array<SkillId>): Map<string, string> {
+  const departments = new Map<string, string>();
+  for (const id of ids) {
+    const skill = registry.getById(id);
+    if (skill?.marketProfile?.scope === TEAM_SCOPE && skill.authorDepartment !== undefined) {
+      departments.set(id.toString(), skill.authorDepartment);
+    }
+  }
+  return departments;
 }
 
 export function isDeploymentSkillId(id: SkillId | undefined): boolean {

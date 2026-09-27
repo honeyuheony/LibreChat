@@ -2455,6 +2455,18 @@ describe('createResponse controller', () => {
     });
   });
 
+  describe('deployment skill scope', () => {
+    it('hands the requesting user to the deployment skill merge', async () => {
+      const { withDeploymentSkillIds } = require('~/server/services/Endpoints/agents/skillDeps');
+      req.config.endpoints.agents.capabilities = ['skills'];
+
+      await createResponse(req, res);
+
+      expect(withDeploymentSkillIds).toHaveBeenCalledTimes(1);
+      expect(withDeploymentSkillIds).toHaveBeenCalledWith(expect.any(Array), req.user);
+    });
+  });
+
   describe('file search role gating', () => {
     const setCapabilities = (capabilities) => {
       req.config.endpoints.agents.capabilities = capabilities;

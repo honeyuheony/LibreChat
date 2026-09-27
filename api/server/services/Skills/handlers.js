@@ -1,4 +1,8 @@
-const { createSkillsHandlers, createDepartmentGroups } = require('@librechat/api');
+const {
+  createSkillsHandlers,
+  createDepartmentGroups,
+  findDeploymentTeamDepartments,
+} = require('@librechat/api');
 const { isValidObjectIdString } = require('@librechat/data-schemas');
 const { PermissionBits } = require('librechat-data-provider');
 const {
@@ -23,6 +27,19 @@ const {
 } = require('~/server/services/Endpoints/agents/skillDeps');
 const db = require('~/models');
 
+/** 부서 그룹 부여가 없는 `scope: 팀` 배포 스킬도 작성 부서의 「우리 팀」 배지를 받게 한다. */
+function withDeploymentTeamDepartments(departmentGroups) {
+  return {
+    ...departmentGroups,
+    findTeamDepartments: async (resourceType, ids) => {
+      const granted = await departmentGroups.findTeamDepartments(resourceType, ids);
+      return resourceType === 'skill'
+        ? new Map([...findDeploymentTeamDepartments(ids), ...granted])
+        : granted;
+    },
+  };
+}
+
 function getSkillsHandlers() {
   const skillDbMethods = getSkillDbMethods();
   return createSkillsHandlers({
@@ -36,10 +53,18 @@ function getSkillsHandlers() {
     getSkillFileByPath: skillDbMethods.getSkillFileByPath,
     updateSkillFileContent: skillDbMethods.updateSkillFileContent,
     getStrategyFunctions: getSkillStrategyFunctions,
-    findAccessibleResources: async (params) =>
-      params.resourceType === 'skill' && params.requiredPermissions === PermissionBits.VIEW
-        ? withDeploymentSkillIds(await findAccessibleResources(params))
-        : findAccessibleResources(params),
+    // 핸들러는 userId 만 넘기므로 팀 범위 배포 스킬을 가리려고 부서를 따로 읽는다.
+    findAccessibleResources: async (params) => {
+      if (params.resourceType !== 'skill' || params.requiredPermissions !== PermissionBits.VIEW) {
+        return findAccessibleResources(params);
+      }
+      const [ids, user] = await Promise.all([
+        findAccessibleResources(params),
+        db.getUserById(params.userId, 'department'),
+      ]);
+      return withDeploymentSkillIds(ids, user);
+    },
+    // 사용자를 넘기지 않아 팀 범위 배포 스킬은 공개로 치지 않는다.
     findPubliclyAccessibleResources: async (params) =>
       params.resourceType === 'skill' && params.requiredPermissions === PermissionBits.VIEW
         ? withDeploymentSkillIds(await findPubliclyAccessibleResources(params))
@@ -54,7 +79,7 @@ function getSkillsHandlers() {
     countPublishedForks,
     getDeploymentSkillUsage,
     getSkillAuthorDepartments,
-    departmentGroups: createDepartmentGroups(db),
+    departmentGroups: withDeploymentTeamDepartments(createDepartmentGroups(db)),
   });
 }
 module.exports = { getSkillsHandlers };

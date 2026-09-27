@@ -73,7 +73,7 @@ const handlers = createSchedulesHandlers({
         role: req.user.role,
         resourceType: ResourceType.SKILL,
         requiredPermissions: PermissionBits.VIEW,
-      }).then(withDeploymentSkillIds),
+      }).then((ids) => withDeploymentSkillIds(ids, req.user)),
       getSkillByName: getSkillDbMethods().getSkillByName,
     }),
   markFilesUsed: async (fileIds, userId) => {

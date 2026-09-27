@@ -56,8 +56,9 @@ function getSkillDbMethods() {
   return deploymentSkillMethods;
 }
 
-function withDeploymentSkillIds(ids = []) {
-  return mergeDeploymentSkillIds(ids);
+/** `user` 가 없으면 `scope: 팀` 배포 스킬은 더하지 않는다. */
+function withDeploymentSkillIds(ids = [], user) {
+  return mergeDeploymentSkillIds(ids, user);
 }
 
 function getSkillStrategyFunctions(source) {

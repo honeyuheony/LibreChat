@@ -315,7 +315,7 @@ const initializeClientWithProvider = async ({
         role: req.user.role,
         resourceType: ResourceType.SKILL,
         requiredPermissions: PermissionBits.VIEW,
-      }).then(withDeploymentSkillIds)
+      }).then((ids) => withDeploymentSkillIds(ids, req.user))
     : Promise.resolve([]);
   const editableSkillIdsPromise = skillsCapabilityEnabled
     ? findAccessibleResources({

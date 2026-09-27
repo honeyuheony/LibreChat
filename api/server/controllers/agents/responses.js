@@ -821,6 +821,7 @@ const executeResponse = async (envelope, { req, res }) => {
               resourceType: ResourceType.SKILL,
               requiredPermissions: PermissionBits.VIEW,
             }),
+            req.user,
           )
         : [];
       const editableSkillIds = skillsCapabilityEnabled

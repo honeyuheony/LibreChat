@@ -142,7 +142,7 @@ export function applyDeploymentUsage<T extends TSkillSummary>(
   };
 }
 
-const TEAM_SCOPE = '팀';
+export const TEAM_SCOPE = '팀';
 
 /** user 스키마의 `department`는 없을 수도 있으므로 문자열일 때만 쓴다. */
 export function readUserDepartment(user: unknown): string | undefined {
