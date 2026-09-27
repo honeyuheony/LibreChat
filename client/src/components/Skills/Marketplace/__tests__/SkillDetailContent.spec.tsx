@@ -51,13 +51,17 @@ jest.mock('@librechat/client', () => ({
   OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   OGDialogContent: ({
     children,
+    className,
     overlayClassName,
   }: {
     children: React.ReactNode;
+    className?: string;
     overlayClassName?: string;
   }) => (
     <div data-testid="dialog-content" className={overlayClassName}>
-      {children}
+      <div data-testid="dialog-panel" className={className}>
+        {children}
+      </div>
     </div>
   ),
 }));
@@ -181,6 +185,16 @@ describe('SkillDetailContent', () => {
       screen.getByText((text) => text.includes('com_skills_detail_model_auto')),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /내보내기/ })).not.toBeInTheDocument();
+  });
+
+  it('keeps the dialog fixed in the viewport', () => {
+    renderDetail();
+
+    // 공용 대화상자는 fixed 로 가운데에 놓인다. 뒤에 붙은 position 클래스가 그것을 덮으면 창이 화면 밖으로 밀린다.
+    const panelClasses = screen.getByTestId('dialog-panel').className.split(/\s+/);
+    expect(panelClasses).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/^(relative|absolute|static|sticky)$/)]),
+    );
   });
 
   it('blurs the background behind the detail window', () => {

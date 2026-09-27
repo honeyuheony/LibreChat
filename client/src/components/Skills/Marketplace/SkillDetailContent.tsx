@@ -227,7 +227,7 @@ export default function SkillDetailContent({
     <OGDialogContent
       showCloseButton={false}
       overlayClassName={SKILL_DETAIL_OVERLAY_CLASS}
-      className="relative flex w-[580px] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 text-center"
+      className="flex w-[580px] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 text-center"
     >
       <OGDialogClose asChild>
         <Button
