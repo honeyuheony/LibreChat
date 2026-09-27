@@ -15,6 +15,7 @@ const { AIMessageChunk } = require('@langchain/core/messages');
 const { tryBindReplay } = require('./model-replay');
 const { runFileDeliveryResponses } = require('./run-files-model');
 const { createRunFileLifecycleResponses } = require('./run-files-lifecycle-model');
+const taskModeFixture = require('../fixtures/task-mode/documents.json');
 
 const runFileLifecycle = createRunFileLifecycleResponses({
   findLastToolMessage,
@@ -2796,8 +2797,7 @@ function latestTableFields(messages) {
 }
 
 function taskFixtureDocument(filename) {
-  const fixture = require('../fixtures/task-mode/documents.json');
-  return fixture.documents.find((doc) => doc.filename === filename);
+  return taskModeFixture.documents.find((doc) => doc.filename === filename);
 }
 
 /** 한글 도구를 부르지 않고도 올린 파일의 첫 문단이 모델에 들어갔는지 답한다. */

@@ -46,6 +46,7 @@ const {
   setSkillPublicationState,
   getSkillAuthorDepartments,
 } = require('~/models');
+const db = require('~/models');
 const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
 const {
@@ -223,7 +224,7 @@ const publishHandler = createSkillPublishHandler({
   bulkUpdateResourcePermissions,
   sharePolicy,
   getSkillAuthorDepartments,
-  departmentGroups: createDepartmentGroups(require('~/models')),
+  departmentGroups: createDepartmentGroups(db),
 });
 
 // ---------------------------------------------------------------------------
