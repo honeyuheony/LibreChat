@@ -47,7 +47,7 @@ describe('extractFields', () => {
     const { llm, prompts } = fakeLLM(() => ({
       '전월 대비': {
         value: '12% 증가, 긴장 완화',
-        quote: '전월 대비 12% 증가\n\n긴장 완화가 예상된다',
+        quote: '긴장 완화가 예상된다\n\n전월 대비 12% 증가',
       },
     }));
     const rows = await extractFields({
@@ -57,7 +57,7 @@ describe('extractFields', () => {
       cache: memoryCache(),
     });
     expect(prompts[0]).toContain('separate them with a blank line');
-    expect(rows[0].cells[0]).toMatchObject({ status: 'ok', evidence: { paragraph: 2 } });
+    expect(rows[0].cells[0]).toMatchObject({ status: 'ok', evidence: { paragraph: 1 } });
   });
 
   it('makes no model call when every requested field is cached', async () => {

@@ -39,8 +39,33 @@ describe('locateQuote', () => {
 
   it('accepts excerpts joined by blank lines when each one is verbatim, located at the first', () => {
     const doc = prepareDocument({ file_id: 'f1', filename: 'a.hwp', text: hwpText });
-    const quote = '경제 부문의 식량 수급\n\n9.9절 행사가 간소화';
-    expect(locateQuote(doc, quote)).toEqual({ quote, paragraph: 3 });
+    const quote = '9.9절 행사가 간소화\n\n경제 부문의 식량 수급';
+    expect(locateQuote(doc, quote)).toEqual({ quote, paragraph: 2 });
+  });
+
+  it('rejects excerpts that appear in the text in a different order', () => {
+    const doc = prepareDocument({ file_id: 'f1', filename: 'a.hwp', text: hwpText });
+    expect(locateQuote(doc, '경제 부문의 식량 수급\n\n9.9절 행사가 간소화')).toBeNull();
+  });
+
+  it.each([
+    ['a digit run joined across a line break', '순위 1\n200명 참석', '1200명'],
+    ['digits joined across tabs', '합계\t10\t0건', '100건'],
+    ['Latin words joined across spaces', 'the is land report', 'island'],
+    [
+      'short excerpts combined into a value the text does not state',
+      '예산은 3천만 원이다.\n별첨: 1억 원 이하 사업 목록',
+      '예산은 3\n\n억 원',
+    ],
+    ['one-letter excerpts spanning a word', '가나다라', '가\n\n라'],
+    [
+      'an excerpt of punctuation only',
+      '정치 부문에서는 행사가 간소화되었다. 경제 부문도 조정되었다.',
+      '정치 부문에서는 행사가 간소화\n\n.',
+    ],
+  ])('rejects %s', (_case, text, quote) => {
+    const doc = prepareDocument({ file_id: 'f1', filename: 'a.hwp', text });
+    expect(locateQuote(doc, quote)).toBeNull();
   });
 
   it('rejects joined excerpts when any one of them is not in the text', () => {
@@ -95,5 +120,12 @@ describe('formatFootnote', () => {
     expect(
       formatFootnote({ filename: 'b.pdf', evidence: { quote: '12%', page: 2, paragraph: 3 } }),
     ).toBe('b.pdf · 「12%」 · 2쪽 3번째 문단');
+  });
+
+  it('joins a quote of several excerpts into one line', () => {
+    const quote = '9.9절 행사가\n간소화\n\n경제 부문의 식량 수급';
+    expect(formatFootnote({ filename: 'a.hwp', evidence: { quote, paragraph: 2 } })).toBe(
+      'a.hwp · 「9.9절 행사가 간소화 … 경제 부문의 식량 수급」 · 2번째 문단',
+    );
   });
 });

@@ -10,31 +10,32 @@ interface NormalizedText {
 const normalizedCache = new WeakMap<TaskDocument, NormalizedText>();
 
 const isSpace = (ch: string) => /\s/.test(ch);
+const isDigitOrLatin = (ch: string | undefined) => ch != null && /[0-9A-Za-z]/.test(ch);
 
 /**
- * NFKC per character, keeping an offset map back. Whitespace runs fold to one space, or are
- * dropped with `dropSpaces`: HWP text wraps lines inside words, so a quote copied from the
- * rendered sentence would otherwise miss the break the stored text has.
+ * NFKC per character with whitespace runs folded to one space, keeping an offset map back.
+ * `dropWordSpaces` drops a run unless a digit or Latin letter touches it: HWP wraps lines inside
+ * words, while `1\n200` must not read as `1200` nor `is land` as `island`.
  */
-function normalizeWithOrigin(source: string, dropSpaces = false): NormalizedText {
+function normalizeWithOrigin(source: string, dropWordSpaces = false): NormalizedText {
   let text = '';
   const origin: number[] = [];
   let pendingSpace = false;
   for (let i = 0; i < source.length; i++) {
     const ch = source[i];
     if (isSpace(ch)) {
-      pendingSpace = !dropSpaces && text.length > 0;
+      pendingSpace = text.length > 0;
       continue;
     }
-    if (pendingSpace) {
+    const parts = ch.normalize('NFKC');
+    const keepSpace =
+      !dropWordSpaces || isDigitOrLatin(text[text.length - 1]) || isDigitOrLatin(parts[0]);
+    if (pendingSpace && keepSpace) {
       text += ' ';
       origin.push(i);
-      pendingSpace = false;
     }
-    for (const part of ch.normalize('NFKC')) {
-      if (dropSpaces && isSpace(part)) {
-        continue;
-      }
+    pendingSpace = false;
+    for (const part of parts) {
       text += part;
       origin.push(i);
     }
@@ -42,6 +43,7 @@ function normalizeWithOrigin(source: string, dropSpaces = false): NormalizedText
   return { text, origin };
 }
 
+/** Folds every whitespace run to one space; quote matching also drops spaces between words. */
 export function normalizeQuote(quote: string): string {
   return normalizeWithOrigin(quote).text;
 }
@@ -88,26 +90,45 @@ function pageAt(pageStarts: number[] | undefined, offset: number): number | unde
 
 /** Models join excerpts from separate places with a blank line, as the prompt asks. */
 const EXCERPT_BREAK = /\n[^\S\n]*\n/;
+/**
+ * Letters and digits each excerpt of a multi-excerpt quote needs, so short pieces cannot be
+ * combined into a value the text never states. 5 measured on 55 stored demo cells: 47 pass, 8 at 8.
+ */
+const MIN_EXCERPT_CHARS = 5;
+const WORD_CHAR = /[\p{L}\p{N}]/gu;
+
+const splitExcerpts = (quote: string) =>
+  quote.split(EXCERPT_BREAK).filter((excerpt) => excerpt.trim().length > 0);
 
 /**
- * Finds `quote` verbatim (after normalization, ignoring whitespace) in the document; `null`
- * when absent. A quote of several excerpts counts only when every excerpt is found, and is
- * located at the first one.
+ * Finds `quote` verbatim (after normalization) in the document; `null` when absent. A quote
+ * of several excerpts counts only when every excerpt is long enough and found in order after
+ * the previous one, and is located at the first.
  */
 export function locateQuote(doc: TaskDocument, quote: string): TaskEvidence | null {
-  const needles = quote
-    .split(EXCERPT_BREAK)
-    .map((excerpt) => normalizeWithOrigin(excerpt, true).text)
-    .filter((needle) => needle.length > 0);
+  const needles = splitExcerpts(quote).map((excerpt) => normalizeWithOrigin(excerpt, true).text);
   if (needles.length === 0) {
     return null;
   }
-  const haystack = getNormalized(doc);
-  const indexes = needles.map((needle) => haystack.text.indexOf(needle));
-  if (indexes.some((found) => found < 0)) {
+  if (
+    needles.length > 1 &&
+    needles.some((needle) => (needle.match(WORD_CHAR)?.length ?? 0) < MIN_EXCERPT_CHARS)
+  ) {
     return null;
   }
-  const index = indexes[0];
+  const haystack = getNormalized(doc);
+  let index = -1;
+  let searchFrom = 0;
+  for (const needle of needles) {
+    const found = haystack.text.indexOf(needle, searchFrom);
+    if (found < 0) {
+      return null;
+    }
+    if (index < 0) {
+      index = found;
+    }
+    searchFrom = found + needle.length;
+  }
   const offset = haystack.origin[index];
   const page = pageAt(doc.pageStarts, offset);
   const pageOffset = page != null && doc.pageStarts ? doc.pageStarts[page - 1] : 0;
@@ -160,5 +181,8 @@ export function formatFootnote(source: Pick<FootnoteSource, 'filename' | 'eviden
   ]
     .filter(Boolean)
     .join(' ');
-  return [source.filename, `「${evidence.quote}」`, position].filter(Boolean).join(' · ');
+  const quote = splitExcerpts(evidence.quote)
+    .map((excerpt) => normalizeQuote(excerpt))
+    .join(' … ');
+  return [source.filename, `「${quote}」`, position].filter(Boolean).join(' · ');
 }
