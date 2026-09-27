@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Spinner, OGDialogTitle, OGDialogContent, useToastContext } from '@librechat/client';
 import type { TSkillStatesResponse, TSkillSummary } from 'librechat-data-provider';
 import {
@@ -6,13 +6,13 @@ import {
   useDeleteSkillPackMutation,
   useUpdateSkillStatesMutation,
 } from '~/data-provider';
-import { formatCount, getSkillTitle, runsOf } from '../Marketplace/skillCategories';
 import { resolveSkillDefaultActive } from '~/hooks/Skills/useSkillActiveState';
+import { formatCount, getSkillTitle } from '../Marketplace/skillCategories';
 import { useLocalize, useSkillActiveState } from '~/hooks';
 import { byLine } from '../Marketplace/SkillMeta';
 import SkillIcon from '../Marketplace/SkillIcon';
 import PackTree, { packPaths } from './PackTree';
-import useSkillConnectors from './connectors';
+import usePackStats from './stats';
 
 type PackDetailProps = {
   packId: string;
@@ -67,14 +67,7 @@ export default function PackDetail({
   const { skillStates, defaultActiveOnShare, isActive, isLoading } = useSkillActiveState();
   const pack = packQuery.data;
 
-  const packSkills = useMemo(() => {
-    const byId = new Map(skills.map((skill) => [skill._id, skill]));
-    return (pack?.skillIds ?? [])
-      .map((id) => byId.get(id))
-      .filter((skill): skill is TSkillSummary => skill != null);
-  }, [pack?.skillIds, skills]);
-  const packSkillIds = useMemo(() => packSkills.map((skill) => skill._id), [packSkills]);
-  const { union, probes } = useSkillConnectors(packSkillIds);
+  const { packSkills, totalRuns, union, probes } = usePackStats(pack?.skillIds, skills);
 
   if (packQuery.isLoading) {
     return (
@@ -92,7 +85,6 @@ export default function PackDetail({
     );
   }
 
-  const totalRuns = packSkills.reduce((sum, skill) => sum + runsOf(skill), 0);
   const isAuthor = !!userId && pack.author === userId;
 
   const addAll = async () => {
