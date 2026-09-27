@@ -90,7 +90,7 @@ async function typeText(text: string) {
   });
 }
 
-describe('Builder laid out like the wireframe editor', () => {
+describe('Builder layout', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
@@ -101,7 +101,7 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(dialog.className).toContain('w-[1180px]');
   });
 
-  it('dims the page behind the editor with a light, blurred scrim like the wireframe .ov', () => {
+  it('dims the page behind the editor with a light, blurred scrim', () => {
     render(<Harness />);
     const overlay = document.querySelector('[data-state="open"].fixed.inset-0');
     expect(overlay).toHaveClass('bg-black/[0.38]', 'backdrop-blur-[6px]');
@@ -341,7 +341,7 @@ describe('Builder laid out like the wireframe editor', () => {
   });
 });
 
-describe('Builder sized and styled like the wireframe editor (07)', () => {
+describe('Builder sizes and styles', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
@@ -378,7 +378,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(screen.getByText('com_skills_builder_folder_empty')).toHaveClass('text-text-muted');
   });
 
-  it('sets the dialog title in the wireframe bold weight', () => {
+  it('sets the dialog title in bold', () => {
     render(<Harness />);
     expect(screen.getByRole('heading', { level: 2 })).toHaveClass('font-bold');
   });
@@ -422,7 +422,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(clip.style.fontFamily).toContain('Noto Color Emoji');
   });
 
-  it('matches the editor footer controls to the wireframe sizes and type', () => {
+  it('sizes the editor footer controls and their type', () => {
     render(<Harness />);
 
     const footer = screen
@@ -446,7 +446,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     );
   });
 
-  it('matches the input card width, spacing, and text area size to the wireframe', () => {
+  it('sizes the input card width, spacing, and text area', () => {
     render(<Harness />);
 
     const textArea = textarea();
@@ -465,7 +465,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
       .forEach((row) => expect(row).toHaveClass('h-[22px]'));
   });
 
-  it('uses reference padding and muted headings for preview blocks', () => {
+  it('pads preview blocks and mutes their headings', () => {
     render(<Harness />);
 
     const share = block('com_skills_builder_share') as HTMLElement;
@@ -473,7 +473,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(share.querySelector('h5')).toHaveClass('text-text-muted');
   });
 
-  it('matches the empty result table rows to the reference', () => {
+  it('sizes the empty result table rows', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
       fields: [],
@@ -500,7 +500,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(table.parentElement?.classList.contains('border-dashed')).toBe(false);
   });
 
-  it('uses reference text sizes and color for empty hints and the input placeholder', () => {
+  it('sets text sizes and color for empty hints and the input placeholder', () => {
     render(<Harness />);
 
     expect(screen.getByText('com_skills_builder_output_report')).toHaveClass('text-[15.5px]');
@@ -517,7 +517,7 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(icon.style.fontFamily).toContain('Noto Color Emoji');
   });
 
-  it('dims the page as lightly as the wireframe scrim', () => {
+  it('keeps the scrim light enough to see the market behind it', () => {
     render(<Harness />);
     const overlay = document.querySelector('[data-state="open"].fixed.inset-0');
     expect(overlay).toHaveClass(
@@ -527,8 +527,8 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
   });
 });
 
-describe('Share step matches the reference screen (12)', () => {
-  it('sizes scope pills like the reference and emphasizes the selected scope', () => {
+describe('Share step', () => {
+  it('sizes scope pills and emphasizes the selected scope', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
       fields: [],
@@ -549,7 +549,7 @@ describe('Share step matches the reference screen (12)', () => {
     expect(selected).not.toHaveClass('!font-normal');
   });
 
-  it('styles selected time and scope options like the reference', () => {
+  it('fills the selected time and scope options', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
       fields: [],
@@ -597,7 +597,7 @@ describe('Share step matches the reference screen (12)', () => {
     expect(share).toHaveClass('border-ring-primary', 'ring-[3px]', 'ring-border-brand');
   });
 
-  it('uses the reference size for share guidance labels', () => {
+  it('sizes the share guidance labels', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
       fields: [],
@@ -641,7 +641,7 @@ describe('Share step matches the reference screen (12)', () => {
   });
 });
 
-describe('Others’ examples shown like the wireframe (08)', () => {
+describe('Others’ examples', () => {
   it('lists each example line by line as a numbered list in the body font instead of raw text', () => {
     render(<Harness peers={[peer]} />);
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
