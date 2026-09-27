@@ -155,7 +155,7 @@ function AgentRanking({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light bg-surface-primary text-left text-[11.5px] text-text-muted">
+            <tr className="border-b border-border-light bg-surface-primary text-left text-[11.5px] leading-[17px] text-text-muted">
               <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_agent_name')}
               </th>
@@ -204,7 +204,7 @@ function AgentRanking({
                   <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
                     <span
                       aria-hidden="true"
-                      className="me-1.5 inline-block h-1.5 rounded-sm bg-gradient-to-r from-accent-primary to-accent-primary-hover align-middle"
+                      className="me-1.5 inline-block h-1.5 rounded-sm bg-gradient-to-br from-[#8b5cf6] to-[#db2777] align-middle"
                       style={{ width: `${Math.round((90 * agent.runs) / maxRuns)}px` }}
                     />
                     {formatNumber(agent.runs, locale)}
@@ -264,7 +264,7 @@ function ContributorRanking({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light bg-surface-primary text-left text-[11.5px] text-text-muted">
+            <tr className="border-b border-border-light bg-surface-primary text-left text-[11.5px] leading-[17px] text-text-muted">
               <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_author')}
               </th>
