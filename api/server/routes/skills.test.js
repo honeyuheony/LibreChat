@@ -1294,6 +1294,13 @@ describe('Skill builder routes', () => {
       expect(limited.headers['content-type']).toMatch(/application\/json/);
       expect(limited.body.message).toEqual(expect.any(String));
 
+      const getLogStores = require('~/cache/getLogStores');
+      const { ViolationTypes } = require('librechat-data-provider');
+      const violations = await getLogStores(ViolationTypes.SKILL_DRAFT_LIMIT).get(
+        testUsers.noAccess._id.toString(),
+      );
+      expect(violations).toBe(0);
+
       setTestUser(testUsers.editor);
       const otherUser = await send();
       expect(otherUser.status).toBe(200);
@@ -1427,6 +1434,41 @@ describe('Skill builder routes', () => {
       expect(res.body.current.version).toBe(1);
     });
 
+    it('rejects a turn the user stopped', async () => {
+      const created = await createSkillAsOwner();
+      await insertTestTurn({
+        user: testUsers.owner,
+        conversationId: 'convo-owner',
+        skillName: 'demo-skill',
+        response: { finish_reason: 'incomplete', content: [{ type: 'text', text: '중간' }] },
+      });
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-owner', version: 1 });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('RESPONSE_FAILED');
+    });
+
+    it('rejects a turn with an error content part', async () => {
+      const created = await createSkillAsOwner();
+      await insertTestTurn({
+        user: testUsers.owner,
+        conversationId: 'convo-owner',
+        skillName: 'demo-skill',
+        response: {
+          content: [
+            { type: 'text', text: '결과' },
+            { type: 'error', error: 'tool' },
+          ],
+        },
+      });
+      const res = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-owner', version: 1 });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('RESPONSE_FAILED');
+    });
+
     it('rejects a turn whose response ended in an error', async () => {
       const created = await createSkillAsOwner();
       await insertTestTurn({
@@ -1497,6 +1539,47 @@ describe('Skill builder routes', () => {
       expect(remaining[0].principalType).toBe(PrincipalType.USER);
       expect(remaining[0].principalId.toString()).toBe(testUsers.owner._id.toString());
       expect(remaining[0].roleId.toString()).toBe(testRoles.owner._id.toString());
+    });
+
+    it('keeps updatedAt while recording a test and publishing', async () => {
+      const created = await createSkillAsOwner();
+      const before = (await Skill.findById(created.body._id).lean()).updatedAt;
+      await Skill.updateOne(
+        { _id: created.body._id },
+        { $set: { manualMinutes: 30 } },
+        { timestamps: false },
+      );
+      await insertTestTurn({
+        user: testUsers.owner,
+        conversationId: 'convo-owner',
+        skillName: 'demo-skill',
+      });
+      const tested = await request(app)
+        .post(`/api/skills/${created.body._id}/test-result`)
+        .send({ conversationId: 'convo-owner', version: 1 });
+      expect(tested.status).toBe(200);
+      const published = await request(app)
+        .post(`/api/skills/${created.body._id}/publish`)
+        .send({ scope: 'all' });
+      expect(published.status).toBe(200);
+      expect((await Skill.findById(created.body._id).lean()).updatedAt).toEqual(before);
+    });
+
+    it('rolls back the publish time when the viewer role is missing', async () => {
+      const tested = await createTestedSkill();
+      const viewer = await AccessRole.findById(testRoles.viewer._id).lean();
+      await AccessRole.deleteOne({ _id: viewer._id });
+      try {
+        const res = await request(app)
+          .post(`/api/skills/${tested._id}/publish`)
+          .send({ scope: 'all' });
+        expect(res.status).toBe(500);
+        expect(res.body.code).toBe('PUBLISH_ACL_FAILED');
+        expect((await Skill.findById(tested._id).lean()).publishedAt).toBeUndefined();
+        expect(await publicEntry(tested._id)).toBeNull();
+      } finally {
+        await AccessRole.create(viewer);
+      }
     });
 
     it('rejects the team scope', async () => {

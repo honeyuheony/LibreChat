@@ -726,6 +726,23 @@ describe('Skill CRUD methods', () => {
       expect((await methods.getSkillById(skill._id))?.lastTest).toBeUndefined();
     });
 
+    it('keeps updatedAt as the last content save time', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput());
+      const before = (await methods.getSkillById(skill._id))?.updatedAt;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        lastTest,
+        publishedAt: new Date('2026-09-27T12:00:00.000Z'),
+      });
+
+      const after = await methods.getSkillById(skill._id);
+      expect(after?.lastTest).toEqual(lastTest);
+      expect(after?.updatedAt).toEqual(before);
+    });
+
     it('reports not_found for an unknown id', async () => {
       const result = await methods.setSkillPublicationState({
         id: new mongoose.Types.ObjectId().toString(),

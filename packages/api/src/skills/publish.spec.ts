@@ -155,6 +155,17 @@ describe('createSkillTestResultHandler', () => {
     ['no response yet', null, 'RESPONSE_MISSING'],
     ['an error response', { error: true }, 'RESPONSE_FAILED'],
     ['an unfinished response', { unfinished: true }, 'RESPONSE_FAILED'],
+    ['a response the user stopped', { finish_reason: 'incomplete' }, 'RESPONSE_FAILED'],
+    [
+      'a response cut at the tool call limit',
+      { finish_reason: 'tool_call_limit' },
+      'RESPONSE_FAILED',
+    ],
+    [
+      'a response with an error content part',
+      { content: [{ type: 'text' }, { type: 'error' }] },
+      'RESPONSE_FAILED',
+    ],
   ])('rejects %s with 400', async (_label, response, code) => {
     const deps = createDeps({ getMessages: jest.fn(async () => testMessages({ response })) });
     const res = await run(deps, { conversationId: 'convo-1', version: 4 });
@@ -189,6 +200,23 @@ describe('createSkillTestResultHandler', () => {
         lastTest: expect.objectContaining({ version: 4, seconds: 42.5 }),
       }),
     );
+  });
+
+  it('accepts a response that finished with stop', async () => {
+    const deps = createDeps({
+      getMessages: jest.fn(async () =>
+        testMessages({ response: { finish_reason: 'stop', content: [{ type: 'text' }] } }),
+      ),
+    });
+    const res = await run(deps, { conversationId: 'convo-1', version: 4 });
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it('reads the finish reason and content part types of the turn', async () => {
+    const deps = createDeps();
+    await run(deps, { conversationId: 'convo-1', version: 4 });
+    const select = (deps.getMessages.mock.calls[0][1] as string).split(' ');
+    expect(select).toEqual(expect.arrayContaining(['finish_reason', 'content.type']));
   });
 
   it('uses the latest turn that picked the skill', async () => {
@@ -434,6 +462,26 @@ describe('createSkillPublishHandler', () => {
       expectedVersion: 4,
       publishedAt: previous,
     });
+  });
+
+  it('rolls back and answers PUBLISH_ACL_FAILED when the ACL update reports errors', async () => {
+    const previous = new Date('2026-09-01T00:00:00.000Z');
+    const deps = createDeps({
+      bulkUpdateResourcePermissions: jest.fn(async () => ({
+        granted: [],
+        updated: [],
+        revoked: [],
+        errors: [
+          { principal: { type: PrincipalType.PUBLIC }, error: 'Role skill_viewer not found' },
+        ],
+      })),
+    });
+    const res = await run(deps, { scope: 'all' }, testedSkill({ publishedAt: previous }));
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'PUBLISH_ACL_FAILED' }));
+    expect(deps.setSkillPublicationState).toHaveBeenCalledTimes(2);
+    expect(deps.setSkillPublicationState.mock.calls[1][0].publishedAt).toEqual(previous);
   });
 
   it('clears the publish time on rollback when the skill was a draft', async () => {

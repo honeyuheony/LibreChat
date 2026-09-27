@@ -3,6 +3,7 @@ import {
   ResourceType,
   AccessRoleIds,
   PrincipalType,
+  ContentTypes,
   PermissionBits,
 } from 'librechat-data-provider';
 import type { TSkillConflictResponse, TSkillPublishScope } from 'librechat-data-provider';
@@ -29,6 +30,8 @@ export interface SkillTestMessage {
   isCreatedByUser?: boolean;
   manualSkills?: string[] | null;
   error?: boolean | null;
+  finish_reason?: string | null;
+  content?: Array<{ type?: string | null } | null> | null;
   unfinished?: boolean | null;
   createdAt?: Date | string | null;
   updatedAt?: Date | string | null;
@@ -78,13 +81,14 @@ export interface SkillPublishDeps extends SkillLookupDeps {
     updatedPrincipals: PublishPrincipal[];
     revokedPrincipals: PublishPrincipal[];
     grantedBy: string;
-  }) => Promise<unknown>;
+  }) => Promise<{ errors?: Array<{ error: string }> } | undefined>;
   sharePolicy: SkillSharePolicy;
 }
 
 type SkillRequest = ServerRequest & { resourceAccess?: { resourceInfo?: SkillDoc } };
 
 const PUBLISH_SCOPES = new Set<string>(['all', 'me']);
+const CLEAN_FINISH_REASONS = new Set<string>(['stop']);
 const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
 
 async function loadSkill(req: SkillRequest, deps: SkillLookupDeps): Promise<SkillDoc | null> {
@@ -99,6 +103,17 @@ function conflictResponse(current: SkillDoc, isPublic: boolean): TSkillConflictR
 
 function toTime(value: Date | string | null | undefined): number {
   return value == null ? Number.NaN : new Date(value).getTime();
+}
+
+/** 정상 agent 턴은 finish_reason 을 적지 않는다. 멈춘 응답('incomplete')·도구 한도('tool_call_limit')·오류 조각은 실패다. */
+function finishedCleanly(response: SkillTestMessage): boolean {
+  if (response.error || response.unfinished) {
+    return false;
+  }
+  if (response.finish_reason != null && !CLEAN_FINISH_REASONS.has(response.finish_reason)) {
+    return false;
+  }
+  return !response.content?.some((part) => part?.type === ContentTypes.ERROR);
 }
 
 /** 이 스킬을 고른 마지막 사용자 턴과 그 턴의 마지막 응답. */
@@ -167,7 +182,7 @@ export function createSkillTestResultHandler(deps: SkillTestResultDeps) {
       }
       const messages = await deps.getMessages(
         { conversationId, user: userId },
-        'messageId parentMessageId isCreatedByUser manualSkills error unfinished createdAt updatedAt',
+        'messageId parentMessageId isCreatedByUser manualSkills error unfinished finish_reason content.type createdAt updatedAt',
       );
       const { userMessage, response } = findTestTurn(messages, skill.name);
       if (!userMessage) {
@@ -180,7 +195,7 @@ export function createSkillTestResultHandler(deps: SkillTestResultDeps) {
           .status(400)
           .json({ error: 'The test turn has no response yet', code: 'RESPONSE_MISSING' });
       }
-      if (response.error || response.unfinished) {
+      if (!finishedCleanly(response)) {
         return res
           .status(400)
           .json({ error: 'The test turn did not finish cleanly', code: 'RESPONSE_FAILED' });
@@ -329,12 +344,15 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
       }
 
       try {
-        await deps.bulkUpdateResourcePermissions({
+        const aclResult = await deps.bulkUpdateResourcePermissions({
           resourceType: ResourceType.SKILL,
           resourceId: skill._id,
           ...principals,
           grantedBy: userId,
         });
+        if (aclResult?.errors?.length) {
+          throw new Error(aclResult.errors.map((entry) => entry.error).join('; '));
+        }
       } catch (aclError) {
         logger.error(
           `[skillPublish] ACL update failed for ${skill._id}, restoring publish state`,
@@ -348,7 +366,9 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         if (restored.status !== 'updated') {
           logger.error(`[skillPublish] Could not restore publish state for ${skill._id}`);
         }
-        return res.status(500).json({ error: 'Failed to update sharing for the skill' });
+        return res
+          .status(500)
+          .json({ error: 'Failed to update sharing for the skill', code: 'PUBLISH_ACL_FAILED' });
       }
       return res.status(200).json(serializeSkill(published.skill, isPublic));
     } catch (error) {

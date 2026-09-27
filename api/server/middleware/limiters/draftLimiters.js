@@ -13,7 +13,8 @@ const getEnvironmentVariables = () => {
   const DRAFT_IP_WINDOW = parseInt(process.env.DRAFT_IP_WINDOW) || 1;
   const DRAFT_USER_MAX = parseInt(process.env.DRAFT_USER_MAX) || 30;
   const DRAFT_USER_WINDOW = parseInt(process.env.DRAFT_USER_WINDOW) || 1;
-  const DRAFT_VIOLATION_SCORE = process.env.DRAFT_VIOLATION_SCORE;
+  // 편집기가 debounce 로 부르다 한도에 닿는 것은 악의가 아니므로 기본 점수 0 으로 앱 전체 차단을 막는다.
+  const DRAFT_VIOLATION_SCORE = process.env.DRAFT_VIOLATION_SCORE ?? 0;
 
   const draftIpWindowMs = DRAFT_IP_WINDOW * 60 * 1000;
   const draftUserWindowMs = DRAFT_USER_WINDOW * 60 * 1000;

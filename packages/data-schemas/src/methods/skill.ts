@@ -2256,7 +2256,8 @@ export function createSkillMethods(
         $set: setPayload,
         ...(Object.keys(unsetPayload).length > 0 && { $unset: unsetPayload }),
       },
-      { new: true },
+      // updatedAt 은 마지막 내용 저장 시각으로 남긴다. 시험 기록 판정이 이 값을 기준으로 쓴다.
+      { new: true, timestamps: false },
     ).lean();
     if (result) {
       return {
