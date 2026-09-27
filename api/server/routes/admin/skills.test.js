@@ -37,6 +37,8 @@ jest.mock('@librechat/data-schemas', () => ({
 jest.mock('@librechat/api', () => ({
   createAdminSkillsSyncAccess: jest.fn(() => mockSyncAccess),
   createAdminSkillsSyncHandlers: jest.fn(() => mockHandlers),
+  createSkillMetricsHandler: jest.fn(() => (req, res) => res.status(200).json({ ok: true })),
+  getDeploymentSkillRegistry: jest.fn(),
 }));
 
 jest.mock('~/server/middleware/roles/capabilities', () => ({

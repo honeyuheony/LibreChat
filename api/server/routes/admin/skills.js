@@ -1,9 +1,21 @@
 const express = require('express');
-const { createAdminSkillsSyncAccess, createAdminSkillsSyncHandlers } = require('@librechat/api');
+const mongoose = require('mongoose');
+const {
+  createSkillMetricsHandler,
+  getDeploymentSkillRegistry,
+  createAdminSkillsSyncAccess,
+  createAdminSkillsSyncHandlers,
+} = require('@librechat/api');
 const { SystemCapabilities } = require('@librechat/data-schemas');
 const { hasCapability, requireCapability } = require('~/server/middleware/roles/capabilities');
 const { requireJwtAuth } = require('~/server/middleware');
-const { upsertSkillSyncCredential, deleteSkillSyncCredential } = require('~/models');
+const {
+  countPublishedForks,
+  getDeploymentSkillUsage,
+  upsertSkillSyncCredential,
+  deleteSkillSyncCredential,
+  getSkillAuthorDepartments,
+} = require('~/models');
 const { getGitHubSkillSyncRunnerForRequest } = require('~/server/services/Skills/sync');
 const { getAppConfig } = require('~/server/services/Config');
 const configMiddleware = require('~/server/middleware/config/app');
@@ -22,6 +34,19 @@ const handlers = createAdminSkillsSyncHandlers({
   deleteCredential: deleteSkillSyncCredential,
 });
 
+const metricsHandler = createSkillMetricsHandler({
+  listUserSkills: () =>
+    mongoose.models.Skill.find({})
+      .select(
+        'name displayTitle author authorName useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf',
+      )
+      .lean(),
+  listDeploymentSkills: () => getDeploymentSkillRegistry().list(),
+  countPublishedForks,
+  getDeploymentSkillUsage,
+  getSkillAuthorDepartments,
+});
+
 router.use(
   requireJwtAuth,
   requireAdminAccess,
@@ -35,6 +60,7 @@ router.get(
   syncAccess.attachCredentialReadAccess,
   handlers.getSyncStatus,
 );
+router.get('/metrics', metricsHandler);
 router.post('/sync/run', syncAccess.requireSyncRunCapability, handlers.runSync);
 router.put(
   '/sync/credentials/:credentialKey',
