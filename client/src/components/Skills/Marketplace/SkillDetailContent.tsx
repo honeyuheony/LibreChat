@@ -1,8 +1,17 @@
 import React, { useId, useState } from 'react';
+import { X } from 'lucide-react';
 import { useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import { Constants } from 'librechat-data-provider';
-import { Label, Spinner, Switch, OGDialogTitle, OGDialogContent } from '@librechat/client';
+import {
+  Button,
+  Label,
+  OGDialogClose,
+  OGDialogContent,
+  OGDialogTitle,
+  Spinner,
+  Switch,
+} from '@librechat/client';
 import type { TSkillSummary } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import {
@@ -61,6 +70,29 @@ function extractInstructionSteps(content: string): string[] {
     .flatMap((line) => line.split(/(?<=[.!?])\s+/))
     .map((step) => step.replace(/^\s*\d+[.)]\s*/, '').trim())
     .filter(Boolean);
+}
+
+function stripTriggerSummary(summary: string, triggers: readonly string[] = []): string {
+  const markerIndex = summary.indexOf('다음 요청에 사용:');
+  if (markerIndex !== -1) {
+    return summary.slice(0, markerIndex).trimEnd();
+  }
+  const sentenceBoundary = Math.max(
+    summary.lastIndexOf('. '),
+    summary.lastIndexOf('! '),
+    summary.lastIndexOf('? '),
+  );
+  if (sentenceBoundary === -1) {
+    return summary;
+  }
+  const triggerSentence = summary.slice(sentenceBoundary + 2);
+  if (
+    !/(?:할 때\s*(?:씁니다|사용합니다))\.?$/.test(triggerSentence) ||
+    !triggers.some((trigger) => triggerSentence.includes(trigger))
+  ) {
+    return summary;
+  }
+  return summary.slice(0, sentenceBoundary + 1).trimEnd();
 }
 
 function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
@@ -139,8 +171,8 @@ export default function SkillDetailContent({
   };
 
   const title = getSkillTitle(skill);
-  const summary = getSkillSummary(skill);
   const profile = skill.marketProfile;
+  const summary = stripTriggerSummary(getSkillSummary(skill), profile?.triggers);
   const origin = skill.forkOf ? allSkills.find((entry) => entry._id === skill.forkOf) : undefined;
   const forks = allSkills.filter((entry) => entry.forkOf === skill._id);
   const starters = skill.examples && skill.examples.length > 0 ? skill.examples : [summary];
@@ -193,9 +225,21 @@ export default function SkillDetailContent({
 
   return (
     <OGDialogContent
+      showCloseButton={false}
       overlayClassName={SKILL_DETAIL_OVERLAY_CLASS}
-      className="flex w-[580px] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 text-center"
+      className="relative flex w-[580px] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 text-center"
     >
+      <OGDialogClose asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label={localize('com_ui_close')}
+          className="absolute right-3 top-3 z-10 h-[27px] w-[35px] rounded-full px-[11px] py-[3px] text-[13px] text-text-secondary"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </Button>
+      </OGDialogClose>
       <div className="min-h-0 flex-1 overflow-y-auto px-[34px] pb-3.5 pt-[34px]">
         <SkillIcon skill={skill} size="l" />
         <OGDialogTitle className="mb-1 mt-4 text-[25px] font-bold leading-tight">

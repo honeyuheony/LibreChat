@@ -234,8 +234,8 @@ export default function SkillMarketplace() {
                   <OpenSidebar />
                 </div>
               )}
-              <div className="bg-[radial-gradient(ellipse_50%_70%_at_50%_0%,rgba(124,58,237,0.10),transparent_70%)] pb-1.5 pt-4 text-center">
-                <h1 className="mb-2.5 text-[28px] font-extrabold tracking-[-0.04em] text-text-primary md:text-[40px]">
+              <div className="bg-[radial-gradient(ellipse_50%_70%_at_50%_0%,rgba(124,58,237,0.10),transparent_70%)] pb-1.5 pt-[38px] text-center">
+                <h1 className="mb-2.5 text-[28px] font-extrabold leading-[1.1] tracking-[-0.04em] text-text-primary md:text-[40px]">
                   {localize('com_skills_hero_before')}
                   <em className="bg-gradient-to-br from-[#8b5cf6] to-[#db2777] bg-clip-text not-italic text-transparent">
                     {localize('com_skills_hero_highlight')}

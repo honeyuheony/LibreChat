@@ -175,7 +175,7 @@ export default function UserSettings() {
                   approvalModeMutation.mutate({ approvalMode: nextApprovalMode });
                 }
               }}
-              className="w-full max-w-[520px] rounded-lg border border-border-medium bg-surface-tertiary px-3 py-2 text-[14.5px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
+              className="w-full max-w-[520px] rounded-lg border border-border-medium bg-surface-tertiary px-3 py-[7.5px] text-[14.5px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             >
               <option value="manual">
                 {localizeSetting('com_ui_user_settings_approval_manual')}

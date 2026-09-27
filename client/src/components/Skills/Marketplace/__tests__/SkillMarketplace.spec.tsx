@@ -149,11 +149,13 @@ describe('SkillMarketplace', () => {
     expect(createAction?.nextElementSibling).toHaveTextContent('com_skills_create_agent_hint');
   });
 
-  it('positions the marketplace introduction at the wireframe offset on the pack tab', () => {
+  it('matches the marketplace introduction position and title line height on the pack tab', () => {
     renderAt('/skills-market/packs');
 
     const createAction = screen.getByRole('button', { name: 'com_skills_create_agent' });
-    expect(createAction.parentElement?.parentElement).toHaveClass('pt-4');
+    const hero = createAction.parentElement?.parentElement;
+    expect(hero).toHaveClass('pt-[38px]');
+    expect(hero?.querySelector('h1')).toHaveClass('leading-[1.1]');
   });
 
   it('lists every agent of a category, including base agents', () => {

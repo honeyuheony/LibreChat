@@ -18,6 +18,21 @@ jest.mock('~/store', () => ({
   default: { pendingManualSkillsByConvoId: () => 'pendingManualSkills' },
 }));
 jest.mock('@librechat/client', () => ({
+  Button: ({
+    children,
+    className,
+    type,
+    'aria-label': ariaLabel,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    type?: 'button';
+    'aria-label'?: string;
+  }) => (
+    <button type={type} className={className} aria-label={ariaLabel}>
+      {children}
+    </button>
+  ),
   Label: ({ children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
     <label {...props}>{children}</label>
   ),
@@ -32,6 +47,7 @@ jest.mock('@librechat/client', () => ({
     id: string;
     'aria-labelledby': string;
   }) => <button role="switch" aria-checked={checked} onClick={onCheckedChange} {...props} />,
+  OGDialogClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   OGDialogContent: ({
     children,
@@ -77,6 +93,40 @@ describe('SkillDetailContent', () => {
     expect(screen.getByText('1,317h')).toBeInTheDocument();
     expect(screen.getByText('com_skills_minutes:{"count":25}')).toBeInTheDocument();
     expect(screen.getByText('41')).toBeInTheDocument();
+  });
+
+  it('keeps trigger instructions out of the summary and shows trigger tags separately', () => {
+    const skill = {
+      ...weekly,
+      description:
+        '회의 메모·녹취록에서 결정 사항과 담당자·기한별 할 일을 뽑아 공유 메일 초안까지 작성. 회의록에서 액션아이템을 뽑아 달라, 담당자별 할 일을 정리해 달라, 할 일을 공유 메일 초안으로 써 달라고 할 때 씁니다.',
+      examples: ['회의록에서 액션아이템을 뽑아 달라'],
+      marketProfile: { ...weekly.marketProfile, triggers: ['회의록', '액션아이템'] },
+    };
+    renderDetail(skill);
+
+    expect(
+      screen.getByText(
+        '회의 메모·녹취록에서 결정 사항과 담당자·기한별 할 일을 뽑아 공유 메일 초안까지 작성.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/할 때 씁니다/)).not.toBeInTheDocument();
+    expect(screen.getByText('com_skills_when')).toBeInTheDocument();
+    expect(screen.getByText('회의록')).toBeInTheDocument();
+    expect(screen.getByText('액션아이템')).toBeInTheDocument();
+  });
+
+  it('matches the detail window close button size', () => {
+    renderDetail();
+
+    expect(screen.getByRole('button', { name: 'com_ui_close' })).toHaveClass(
+      'absolute',
+      'right-3',
+      'top-3',
+      'h-[27px]',
+      'w-[35px]',
+      'text-[13px]',
+    );
   });
 
   it('shows the response scope and previous department in the visibility note', () => {

@@ -176,6 +176,7 @@ describe('MetricsView', () => {
         'bg-surface-primary',
         'text-[11.5px]',
         'text-text-muted',
+        'leading-[17px]',
       );
       expect(table.parentElement?.classList.contains('rounded-lg')).toBe(false);
       expect(table.parentElement?.classList.contains('border-border-light')).toBe(false);
@@ -204,9 +205,9 @@ describe('MetricsView', () => {
     );
     const runBar = runsCell.querySelector('span[aria-hidden="true"]');
     expect(runBar).toHaveStyle({ width: '90px' });
-    expect(runBar?.classList.contains('bg-gradient-to-r')).toBe(true);
-    expect(runBar?.classList.contains('from-accent-primary')).toBe(true);
-    expect(runBar?.classList.contains('to-accent-primary-hover')).toBe(true);
+    expect(runBar?.classList.contains('bg-gradient-to-br')).toBe(true);
+    expect(runBar?.classList.contains('from-[#8b5cf6]')).toBe(true);
+    expect(runBar?.classList.contains('to-[#db2777]')).toBe(true);
   });
 
   it('navigates to the selected skill detail when another cell in its row is clicked', async () => {
