@@ -14,13 +14,13 @@ export type TSkillMarkdownComposeInput = {
 };
 
 export function composeSkillMarkdown(input: TSkillMarkdownComposeInput): string {
-  const title = input.displayTitle ?? input.name;
+  const title = input.displayTitle || input.name;
   const frontmatter = {
     name: input.name,
     title,
     description: input.description,
     ...(input.category !== undefined && { category: input.category }),
-    ...(input.examples !== undefined && { examples: input.examples }),
+    ...(input.examples !== undefined && { examples: input.examples.slice(0, 5) }),
     ...(input.metadata !== undefined && { metadata: input.metadata }),
   };
   const body = [

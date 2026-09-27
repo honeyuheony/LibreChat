@@ -139,10 +139,10 @@ export interface IDeploymentSkillUsageDocument extends IDeploymentSkillUsage, Do
 
 /**
  * Lean summary projection returned by `listSkillsByAccess`. The list query
- * uses a narrow `.select()` that omits `body` and `frontmatter` to keep
- * payloads small, so those fields are truthfully absent on summary rows.
+ * uses a narrow `.select()` that omits `body`, `frontmatter` and `builder`
+ * to keep payloads small, so those fields are truthfully absent on summary rows.
  */
-export type ISkillSummary = Omit<ISkill, 'body' | 'frontmatter'>;
+export type ISkillSummary = Omit<ISkill, 'body' | 'frontmatter' | 'builder'>;
 
 /**
  * SkillFile — metadata for a file bundled inside a skill.

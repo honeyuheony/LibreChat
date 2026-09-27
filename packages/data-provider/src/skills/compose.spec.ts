@@ -34,6 +34,20 @@ describe('composeSkillMarkdown', () => {
     });
   });
 
+  it('limits examples in the generated frontmatter to five', () => {
+    const examples = ['one', 'two', 'three', 'four', 'five', 'six'];
+    const frontmatter = readFrontmatter(composeSkillMarkdown({ ...input, examples }));
+
+    expect(frontmatter).toMatchObject({ examples: examples.slice(0, 5) });
+  });
+
+  it('uses the skill name when displayTitle is empty', () => {
+    const markdown = composeSkillMarkdown({ ...input, displayTitle: '' });
+
+    expect(readFrontmatter(markdown)).toMatchObject({ title: 'compare-table' });
+    expect(markdown).toContain('# compare-table');
+  });
+
   it('numbers instructions and appends the result and access sections', () => {
     const markdown = composeSkillMarkdown(input);
     const body = markdown.split('---\n').slice(2).join('---\n').trim();

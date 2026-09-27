@@ -777,6 +777,22 @@ describe('Skill CRUD methods', () => {
     expect(skills[0]).toMatchObject({ frontmatter: { examples } });
   });
 
+  it('does not project builder state into list summaries', async () => {
+    const builder = {
+      text: 'Private editor text.',
+      direct: false,
+      sources: { title: 'ai' },
+      aiOff: [],
+    };
+    const { skill } = await methods.createSkill(makeSkillInput({ builder }));
+    const { skills } = await methods.listSkillsByAccess({
+      accessibleIds: [skill._id],
+      limit: 10,
+    });
+
+    expect(skills[0]).not.toHaveProperty('builder');
+  });
+
   it('stores an emoji icon on create, lists it and updates it', async () => {
     const { skill } = await methods.createSkill(makeSkillInput({ icon: ' 📄 ' }));
     expect(skill.icon).toBe('📄');

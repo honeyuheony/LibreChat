@@ -168,6 +168,7 @@ export type TSkill = {
    */
   examples?: string[];
   builder?: TSkillBuilderState;
+  /** Omitted when no publication state was recorded; `null` means an explicit draft. */
   publishedAt?: string | null;
   lastTest?: TSkillLastTest;
   author: string;
@@ -251,11 +252,11 @@ export type TSkillUsageMetrics = {
 };
 
 /**
- * Summary shape used in list endpoints — omits `body` and `frontmatter` to keep
- * list payloads small. Callers that need the full body/frontmatter must fetch
+ * Summary shape used in list endpoints — omits `body`, `frontmatter` and
+ * `builder` to keep list payloads small. Callers that need the full body/frontmatter must fetch
  * the detail via `GET /api/skills/:id`.
  */
-export type TSkillSummary = Omit<TSkill, 'body' | 'frontmatter'>;
+export type TSkillSummary = Omit<TSkill, 'body' | 'frontmatter' | 'builder'>;
 
 /**
  * Metadata for a single file bundled inside a skill.
@@ -388,8 +389,6 @@ export type TCreateSkill = {
   /** 이모지 아이콘. */
   icon?: string;
   builder?: TSkillBuilderState;
-  publishedAt?: string | null;
-  lastTest?: TSkillLastTest;
 };
 
 /** Partial payload for PATCH `/api/skills/:id` — all fields optional. */
@@ -406,8 +405,6 @@ export type TUpdateSkillPayload = {
   /** 이모지 아이콘. */
   icon?: string;
   builder?: TSkillBuilderState;
-  publishedAt?: string | null;
-  lastTest?: TSkillLastTest;
 };
 
 /** POST `/api/skills/:id/fork` 요청 본문. 이름을 비우면 원본 이름을 쓰고, 겹치면 `-fork` 꼬리를 붙인다. */

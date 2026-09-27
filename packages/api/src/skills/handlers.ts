@@ -183,23 +183,20 @@ function serializeSkillExamples(skill: {
   frontmatter?: Record<string, unknown>;
 }): string[] | undefined {
   if (skill.examples !== undefined) {
-    return skill.examples;
+    return skill.examples.slice(0, 5);
   }
   const examples = skill.frontmatter?.examples;
   if (!Array.isArray(examples)) {
     return undefined;
   }
-  return examples.filter((example): example is string => typeof example === 'string');
+  return examples.filter((example): example is string => typeof example === 'string').slice(0, 5);
 }
 
-function toPublishedAtDate(publishedAt: string | null | undefined): Date | null | undefined {
-  if (publishedAt === null) {
-    return null;
+function serializePublishedAt(publishedAt: ISkill['publishedAt']): TSkill['publishedAt'] {
+  if (publishedAt === undefined || publishedAt === null) {
+    return publishedAt;
   }
-  if (publishedAt === undefined) {
-    return undefined;
-  }
-  return new Date(publishedAt);
+  return publishedAt.toISOString();
 }
 
 function serializeLastTest(lastTest: ISkill['lastTest']): TSkill['lastTest'] {
@@ -228,7 +225,7 @@ export function serializeSkill(
     allowedTools: skill.allowedTools,
     examples: serializeSkillExamples(skill),
     builder: skill.builder,
-    publishedAt: skill.publishedAt?.toISOString() ?? null,
+    publishedAt: serializePublishedAt(skill.publishedAt),
     lastTest: serializeLastTest(skill.lastTest),
     icon: skill.icon,
     ...serializeUsage(skill),
@@ -263,8 +260,7 @@ function serializeSkillSummary(
     userInvocable: skill.userInvocable,
     allowedTools: skill.allowedTools,
     examples: serializeSkillExamples(skill),
-    builder: skill.builder,
-    publishedAt: skill.publishedAt?.toISOString() ?? null,
+    publishedAt: serializePublishedAt(skill.publishedAt),
     lastTest: serializeLastTest(skill.lastTest),
     icon: skill.icon,
     ...serializeUsage(skill),
@@ -352,6 +348,64 @@ function parseLimit(raw: unknown): number {
   return Math.min(Math.max(1, parsed), 100);
 }
 
+function isBuilderRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function validateBuilderState(builder: unknown): ValidationIssue[] {
+  if (builder === undefined) {
+    return [];
+  }
+  if (!isBuilderRecord(builder)) {
+    return [{ field: 'builder', code: 'INVALID_TYPE', message: 'builder must be an object' }];
+  }
+
+  const issues: ValidationIssue[] = [];
+  if (typeof builder.text !== 'string') {
+    issues.push({
+      field: 'builder.text',
+      code: 'INVALID_TYPE',
+      message: 'builder.text must be a string',
+    });
+  }
+  if (typeof builder.direct !== 'boolean') {
+    issues.push({
+      field: 'builder.direct',
+      code: 'INVALID_TYPE',
+      message: 'builder.direct must be a boolean',
+    });
+  }
+  if (builder.textBy !== undefined && typeof builder.textBy !== 'string') {
+    issues.push({
+      field: 'builder.textBy',
+      code: 'INVALID_TYPE',
+      message: 'builder.textBy must be a string',
+    });
+  }
+  if (
+    !isBuilderRecord(builder.sources) ||
+    Object.values(builder.sources).some((source) => typeof source !== 'string')
+  ) {
+    issues.push({
+      field: 'builder.sources',
+      code: 'INVALID_TYPE',
+      message: 'builder.sources must be a string map',
+    });
+  }
+  if (!Array.isArray(builder.aiOff) || builder.aiOff.some((step) => typeof step !== 'string')) {
+    issues.push({
+      field: 'builder.aiOff',
+      code: 'INVALID_TYPE',
+      message: 'builder.aiOff must be a string array',
+    });
+  }
+  return issues;
+}
+
 function blockFilteredSkillContent(
   req: ServerRequest,
   res: Response,
@@ -374,6 +428,7 @@ function blockFilteredSkillContent(
           ...(input.frontmatter as Record<string, unknown> | undefined),
         },
         category: input.category,
+        instructions: input.builder?.text,
       }),
     { filters: req.config?.filters },
   );
@@ -567,6 +622,10 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (!body.description || typeof body.description !== 'string') {
         return res.status(400).json({ error: 'Skill description is required' });
       }
+      const builderIssues = validateBuilderState(body.builder);
+      if (builderIssues.length > 0) {
+        return res.status(400).json({ error: 'Validation failed', issues: builderIssues });
+      }
       if (blockFilteredSkillContent(req, res, body)) {
         return res;
       }
@@ -586,10 +645,6 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           alwaysApply: body.alwaysApply,
           icon: body.icon,
           builder: body.builder,
-          publishedAt: toPublishedAtDate(body.publishedAt),
-          lastTest: body.lastTest
-            ? { ...body.lastTest, at: new Date(body.lastTest.at) }
-            : undefined,
           author: authorId,
           authorName,
           tenantId: user.tenantId,
@@ -686,6 +741,11 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           .json({ error: 'expectedVersion is required and must be a positive integer' });
       }
 
+      const builderIssues = validateBuilderState(rest.builder);
+      if (builderIssues.length > 0) {
+        return res.status(400).json({ error: 'Validation failed', issues: builderIssues });
+      }
+
       const update: UpdateSkillInput = {};
       if (rest.name !== undefined) update.name = rest.name;
       if (rest.displayTitle !== undefined) update.displayTitle = rest.displayTitle;
@@ -698,12 +758,6 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (rest.alwaysApply !== undefined) update.alwaysApply = rest.alwaysApply;
       if (rest.icon !== undefined) update.icon = rest.icon;
       if (rest.builder !== undefined) update.builder = rest.builder;
-      if (rest.publishedAt !== undefined) {
-        update.publishedAt = toPublishedAtDate(rest.publishedAt);
-      }
-      if (rest.lastTest) {
-        update.lastTest = { ...rest.lastTest, at: new Date(rest.lastTest.at) };
-      }
       if (rest.manualMinutes !== undefined) {
         const minutes: unknown = rest.manualMinutes;
         if (typeof minutes !== 'number' || !Number.isInteger(minutes) || minutes < 0) {

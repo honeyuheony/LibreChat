@@ -1465,7 +1465,7 @@ export function createSkillMethods(
       /* Only `frontmatter.examples` is projected so list responses can expose
          examples without loading the remaining frontmatter fields. */
       .select(
-        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon builder publishedAt lastTest frontmatter.examples createdAt updatedAt',
+        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon publishedAt lastTest frontmatter.examples createdAt updatedAt',
       )
       .lean();
 

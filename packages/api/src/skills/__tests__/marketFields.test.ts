@@ -10,10 +10,10 @@ import type {
   UpdateSkillResult,
 } from '@librechat/data-schemas';
 import type {
-  TCreateSkill,
+  FiltersConfig,
+  TSkill,
   TSkillCategoriesResponse,
   TSkillListResponse,
-  TUpdateSkillPayload,
 } from 'librechat-data-provider';
 import type { Response } from 'express';
 import type { SkillsHandlersDeps } from '../handlers';
@@ -23,8 +23,8 @@ import {
   getDeploymentSkillRegistry,
   initializeDeploymentSkills,
 } from '../deployment';
+import { createSkillsHandlers, serializeSkill } from '../handlers';
 import { createSkillCategoriesHandler } from '../categories';
-import { createSkillsHandlers } from '../handlers';
 
 const DESCRIPTION = 'Use this skill when the market fixture needs a deployment agent.';
 
@@ -115,7 +115,22 @@ function buildDeps(overrides: Partial<SkillsHandlersDeps> = {}) {
     _id: new Types.ObjectId(),
     name: 'my-draft',
     description: 'A persisted skill written by a coworker.',
-    frontmatter: { examples: ['Compare these reports.'] },
+    frontmatter: {
+      examples: [
+        'Compare report 1.',
+        'Compare report 2.',
+        'Compare report 3.',
+        'Compare report 4.',
+        'Compare report 5.',
+        'Compare report 6.',
+      ],
+    },
+    builder: {
+      text: 'Stored editor state.',
+      direct: false,
+      sources: { title: 'ai' },
+      aiOff: [],
+    },
     category: '문서작성',
     icon: '✍️',
     author: dbAuthor,
@@ -195,37 +210,75 @@ describe('skill list market fields', () => {
     });
   });
 
-  it('serializes examples stored in a skill frontmatter', async () => {
+  it('limits serialized frontmatter examples and omits builder state from list rows', async () => {
     const { deps } = buildDeps();
     const skills = await listFor(undefined, deps);
+    const draft = skills.find((skill) => skill.name === 'my-draft');
 
-    expect(skills.find((skill) => skill.name === 'my-draft')).toMatchObject({
-      examples: ['Compare these reports.'],
-    });
+    expect(draft?.examples).toEqual([
+      'Compare report 1.',
+      'Compare report 2.',
+      'Compare report 3.',
+      'Compare report 4.',
+      'Compare report 5.',
+    ]);
+    expect(draft).not.toHaveProperty('builder');
+    expect(draft?.publishedAt).toBeUndefined();
   });
 
-  it('passes builder timestamps through the create handler as dates', async () => {
+  it('distinguishes a missing publication timestamp from an explicit draft', () => {
+    const missing = serializeSkill(makeSkillRecord(), false);
+    const draft = serializeSkill(makeSkillRecord({ publishedAt: null }), false);
+
+    expect(missing.publishedAt).toBeUndefined();
+    expect(draft.publishedAt).toBeNull();
+  });
+
+  it('limits detail examples stored in frontmatter to five', () => {
+    const examples = ['one', 'two', 'three', 'four', 'five', 'six'];
+    const skill = serializeSkill(makeSkillRecord({ frontmatter: { examples } }), false);
+
+    expect(skill.examples).toEqual(examples.slice(0, 5));
+  });
+
+  it.each([
+    [
+      'valid publication and test records',
+      {
+        publishedAt: '2026-09-27T10:00:00.000Z',
+        lastTest: {
+          version: 1,
+          seconds: 24,
+          conversationId: 'conversation-1',
+          at: '2026-09-27T09:59:00.000Z',
+        },
+      },
+    ],
+    ['invalid publication date', { publishedAt: 'not-a-date' }],
+    ['boolean publication date', { publishedAt: true }],
+    [
+      'missing test timestamp',
+      { lastTest: { version: 1, seconds: 24, conversationId: 'conversation-1' } },
+    ],
+    [
+      'invalid test timestamp',
+      { lastTest: { version: 1, seconds: 24, conversationId: 'conversation-1', at: 'abc' } },
+    ],
+    ['boolean test result', { lastTest: true }],
+  ])('ignores %s on create without returning a server error', async (_name, untrustedFields) => {
     const builder = {
       text: 'Compare the reports.',
       direct: false,
       sources: { title: 'ai' },
       aiOff: [],
     };
-    const publishedAt = '2026-09-27T10:00:00.000Z';
-    const lastTest = {
-      version: 1,
-      seconds: 24,
-      conversationId: 'conversation-1',
-      at: '2026-09-27T09:59:00.000Z',
-    };
-    const savedSkill = makeSkillRecord({
-      builder,
-      publishedAt: new Date(publishedAt),
-      lastTest: { ...lastTest, at: new Date(lastTest.at) },
-    });
     const createSkill = jest.fn(
-      async (_input: CreateSkillInput): Promise<CreateSkillResult> => ({
-        skill: savedSkill,
+      async (input: CreateSkillInput): Promise<CreateSkillResult> => ({
+        skill: makeSkillRecord({
+          builder: input.builder,
+          publishedAt: input.publishedAt,
+          lastTest: input.lastTest,
+        }),
         warnings: [],
       }),
     );
@@ -234,53 +287,195 @@ describe('skill list market fields', () => {
     const handlers = createSkillsHandlers(deps);
     const req = Object.assign(makeRequest(), {
       body: {
-        name: savedSkill.name,
-        description: savedSkill.description,
-        body: savedSkill.body,
+        name: 'builder-skill',
+        description: 'A builder skill for creating a draft.',
+        body: 'Instructions',
         builder,
-        publishedAt,
-        lastTest,
-      } satisfies TCreateSkill,
+        ...untrustedFields,
+      },
     });
 
     await handlers.create(req, response as unknown as Response);
 
-    expect(createSkill).toHaveBeenCalledWith(
-      expect.objectContaining({
-        builder,
-        publishedAt: new Date(publishedAt),
-        lastTest: { ...lastTest, at: new Date(lastTest.at) },
-      }),
-    );
-    expect(response.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        builder,
-        publishedAt,
-        lastTest,
-        examples: ['Compare these reports.'],
-      }),
-    );
+    expect(response.status).toHaveBeenCalledWith(201);
+    expect(createSkill).toHaveBeenCalledWith(expect.objectContaining({ builder }));
+    expect(createSkill.mock.calls[0][0].publishedAt).toBeUndefined();
+    expect(createSkill.mock.calls[0][0].lastTest).toBeUndefined();
+    const skill = response.json.mock.calls[0][0] as TSkill;
+    expect(skill.publishedAt).toBeUndefined();
+    expect(skill.lastTest).toBeUndefined();
   });
 
-  it('passes builder timestamps through the patch handler as dates', async () => {
+  it.each([
+    [
+      'valid publication and test records',
+      {
+        publishedAt: '2026-09-27T10:00:00.000Z',
+        lastTest: {
+          version: 1,
+          seconds: 24,
+          conversationId: 'conversation-1',
+          at: '2026-09-27T09:59:00.000Z',
+        },
+      },
+    ],
+    ['invalid publication date', { publishedAt: 'not-a-date' }],
+    ['boolean publication date', { publishedAt: true }],
+    [
+      'missing test timestamp',
+      { lastTest: { version: 1, seconds: 24, conversationId: 'conversation-1' } },
+    ],
+    [
+      'invalid test timestamp',
+      { lastTest: { version: 1, seconds: 24, conversationId: 'conversation-1', at: 'abc' } },
+    ],
+    ['boolean test result', { lastTest: true }],
+  ])('ignores %s on patch without returning a server error', async (_name, untrustedFields) => {
     const builder = {
       text: 'Compare the reports.',
       direct: true,
       sources: { title: 'me' },
-      aiOff: ['step-1'],
+      aiOff: [],
     };
-    const publishedAt = '2026-09-27T10:00:00.000Z';
-    const lastTest = {
-      version: 2,
-      seconds: 18,
-      conversationId: 'conversation-2',
-      at: '2026-09-27T10:02:00.000Z',
-    };
-    const updatedSkill = makeSkillRecord({
-      builder,
-      publishedAt: new Date(publishedAt),
-      lastTest: { ...lastTest, at: new Date(lastTest.at) },
+    const updateSkill = jest.fn(
+      async (input: {
+        id: string;
+        expectedVersion: number;
+        update: UpdateSkillInput;
+      }): Promise<UpdateSkillResult> => ({
+        status: 'updated',
+        skill: makeSkillRecord({
+          builder: input.update.builder,
+          publishedAt: input.update.publishedAt,
+          lastTest: input.update.lastTest,
+        }),
+        warnings: [],
+      }),
+    );
+    const { deps } = buildDeps({ updateSkill });
+    const response = createResponse();
+    const handlers = createSkillsHandlers(deps);
+    const req = Object.assign(makeRequest(), {
+      params: { id: new Types.ObjectId().toString() },
+      body: { expectedVersion: 1, builder, ...untrustedFields },
     });
+
+    await handlers.patch(req, response as unknown as Response);
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(updateSkill).toHaveBeenCalledWith(
+      expect.objectContaining({ update: expect.objectContaining({ builder }) }),
+    );
+    expect(updateSkill.mock.calls[0][0].update.publishedAt).toBeUndefined();
+    expect(updateSkill.mock.calls[0][0].update.lastTest).toBeUndefined();
+    const skill = response.json.mock.calls[0][0] as TSkill;
+    expect(skill.publishedAt).toBeUndefined();
+    expect(skill.lastTest).toBeUndefined();
+  });
+
+  const invalidBuilderStates = [
+    ['not an object', null],
+    ['missing required fields', { text: 'text' }],
+    ['non-string text', { text: 1, direct: true, sources: {}, aiOff: [] }],
+    ['non-boolean direct', { text: 'text', direct: 'yes', sources: {}, aiOff: [] }],
+    ['non-string textBy', { text: 'text', direct: true, textBy: 1, sources: {}, aiOff: [] }],
+    ['sources is not an object', { text: 'text', direct: true, sources: [], aiOff: [] }],
+    [
+      'sources is not a plain object',
+      { text: 'text', direct: true, sources: new Map(), aiOff: [] },
+    ],
+    [
+      'source value is not a string',
+      { text: 'text', direct: true, sources: { title: false }, aiOff: [] },
+    ],
+    ['aiOff is not an array', { text: 'text', direct: true, sources: {}, aiOff: 'step' }],
+    ['aiOff item is not a string', { text: 'text', direct: true, sources: {}, aiOff: [1] }],
+  ] as const;
+
+  it.each(invalidBuilderStates)(
+    'rejects an invalid builder state in create and patch (%s)',
+    async (_name, builder) => {
+      const createSkill = jest.fn(
+        async (_input: CreateSkillInput): Promise<CreateSkillResult> => ({
+          skill: makeSkillRecord(),
+          warnings: [],
+        }),
+      );
+      const updateSkill = jest.fn(
+        async (_input: {
+          id: string;
+          expectedVersion: number;
+          update: UpdateSkillInput;
+        }): Promise<UpdateSkillResult> => ({
+          status: 'updated',
+          skill: makeSkillRecord(),
+          warnings: [],
+        }),
+      );
+      const { deps } = buildDeps({ createSkill, updateSkill });
+      const handlers = createSkillsHandlers(deps);
+      const createResponseMock = createResponse();
+      const createRequest = Object.assign(makeRequest(), {
+        body: {
+          name: 'builder-skill',
+          description: 'A builder skill for creating a draft.',
+          builder,
+        },
+      });
+      await handlers.create(createRequest, createResponseMock as unknown as Response);
+
+      const patchResponseMock = createResponse();
+      const patchRequest = Object.assign(makeRequest(), {
+        params: { id: new Types.ObjectId().toString() },
+        body: { expectedVersion: 1, builder },
+      });
+      await handlers.patch(patchRequest, patchResponseMock as unknown as Response);
+
+      expect(createResponseMock.status).toHaveBeenCalledWith(400);
+      expect(createResponseMock.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Validation failed',
+          issues: expect.arrayContaining([
+            expect.objectContaining({ field: expect.stringMatching(/^builder/) }),
+          ]),
+        }),
+      );
+      expect(patchResponseMock.status).toHaveBeenCalledWith(400);
+      expect(patchResponseMock.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Validation failed',
+          issues: expect.arrayContaining([
+            expect.objectContaining({ field: expect.stringMatching(/^builder/) }),
+          ]),
+        }),
+      );
+      expect(createSkill).not.toHaveBeenCalled();
+      expect(updateSkill).not.toHaveBeenCalled();
+    },
+  );
+
+  it('checks builder text with the skill content filter before create and patch', async () => {
+    const builder = {
+      text: 'PRIVATE-TEXT',
+      direct: false,
+      sources: { title: 'ai' },
+      aiOff: [],
+    };
+    const filters: FiltersConfig = {
+      skills: {
+        pii: {
+          fields: ['instructions'],
+          starterPatterns: [],
+          customPatterns: [{ id: 'private', label: 'private text', regex: 'PRIVATE-TEXT' }],
+        },
+      },
+    };
+    const createSkill = jest.fn(
+      async (_input: CreateSkillInput): Promise<CreateSkillResult> => ({
+        skill: makeSkillRecord({ builder }),
+        warnings: [],
+      }),
+    );
     const updateSkill = jest.fn(
       async (_input: {
         id: string;
@@ -288,42 +483,36 @@ describe('skill list market fields', () => {
         update: UpdateSkillInput;
       }): Promise<UpdateSkillResult> => ({
         status: 'updated',
-        skill: updatedSkill,
+        skill: makeSkillRecord({ builder }),
         warnings: [],
       }),
     );
-    const { deps } = buildDeps({
-      updateSkill,
-      hasPublicPermission: jest.fn(async () => false),
-    });
-    const response = createResponse();
+    const { deps } = buildDeps({ createSkill, updateSkill });
     const handlers = createSkillsHandlers(deps);
-    const req = Object.assign(makeRequest(), {
-      params: { id: updatedSkill._id.toString() },
-      body: { expectedVersion: 1, builder, publishedAt, lastTest } satisfies TUpdateSkillPayload & {
-        expectedVersion: number;
+    const createResponseMock = createResponse();
+    const createRequest = Object.assign(makeRequest(), {
+      config: { filters } as ServerRequest['config'],
+      body: {
+        name: 'builder-skill',
+        description: 'A builder skill for creating a draft.',
+        body: 'Clean body',
+        builder,
       },
     });
+    await handlers.create(createRequest, createResponseMock as unknown as Response);
 
-    await handlers.patch(req, response as unknown as Response);
-
-    expect(updateSkill).toHaveBeenCalledWith({
-      id: updatedSkill._id.toString(),
-      expectedVersion: 1,
-      update: {
-        builder,
-        publishedAt: new Date(publishedAt),
-        lastTest: { ...lastTest, at: new Date(lastTest.at) },
-      },
+    const patchResponseMock = createResponse();
+    const patchRequest = Object.assign(makeRequest(), {
+      config: { filters } as ServerRequest['config'],
+      params: { id: new Types.ObjectId().toString() },
+      body: { expectedVersion: 1, builder },
     });
-    expect(response.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        builder,
-        publishedAt,
-        lastTest,
-        examples: ['Compare these reports.'],
-      }),
-    );
+    await handlers.patch(patchRequest, patchResponseMock as unknown as Response);
+
+    expect(createResponseMock.status).toHaveBeenCalledWith(400);
+    expect(patchResponseMock.status).toHaveBeenCalledWith(400);
+    expect(createSkill).not.toHaveBeenCalled();
+    expect(updateSkill).not.toHaveBeenCalled();
   });
 
   it('reads the author department and icon of user skills', async () => {
