@@ -295,6 +295,37 @@ describe('skill pack routes', () => {
     );
   });
 
+  it('returns only skills the requester can view when listing packs', async () => {
+    const visibleSkill = await createSkill({
+      name: 'listed-visible-skill',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const hiddenSkill = await createSkill({ name: 'listed-hidden-skill', author: testUsers.owner });
+    const packId = new mongoose.Types.ObjectId();
+    await SkillPack.collection.insertOne({
+      _id: packId,
+      name: 'Quarterly Pack',
+      slug: 'quarterly-pack',
+      description: 'Skills for quarterly work.',
+      icon: '📦',
+      skillIds: [visibleSkill._id, hiddenSkill._id],
+      author: testUsers.owner._id,
+      authorName: testUsers.owner.name,
+      tenantId: 'tenant-private',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      __v: 7,
+    });
+
+    currentTestUser = testUsers.reader;
+    const response = await request(app).get('/api/skill-packs').expect(200);
+
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].skillIds).toEqual([visibleSkill._id.toString()]);
+    expect(response.body[0].skillIds).not.toContain(hiddenSkill._id.toString());
+  });
+
   it('uses username or email prefix when the author name is blank', async () => {
     const first = await createSkill({
       name: 'fallback-name-one',
@@ -334,7 +365,7 @@ describe('skill pack routes', () => {
 
     currentTestUser = testUsers.owner;
     const listing = await request(app).get('/api/skill-packs').expect(200);
-    expect(listing.body[0]).not.toHaveProperty('skillIds');
+    expect(listing.body[0].skillIds).toEqual([first._id.toString(), second._id.toString()]);
 
     currentTestUser = testUsers.other;
     await request(app).delete(`/api/skill-packs/${created.body._id}`).expect(403);

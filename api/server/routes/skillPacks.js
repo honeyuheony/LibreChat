@@ -65,10 +65,28 @@ router.use(requireJwtAuth);
 router.use(configMiddleware);
 router.use(checkSkillAccess);
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const packs = await listSkillPacks();
-    return res.json(packs.map((pack) => serializeSkillPack(pack)));
+    const [packs, accessibleSkillIds] = await Promise.all([
+      listSkillPacks(),
+      findAccessibleResources({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType: ResourceType.SKILL,
+        requiredPermissions: PermissionBits.VIEW,
+      }),
+    ]);
+    const accessibleSkillIdSet = new Set(accessibleSkillIds.map((skillId) => skillId.toString()));
+    return res.json(
+      packs.map((pack) =>
+        serializeSkillPack(
+          pack,
+          pack.skillIds
+            .filter((skillId) => accessibleSkillIdSet.has(skillId.toString()))
+            .map((skillId) => skillId.toString()),
+        ),
+      ),
+    );
   } catch (error) {
     logger.error('[skill-packs] Failed to list packs:', error);
     return res.status(500).json({ error: 'Failed to list packs' });
