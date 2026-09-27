@@ -24,6 +24,7 @@ import { createToolFavoriteModel } from './favorite';
 import { createMCPServerModel } from './mcpServer';
 import { createAssistantModel } from './assistant';
 import { createSkillFileModel } from './skillFile';
+import { createSkillPackModel } from './skillPack';
 import { createConversationModel } from './convo';
 import { createToolCallModel } from './toolCall';
 import { createAclEntryModel } from './aclEntry';
@@ -75,6 +76,7 @@ export function createModels(mongoose: typeof import('mongoose')): {
   Prompt: ReturnType<typeof createPromptModel>;
   PromptGroup: ReturnType<typeof createPromptGroupModel>;
   Skill: ReturnType<typeof createSkillModel>;
+  SkillPack: ReturnType<typeof createSkillPackModel>;
   SkillFile: ReturnType<typeof createSkillFileModel>;
   SkillSyncCredential: ReturnType<typeof createSkillSyncCredentialModel>;
   SkillSyncStatus: ReturnType<typeof createSkillSyncStatusModel>;
@@ -128,6 +130,7 @@ export function createModels(mongoose: typeof import('mongoose')): {
     Prompt: createPromptModel(mongoose),
     PromptGroup: createPromptGroupModel(mongoose),
     Skill: createSkillModel(mongoose),
+    SkillPack: createSkillPackModel(mongoose),
     SkillFile: createSkillFileModel(mongoose),
     SkillSyncCredential: createSkillSyncCredentialModel(mongoose),
     SkillSyncStatus: createSkillSyncStatusModel(mongoose),

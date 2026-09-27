@@ -130,6 +130,7 @@ import {
   type UpdateSkillResult,
   type ValidationIssue,
 } from './skill';
+import { createSkillPackMethods, type SkillPackMethods } from './skillPack';
 import { createScheduleMethods, type ScheduleMethods } from './schedule';
 import {
   createAgentQueuedTurnMethods,
@@ -427,6 +428,7 @@ export function createMethods(
     getSoleOwnedResourceIds: aclEntryMethods.getSoleOwnedResourceIds,
   };
   const skillMethods = createSkillMethods(mongoose, skillDeps);
+  const skillPackMethods = createSkillPackMethods(mongoose);
 
   // Tier 1: action methods (created as variable for agent dependency)
   const actionMethods = createActionMethods(mongoose);
@@ -482,6 +484,7 @@ export function createMethods(
     ...spendTokensMethods,
     ...promptMethods,
     ...skillMethods,
+    ...skillPackMethods,
     ...createSkillSyncMethods(mongoose),
     ...agentTriggerDeliveryMethods,
     ...agentQueuedTurnMethods,
@@ -545,6 +548,7 @@ export type {
   SpendTokensMethods,
   PromptMethods,
   SkillMethods,
+  SkillPackMethods,
   SkillDeps,
   CreateSkillInput,
   CreateSkillResult,
