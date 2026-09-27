@@ -1,20 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useRecoilValue } from 'recoil';
+import { Button } from '@librechat/client';
 import { useAtom, useAtomValue } from 'jotai';
-import type { TMessage, TaskProgressEvent } from 'librechat-data-provider';
+import { normalizeServerName } from 'librechat-data-provider';
+import type { TMessage, TaskProgressEvent, MCPServersListResponse } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
-import type { TaskOutput, TaskStepView, TaskToolCallState } from './taskState';
+import type { TaskActivity, TaskOutput, TaskStepView, TaskToolCallState } from './taskState';
 import {
-  collectConversationFiles,
+  formatTaskTime,
   collectTaskOutputs,
   countTaskFootnotes,
-  formatTaskTime,
+  collectToolActivity,
+  collectConversationFiles,
 } from './taskState';
 import { getAgentServerNames } from '~/components/Chat/Input/useAgentConnectorSelection';
 import useTaskRunState, { TASK_STATUS_DOT, TASK_STATUS_LABEL } from './useTaskRunState';
 import { useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
+import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { ephemeralAgentByConvoId } from '~/store/agents';
 import { shortResultTitle } from '~/utils/results';
@@ -39,34 +43,104 @@ const selectMessages = (messages: TMessage[]) => messages;
 function Section({
   title,
   count,
+  action,
   open,
   onToggle,
   children,
 }: {
   title: string;
   count?: ReactNode;
+  /** A link on the heading's right, beside the toggle rather than inside it. */
+  action?: ReactNode;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
 }) {
   return (
     <section className="border-b border-border-light px-[18px] pb-4 pt-3.5">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="mb-2.5 flex w-full items-center gap-2 text-left text-[12.5px] font-bold tracking-[.06em] text-text-secondary"
-      >
-        <span aria-hidden="true" className="w-3 text-[11px] text-text-muted">
-          {open ? '▾' : '▸'}
-        </span>
-        {title}
-        {count != null && (
-          <span className="font-medium tracking-normal text-text-muted">{count}</span>
-        )}
-      </button>
+      <div className="mb-2.5 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left text-[12.5px] font-bold tracking-[.06em] text-text-secondary"
+        >
+          <span aria-hidden="true" className="w-3 text-[11px] text-text-muted">
+            {open ? '▾' : '▸'}
+          </span>
+          {title}
+          {count != null && (
+            <span className="font-medium tracking-normal text-text-muted">{count}</span>
+          )}
+        </button>
+        {action}
+      </div>
       {open && children}
     </section>
+  );
+}
+
+function HeadingLink({
+  onClick,
+  expanded,
+  children,
+}: {
+  onClick: () => void;
+  expanded?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="pill"
+      onClick={onClick}
+      aria-expanded={expanded}
+      className="h-auto px-0 text-[12.5px] font-medium text-link hover:bg-transparent hover:text-link-hover"
+    >
+      {children}
+    </Button>
+  );
+}
+
+/** Tool keys carry the normalized server name, so titles are looked up by that. */
+function useServerTitles(servers: MCPServersListResponse | undefined): Map<string, string> {
+  return useMemo(() => {
+    const titles = new Map<string, string>();
+    for (const [serverName, config] of Object.entries(servers ?? {})) {
+      titles.set(normalizeServerName(serverName), config.title ?? serverName);
+    }
+    return titles;
+  }, [servers]);
+}
+
+function ActivityLog({
+  label,
+  activity,
+  titles,
+}: {
+  label: string;
+  activity: TaskActivity[];
+  titles: Map<string, string>;
+}) {
+  return (
+    <ol
+      aria-label={label}
+      className="mt-2 flex max-h-[180px] flex-col gap-1 overflow-auto border-t border-dashed border-border-light pt-2 text-[12.5px] text-text-secondary"
+    >
+      {activity.map((entry) => (
+        <li key={entry.id} className="flex items-start gap-2 leading-normal">
+          <span className="w-[42px] shrink-0 pt-0.5 font-mono text-[11.5px] text-text-muted">
+            {formatTaskTime(entry.createdAt)}
+          </span>
+          <span className="min-w-0 break-words">
+            {entry.serverName != null
+              ? `${entry.name} · ${titles.get(entry.serverName) ?? entry.serverName}`
+              : entry.name}
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -75,6 +149,8 @@ function ProgressSection({
   awaiting,
   steps,
   progress,
+  activity,
+  serverTitles,
   open,
   onToggle,
 }: {
@@ -83,10 +159,14 @@ function ProgressSection({
   awaiting: boolean;
   steps: TaskStepView[];
   progress: TaskProgressEvent | null;
+  activity: TaskActivity[];
+  serverTitles: Map<string, string>;
   open: boolean;
   onToggle: () => void;
 }) {
   const localize = useLocalize();
+  const [logOpen, setLogOpen] = useState(false);
+  const activityLabel = localize('com_ui_task_activity', { count: activity.length });
   const doneSteps = steps.filter((step) => step.state === 'done').length;
   const liveProgress = !call.finished && !awaiting ? progress : null;
   const percent =
@@ -98,6 +178,13 @@ function ProgressSection({
     <Section
       title={localize('com_ui_task_progress')}
       count={`${doneSteps}/${steps.length}`}
+      action={
+        activity.length > 0 && (
+          <HeadingLink expanded={logOpen} onClick={() => setLogOpen((value) => !value)}>
+            {logOpen ? localize('com_ui_task_activity_close') : activityLabel}
+          </HeadingLink>
+        )
+      }
       open={open}
       onToggle={onToggle}
     >
@@ -154,6 +241,7 @@ function ProgressSection({
           </li>
         ))}
       </ol>
+      {logOpen && <ActivityLog label={activityLabel} activity={activity} titles={serverTitles} />}
     </Section>
   );
 }
@@ -281,20 +369,23 @@ function SubHeading({ children }: { children: ReactNode }) {
 function ContextSection({
   conversationId,
   messages,
+  servers,
   isTaskMode,
   open,
   onToggle,
 }: {
   conversationId: string;
   messages: TMessage[] | undefined;
+  servers: MCPServersListResponse | undefined;
   isTaskMode: boolean;
   open: boolean;
   onToggle: () => void;
 }) {
   const localize = useLocalize();
   const [filesOpen, setFilesOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const manageRef = useRef<HTMLDivElement>(null);
   const files = useMemo(() => collectConversationFiles(messages), [messages]);
-  const { data: servers } = useMCPServersQuery({ enabled: false });
   const chatSelection = useAtomValue(mcpValuesAtomFamily(conversationId));
   const ephemeralAgent = useRecoilValue(ephemeralAgentByConvoId(conversationId));
   const conversation = useRecoilValue(store.conversationByIndex(0));
@@ -305,8 +396,14 @@ function ContextSection({
 
   /** Mirrors the composer: a saved agent's own connectors, less those switched off in this chat;
    *  otherwise the chat menu's servers and the chat's selection. */
+  /** The list is keyed by server name; its entries do not repeat it. */
   const serverRows = useMemo(() => {
-    const catalog = Object.values(servers ?? {});
+    const catalog = Object.entries(servers ?? {}).map(([serverName, config]) => ({
+      serverName,
+      title: config.title,
+      chatMenu: config.chatMenu,
+      consumeOnly: config.consumeOnly,
+    }));
     if (isSavedAgent) {
       const carried = getAgentServerNames(
         tools,
@@ -323,7 +420,20 @@ function ContextSection({
   }, [chatSelection, ephemeralAgent?.disabled_mcp, isSavedAgent, servers, tools]);
 
   return (
-    <Section title={localize('com_ui_task_context')} open={open} onToggle={onToggle}>
+    <Section
+      title={localize('com_ui_task_context')}
+      action={
+        files.length > 0 && (
+          <div ref={manageRef}>
+            <HeadingLink onClick={() => setManageOpen(true)}>
+              {localize('com_sidepanel_manage_files')}
+            </HeadingLink>
+          </div>
+        )
+      }
+      open={open}
+      onToggle={onToggle}
+    >
       <SubHeading>{localize('com_ui_task_files')}</SubHeading>
       {files.length === 0 ? (
         <ContextRow icon="↑" text={localize('com_ui_task_files_none')} muted />
@@ -378,6 +488,9 @@ function ContextSection({
         text={modelName}
         status={localize(isTaskMode ? 'com_ui_task_mode_task' : 'com_ui_task_mode_chat')}
       />
+      {manageOpen && (
+        <MyFilesModal open={manageOpen} onOpenChange={setManageOpen} triggerRef={manageRef} />
+      )}
     </Section>
   );
 }
@@ -423,8 +536,11 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
     enabled: false,
     select: selectMessages,
   });
+  const { data: servers } = useMCPServersQuery({ enabled: false });
+  const serverTitles = useServerTitles(servers);
   const { call, progress, steps, awaiting, status } = useTaskRunState(conversationId);
   const outputs = useMemo(() => collectTaskOutputs(messages), [messages]);
+  const activity = useMemo(() => collectToolActivity(messages), [messages]);
 
   const toggle = (name: keyof typeof sections) => () =>
     setSections((current) => ({ ...current, [name]: !current[name] }));
@@ -469,6 +585,8 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
               awaiting={awaiting}
               steps={steps}
               progress={progress}
+              activity={activity}
+              serverTitles={serverTitles}
               open={sections.progress}
               onToggle={toggle('progress')}
             />
@@ -484,6 +602,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
           <ContextSection
             conversationId={conversationId}
             messages={messages}
+            servers={servers}
             isTaskMode={call != null}
             open={sections.context}
             onToggle={toggle('context')}

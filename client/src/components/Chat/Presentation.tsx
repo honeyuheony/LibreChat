@@ -165,6 +165,7 @@ export default function Presentation({ children }: { children: React.ReactNode }
   }, [conversationId, taskPanel.hasTaskCall, taskPanel.open]);
 
   const panelElement = artifactsElement ?? taskPanelElement ?? subagentElement;
+  const panelKind = artifactsElement == null && taskPanelElement != null ? 'task' : 'artifacts';
 
   return (
     <DragDropWrapper className="relative flex w-full grow overflow-hidden bg-presentation">
@@ -173,7 +174,7 @@ export default function Presentation({ children }: { children: React.ReactNode }
           conversationId={conversationId ?? ''}
           enabled={conversationEndpoint === EModelEndpoint.agents && conversationAgentId != null}
         >
-          <SidePanelGroup panel={panelElement}>
+          <SidePanelGroup panel={panelElement} panelKind={panelKind}>
             <main className="flex h-full flex-col overflow-y-auto" role="main">
               {children}
             </main>

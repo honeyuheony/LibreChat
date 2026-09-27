@@ -1,9 +1,17 @@
 import { useEffect, memo } from 'react';
 import { usePanelRef } from 'react-resizable-panels';
 import { ResizableHandleAlt, ResizablePanel } from '@librechat/client';
+import { cn } from '~/utils';
+
+export interface PanelSlot {
+  id: string;
+  defaultSize: string;
+  minWidthClassName?: string;
+}
 
 interface ArtifactsPanelProps {
   panel: React.ReactNode | null;
+  slot: PanelSlot;
   minSizeMain: string;
   shouldRender: boolean;
   onRenderChange: (shouldRender: boolean) => void;
@@ -11,6 +19,7 @@ interface ArtifactsPanelProps {
 
 const ArtifactsPanel = memo(function ArtifactsPanel({
   panel,
+  slot,
   minSizeMain,
   shouldRender,
   onRenderChange,
@@ -40,15 +49,16 @@ const ArtifactsPanel = memo(function ArtifactsPanel({
         <ResizableHandleAlt withHandle className="bg-border-medium text-text-primary" />
       )}
       <ResizablePanel
-        defaultSize="50"
+        key={slot.id}
+        defaultSize={slot.defaultSize}
         maxSize="70"
         collapsedSize="0"
         collapsible={true}
         minSize={minSizeMain}
         panelRef={artifactsPanelRef}
-        id="artifacts-panel"
+        id={slot.id}
       >
-        <div className="h-full min-w-[400px] overflow-hidden">{panel}</div>
+        <div className={cn('h-full overflow-hidden', slot.minWidthClassName)}>{panel}</div>
       </ResizablePanel>
     </>
   );
