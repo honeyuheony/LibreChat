@@ -39,7 +39,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
       <div
         role="group"
         aria-label={localize('com_skills_builder_todo_minutes')}
-        className="mb-1.5 flex flex-wrap items-center gap-2 text-sm"
+        className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px]"
       >
         <span className="text-text-secondary">{localize('com_skills_builder_minutes_before')}</span>
         <div className="inline-flex flex-wrap gap-1.5">
@@ -62,7 +62,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
         </div>
         <span className="text-text-secondary">{localize('com_skills_builder_minutes_after')}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-[13.5px]">
         <span id="builder-scope-label" className="text-text-secondary">
           {localize('com_skills_builder_scope')}
         </span>

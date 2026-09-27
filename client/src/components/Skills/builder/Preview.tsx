@@ -100,17 +100,15 @@ export function Block({
 }) {
   const ref = useRevealWhenActive(active);
   return (
-    <section ref={ref} data-active={active} className={cn(blockFrame(active), 'px-4 py-3')}>
-      <h5 className="mb-1.5 flex items-center gap-1 text-xs font-bold text-text-secondary">
-        {title}
-      </h5>
+    <section ref={ref} data-active={active} className={cn(blockFrame(active), 'px-[14px] py-3')}>
+      <h5 className="mb-1.5 flex items-center gap-1 text-xs font-bold text-text-muted">{title}</h5>
       {children}
     </section>
   );
 }
 
-function Ghost({ children }: { children: ReactNode }) {
-  return <span className="text-text-muted/60">{children}</span>;
+function Ghost({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn('text-text-muted/60', className)}>{children}</span>;
 }
 
 function EditButton({
@@ -465,7 +463,7 @@ export default function Preview({
         )}
         {editing !== 'triggers' && values.triggers.length === 0 && (
           <EditButton label={clickLabel} onClick={() => setEditing('triggers')}>
-            <Ghost>{localize('com_skills_builder_when_ghost')}</Ghost>
+            <Ghost className="text-[15.5px]">{localize('com_skills_builder_when_ghost')}</Ghost>
           </EditButton>
         )}
       </Block>
@@ -486,7 +484,7 @@ export default function Preview({
             ))}
           </ol>
         ) : (
-          <Ghost>{localize('com_skills_builder_how_ghost')}</Ghost>
+          <Ghost className="text-[15.5px]">{localize('com_skills_builder_how_ghost')}</Ghost>
         )}
         {state.aiOff.length > 0 && (
           <p className="mt-1 text-xs text-text-secondary">
@@ -541,7 +539,7 @@ export default function Preview({
         ) : (
           <div className="text-sm">
             <EditButton label={clickLabel} onClick={() => setEditing('output')}>
-              <b>{localize(OUTPUT_CARD[values.output].label)}</b>
+              <b className="text-[15.5px]">{localize(OUTPUT_CARD[values.output].label)}</b>
             </EditButton>
             {values.extras.length > 0 && (
               <span className="text-text-secondary">

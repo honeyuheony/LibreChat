@@ -466,10 +466,21 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
       .forEach((row) => expect(row).toHaveClass('h-[22px]'));
   });
 
-  it('uses 14px corners for the preview blocks', () => {
+  it('uses reference padding and muted headings for preview blocks', () => {
     render(<Harness />);
 
-    expect(block('com_skills_builder_share')).toHaveClass('rounded-[14px]');
+    const share = block('com_skills_builder_share') as HTMLElement;
+    expect(share).toHaveClass('rounded-[14px]', 'px-[14px]', 'py-3');
+    expect(share.querySelector('h5')).toHaveClass('text-text-muted');
+  });
+
+  it('uses reference text sizes and color for empty hints and the input placeholder', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('com_skills_builder_output_report')).toHaveClass('text-[15.5px]');
+    expect(screen.getByText('com_skills_builder_when_ghost')).toHaveClass('text-[15.5px]');
+    expect(screen.getByText('com_skills_builder_how_ghost')).toHaveClass('text-[15.5px]');
+    expect(textarea()).toHaveClass('text-[15.5px]', 'placeholder:text-text-muted');
   });
 
   it('draws the draft icon with an emoji font so the circle is not left blank', () => {
@@ -544,6 +555,24 @@ describe('Share step matches the reference screen (12)', () => {
       'aria-checked:bg-surface-submit',
       'aria-checked:font-semibold',
       'aria-checked:text-text-on-status',
+    );
+  });
+
+  it('uses the reference size for share guidance labels', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={{ ...chat, manualMinutes: 30 }} />);
+
+    const share = block('com_skills_builder_share') as HTMLElement;
+    expect(
+      within(share).getByRole('group', { name: 'com_skills_builder_todo_minutes' }),
+    ).toHaveClass('text-[13.5px]');
+    expect(within(share).getByText('com_skills_builder_scope').parentElement).toHaveClass(
+      'text-[13.5px]',
     );
   });
 
