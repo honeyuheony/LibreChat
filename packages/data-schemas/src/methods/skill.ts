@@ -1167,6 +1167,11 @@ export function createSkillMethods(
   getSkillAuthorDepartments: (
     authorIds: Array<Types.ObjectId | string>,
   ) => Promise<Record<string, string>>;
+  updateSkillReview: (params: {
+    skillId: Types.ObjectId | string;
+    reviewedAt: Date | null;
+    reviewedBy: Types.ObjectId | string | null;
+  }) => Promise<{ matchedCount: number }>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
       skillId: Types.ObjectId | string;
