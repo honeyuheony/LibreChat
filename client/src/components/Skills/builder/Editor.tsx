@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Spinner, useToastContext } from '@librechat/client';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
@@ -26,6 +26,7 @@ import { pickTrialSpec } from './trial';
 import useSession from './useSession';
 import celebrate from './celebrate';
 import { forkState } from './state';
+import usePeers from './usePeers';
 import Builder from './Builder';
 
 /**
@@ -99,6 +100,12 @@ function EditorPage({ entry, fork, forkTitle, chat }: EditorPageProps) {
     { text: entry.text, fork, chat },
   );
 
+  const [peeking, setPeeking] = useState(false);
+  const peers = usePeers(peeking, session.state.values.output, [
+    session.forkOf,
+    session.skill?._id,
+  ]);
+
   const author = user?.name || user?.username || '';
 
   const publish = async () => {
@@ -127,6 +134,8 @@ function EditorPage({ entry, fork, forkTitle, chat }: EditorPageProps) {
       department={user?.department}
       connectorChoices={connectorChoices}
       fromChat={entry.from === 'chat'}
+      peers={peers}
+      onPeek={setPeeking}
       forkTitle={forkTitle}
       onCancel={() => navigate(MARKET_PATH)}
       onPublish={() => void publish()}

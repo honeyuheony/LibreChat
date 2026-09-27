@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { TSkill, TSkillDraft } from 'librechat-data-provider';
 import type { SessionDeps } from '../useSession';
+import type { PeerExample } from '../peers';
 import { DRAFT_DEBOUNCE_MS } from '../useDraft';
 import useSession from '../useSession';
 import Builder from '../Builder';
@@ -38,7 +39,13 @@ const deps: SessionDeps = {
   wait: async () => undefined,
 };
 
-function Harness({ department }: { department?: string }) {
+type HarnessProps = {
+  department?: string;
+  peers?: PeerExample[];
+  onPeek?: (open: boolean) => void;
+};
+
+function Harness({ department, peers = [], onPeek }: HarnessProps) {
   const session = useSession(deps);
   return (
     <Builder
@@ -46,11 +53,26 @@ function Harness({ department }: { department?: string }) {
       author="홍길동"
       department={department}
       connectorChoices={['confluence', 'jira', 'mail']}
+      peers={peers}
+      onPeek={onPeek}
       onCancel={jest.fn()}
       onPublish={jest.fn()}
     />
   );
 }
+
+const peer: PeerExample = {
+  skill: {
+    _id: 'peer-1',
+    name: 'weekly-report',
+    displayTitle: '주간보고 작성',
+    icon: '📋',
+    authorName: '박지원',
+    authorDepartment: '기획팀',
+    useCount: 1200,
+  } as TSkill,
+  text: '팀원 주간보고를 취합한다. 금주 실적과 차주 계획을 나눈다.\n마감은 금요일이다.',
+};
 
 const textarea = () => screen.getByLabelText('com_skills_builder_text_heading');
 const block = (title: string) => screen.getByText(title, { selector: 'h5' }).closest('section');
@@ -85,12 +107,45 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(screen.queryByText('출장보고 양식.hwp')).not.toBeInTheDocument();
   });
 
-  it('opens and closes the note on how to start from someone else’s example', () => {
-    render(<Harness />);
+  it('lists others’ agents with their text and closes the list again', () => {
+    const onPeek = jest.fn();
+    render(<Harness peers={[peer]} onPeek={onPeek} />);
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
-    expect(screen.getByText('com_skills_builder_peek_hint')).toBeVisible();
+
+    expect(onPeek).toHaveBeenLastCalledWith(true);
+    const list = screen.getByRole('list', { name: 'com_skills_builder_peek' });
+    const item = within(list).getByRole('listitem');
+    expect(within(item).getByText('주간보고 작성')).toBeVisible();
+    expect(item).toHaveTextContent('com_skills_by_author_department');
+    expect(item).toHaveTextContent('com_skills_meta_runs:{"value":"1,200"}');
+    expect(item.querySelector('pre')).toHaveTextContent('마감은 금요일이다.');
+
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek_close' }));
-    expect(screen.queryByText('com_skills_builder_peek_hint')).not.toBeInTheDocument();
+    expect(onPeek).toHaveBeenLastCalledWith(false);
+    expect(screen.queryByRole('list', { name: 'com_skills_builder_peek' })).not.toBeInTheDocument();
+  });
+
+  it('says there is nothing to show when no example is visible', () => {
+    render(<Harness peers={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    expect(screen.getByText('com_skills_builder_peek_empty')).toBeVisible();
+  });
+
+  it('copies an example into the text box one sentence per line, as direct text from that agent', () => {
+    render(<Harness peers={[peer]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek_copy' }));
+
+    expect(screen.getByLabelText('com_skills_builder_how')).toHaveValue(
+      '팀원 주간보고를 취합한다.\n금주 실적과 차주 계획을 나눈다.\n마감은 금요일이다.',
+    );
+    const textSection = screen.getByLabelText('com_skills_builder_how').closest('section');
+    expect(
+      within(textSection as HTMLElement).getByText(
+        'com_skills_builder_source_copied:{"name":"주간보고 작성"}',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'com_skills_builder_peek' })).not.toBeInTheDocument();
   });
 
   it('keeps the AI-added badge on the same line as the end of its sentence', async () => {

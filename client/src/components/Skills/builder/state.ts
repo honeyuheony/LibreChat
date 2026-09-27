@@ -421,7 +421,7 @@ export function metadataList(skill: Pick<TSkill, 'frontmatter'>, key: string): s
 }
 
 /** 직접 모드로 쓴 원본은 글칸 원문을, 아니면 AI 줄까지 합쳐 저장된 본문 번호 목록을 쓴다. */
-function originalLines(skill: TSkill): string {
+export function originalLines(skill: TSkill): string {
   if (skill.builder?.direct && skill.builder.text.trim()) {
     return skill.builder.text;
   }
