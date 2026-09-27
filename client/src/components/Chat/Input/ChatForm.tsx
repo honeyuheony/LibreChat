@@ -1,8 +1,16 @@
 import { memo, useRef, useMemo, useEffect, useState, useCallback } from 'react';
+import { useSetAtom } from 'jotai';
 import { useWatch } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { useRecoilState, useRecoilValue, useRecoilCallback } from 'recoil';
 import { composerSurfaceClasses, TextareaAutosize } from '@librechat/client';
-import { Constants, isAssistantsEndpoint, isAgentsEndpoint } from 'librechat-data-provider';
+import {
+  Constants,
+  Permissions,
+  PermissionTypes,
+  isAgentsEndpoint,
+  isAssistantsEndpoint,
+} from 'librechat-data-provider';
 import type { TChatProject, TMessage, TConversation } from 'librechat-data-provider';
 import type { SetterOrUpdater } from 'recoil';
 import type { ExtendedFile, FileSetter, ConvoGenerator } from '~/common';
@@ -11,6 +19,7 @@ import {
   useTextarea,
   useAutoSave,
   useLocalize,
+  useHasAccess,
   useRequiresKey,
   useHandleKeyUp,
   useQueryParams,
@@ -27,6 +36,11 @@ import {
   getFilesDraftCached,
   isPastedTextFileMarked,
 } from '~/utils';
+import AgentSuggestChips, {
+  BUILDER_PATH,
+  builderEntryByConvoId,
+  readAgentBuildRequest,
+} from './AgentSuggestChips';
 import {
   useChatContext,
   useChatFormContext,
@@ -37,6 +51,7 @@ import {
   PendingToolApprovalButton,
   PendingToolApprovalPanel,
 } from '~/components/Chat/approval/Review';
+import { mainTextareaId, BadgeItem, isEphemeralAgent } from '~/common';
 import PendingManualSkillsChips from './PendingManualSkillsChips';
 import usePastedTextEdit from '~/hooks/Files/usePastedTextEdit';
 import useAskAnswerMode from '~/hooks/Input/useAskAnswerMode';
@@ -48,7 +63,6 @@ import DuringRunSendButton from './DuringRunSendButton';
 import useSkillAttachItems from './useSkillAttachItems';
 import ProjectLandingChip from '../ProjectLandingChip';
 import { useGetStartupConfig } from '~/data-provider';
-import { mainTextareaId, BadgeItem } from '~/common';
 import PendingSteerChips from './PendingSteerChips';
 import PendingQuoteChips from './PendingQuoteChips';
 import AttachFileChat from './Files/AttachFileChat';
@@ -332,6 +346,16 @@ const ChatForm = memo(function ChatForm({
   );
 
   const { submitMessage, submitPrompt } = useSubmitMessage();
+  const navigate = useNavigate();
+  const canUseSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.USE,
+  });
+  const canCreateSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.CREATE,
+  });
+  const setBuilderEntry = useSetAtom(builderEntryByConvoId(conversationId));
   const codeWorkspace = useCodeWorkspace(conversation, addedConvo);
 
   /** Queued/steered sends carry their FULL submission context: explicit
@@ -630,12 +654,62 @@ const ChatForm = memo(function ChatForm({
     bottomClearance = 'sm:mb-10';
   }
 
-  /** Answer mode, then during-run steering or queueing (a run in flight, or a
-   *  queued follow-up about to start), then an ordinary send: the same route
-   *  for typed, dictated, and shortcut-bound submissions. */
+  const hasPendingManualSkills = useRecoilCallback(
+    ({ snapshot }) =>
+      (convoId: string) =>
+        snapshot.getLoadable(store.pendingManualSkillsByConvoId(convoId)).getValue().length > 0,
+    [],
+  );
+
+  /** "…하는 agent 만들어줘" opens the agent editor with the tail stripped instead of asking the
+   *  model. Answer mode, during-run sends, attachments and picked skills keep the ordinary send. */
+  const openBuilderInstead = useCallback(
+    (text: string): boolean => {
+      if (!canCreateSkills || answerMode.active || steering.duringRunActive || files.size > 0) {
+        return false;
+      }
+      if (hasPendingManualSkills(conversationId)) {
+        return false;
+      }
+      const request = readAgentBuildRequest(text);
+      if (request == null) {
+        return false;
+      }
+      const entry = {
+        text: request,
+        from: 'chat' as const,
+        conversationId: conversationId === Constants.NEW_CONVO ? undefined : conversationId,
+      };
+      consumeDraft();
+      methods.reset();
+      setBuilderEntry(entry);
+      navigate(BUILDER_PATH, { state: entry });
+      return true;
+    },
+    [
+      canCreateSkills,
+      answerMode.active,
+      steering.duringRunActive,
+      files.size,
+      hasPendingManualSkills,
+      conversationId,
+      consumeDraft,
+      methods,
+      setBuilderEntry,
+      navigate,
+    ],
+  );
+
+  /** An agent build request opens the editor; otherwise answer mode, then during-run
+   *  steering or queueing (a run in flight, or a queued follow-up about to start), then an
+   *  ordinary send: the same route for typed, dictated, and shortcut-bound submissions. */
   const submitComposerText = useCallback(
-    (data: { text: string }): false | void =>
-      submitFromComposer(
+    (data: { text: string }): false | void => {
+      if (openBuilderInstead(data.text)) {
+        return;
+      }
+      setBuilderEntry(null);
+      return submitFromComposer(
         {
           answerMode,
           steering,
@@ -643,8 +717,9 @@ const ChatForm = memo(function ChatForm({
           reset: () => methods.reset(),
         },
         data,
-      ),
-    [answerMode, steering, submitMessage, methods],
+      );
+    },
+    [openBuilderInstead, setBuilderEntry, answerMode, steering, submitMessage, methods],
   );
 
   return (
@@ -759,6 +834,17 @@ const ChatForm = memo(function ChatForm({
               )}
             >
               <TextareaHeader addedConvo={addedConvo} setAddedConvo={setAddedConvo} />
+              {index === 0 && (
+                <AgentSuggestChips
+                  conversationId={conversationId}
+                  text={textValue ?? ''}
+                  suggestEnabled={
+                    canUseSkills &&
+                    !composerReserved &&
+                    (!conversation?.agent_id || isEphemeralAgent(conversation.agent_id))
+                  }
+                />
+              )}
               <PendingManualSkillsChips conversationId={conversationId} />
               {quotesEnabled && (
                 <PendingQuoteChips conversationId={conversationId} focusComposer={focusTextArea} />
