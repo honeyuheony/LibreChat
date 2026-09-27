@@ -169,6 +169,12 @@ jest.mock('../ParallelContent', () => ({
   ),
 }));
 
+jest.mock('../Task/TaskSaveOffer', () => ({
+  MessageSaveOffer: ({ messageId }: { messageId: string }) => (
+    <div data-testid="message-save-offer" data-message-id={messageId} />
+  ),
+}));
+
 import ContentParts from '../ContentParts';
 
 const baseProps = {
@@ -997,5 +1003,42 @@ describe('ContentParts — settled content identity across compaction', () => {
       'data-animate-entrance',
       'true',
     );
+  });
+});
+
+describe('ContentParts — save-as-agent offer', () => {
+  const textPart = (text: string) =>
+    ({ type: ContentTypes.TEXT, text }) as unknown as TMessageContentParts;
+
+  it('places the offer once, after the whole answer body', () => {
+    const phase = {
+      type: ContentTypes.ACTIVITY_LABEL,
+      [ContentTypes.ACTIVITY_LABEL]: 'Read the documents',
+      activity_label_type: 'phase',
+      activity_start_index: 0,
+      activity_count: 1,
+      pending: false,
+    } as unknown as TMessageContentParts;
+    render(
+      <ContentParts
+        {...baseProps}
+        content={[textPart('first'), phase, textPart('middle'), textPart('last')]}
+      />,
+    );
+
+    const offers = screen.getAllByTestId('message-save-offer');
+    expect(offers).toHaveLength(1);
+    expect(offers[0]).toHaveAttribute('data-message-id', 'msg-1');
+    const parts = screen.getAllByTestId(`real-part-${ContentTypes.TEXT}`);
+    const lastPart = parts[parts.length - 1];
+    expect(lastPart.compareDocumentPosition(offers[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('never offers under a message the user wrote', () => {
+    render(<ContentParts {...baseProps} isCreatedByUser content={[textPart('question')]} />);
+
+    expect(screen.queryByTestId('message-save-offer')).toBeNull();
   });
 });

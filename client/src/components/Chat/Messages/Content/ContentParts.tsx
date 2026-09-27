@@ -28,6 +28,7 @@ import { ParallelContentRenderer, type PartWithIndex } from './ParallelContent';
 import { MediaContext, MessageContext, SearchContext } from '~/Providers';
 import MemoryArtifacts, { hasMemoryArtifacts } from './MemoryArtifacts';
 import { hasParallelLanes, parallelLaneGroups } from '~/utils/lanes';
+import { MessageSaveOffer } from './Task/TaskSaveOffer';
 import PendingSkillCall from './Parts/PendingSkillCall';
 import ActivityPhaseGroup from './ActivityPhaseGroup';
 import { hasPendingApprovalInPart } from '~/utils';
@@ -1111,7 +1112,7 @@ const ContentPartsBody = memo(function ContentPartsBody({
 });
 
 const ContentParts = memo(function ContentParts(props: ContentPartsProps) {
-  const { attachments } = props;
+  const { attachments, content, messageId, isCreatedByUser, edit } = props;
   /** Published once for the whole message so every markdown block below —
    *  including the ones nested inside phase cards — resolves a bare
    *  `![DTI](5_dti.png)` against the files this turn actually produced.
@@ -1130,6 +1131,7 @@ const ContentParts = memo(function ContentParts(props: ContentPartsProps) {
   return (
     <MediaContext.Provider value={media}>
       <ContentPartsBody {...props} />
+      {content != null && !isCreatedByUser && !edit && <MessageSaveOffer messageId={messageId} />}
     </MediaContext.Provider>
   );
 });
