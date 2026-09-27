@@ -27,15 +27,16 @@ export const useParentSubagentsQuery = (
     [QueryKeys.parentSubagents, parentConversationId],
     () => dataService.getParentSubagents(parentConversationId),
     {
-      enabled:
-        parentConversationId !== '' &&
-        parentConversationId !== Constants.NEW_CONVO &&
-        parentConversationId !== Constants.PENDING_CONVO,
       staleTime: 5_000,
       refetchOnWindowFocus: true,
       refetchInterval: parentSubagentsRefetchInterval,
       refetchIntervalInBackground: false,
       ...config,
+      enabled:
+        parentConversationId !== '' &&
+        parentConversationId !== Constants.NEW_CONVO &&
+        parentConversationId !== Constants.PENDING_CONVO &&
+        config?.enabled !== false,
     },
   );
 
@@ -111,12 +112,12 @@ export const useSubagentThreadQuery = (
     [QueryKeys.subagentThread, parentConversationId, threadId, taskId],
     () => dataService.getSubagentThread(parentConversationId, threadId, taskId),
     {
-      enabled: parentConversationId !== '' && threadId !== '',
       retry: false,
       refetchOnWindowFocus: true,
       refetchInterval: (view) =>
         subagentThreadRefetchInterval(view, readiness.deadline, Date.now(), taskId),
       ...config,
+      enabled: parentConversationId !== '' && threadId !== '' && config?.enabled !== false,
     },
   );
 
