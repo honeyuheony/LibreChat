@@ -150,3 +150,11 @@ export function isVisibleToDepartment(
   }
   return userDepartment !== undefined && userDepartment === skill.authorDepartment;
 }
+
+/** 배포 스킬을 요청한 사용자에게 보이거나 불러와도 되는지. 개별 조회와 실행 로딩이 함께 쓴다. */
+export function isDeploymentSkillVisibleTo(
+  skill: { marketProfile?: TSkillMarketProfile; authorDepartment?: string },
+  user: unknown,
+): boolean {
+  return isVisibleToDepartment(skill, readUserDepartment(user));
+}

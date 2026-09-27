@@ -16,3 +16,4 @@ export * from './fork';
 export * from './draft';
 export * from './publish';
 export * from './metrics';
+export { isDeploymentSkillVisibleTo } from './market';

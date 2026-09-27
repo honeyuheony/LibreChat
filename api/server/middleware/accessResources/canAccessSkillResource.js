@@ -1,7 +1,7 @@
 const { ResourceType, PermissionBits } = require('librechat-data-provider');
 const { canAccessResource } = require('./canAccessResource');
 const { getSkillById } = require('~/models');
-const { getDeploymentSkillById } = require('@librechat/api');
+const { getDeploymentSkillById, isDeploymentSkillVisibleTo } = require('@librechat/api');
 
 /**
  * Skill-specific middleware factory that checks skill access permissions.
@@ -37,6 +37,12 @@ const canAccessSkillResource = (options) => {
       return res.status(403).json({
         error: 'Forbidden',
         message: 'Deployment skills are read-only',
+      });
+    }
+    if (!isDeploymentSkillVisibleTo(deploymentSkill, req.user)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Insufficient permissions to access this skill',
       });
     }
     req.resourceAccess = {
