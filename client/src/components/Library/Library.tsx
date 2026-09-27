@@ -17,6 +17,7 @@ import type { TranslationKeys } from '~/hooks';
 import { useTaskResultsInfiniteQuery } from '~/data-provider/Tasks';
 import { RESULT_QUERY_PARAM } from '~/components/Task/useTaskPanel';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import { shortResultTitle } from '~/utils/results';
 import { useLocalize } from '~/hooks';
 
@@ -177,7 +178,7 @@ export default function Library() {
       className="relative flex h-full w-full grow flex-col overflow-y-auto bg-presentation"
       data-testid="library"
     >
-      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+      <header className={pageTopBarClassName}>
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_ui_library')}</span>
       </header>

@@ -16,6 +16,7 @@ import {
 } from '~/data-provider/User';
 import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import { useLocalize } from '~/hooks';
 
 export default function UserSettings() {
@@ -172,7 +173,7 @@ export default function UserSettings() {
       className="relative flex h-full w-full grow flex-col overflow-y-auto bg-presentation"
       data-testid="user-settings"
     >
-      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+      <header className={pageTopBarClassName}>
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_nav_settings')}</span>
       </header>

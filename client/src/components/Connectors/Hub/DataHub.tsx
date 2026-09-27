@@ -21,6 +21,7 @@ import {
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
 import RecentActivity from './RecentActivity';
 import ConnectorDetail from './Detail';
@@ -224,7 +225,7 @@ export default function DataHub() {
       className="relative flex h-full w-full grow flex-col overflow-y-auto bg-presentation"
       data-testid="data-hub"
     >
-      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+      <header className={pageTopBarClassName}>
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">
           {localize('com_ui_data_hub_topbar_title')}
