@@ -198,10 +198,12 @@ export default function TaskSchemaApproval({
           >
             {estimate.data != null && (
               <span className="text-sm text-text-secondary">
-                {localize('com_ui_task_estimate', {
-                  0: estimate.data.minutes.min,
-                  1: estimate.data.minutes.max,
-                })}
+                {estimate.data.minutes.min === estimate.data.minutes.max
+                  ? localize('com_ui_task_estimate_single', { 0: estimate.data.minutes.min })
+                  : localize('com_ui_task_estimate', {
+                      0: estimate.data.minutes.min,
+                      1: estimate.data.minutes.max,
+                    })}
                 {' · '}
                 {localize(
                   estimate.data.cached > 0

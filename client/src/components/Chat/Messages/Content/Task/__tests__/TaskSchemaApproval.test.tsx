@@ -132,6 +132,15 @@ describe('TaskSchemaApproval', () => {
     expect(mockEstimate).toHaveBeenCalledWith(CONVERSATION_ID, args.fields);
   });
 
+  test('shows a single minute count when the estimate range has no spread', async () => {
+    renderCard();
+
+    expect(
+      await screen.findByText('com_ui_task_estimate_single:1 · com_ui_task_estimate_first'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/com_ui_task_estimate:/)).not.toBeInTheDocument();
+  });
+
   test('asks for a new estimate once the chips settle and keeps the last one meanwhile', async () => {
     jest.useFakeTimers();
     try {
@@ -148,7 +157,7 @@ describe('TaskSchemaApproval', () => {
       expect(mockEstimate).toHaveBeenCalledTimes(1);
       expect(screen.getByText('com_ui_task_schema_intro:12', { exact: false })).toBeVisible();
       expect(
-        screen.getByText('com_ui_task_estimate:1|1 · com_ui_task_estimate_first'),
+        screen.getByText('com_ui_task_estimate_single:1 · com_ui_task_estimate_first'),
       ).toBeVisible();
 
       await act(async () => {

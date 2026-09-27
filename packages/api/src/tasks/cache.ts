@@ -2,7 +2,7 @@ import type { TaskCell } from 'librechat-data-provider';
 import type { Model } from 'mongoose';
 
 /** Bump when the extraction prompt or its output contract changes; old rows stop matching. */
-export const EXTRACT_PROMPT_VERSION = 'extract-v1';
+export const EXTRACT_PROMPT_VERSION = 'extract-v2';
 /** Bump when the per-document summary prompt or its output contract changes. */
 export const SUMMARY_PROMPT_VERSION = 'summary-v1';
 
