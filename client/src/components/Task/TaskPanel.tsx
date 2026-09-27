@@ -312,11 +312,14 @@ function OutputsSection({
                   </span>
                   <span className="min-w-0 flex-1">
                     <b className="block truncate font-semibold text-text-primary">
-                      {shortResultTitle({
-                        kind: output.kind,
-                        title: output.title,
-                        rows: output.stats?.docs,
-                      })}
+                      {shortResultTitle(
+                        {
+                          kind: output.kind,
+                          title: output.title,
+                          rows: output.stats?.docs,
+                        },
+                        (rows) => localize('com_ui_task_count', { 0: String(rows) }),
+                      )}
                     </b>
                     <OutputMeta output={output} />
                   </span>

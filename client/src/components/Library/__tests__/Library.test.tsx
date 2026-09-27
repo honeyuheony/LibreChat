@@ -77,7 +77,7 @@ describe('Library', () => {
     );
     renderLibrary();
 
-    await screen.findByText('분야별 비교표 · 12건');
+    await screen.findByText('분야별 비교표 · com_ui_task_count {"0":"12"}');
     const [table, report, summary] = bodyRows().map(cellTexts);
     expect(table[1]).toBe('com_ui_library_kind_table {"0":"12"}');
     expect(table[4]).toBe('com_ui_task_excel');
@@ -102,7 +102,9 @@ describe('Library', () => {
     );
     renderLibrary();
 
-    expect(await screen.findByRole('link', { name: '비교표 · 3건' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: '비교표 · com_ui_task_count {"0":"3"}' }),
+    ).toBeInTheDocument();
   });
 
   it('keeps only the table title prefix when its row count is missing', async () => {
