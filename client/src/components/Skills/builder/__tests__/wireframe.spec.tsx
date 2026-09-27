@@ -351,10 +351,23 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     render(<Harness />);
 
     const skillRow = screen.getByRole('treeitem', { name: /SKILL\.md/ });
-    expect(skillRow).toHaveClass('text-accent-primary');
+    /** The wireframe fills the selected row with brand-100 (237,233,254); the
+     *  theme carries that exact value as the user-bubble surface. */
+    expect(skillRow).toHaveClass('bg-surface-message-user', 'text-accent-primary-hover');
+    expect(skillRow).not.toHaveClass('bg-surface-brand-subtle');
     expect(within(skillRow).getByText('com_skills_builder_folder_main')).toHaveClass(
       'text-accent-primary',
     );
+    expect(screen.getByText('skills/agent-draft/SKILL.md')).toHaveClass(
+      'text-[11.5px]',
+      'text-text-muted',
+    );
+    expect(screen.getByText('com_skills_builder_folder_empty')).toHaveClass('text-text-muted');
+  });
+
+  it('sets the dialog title in the wireframe bold weight', () => {
+    render(<Harness />);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveClass('font-bold');
   });
 
   it('still saves an unnamed draft under a generated agent- name, not the draft folder name', async () => {
