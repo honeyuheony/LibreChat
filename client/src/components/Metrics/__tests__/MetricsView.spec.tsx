@@ -168,6 +168,7 @@ describe('MetricsView', () => {
     const runsCell = within(firstAgentRow).getByRole('cell', { name: '5,422' });
     expect(runsCell).toHaveClass('px-2', 'py-1.5');
     const runBar = runsCell.querySelector('span[aria-hidden="true"]');
+    expect(runBar).toHaveStyle({ width: '90px' });
     expect(runBar?.classList.contains('bg-gradient-to-r')).toBe(true);
     expect(runBar?.classList.contains('from-accent-primary')).toBe(true);
     expect(runBar?.classList.contains('to-accent-primary-hover')).toBe(true);
@@ -200,7 +201,17 @@ describe('MetricsView', () => {
     renderMetrics();
 
     expect(await screen.findByText('com_metrics_empty_contributors')).toBeInTheDocument();
-    expect(screen.getByText('com_metrics_base_total:value=3')).toBeInTheDocument();
+    const baseTotalRow = screen.getByRole('row', { name: /com_metrics_base_total/ });
+    expect(baseTotalRow).toHaveClass('border-b', 'border-border-light');
+    const emptyContributorRow = screen.getByRole('row', {
+      name: /com_metrics_empty_contributors/,
+    });
+    expect(within(emptyContributorRow).getByRole('cell')).toHaveClass(
+      'border-b',
+      'border-border-light',
+      'px-2',
+      'py-1.5',
+    );
   });
 
   it('shows an error and retries the interrupted request', async () => {

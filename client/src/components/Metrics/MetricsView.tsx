@@ -218,7 +218,7 @@ function AgentRanking({
                 </tr>
               );
             })}
-            <tr className="text-text-secondary">
+            <tr className="border-b border-border-light text-text-secondary">
               <td className="px-2 py-1.5">
                 {localize('com_metrics_base_total', {
                   value: formatNumber(report.baseTotal.count, locale),
@@ -285,7 +285,10 @@ function ContributorRanking({
           <tbody>
             {contributors.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-text-tertiary">
+                <td
+                  colSpan={5}
+                  className="border-b border-border-light px-2 py-1.5 text-center text-text-tertiary"
+                >
                   {localize('com_metrics_empty_contributors')}
                 </td>
               </tr>
