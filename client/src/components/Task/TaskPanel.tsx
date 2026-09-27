@@ -16,11 +16,12 @@ import {
 } from './taskState';
 import { getAgentServerNames } from '~/components/Chat/Input/useAgentConnectorSelection';
 import useTaskRunState, { TASK_STATUS_DOT, TASK_STATUS_LABEL } from './useTaskRunState';
-import { useGetMessagesByConvoId, useMCPServersQuery } from '~/data-provider';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { ephemeralAgentByConvoId } from '~/store/agents';
+import { useMCPServersQuery } from '~/data-provider';
+import useCachedMessages from './useCachedMessages';
 import { shortResultTitle } from '~/utils/results';
 import { mcpValuesAtomFamily } from '~/store/mcp';
 import { taskPanelState } from '~/store/task';
@@ -37,8 +38,6 @@ const OUTPUT_ICON: Record<TaskOutput['kind'], { label?: string; className: strin
   summary: { label: 'doc', className: 'bg-status-success-subtle text-status-success' },
   report: { label: 'hwp', className: 'bg-status-warning-subtle text-status-warning-strong' },
 };
-
-const selectMessages = (messages: TMessage[]) => messages;
 
 function Section({
   title,
@@ -535,10 +534,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   const [panel, setPanel] = useAtom(taskPanelState);
   const [sections, setSections] = useState({ progress: true, outputs: true, context: true });
   const conversation = useRecoilValue(store.conversationByIndex(0));
-  const { data: messages } = useGetMessagesByConvoId(conversationId, {
-    enabled: false,
-    select: selectMessages,
-  });
+  const messages = useCachedMessages(conversationId);
   const { data: servers } = useMCPServersQuery({ enabled: false });
   const serverTitles = useServerTitles(servers);
   const { call, progress, steps, awaiting, status } = useTaskRunState(conversationId);

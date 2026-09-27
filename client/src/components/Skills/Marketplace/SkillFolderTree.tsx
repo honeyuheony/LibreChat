@@ -5,38 +5,11 @@ import {
   useGetSkillQuery,
   useListSkillFilesQuery,
 } from '~/data-provider';
+import { folderIndent, folderRows } from '../utils/tree';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 const SKILL_MD = 'SKILL.md';
-
-type TreeRow = { kind: 'dir' | 'file'; path: string; label: string; depth: number };
-
-/** 폴더를 먼저, 같은 깊이에서는 이름순으로 펼친다. */
-function buildTreeRows(paths: string[]): TreeRow[] {
-  const sorted = paths
-    .slice()
-    .sort((a, b) => (a.includes('/') ? 0 : 1) - (b.includes('/') ? 0 : 1) || a.localeCompare(b));
-  const rows: TreeRow[] = [];
-  const seenDirs = new Set<string>();
-  for (const filePath of sorted) {
-    const segments = filePath.split('/');
-    for (let i = 1; i < segments.length; i++) {
-      const dir = segments.slice(0, i).join('/');
-      if (!seenDirs.has(dir)) {
-        seenDirs.add(dir);
-        rows.push({ kind: 'dir', path: dir, label: `${segments[i - 1]}/`, depth: i });
-      }
-    }
-    rows.push({
-      kind: 'file',
-      path: filePath,
-      label: segments[segments.length - 1],
-      depth: segments.length,
-    });
-  }
-  return rows;
-}
 
 /** 스킬 폴더(SKILL.md 와 딸린 파일)를 트리로 보이고, 고른 파일의 내용을 옆에 보인다. */
 export default function SkillFolderTree({
@@ -55,7 +28,7 @@ export default function SkillFolderTree({
 
   const rows = useMemo(
     () =>
-      buildTreeRows([SKILL_MD, ...(filesQuery.data?.files ?? []).map((file) => file.relativePath)]),
+      folderRows([SKILL_MD, ...(filesQuery.data?.files ?? []).map((file) => file.relativePath)]),
     [filesQuery.data?.files],
   );
 
@@ -81,9 +54,9 @@ export default function SkillFolderTree({
             <div
               key={`dir:${row.path}`}
               className="whitespace-nowrap py-[3px] pr-2 font-semibold text-text-primary"
-              style={{ paddingLeft: row.depth * 16 + 8 }}
+              style={{ paddingLeft: folderIndent(row.depth) }}
             >
-              {`▾ ${row.label}`}
+              {`▾ ${row.name}/`}
             </div>
           ) : (
             <button
@@ -94,9 +67,9 @@ export default function SkillFolderTree({
                 'block w-full whitespace-nowrap py-[3px] pr-2 text-left text-text-tertiary hover:bg-surface-hover',
                 row.path === selected && 'bg-[#ede9fe] text-[#5b21b6]',
               )}
-              style={{ paddingLeft: row.depth * 16 + 8 }}
+              style={{ paddingLeft: folderIndent(row.depth) }}
             >
-              {row.label}
+              {row.name}
             </button>
           ),
         )}

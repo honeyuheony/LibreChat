@@ -1,12 +1,8 @@
 import React from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
+import { EMOJI_FONT, SKILL_ICON_CHOICES } from '../Marketplace/SkillIcon';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
-
-/** 만들기 편집기의 아이콘 선택지와 같은 10개. */
-const SKILL_ICON_CHOICES = ['🤖', '📈', '🌍', '📅', '✈️', '🗓️', '📋', '📊', '🎤', '🧾'];
-
-const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
 
 /** 마켓 목록과 상세 창에 보일 이모지 아이콘을 고른다. 폼 값 이름은 `icon`이다. */
 export default function IconSelector() {

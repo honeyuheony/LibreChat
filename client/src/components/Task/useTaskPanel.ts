@@ -2,16 +2,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useAtom } from 'jotai';
 import { useSearchParams } from 'react-router-dom';
 import { Constants } from 'librechat-data-provider';
-import type { TMessage } from 'librechat-data-provider';
 import { collectTaskOutputs, findLatestTaskToolCall } from './taskState';
-import { useGetMessagesByConvoId } from '~/data-provider';
+import useCachedMessages from './useCachedMessages';
 import { taskPanelState } from '~/store/task';
 
 const INITIAL_PANEL = { open: false, view: 'overview', resultId: null } as const;
 
 export const RESULT_QUERY_PARAM = 'result';
-
-const selectMessages = (messages: TMessage[]) => messages;
 
 /**
  * 작업 패널을 대화에 맞춰 열고 닫는다.
@@ -32,10 +29,7 @@ export default function useTaskPanel(
   const [panel, setPanel] = useAtom(taskPanelState);
   const [searchParams] = useSearchParams();
   const requestedResultId = searchParams.get(RESULT_QUERY_PARAM);
-  const { data: messages } = useGetMessagesByConvoId(conversationId ?? '', {
-    enabled: false,
-    select: selectMessages,
-  });
+  const messages = useCachedMessages(conversationId ?? '');
   const hasTaskCall = useMemo(() => findLatestTaskToolCall(messages) != null, [messages]);
   const outputIds = useMemo(
     () => (messages == null ? null : collectTaskOutputs(messages).map((output) => output.resultId)),

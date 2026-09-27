@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
-import type { TMessage, TaskProgressEvent } from 'librechat-data-provider';
+import type { TaskProgressEvent } from 'librechat-data-provider';
 import type { TaskStepView, TaskToolCallState } from './taskState';
 import type { TranslationKeys } from '~/hooks';
 import { findLatestTaskToolCall, isAwaitingTaskApproval, resolveTaskSteps } from './taskState';
 import { taskDecisionByToolCallId, taskProgressByToolCallId } from '~/store/task';
-import { useActiveJobStatus, useGetMessagesByConvoId } from '~/data-provider';
+import { useActiveJobStatus } from '~/data-provider';
+import useCachedMessages from './useCachedMessages';
 import store from '~/store';
 
 export type TaskRunStatus = 'wait' | 'run' | 'ok' | 'stopped';
@@ -25,8 +26,6 @@ export const TASK_STATUS_DOT: Record<TaskRunStatus, string> = {
   stopped: 'bg-border-heavy',
 };
 
-const selectMessages = (messages: TMessage[]) => messages;
-
 /** 대화의 마지막 작업 호출, 그 계획이 선 단계, 실행 상태. */
 export default function useTaskRunState(conversationId: string): {
   call: TaskToolCallState | null;
@@ -37,10 +36,7 @@ export default function useTaskRunState(conversationId: string): {
 } {
   const isSubmitting = useRecoilValue(store.isSubmittingFamily(0));
   const jobStatus = useActiveJobStatus(conversationId);
-  const { data: messages } = useGetMessagesByConvoId(conversationId, {
-    enabled: false,
-    select: selectMessages,
-  });
+  const messages = useCachedMessages(conversationId);
 
   const call = useMemo(() => findLatestTaskToolCall(messages), [messages]);
   const progress = useAtomValue(taskProgressByToolCallId(call?.toolCallId ?? ''));

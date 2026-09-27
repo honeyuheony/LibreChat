@@ -4,7 +4,8 @@ import type { TSkillDraftExtra, TSkillDraftOutput } from 'librechat-data-provide
 import type { ReactNode } from 'react';
 import type { BuilderField, BuilderState, BuilderStep, BuilderValues, ChangedField } from './state';
 import type { TranslationKeys } from '~/hooks';
-import { FIELD_OUTPUTS, ICON_CHOICES, OUTPUTS, SOURCE_AI, SOURCE_ME } from './state';
+import { EMOJI_FONT, DEFAULT_SKILL_ICON, SKILL_ICON_CHOICES } from '../Marketplace/SkillIcon';
+import { FIELD_OUTPUTS, OUTPUTS, SOURCE_AI, SOURCE_ME } from './state';
 import SourceTag, { ChangedMark } from './SourceTag';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -45,10 +46,7 @@ type HeadProps = Pick<
   'state' | 'author' | 'onEdit' | 'changed' | 'active' | 'onActivate'
 > & { department?: string };
 
-/** 이모지 글꼴을 먼저 고른다. 없으면 본문 글꼴이 빈칸을 그려 아이콘 자리가 빈 원으로 보인다(`SkillIcon` 과 같은 순서). */
-export const EMOJI_STYLE = {
-  fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
-};
+export const EMOJI_STYLE = { fontFamily: EMOJI_FONT };
 
 const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
 const NO_CHOICES: string[] = [];
@@ -269,14 +267,14 @@ export function PreviewHead({
           className="flex size-[68px] items-center justify-center rounded-full bg-status-success-subtle text-[34px]"
         >
           <span aria-hidden="true" style={EMOJI_STYLE}>
-            {values.icon || '🤖'}
+            {values.icon || DEFAULT_SKILL_ICON}
           </span>
         </button>
       </div>
       <div className="min-w-0 flex-1">
         {editing === 'icon' && (
           <div className="mb-2 flex flex-wrap gap-1.5" role="group">
-            {ICON_CHOICES.map((icon) => (
+            {SKILL_ICON_CHOICES.map((icon) => (
               <button
                 key={icon}
                 type="button"

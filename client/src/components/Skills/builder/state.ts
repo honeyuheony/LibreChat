@@ -72,18 +72,6 @@ export const OUTPUTS: readonly TSkillDraftOutput[] = [
   'ask',
 ];
 const EXTRAS: readonly TSkillDraftExtra[] = ['translate', 'polish', 'law'];
-export const ICON_CHOICES: readonly string[] = [
-  '🤖',
-  '📈',
-  '🌍',
-  '📅',
-  '✈️',
-  '🗓️',
-  '📋',
-  '📊',
-  '🎤',
-  '🧾',
-];
 /** 뽑을 항목은 보고서·비교표일 때만 쓴다. */
 export const FIELD_OUTPUTS: ReadonlySet<TSkillDraftOutput> = new Set(['report', 'organize']);
 
