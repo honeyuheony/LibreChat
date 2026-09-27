@@ -51,7 +51,7 @@ export default function SkillRankRow({
             onSelect(skill);
           }
         }}
-        className="group flex cursor-pointer items-center gap-3.5 rounded-[18px] px-2.5 py-3 hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+        className="group flex cursor-pointer items-center gap-3.5 rounded-3xl px-2.5 py-3 hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
       >
         {rank !== undefined && (
           <span

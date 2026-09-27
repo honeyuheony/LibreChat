@@ -144,6 +144,12 @@ describe('SkillMarketplace', () => {
     );
   });
 
+  it('uses the shared large radius for agent cards', () => {
+    renderAt('/skills-market');
+
+    expect(screen.getByRole('button', { name: weekly.displayTitle })).toHaveClass('rounded-3xl');
+  });
+
   it('shows only the current user skills on the mine tab', () => {
     renderAt('/skills-market/mine');
     expect(rowTitles()).toEqual([myDraft.displayTitle]);

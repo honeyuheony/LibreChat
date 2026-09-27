@@ -51,6 +51,20 @@ describe('PackList', () => {
     );
   });
 
+  it('uses the shared large radius for pack cards', () => {
+    render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: /월말 팩/ })).toHaveClass('rounded-3xl');
+  });
+
+  it('uses the shared large radius for the create-pack card', () => {
+    render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: /com_skills_pack_create/ })).toHaveClass(
+      'rounded-3xl',
+    );
+  });
+
   it('shows stats for the included skills available to the user', async () => {
     render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
 
