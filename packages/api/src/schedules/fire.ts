@@ -89,6 +89,8 @@ function buildScheduleTriggerEnvelope(
       timezone: schedule.timezone,
       ...(chatProjectId != null && { chatProjectId }),
       ...(triggerFiles.length > 0 && { files: triggerFiles }),
+      ...(schedule.skills != null &&
+        schedule.skills.length > 0 && { manualSkills: schedule.skills }),
       metadata: {
         manual,
         ...(typeof schedule.configRevision === 'number' && {

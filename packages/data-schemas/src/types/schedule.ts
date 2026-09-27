@@ -22,6 +22,8 @@ export interface ISchedule {
   chatProjectId?: string;
   file_ids?: string[];
   tools?: string[];
+  /** Skill names each run sends as `manualSkills`, the same field a chat turn uses. */
+  skills?: string[];
   cron?: string;
   enabled: boolean;
   disabledReason?: ScheduleDisabledReason;

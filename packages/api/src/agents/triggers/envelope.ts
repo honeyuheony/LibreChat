@@ -48,6 +48,8 @@ export interface AgentFireRunContext {
    *  rest of this context — never sourced from the event payload. */
   chatProjectId?: string;
   files?: JsonValue[];
+  /** Skill names sent as the chat request's `manualSkills`, as if picked with `/`. */
+  manualSkills?: string[];
   metadata?: JsonValue;
 }
 
@@ -155,6 +157,16 @@ function requireString(value: unknown, path: string): string {
   return value;
 }
 
+function requireStringList(value: unknown, path: string): string[] {
+  if (
+    !Array.isArray(value) ||
+    !value.every((entry) => typeof entry === 'string' && entry.trim().length > 0)
+  ) {
+    throw error(`${path} must be an array of non-empty strings`);
+  }
+  return [...(value as string[])];
+}
+
 function requireTimestamp(value: unknown, path: string): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
     throw error(`${path} must be a non-negative integer timestamp`);
@@ -246,6 +258,9 @@ function createFireRunContext(
       throw error('run.files must be an array');
     }
     context.files = cloneJsonValue(run.files, 'run.files', error) as JsonValue[];
+  }
+  if (run.manualSkills != null) {
+    context.manualSkills = requireStringList(run.manualSkills, 'run.manualSkills');
   }
   if (run.metadata !== undefined) {
     context.metadata = cloneJsonValue(run.metadata, 'run.metadata', error) as JsonValue;

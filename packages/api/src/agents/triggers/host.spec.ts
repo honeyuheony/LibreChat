@@ -1,6 +1,7 @@
 import { Constants, EModelEndpoint } from 'librechat-data-provider';
 import { getRequestId, getTenantId, getUserId } from '@librechat/data-schemas';
 import type { AgentTriggerExecutionHostDeps, AgentTriggerFetch } from './host';
+import type { AgentFireRunContext } from './envelope';
 import {
   EVENT_ACTOR_DETACHED_COMPLETION_SOURCE,
   EVENT_ACTOR_DETACHED_COMPLETION_TYPE,
@@ -8,7 +9,7 @@ import {
 import { createAgentTriggerEnvelope, getAgentTriggerIdempotencyKey } from './envelope';
 import { AgentTriggerExecutionError, createAgentTriggerExecutionHost } from './host';
 
-const createFireEnvelope = () =>
+const createFireEnvelope = (run: Partial<AgentFireRunContext> = {}) =>
   createAgentTriggerEnvelope({
     mode: 'fire',
     requestId: 'request-1',
@@ -22,6 +23,7 @@ const createFireEnvelope = () =>
       chatProjectId: 'project-1',
       files: [{ file_id: 'file-1' }],
       metadata: { manual: false },
+      ...run,
     },
     event: {
       id: 'event-1',
@@ -182,6 +184,39 @@ describe('createAgentTriggerExecutionHost fire adapter', () => {
       timezone: 'Europe/Paris',
     });
     expect(mintToken).toHaveBeenCalledWith(envelope.principal, envelope);
+  });
+
+  it('sends the fire run manualSkills on the chat request like a user turn', async () => {
+    const envelope = createFireEnvelope({ manualSkills: ['hwp-report'] });
+    const fetcher = fetchMock(async () =>
+      response({
+        streamId: 'stream-1',
+        conversationId: 'conversation-1',
+        generationCreatedAt: 40,
+        status: 'started',
+      }),
+    );
+
+    await createAgentTriggerExecutionHost(deps(fetcher)).dispatch(envelope);
+
+    const [, init] = fetcher.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toMatchObject({ manualSkills: ['hwp-report'] });
+  });
+
+  it('omits manualSkills from a fire whose run carries none', async () => {
+    const fetcher = fetchMock(async () =>
+      response({
+        streamId: 'stream-1',
+        conversationId: 'conversation-1',
+        generationCreatedAt: 40,
+        status: 'started',
+      }),
+    );
+
+    await createAgentTriggerExecutionHost(deps(fetcher)).dispatch(createFireEnvelope());
+
+    const [, init] = fetcher.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).not.toHaveProperty('manualSkills');
   });
 
   it('reuses the same generation identity when an ambiguous delivery is retried', async () => {
