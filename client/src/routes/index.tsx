@@ -44,6 +44,11 @@ const loadSkillsView = () =>
     Component: m.default,
   }));
 
+const loadSkillBuilder = () =>
+  import('~/components/Skills/builder').then((m) => ({
+    Component: m.Editor,
+  }));
+
 const loadInsightsView = () =>
   import('~/components/Insights').then((m) => ({
     Component: m.default,
@@ -170,7 +175,7 @@ export const router = createBrowserRouter(
             },
             {
               path: 'skills/new',
-              lazy: loadSkillsView,
+              lazy: loadSkillBuilder,
             },
             {
               path: 'skills/:skillId',
