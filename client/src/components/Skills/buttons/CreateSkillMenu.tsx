@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, PenLine, Upload } from 'lucide-react';
 import { DropdownPopup, TooltipAnchor } from '@librechat/client';
 import type { MenuItemProps } from '@librechat/client';
-import { CreateSkillDialog, UploadSkillDialog } from '../dialogs';
+import { UploadSkillDialog } from '../dialogs';
 import { useLocalize } from '~/hooks';
 
 export default function CreateSkillMenu() {
   const localize = useLocalize();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [writeOpen, setWriteOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const createLabel = localize('com_ui_create_skill');
@@ -18,7 +19,7 @@ export default function CreateSkillMenu() {
     () => [
       {
         label: localize('com_ui_skill_write_instructions'),
-        onClick: () => setWriteOpen(true),
+        onClick: () => navigate('/skills/new'),
         icon: <PenLine className="icon-md" aria-hidden="true" />,
       },
       {
@@ -27,7 +28,7 @@ export default function CreateSkillMenu() {
         icon: <Upload className="icon-md" aria-hidden="true" />,
       },
     ],
-    [localize],
+    [localize, navigate],
   );
 
   return (
@@ -54,7 +55,6 @@ export default function CreateSkillMenu() {
         }
         items={items}
       />
-      <CreateSkillDialog isOpen={writeOpen} setIsOpen={setWriteOpen} />
       <UploadSkillDialog isOpen={uploadOpen} setIsOpen={setUploadOpen} />
     </>
   );
