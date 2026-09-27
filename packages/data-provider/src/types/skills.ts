@@ -465,6 +465,43 @@ export type TSkillPublishRequest = {
   scope: TSkillPublishScope;
 };
 
+export type TSkillTestResultVariables = {
+  id: string;
+  payload: TSkillTestResultRequest;
+};
+
+export type TSkillPublishVariables = {
+  id: string;
+  payload: TSkillPublishRequest;
+};
+
+export type TSkillPackSummary = {
+  _id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon?: string;
+  author: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TSkillPack = TSkillPackSummary & {
+  skillIds?: string[];
+};
+
+export type TCreateSkillPackRequest = {
+  name: string;
+  description: string;
+  icon?: string;
+  skillIds: string[];
+};
+
+export type TDeleteSkillPackResponse = {
+  deleted: true;
+};
+
 /** POST `/api/skills/:id/fork` 요청 본문. 이름을 비우면 원본 이름을 쓰고, 겹치면 `-fork` 꼬리를 붙인다. */
 export type TForkSkillRequest = {
   name?: string;

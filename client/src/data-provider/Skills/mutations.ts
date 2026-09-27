@@ -3,6 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   TSkill,
   TSkillFile,
+  TSkillDraftRequest,
+  TSkillPack,
+  TCreateSkillPackRequest,
+  TDeleteSkillPackResponse,
+  TSkillTestResultVariables,
+  TSkillPublishVariables,
   TCreateSkill,
   TForkSkillRequest,
   TForkSkillResponse,
@@ -28,6 +34,7 @@ import type {
   UseMutationOptions,
   UseMutationResult,
 } from '@tanstack/react-query';
+import { getResponseStatus } from '~/utils/errors';
 
 function isInfiniteSkillData(
   data: TSkillListResponse | InfiniteData<TSkillListResponse>,
@@ -119,6 +126,15 @@ function removeSkillFromCachedLists(
     }
     return { ...data, skills: data.skills.filter((s) => s._id !== id) };
   });
+}
+
+async function updateBuilderSkillCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  skill: TSkill,
+): Promise<void> {
+  await queryClient.cancelQueries([QueryKeys.skill, skill._id]);
+  queryClient.setQueryData<TSkill>([QueryKeys.skill, skill._id], skill);
+  void queryClient.invalidateQueries([QueryKeys.skills]);
 }
 
 /**
@@ -268,6 +284,69 @@ export const useDeleteSkillMutation = (
       queryClient.removeQueries([QueryKeys.skillFiles, variables.id]);
       removeSkillFromCachedLists(queryClient, variables.id);
       if (onSuccess) onSuccess(response, variables, context);
+    },
+  });
+};
+
+export const useCreateSkillDraftMutation = () =>
+  useMutation((payload: TSkillDraftRequest) => dataService.createSkillDraft(payload));
+
+export const isSkillDraftRateLimited = (error: unknown): boolean =>
+  getResponseStatus(error) === 429;
+
+export const useRecordSkillTestResultMutation = (): UseMutationResult<
+  TSkill,
+  unknown,
+  TSkillTestResultVariables
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    (variables: TSkillTestResultVariables) =>
+      dataService.recordSkillTestResult(variables.id, variables.payload),
+    {
+      onSuccess: (skill) => updateBuilderSkillCache(queryClient, skill),
+    },
+  );
+};
+
+export const usePublishSkillMutation = (): UseMutationResult<
+  TSkill,
+  unknown,
+  TSkillPublishVariables
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    (variables: TSkillPublishVariables) =>
+      dataService.publishSkill(variables.id, variables.payload),
+    {
+      onSuccess: (skill) => updateBuilderSkillCache(queryClient, skill),
+    },
+  );
+};
+
+export const useCreateSkillPackMutation = (): UseMutationResult<
+  TSkillPack,
+  unknown,
+  TCreateSkillPackRequest
+> => {
+  const queryClient = useQueryClient();
+  return useMutation((payload: TCreateSkillPackRequest) => dataService.createSkillPack(payload), {
+    onSuccess: () => {
+      void queryClient.invalidateQueries([QueryKeys.skills, 'packs'], { exact: true });
+    },
+  });
+};
+
+export const useDeleteSkillPackMutation = (): UseMutationResult<
+  TDeleteSkillPackResponse,
+  unknown,
+  { id: string }
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(({ id }: { id: string }) => dataService.deleteSkillPack(id), {
+    onSuccess: (_response, variables) => {
+      queryClient.removeQueries([QueryKeys.skills, 'packs', variables.id]);
+      void queryClient.invalidateQueries([QueryKeys.skills, 'packs'], { exact: true });
     },
   });
 };
