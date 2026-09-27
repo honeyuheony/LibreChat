@@ -34,10 +34,20 @@ export interface ReportTemplate {
 }
 
 const TEMPLATE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+/**
+ * Templates beyond a skill's default one: id → skill folder and the `-<variant>` suffix of
+ * `slots-<variant>.json`. Mirrors hwp-mcp `TEMPLATE_VARIANTS`, which renders the same ids.
+ */
+const TEMPLATE_VARIANTS: ReadonlyMap<string, { folder: string; variant: string }> = new Map([
+  ['hwp-report-general', { folder: 'hwp-report', variant: 'general' }],
+]);
 const FILENAME_COLUMN = '@filename';
 const TITLE_PLACEHOLDER = /\{\{([^}]+)\}\}/g;
 
-/** Reads `<skillsDir>/<templateId>/assets/slots.json`, the same file hwp-mcp fills from. */
+/**
+ * Reads `<skillsDir>/<templateId>/assets/slots.json`, or the `slots-<variant>.json` a
+ * `TEMPLATE_VARIANTS` id names; the same files hwp-mcp fills from.
+ */
 export async function loadReportTemplate(
   templateId: string,
   skillsDir: string,
@@ -45,7 +55,10 @@ export async function loadReportTemplate(
   if (!TEMPLATE_ID_PATTERN.test(templateId)) {
     throw new Error(`Unknown report template "${templateId}".`);
   }
-  const slotsPath = path.join(skillsDir, templateId, 'assets', 'slots.json');
+  const target = TEMPLATE_VARIANTS.get(templateId);
+  const folder = target?.folder ?? templateId;
+  const slotsFile = target ? `slots-${target.variant}.json` : 'slots.json';
+  const slotsPath = path.join(skillsDir, folder, 'assets', slotsFile);
   let raw: string;
   try {
     raw = await fs.readFile(slotsPath, 'utf8');
