@@ -1,9 +1,16 @@
+import { Types } from 'mongoose';
 import { createHash } from 'node:crypto';
+import { SCHEDULE_MAX_SKILLS, SCHEDULE_SKILL_NAME_MAX_LENGTH } from 'librechat-data-provider';
 import type { ISchedule, IScheduleRun } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { SchedulesHandlersDeps } from './handlers';
 import type { ServerRequest } from '~/types';
-import { createSchedulesHandlers, toWireSchedule, computeCreateDigest } from './handlers';
+import {
+  toWireSchedule,
+  computeCreateDigest,
+  createSchedulesHandlers,
+  filterViewableSkillNamesByAccess,
+} from './handlers';
 import { ScheduleMCPError } from './mcp';
 
 /** A lean schedule doc carrying both public fields and internal bookkeeping. */
@@ -21,6 +28,7 @@ function fullScheduleDoc(overrides: Partial<ISchedule> = {}): ISchedule {
     timezone: 'America/New_York',
     target: 'new',
     file_ids: ['file-1'],
+    skills: ['hwp-report'],
     enabled: true,
     disabledReason: undefined,
     nextRunAt: new Date('2026-07-21T12:00:00Z'),
@@ -78,6 +86,7 @@ describe('toWireSchedule', () => {
         'nextRunAt',
         'prompt',
         'runCount',
+        'skills',
         'target',
         'timezone',
         'updatedAt',
@@ -385,6 +394,160 @@ describe('createSchedule late-create compensation', () => {
     // requested, and deleting it would erase a row a concurrent replay may already
     // have confirmed with its own 201.
     expect(captured.status).toBe(201);
+  });
+});
+
+describe('schedule skills', () => {
+  const createWithSkills = async (
+    skills: unknown,
+    over: Partial<SchedulesHandlersDeps> = {},
+  ): Promise<{ deps: SchedulesHandlersDeps; status?: number }> => {
+    const deps = makeCreateDeps({
+      isUserDeleting: jest.fn(async () => false),
+      filterViewableSkillNames: jest.fn(async (names: string[]) => names),
+      ...over,
+    });
+    (deps.methods.armSchedule as jest.Mock).mockResolvedValue(true);
+    (deps.methods.getScheduleById as jest.Mock).mockResolvedValue({
+      ...CREATE_BODY,
+      id: 'sched-1',
+    } as unknown as ISchedule);
+    const req = makeCreateReq() as unknown as { body: Record<string, unknown> };
+    req.body.skills = skills;
+    const { res, captured } = makeRes();
+    await createSchedulesHandlers(deps).createSchedule(req as unknown as ServerRequest, res);
+    return { deps, status: captured.status };
+  };
+
+  it('stores visible skills on the created schedule', async () => {
+    const { deps, status } = await createWithSkills(['hwp-report', 'hwp-report']);
+
+    expect(status ?? 201).toBe(201);
+    expect(deps.filterViewableSkillNames).toHaveBeenCalledWith(
+      ['hwp-report'],
+      expect.objectContaining({ user: expect.objectContaining({ id: 'user-1' }) }),
+    );
+    expect(deps.methods.createScheduleWithSlot).toHaveBeenCalledWith(
+      expect.objectContaining({ skills: ['hwp-report'] }),
+      expect.any(Number),
+    );
+  });
+
+  it.each([
+    ['a non-array value', 'hwp-report'],
+    ['a non-string entry', ['hwp-report', 7]],
+    ['an empty name', ['']],
+    ['an over-long name', ['x'.repeat(SCHEDULE_SKILL_NAME_MAX_LENGTH + 1)]],
+    [
+      'more skills than a turn can invoke',
+      Array.from({ length: SCHEDULE_MAX_SKILLS + 1 }, (_, i) => `skill-${i}`),
+    ],
+  ])('refuses %s before touching storage', async (_label, skills) => {
+    const { deps, status } = await createWithSkills(skills);
+
+    expect(status).toBe(400);
+    expect(deps.filterViewableSkillNames).not.toHaveBeenCalled();
+    expect(deps.methods.createScheduleWithSlot).not.toHaveBeenCalled();
+  });
+
+  it('refuses a skill the requesting user cannot see', async () => {
+    const { deps, status } = await createWithSkills(['hwp-report', 'someone-elses'], {
+      filterViewableSkillNames: jest.fn(async () => ['hwp-report']),
+    });
+
+    expect(status).toBe(400);
+    expect(deps.methods.createScheduleWithSlot).not.toHaveBeenCalled();
+  });
+
+  it('refuses skills when the host wired no visibility check', async () => {
+    const { deps, status } = await createWithSkills(['hwp-report'], {
+      filterViewableSkillNames: undefined,
+    });
+
+    expect(status).toBe(400);
+    expect(deps.methods.createScheduleWithSlot).not.toHaveBeenCalled();
+  });
+
+  it('checks skills supplied on an edit', async () => {
+    const filterViewableSkillNames = jest.fn(async () => []);
+    const deps = makeCreateDeps({
+      isUserDeleting: jest.fn(async () => false),
+      filterViewableSkillNames,
+    });
+    (deps.methods.getScheduleById as jest.Mock).mockResolvedValue(fullScheduleDoc());
+    const { res, captured } = makeRes();
+
+    await createSchedulesHandlers(deps).updateSchedule(
+      {
+        params: { id: 'sched-1' },
+        body: { skills: ['someone-elses'] },
+        user: { id: 'user-1', tenantId: 't1', role: 'USER' },
+      } as unknown as ServerRequest,
+      res,
+    );
+
+    expect(captured.status).toBe(400);
+    expect(deps.methods.updateScheduleById).not.toHaveBeenCalled();
+  });
+
+  it('keeps the digest of a create that names no skills unchanged', () => {
+    expect(computeCreateDigest({ ...CREATE_BODY, target: 'new', enabled: true, skills: [] })).toBe(
+      createBodyDigest(),
+    );
+    expect(
+      computeCreateDigest({ ...CREATE_BODY, target: 'new', enabled: true, skills: ['a'] }),
+    ).not.toBe(createBodyDigest());
+  });
+});
+
+describe('filterViewableSkillNamesByAccess', () => {
+  const accessibleSkillIds = [new Types.ObjectId()];
+  const skill = (name: string, userInvocable?: boolean) => ({
+    _id: accessibleSkillIds[0],
+    name,
+    body: '# Skill',
+    author: 'author-1',
+    ...(userInvocable != null && { userInvocable }),
+  });
+
+  it('keeps names the ACL-scoped lookup resolves and drops the rest', async () => {
+    const getSkillByName = jest.fn(async (name: string) =>
+      name === 'hwp-report' ? skill(name) : null,
+    );
+
+    const names = await filterViewableSkillNamesByAccess({
+      names: ['hwp-report', 'private-report'],
+      accessibleSkillIds,
+      getSkillByName,
+    });
+
+    expect(names).toEqual(['hwp-report']);
+    expect(getSkillByName).toHaveBeenCalledWith('hwp-report', accessibleSkillIds, {
+      preferUserInvocable: true,
+    });
+  });
+
+  it('drops a model-only skill a manual pick would skip', async () => {
+    const names = await filterViewableSkillNamesByAccess({
+      names: ['model-only'],
+      accessibleSkillIds,
+      getSkillByName: async (name: string) => skill(name, false),
+    });
+
+    expect(names).toEqual([]);
+  });
+
+  it('resolves nothing without any accessible skill id', async () => {
+    const getSkillByName = jest.fn(async (name: string) => skill(name));
+
+    const names = await filterViewableSkillNamesByAccess({
+      names: ['hwp-report'],
+      accessibleSkillIds: [],
+      getSkillByName,
+    });
+
+    expect(names).toEqual([]);
+    expect(getSkillByName).not.toHaveBeenCalled();
   });
 });
 

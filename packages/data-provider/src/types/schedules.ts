@@ -11,6 +11,12 @@ export type ScheduleFrequency = (typeof scheduleFrequencies)[number];
  *  list: an every-minute-of-the-hour cadence spelled out runs past two hundred chars. */
 export const SCHEDULE_CRON_MAX_LENGTH = 256;
 
+/** Mirrors the chat path's bounds on `manualSkills` (`MAX_MANUAL_SKILLS` and
+ *  `MAX_SKILL_NAME_LENGTH` in packages/api): a longer list would be truncated at fire
+ *  time, so the schedule refuses it at write time instead of saving skills it drops. */
+export const SCHEDULE_MAX_SKILLS = 10;
+export const SCHEDULE_SKILL_NAME_MAX_LENGTH = 200;
+
 export const scheduleTargets = ['new'] as const;
 export type ScheduleTarget = (typeof scheduleTargets)[number];
 
@@ -82,6 +88,15 @@ export const createSchedulePayloadSchema = z.object({
     .transform((ids) => Array.from(new Set(ids)))
     .optional(),
   /**
+   * Skill names each run invokes, sent as the chat request's `manualSkills` like a
+   * `/` pick. Visibility to the requesting user is checked server-side at write time.
+   */
+  skills: z
+    .array(z.string().trim().min(1).max(SCHEDULE_SKILL_NAME_MAX_LENGTH))
+    .max(SCHEDULE_MAX_SKILLS)
+    .transform((names) => Array.from(new Set(names)))
+    .optional(),
+  /**
    * Chat project each run's conversation is filed under. `null` clears the scope.
    * Ownership is checked server-side at write time and again at every fire, so a
    * deleted project disables the schedule instead of silently filing runs loose.
@@ -134,6 +149,7 @@ export type TSchedule = {
   timezone: string;
   target: ScheduleTarget;
   file_ids?: string[];
+  skills?: string[];
   chatProjectId?: string | null;
   enabled: boolean;
   disabledReason?: ScheduleDisabledReason;

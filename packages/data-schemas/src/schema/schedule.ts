@@ -104,6 +104,11 @@ const scheduleSchema: Schema<IScheduleDocument> = new Schema(
       type: [String],
       default: undefined,
     },
+    /** Skill names every run invokes as the user's manual `/` pick (`manualSkills`). */
+    skills: {
+      type: [String],
+      default: undefined,
+    },
     cron: {
       type: String,
     },

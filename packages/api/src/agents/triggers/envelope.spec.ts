@@ -319,6 +319,33 @@ describe('createAgentTriggerEnvelope', () => {
     ).toThrow('run.chatProjectId must be a non-empty string');
   });
 
+  it('carries manualSkills through the fire run context and rejects malformed lists', () => {
+    const input = createFireInput();
+    const skills = ['hwp-report'];
+    const envelope = createAgentTriggerEnvelope({
+      ...input,
+      run: { manualSkills: skills },
+    } as CreateAgentTriggerEnvelopeInput);
+    skills[0] = 'changed';
+    expect(envelope.mode === 'fire' && envelope.run?.manualSkills).toEqual(['hwp-report']);
+
+    const parsed = parseAgentTriggerEnvelope(JSON.parse(JSON.stringify(envelope)) as unknown);
+    expect(parsed.mode === 'fire' && parsed.run?.manualSkills).toEqual(['hwp-report']);
+
+    expect(() =>
+      createAgentTriggerEnvelope({
+        ...createFireInput(),
+        run: { manualSkills: 'hwp-report' },
+      } as unknown as CreateAgentTriggerEnvelopeInput),
+    ).toThrow('run.manualSkills must be an array of non-empty strings');
+    expect(() =>
+      createAgentTriggerEnvelope({
+        ...createFireInput(),
+        run: { manualSkills: ['ok', 42] },
+      } as unknown as CreateAgentTriggerEnvelopeInput),
+    ).toThrow('run.manualSkills must be an array of non-empty strings');
+  });
+
   it('rejects non-JSON and circular event payloads', () => {
     expect(() =>
       createAgentTriggerEnvelope({

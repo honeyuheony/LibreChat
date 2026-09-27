@@ -100,6 +100,18 @@ async function getRun(scheduleId: string, scheduledFor: Date): Promise<ISchedule
   return run;
 }
 
+describe('schedule skills', () => {
+  it('persists the skill names a schedule fires with', async () => {
+    const schedule = await methods.createSchedule(scheduleData({ skills: ['hwp-report'] }));
+    expect((await getSchedule(schedule.id)).skills).toEqual(['hwp-report']);
+  });
+
+  it('reads a row written before skills existed without inventing an empty list', async () => {
+    const schedule = await methods.createSchedule(scheduleData());
+    expect((await getSchedule(schedule.id)).skills).toBeUndefined();
+  });
+});
+
 describe('claimDueSchedule', () => {
   it('grants exactly one winner across 8 concurrent claims', async () => {
     await methods.createSchedule(scheduleData());

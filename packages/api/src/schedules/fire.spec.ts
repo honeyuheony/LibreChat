@@ -414,6 +414,40 @@ describe('fireSchedule', () => {
     });
   });
 
+  it('sends the schedule skills as manualSkills on the durable trigger', async () => {
+    const { methods } = makeMethods();
+    const enqueueTrigger = jest.fn<
+      ReturnType<ScheduleEngineDeps['enqueueTrigger']>,
+      Parameters<ScheduleEngineDeps['enqueueTrigger']>
+    >(async () => undefined);
+    await fireSchedule(
+      makeDeps(methods, { enqueueTrigger }),
+      makeSchedule({ skills: ['hwp-report', 'organize'] }),
+      LIMITS,
+      dueAt(),
+    );
+    expect(enqueueTrigger.mock.calls[0][0]).toMatchObject({
+      run: { manualSkills: ['hwp-report', 'organize'] },
+    });
+  });
+
+  it('fires a schedule saved before skills existed without manualSkills', async () => {
+    const { methods } = makeMethods();
+    const enqueueTrigger = jest.fn<
+      ReturnType<ScheduleEngineDeps['enqueueTrigger']>,
+      Parameters<ScheduleEngineDeps['enqueueTrigger']>
+    >(async () => undefined);
+    const result = await fireSchedule(
+      makeDeps(methods, { enqueueTrigger }),
+      makeSchedule(),
+      LIMITS,
+      dueAt(),
+    );
+    expect(result.fired).toBe(true);
+    const envelope = enqueueTrigger.mock.calls[0][0];
+    expect(envelope.mode === 'fire' && envelope.run).not.toHaveProperty('manualSkills');
+  });
+
   it('records a definite trigger admission rejection as an error', async () => {
     const { methods, calls } = makeMethods();
     const result = await fireSchedule(

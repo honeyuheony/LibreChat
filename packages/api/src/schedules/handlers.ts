@@ -16,6 +16,7 @@ import type {
   ScheduleLimits,
   FireResult,
 } from './types';
+import type { ResolveManualSkillsParams } from '../agents/skills';
 import type { ServerRequest } from '~/types';
 import {
   isValidCronExpression,
@@ -37,6 +38,9 @@ export interface SchedulesHandlersDeps {
   canUseProject: (projectId: string, userId: string) => Promise<boolean>;
   /** Filters to file ids owned by the user. */
   filterOwnedFileIds: (fileIds: string[], userId: string) => Promise<string[]>;
+  /** Filters to skill names the requesting user can view. Optional so an older host
+   *  keeps booting; without it any schedule naming skills is refused (fail-closed). */
+  filterViewableSkillNames?: (names: string[], req: ServerRequest) => Promise<string[]>;
   /** Extends a bounded renewable upload hold on attached files so they survive to the
    *  first fire, which consumes them permanently; a schedule that dies first lets the
    *  hold lapse instead of retaining the upload forever. Throws when any file is gone. */
@@ -54,6 +58,29 @@ export interface SchedulesHandlersDeps {
   deleteSchedule: (id: string, userId: string) => Promise<ScheduleDeleteResult>;
   /** Whether this user's account deletion has begun. Fail-closed (unknown == true). */
   isUserDeleting: (userId: string) => Promise<boolean>;
+}
+
+/**
+ * Keeps the names a chat turn's `manualSkills` would resolve for this user: the same
+ * ACL-scoped `getSkillByName` lookup and user-invocable rule `resolveManualSkills` applies.
+ */
+export async function filterViewableSkillNamesByAccess({
+  names,
+  accessibleSkillIds,
+  getSkillByName,
+}: Pick<ResolveManualSkillsParams, 'names' | 'accessibleSkillIds' | 'getSkillByName'>): Promise<
+  string[]
+> {
+  if (accessibleSkillIds.length === 0) {
+    return [];
+  }
+  const skills = await Promise.all(
+    names.map((name) => getSkillByName(name, accessibleSkillIds, { preferUserInvocable: true })),
+  );
+  return names.filter((_, index) => {
+    const skill = skills[index];
+    return skill != null && skill.userInvocable !== false;
+  });
 }
 
 /**
@@ -143,6 +170,8 @@ export function computeCreateDigest(payload: TCreateSchedule): string {
           daysOfWeek: payload.cadence.daysOfWeek ?? null,
         },
     file_ids: payload.file_ids ?? null,
+    // Only when non-empty, so a create naming no skills keeps its pre-skills digest.
+    ...(payload.skills != null && payload.skills.length > 0 && { skills: payload.skills }),
     // `!== undefined`, NOT `!= null`: an OMITTED field still digests byte-identically
     // to a payload from before project scope existed, so an in-flight create retried
     // across the upgrade matches its own row — but an explicit `null` is a different
@@ -202,6 +231,7 @@ function matchesCreatedSchedule(existing: ISchedule, payload: TCreateSchedule): 
     existing.cadence?.frequency === payload.cadence.frequency &&
     sameCadenceShape(existing.cadence, payload.cadence) &&
     sameList(existing.file_ids, payload.file_ids) &&
+    sameList(existing.skills, payload.skills) &&
     // Only when the payload names one: an operator pin is written to the row without
     // the client ever sending it, and a legacy row predates project scope entirely.
     (payload.chatProjectId === undefined ||
@@ -237,6 +267,7 @@ export type WireSchedule = Pick<
   | 'target'
   | 'chatProjectId'
   | 'file_ids'
+  | 'skills'
   | 'enabled'
   | 'disabledReason'
   | 'nextRunAt'
@@ -306,6 +337,7 @@ export function toWireSchedule(
     target: schedule.target,
     chatProjectId: resolveScheduleProjectId(limits ?? {}, schedule.chatProjectId),
     file_ids: schedule.file_ids,
+    skills: schedule.skills,
     enabled: schedule.enabled,
     disabledReason: schedule.disabledReason,
     nextRunAt: schedule.nextRunAt,
@@ -444,6 +476,17 @@ export function createSchedulesHandlers(deps: SchedulesHandlersDeps): SchedulesH
       const owned = await deps.filterOwnedFileIds(payload.file_ids, requestUser(req).id);
       if (owned.length !== payload.file_ids.length) {
         res.status(400).json({ error: 'One or more attached files were not found' });
+        return false;
+      }
+    }
+    if (payload.skills != null && payload.skills.length > 0) {
+      const viewable = new Set(
+        deps.filterViewableSkillNames == null
+          ? []
+          : await deps.filterViewableSkillNames(payload.skills, req),
+      );
+      if (!payload.skills.every((name) => viewable.has(name))) {
+        res.status(400).json({ error: 'One or more skills were not found or not accessible' });
         return false;
       }
     }

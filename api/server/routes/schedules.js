@@ -1,10 +1,16 @@
 const express = require('express');
-const { Permissions, PermissionTypes } = require('librechat-data-provider');
+const {
+  Permissions,
+  ResourceType,
+  PermissionBits,
+  PermissionTypes,
+} = require('librechat-data-provider');
 const {
   isEnabled,
   SCHEDULE_FILE_HOLD,
   generateCheckAccess,
   createSchedulesHandlers,
+  filterViewableSkillNamesByAccess,
 } = require('@librechat/api');
 const { requireJwtAuth, configMiddleware, messageIpLimiter } = require('~/server/middleware');
 const {
@@ -13,7 +19,12 @@ const {
   deleteScheduleForOwner,
   isUserDeleting,
 } = require('~/server/services/Schedules');
+const {
+  getSkillDbMethods,
+  withDeploymentSkillIds,
+} = require('~/server/services/Endpoints/agents/skillDeps');
 const { resolveAgentFireAccess } = require('~/server/services/Schedules/access');
+const { findAccessibleResources } = require('~/server/services/PermissionService');
 const methods = require('~/models');
 
 const { getRoleByName } = methods;
@@ -53,6 +64,18 @@ const handlers = createSchedulesHandlers({
     });
     return (files ?? []).map((file) => file.file_id);
   },
+  // The VIEW-scoped ids (DB plus deployment skills) a chat turn resolves `manualSkills` against.
+  filterViewableSkillNames: async (names, req) =>
+    filterViewableSkillNamesByAccess({
+      names,
+      accessibleSkillIds: await findAccessibleResources({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType: ResourceType.SKILL,
+        requiredPermissions: PermissionBits.VIEW,
+      }).then(withDeploymentSkillIds),
+      getSkillByName: getSkillDbMethods().getSkillByName,
+    }),
   markFilesUsed: async (fileIds, userId) => {
     // BOUNDED renewable hold (extendFilesTTL), not a permanent `$unset` of the upload
     // TTL: permanence made a schedule deleted before its first run, an edit that

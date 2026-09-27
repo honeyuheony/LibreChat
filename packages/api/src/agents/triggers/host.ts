@@ -720,6 +720,7 @@ async function startRun(
             chatProjectId: run.chatProjectId,
           }),
           ...(run?.files != null && { files: run.files }),
+          ...(run?.manualSkills != null && { manualSkills: run.manualSkills }),
           ...(typeof timezone === 'string' && timezone.trim().length > 0
             ? { timezone: timezone.trim() }
             : {}),
