@@ -251,6 +251,42 @@ export type TSkillUsageMetrics = {
   savedHours: number | null;
 };
 
+export type TSkillMetricsAgent = {
+  id: string;
+  name: string;
+  displayTitle?: string;
+  authorName: string;
+  authorDepartment?: string;
+  runs: number;
+  forks: number;
+  savedHours: number | null;
+};
+
+export type TSkillMetricsContributor = {
+  authorName: string;
+  department?: string;
+  agents: number;
+  runs: number;
+  forks: number;
+  savedHours: number;
+};
+
+export type TSkillMetricsReport = {
+  agents: { total: number; base: number; staff: number };
+  runs: { total: number; staff: number };
+  forks: { total: number; forkedAgents: number };
+  savedHours: { total: number; staff: number };
+  ranking: TSkillMetricsAgent[];
+  baseTotal: {
+    count: number;
+    authorName?: string;
+    runs: number;
+    forks: number;
+    savedHours: number;
+  };
+  contributors: TSkillMetricsContributor[];
+};
+
 /**
  * Summary shape used in list endpoints — omits `body`, `frontmatter` and
  * `builder` to keep list payloads small. Callers that need the full body/frontmatter must fetch

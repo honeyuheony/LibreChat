@@ -7,8 +7,8 @@ import type {
   TTraceRecordDetail,
 } from './types/traces';
 import type { TInsightsAccessResponse, TInsightsParams, TInsightsResponse } from './types/insights';
+import type { TTaskResultsResponse, TaskResult } from './types/tasks';
 import type { TFileConfig } from './file-config';
-import type { TaskResult } from './types/tasks';
 import type * as tl from './types/tools';
 import type * as t from './types';
 import * as permissions from './accessPermissions';
@@ -287,6 +287,16 @@ export function updateUserPreferences(
   preferences: t.TUpdateUserPreferencesRequest,
 ): Promise<t.TUpdateUserPreferencesResponse> {
   return request.patch(endpoints.userPreferences(), preferences);
+}
+
+export function getWorkspacePreferences(): Promise<t.TWorkspacePreferences> {
+  return request.get(endpoints.workspacePreferences());
+}
+
+export function updateWorkspacePreferences(
+  preferences: t.TUpdateWorkspacePreferencesRequest,
+): Promise<t.TUpdateWorkspacePreferencesResponse> {
+  return request.patch(endpoints.workspacePreferences(), preferences);
 }
 
 export function updateUserConnectorDefaults(
@@ -1065,6 +1075,10 @@ export function getTaskResult(resultId: string): Promise<TaskResult> {
   return request.get(endpoints.taskResult(resultId));
 }
 
+export function getTaskResults(cursor?: string | null): Promise<TTaskResultsResponse> {
+  return request.get(endpoints.taskResults(cursor));
+}
+
 export function getTaskResultExport(resultId: string): Promise<AxiosResponse> {
   return request.getResponse(endpoints.taskResultExport(resultId), {
     responseType: 'blob',
@@ -1467,6 +1481,10 @@ export const updateSkillNodeContent = (variables: {
     updatedAt: now,
   });
 };
+
+export function getAdminSkillMetrics(): Promise<sk.TSkillMetricsReport> {
+  return request.get(endpoints.adminSkillMetrics());
+}
 
 export function getGitHubSkillSyncStatus(): Promise<sk.TGitHubSkillSyncStatusResponse> {
   return request.get(endpoints.adminSkillsSyncStatus());
