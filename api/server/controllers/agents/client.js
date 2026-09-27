@@ -5507,6 +5507,7 @@ class AgentClient extends BaseClient {
         }),
         resolveConfigServers(this.options.req),
       ]);
+      const resumeUserInstructions = formatUserInstructionsContext(this.options.req.user);
       const resumeScopedAttachmentMap = buildAgentScopedAttachmentMap({
         agentIds: agents.map((agent) => agent?.id).filter(Boolean),
         attachmentsByAgentId: this.options.agentContextAttachmentsByAgentId,
@@ -5547,7 +5548,9 @@ class AgentClient extends BaseClient {
               logger,
               mcpManager: resumeMcpManager,
               configServers: resumeConfigServers,
-              sharedRunContext: scopedContext ?? '',
+              sharedRunContext: [resumeUserInstructions, scopedContext]
+                .filter(Boolean)
+                .join('\n\n'),
               ephemeralAgent:
                 agent === this.options.agent ? this.options.req.body.ephemeralAgent : undefined,
             });
@@ -5648,7 +5651,9 @@ class AgentClient extends BaseClient {
                   logger,
                   mcpManager: resumeMcpManager,
                   configServers: resumeConfigServers,
-                  sharedRunContext: scopedContext ?? '',
+                  sharedRunContext: [resumeUserInstructions, scopedContext]
+                    .filter(Boolean)
+                    .join('\n\n'),
                 });
                 assertModelBoundContent({
                   onTraversalFailure: reportLocatorTraversalFailure,
