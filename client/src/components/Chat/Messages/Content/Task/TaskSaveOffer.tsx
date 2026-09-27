@@ -5,7 +5,6 @@ import { Constants, Permissions, PermissionTypes, splitMCPToolKey } from 'librec
 import type { TMessage } from 'librechat-data-provider';
 import type { ContextType } from 'react';
 import type { BuilderEntryState } from '~/components/Skills/builder';
-import type { TranslationKeys } from '~/hooks';
 import { BUILDER_PATH } from '~/components/Chat/Input/AgentSuggestChips';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { useGetMessagesByConvoId } from '~/data-provider';
@@ -82,8 +81,8 @@ export default function TaskSaveOffer({
       data-testid="task-save-offer"
     >
       <div className="min-w-0 flex-1 text-[0.875rem] leading-relaxed text-text-primary">
-        <b className="block">{localize('com_ui_task_save_agent_title' as TranslationKeys)}</b>
-        {localize('com_ui_task_save_agent_body' as TranslationKeys)}
+        <b className="block">{localize('com_ui_task_save_agent_title')}</b>
+        {localize('com_ui_task_save_agent_body')}
       </div>
       <Button size="pill" variant="submit" onClick={save}>
         {localize('com_skills_chat_save_as_agent')}

@@ -10,7 +10,6 @@ import {
 } from 'librechat-data-provider';
 import type { UserApprovalMode } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
-import type { TranslationKeys } from '~/hooks';
 import {
   useUpdateWorkspacePreferencesMutation,
   useWorkspacePreferencesQuery,
@@ -18,19 +17,6 @@ import {
 import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import { useLocalize } from '~/hooks';
-
-type UserSettingsKey =
-  | 'com_ui_user_settings_connection_prefix'
-  | 'com_ui_user_settings_connection_suffix'
-  | 'com_ui_user_settings_data_integrations'
-  | 'com_ui_user_settings_global_instructions'
-  | 'com_ui_user_settings_global_instructions_hint'
-  | 'com_ui_user_settings_approval_mode'
-  | 'com_ui_user_settings_approval_manual'
-  | 'com_ui_user_settings_approval_auto'
-  | 'com_ui_user_settings_load_error'
-  | 'com_ui_user_settings_save_error'
-  | 'com_ui_user_settings_instructions_saved';
 
 export default function UserSettings() {
   const localize = useLocalize();
@@ -43,9 +29,6 @@ export default function UserSettings() {
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const savedInstructions = useRef<string | null>(null);
   const savedApprovalMode = useRef<UserApprovalMode | null>(null);
-
-  const localizeSetting = (key: TranslationKeys | UserSettingsKey) =>
-    localize(key as TranslationKeys);
 
   useEffect(() => {
     if (!preferences || preferencesLoaded) {
@@ -65,13 +48,13 @@ export default function UserSettings() {
       }
       savedInstructions.current = payload.instructions;
       showToast({
-        message: localizeSetting('com_ui_user_settings_instructions_saved'),
+        message: localize('com_ui_user_settings_instructions_saved'),
         status: 'success',
       });
     },
     onError: () =>
       showToast({
-        message: localizeSetting('com_ui_user_settings_save_error'),
+        message: localize('com_ui_user_settings_save_error'),
         status: 'error',
       }),
   });
@@ -87,7 +70,7 @@ export default function UserSettings() {
         setApprovalMode(savedApprovalMode.current);
       }
       showToast({
-        message: localizeSetting('com_ui_user_settings_save_error'),
+        message: localize('com_ui_user_settings_save_error'),
         status: 'error',
       });
     },
@@ -97,9 +80,7 @@ export default function UserSettings() {
   if (isError && !preferences) {
     settingsContent = (
       <div className="flex flex-col items-start gap-3" role="alert">
-        <p className="text-sm text-text-secondary">
-          {localizeSetting('com_ui_user_settings_load_error')}
-        </p>
+        <p className="text-sm text-text-secondary">{localize('com_ui_user_settings_load_error')}</p>
         <Button type="button" variant="outline" onClick={() => void refetch()}>
           {localize('com_ui_retry')}
         </Button>
@@ -124,11 +105,11 @@ export default function UserSettings() {
           role="note"
           className="rounded-lg border border-accent-primary/20 bg-surface-brand-subtle px-2.5 py-2 text-[13px] text-accent-primary"
         >
-          {localizeSetting('com_ui_user_settings_connection_prefix')}
+          {localize('com_ui_user_settings_connection_prefix')}
           <Link to="/connectors" className="text-link hover:underline">
-            {localizeSetting('com_ui_user_settings_data_integrations')}
+            {localize('com_ui_user_settings_data_integrations')}
           </Link>
-          {localizeSetting('com_ui_user_settings_connection_suffix')}
+          {localize('com_ui_user_settings_connection_suffix')}
         </p>
         <section className="space-y-4">
           <div className="flex flex-col gap-2">
@@ -136,7 +117,7 @@ export default function UserSettings() {
               htmlFor="global-instructions"
               className="text-[13px] font-normal text-text-muted"
             >
-              {localizeSetting('com_ui_user_settings_global_instructions')}
+              {localize('com_ui_user_settings_global_instructions')}
             </label>
             <textarea
               id="global-instructions"
@@ -153,12 +134,12 @@ export default function UserSettings() {
               className="w-full max-w-[520px] resize-y rounded-md border border-border-light bg-surface-primary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             />
             <p id="global-instructions-hint" className="text-[13px] text-text-muted">
-              {localizeSetting('com_ui_user_settings_global_instructions_hint')}
+              {localize('com_ui_user_settings_global_instructions_hint')}
             </p>
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="approval-mode" className="text-[13px] font-normal text-text-muted">
-              {localizeSetting('com_ui_user_settings_approval_mode')}
+              {localize('com_ui_user_settings_approval_mode')}
             </label>
             <select
               id="approval-mode"
@@ -177,10 +158,8 @@ export default function UserSettings() {
               }}
               className="h-[39px] w-full max-w-[520px] rounded-lg border border-border-medium bg-surface-tertiary px-2.5 py-[7px] text-[14.5px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             >
-              <option value="manual">
-                {localizeSetting('com_ui_user_settings_approval_manual')}
-              </option>
-              <option value="auto">{localizeSetting('com_ui_user_settings_approval_auto')}</option>
+              <option value="manual">{localize('com_ui_user_settings_approval_manual')}</option>
+              <option value="auto">{localize('com_ui_user_settings_approval_auto')}</option>
             </select>
           </div>
         </section>

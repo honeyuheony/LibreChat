@@ -20,19 +20,6 @@ import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import { shortResultTitle } from '~/utils/results';
 import { useLocalize } from '~/hooks';
 
-type LibraryKey =
-  | 'com_ui_library'
-  | 'com_ui_library_intro'
-  | 'com_ui_library_empty'
-  | 'com_ui_library_error'
-  | 'com_ui_library_col_type'
-  | 'com_ui_library_col_created'
-  | 'com_ui_library_col_action'
-  | 'com_ui_library_kind_table'
-  | 'com_ui_library_kind_hwp'
-  | 'com_ui_library_kind_doc'
-  | 'com_ui_library_date_older';
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HWP_FILE = /\.hwpx?$/i;
 
@@ -40,7 +27,7 @@ const resultPath = (item: TTaskResultListItem) =>
   `/c/${encodeURIComponent(item.conversationId)}?${RESULT_QUERY_PARAM}=${encodeURIComponent(item.resultId)}`;
 
 /** 결과는 경과 시간이 아니라 현지 달력 날짜를 기준으로 분류한다. */
-function dayLabelKey(createdAt: Date, now: Date): TranslationKeys | LibraryKey {
+function dayLabelKey(createdAt: Date, now: Date): TranslationKeys {
   const startOf = (date: Date) =>
     new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const days = Math.floor((startOf(now) - startOf(createdAt)) / DAY_MS);
@@ -56,14 +43,8 @@ function dayLabelKey(createdAt: Date, now: Date): TranslationKeys | LibraryKey {
 const clockTime = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-function useLibraryLocalize() {
-  const localize = useLocalize();
-  return (key: TranslationKeys | LibraryKey, options?: Record<string, string>) =>
-    localize(key as TranslationKeys, options);
-}
-
 export default function Library() {
-  const localize = useLibraryLocalize();
+  const localize = useLocalize();
   const navigate = useNavigate();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
