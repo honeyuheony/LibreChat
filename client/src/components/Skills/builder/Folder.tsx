@@ -1,32 +1,10 @@
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { PluginFile } from './state';
+import type { PluginFile } from './markdown';
+import { folderIndent, folderRows } from '../utils/tree';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
-type Row = { kind: 'dir' | 'file'; name: string; depth: number; path: string };
-
 const isSkillFile = (path: string) => /SKILL\.md$/.test(path);
-
-/** 하위 폴더가 있는 파일을 먼저, 그다음 맨 위 파일을 이름순으로 늘어놓는다(와이어프레임 `treeRows`). */
-export function treeRows(files: PluginFile[]): Row[] {
-  const rows: Row[] = [];
-  const seen = new Set<string>();
-  const paths = files
-    .map((file) => file.path)
-    .sort((a, b) => (a.includes('/') ? 0 : 1) - (b.includes('/') ? 0 : 1) || a.localeCompare(b));
-  for (const path of paths) {
-    const segments = path.split('/');
-    for (let i = 1; i < segments.length; i++) {
-      const dir = segments.slice(0, i).join('/');
-      if (!seen.has(dir)) {
-        seen.add(dir);
-        rows.push({ kind: 'dir', name: segments[i - 1], depth: i, path: dir });
-      }
-    }
-    rows.push({ kind: 'file', name: segments[segments.length - 1], depth: segments.length, path });
-  }
-  return rows;
-}
 
 const VIEW_OPTIONS = [
   { raw: false, label: 'com_skills_builder_view_readable' },
@@ -127,7 +105,7 @@ export default function Folder({
         >
           {`▾ ${root}/`}
         </div>
-        {treeRows(files).map((row) =>
+        {folderRows(files.map((file) => file.path)).map((row) =>
           row.kind === 'dir' ? (
             <div
               key={`dir:${row.path}`}
@@ -135,7 +113,7 @@ export default function Folder({
               aria-expanded
               aria-selected={false}
               className="flex h-[22px] items-center font-semibold text-text-primary"
-              style={{ paddingInlineStart: row.depth * 16 + 8 }}
+              style={{ paddingInlineStart: folderIndent(row.depth) }}
             >
               {`▾ ${row.name}/`}
             </div>
@@ -150,7 +128,7 @@ export default function Folder({
                 'flex h-[22px] w-full items-center text-start text-text-secondary hover:bg-surface-hover',
                 row.path === current.path && 'bg-surface-message-user text-accent-primary-hover',
               )}
-              style={{ paddingInlineStart: row.depth * 16 + 8 }}
+              style={{ paddingInlineStart: folderIndent(row.depth) }}
             >
               {row.name}
               {isSkillFile(row.path) && (

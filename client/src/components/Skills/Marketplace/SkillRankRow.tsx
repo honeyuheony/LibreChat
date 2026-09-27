@@ -23,7 +23,7 @@ interface SkillRankRowProps {
   onSelect: (skill: TSkillSummary) => void;
 }
 
-/** 와이어프레임 `ritem`: 번호 · 아이콘 · 이름과 태그 · 설명 · By 줄 · 실행 / 절감 시간 / 회당 단축. */
+/** 순위 행: 번호 · 아이콘 · 이름과 태그 · 설명 · By 줄 · 실행 / 절감 시간 / 회당 단축. */
 export default function SkillRankRow({
   skill,
   rank,

@@ -1,4 +1,5 @@
-type TreeRow = { depth: number; label: string };
+import type { FolderRow } from '../utils/tree';
+import { folderIndent, folderRows } from '../utils/tree';
 
 /** 팩을 Claude 플러그인 배치로 내보낼 때의 파일 경로. 편집기 「만들어지는 폴더」와 같은 이름을 쓴다. */
 export function packPaths(skillNames: string[], hasConnectors: boolean): string[] {
@@ -10,33 +11,18 @@ export function packPaths(skillNames: string[], hasConnectors: boolean): string[
   ];
 }
 
-function treeRows(paths: string[]): TreeRow[] {
-  const seen = new Set<string>();
-  const nested = paths.filter((path) => path.includes('/'));
-  const flat = paths.filter((path) => !path.includes('/'));
-  return [...nested, ...flat].flatMap((path) => {
-    const segments = path.split('/');
-    const dirs = segments.slice(0, -1).flatMap((segment, index) => {
-      const dir = segments.slice(0, index + 1).join('/');
-      if (seen.has(dir)) {
-        return [];
-      }
-      seen.add(dir);
-      return [{ depth: index + 1, label: `${segment}/` }];
-    });
-    return [...dirs, { depth: segments.length, label: segments[segments.length - 1] }];
-  });
-}
-
-/** 와이어프레임 `treeView`: 폴더를 펼친 나무 모양 목록. */
+/** 팩에 담은 순서대로 늘어놓고 이름순으로 다시 정렬하지 않는다. */
 export default function PackTree({ root, paths }: { root: string; paths: string[] }) {
-  const rows = [{ depth: 0, label: `${root}/` }, ...treeRows(paths)];
+  const rows: FolderRow[] = [
+    { kind: 'dir', path: '', name: root, depth: 0 },
+    ...folderRows(paths, false),
+  ];
   return (
     <ul className="rounded-lg border border-border-light bg-surface-primary py-1.5 font-mono text-xs text-text-secondary">
       {rows.map((row, index) => (
-        <li key={`${index}:${row.label}`} style={{ paddingInlineStart: row.depth * 16 + 8 }}>
-          {row.label.endsWith('/') && <span aria-hidden="true">{'▾ '}</span>}
-          <span>{row.label}</span>
+        <li key={`${index}:${row.name}`} style={{ paddingInlineStart: folderIndent(row.depth) }}>
+          {row.kind === 'dir' && <span aria-hidden="true">{'▾ '}</span>}
+          <span>{row.kind === 'dir' ? `${row.name}/` : row.name}</span>
         </li>
       ))}
     </ul>

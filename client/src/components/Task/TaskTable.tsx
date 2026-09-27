@@ -7,8 +7,8 @@ import { formatTaskTime } from './taskState';
 import TaskFootnote from './TaskFootnote';
 import { useLocalize } from '~/hooks';
 
-/** Rows drawn per step; more are added as the reader scrolls near the bottom. */
-export const TASK_TABLE_PAGE = 40;
+/** 한 번에 그리는 행 수. 아래 끝 가까이 굴리면 그만큼 더 그린다. */
+const TASK_TABLE_PAGE = 40;
 
 const stripExtension = (filename: string) => filename.replace(/\.[^.]+$/, '');
 
@@ -41,7 +41,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
     }
   }, [localize, result.resultId, result.title, showToast]);
 
-  /** Footnote numbers run across the table in reading order, one per filled cell. */
+  /** 각주 번호는 값이 있는 칸마다 하나씩, 읽는 순서대로 표 전체에 이어 매긴다. */
   let footnote = 0;
 
   return (
@@ -130,7 +130,7 @@ export default function TaskTable({ result }: { result: TaskTableResult }) {
         <span>{localize('com_ui_task_low_count', { count: result.stats.low })}</span>
         <span className="ml-auto">
           {localize('com_ui_task_extract_version', {
-            /** The server tags it `extract-v1`; the label already says extraction, so only `v1` is shown. */
+            /** 서버 값은 `extract-v1` 이다. 문구가 이미 추출이라고 말하므로 `v1` 만 보인다. */
             version: result.extractor.promptVersion.replace(/^extract-/, ''),
           })}{' '}
           · {formatTaskTime(result.createdAt)}

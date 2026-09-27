@@ -33,7 +33,7 @@ function StatCell({ value, label }: { value: string; label: string }) {
 }
 
 /** 꺼진 스킬을 켠 설정 전체. 켠 값이 기본값과 같으면 예외 목록에서 뺀다(useSkillActiveState 와 같은 규칙). */
-export function activateAll(
+function activateAll(
   states: TSkillStatesResponse,
   off: TSkillSummary[],
   userId: string,
@@ -50,7 +50,7 @@ export function activateAll(
   return next;
 }
 
-/** 팩 상세 창(와이어프레임 `renderPackModal`): agent 수·합계 실행·MCP 서버, 들어 있는 agent, 모두 켜기. */
+/** 팩 상세 창: agent 수·합계 실행·MCP 서버, 들어 있는 agent, 모두 켜기. */
 export default function PackDetail({
   packId,
   skills,

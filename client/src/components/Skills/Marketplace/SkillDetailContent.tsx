@@ -13,7 +13,6 @@ import {
   Switch,
 } from '@librechat/client';
 import type { TSkillSummary } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import {
   formatCount,
   getCategoryLabel,
@@ -39,7 +38,6 @@ interface SkillDetailContentProps {
   onSelectSkill: (skill: TSkillSummary) => void;
 }
 
-/** 와이어프레임 `pvBlock`: 제목이 작게 붙은 테두리 칸. */
 /** SKILL.md 본문은 보통 `# 제목` 으로 시작한다. 창 머리에 이미 제목이 있으니 첫 줄의 h1 은 뺀다. */
 export function stripLeadingTitle(body: string): string {
   return body.replace(/^\s*#[ \t]+[^\n]*\n?/, '');
@@ -144,7 +142,7 @@ function LineageRow({
   );
 }
 
-/** 마켓 상세 창(와이어프레임 `renderAgentModal`). 채팅 시작은 `/` 목록에서 고른 것과 같게 새 대화에 스킬을 붙인다. */
+/** 마켓 상세 창. 채팅 시작은 `/` 목록에서 고른 것과 같게 새 대화에 스킬을 붙인다. */
 export default function SkillDetailContent({
   skill,
   allSkills,
@@ -220,7 +218,7 @@ export default function SkillDetailContent({
     }),
     profile?.version,
     skill.category ? getCategoryLabel(skill.category, localize) : null,
-    localize('com_skills_detail_model_auto' as TranslationKeys),
+    localize('com_skills_detail_model_auto'),
   ].filter(Boolean);
 
   return (

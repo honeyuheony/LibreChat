@@ -20,21 +20,19 @@ import {
   todoItems,
   composeSteps,
   SOURCE_ME,
-  toSavePayload,
-  starterPrompt,
   firstSentence,
   changedFields,
   isPublishReady,
   SOURCE_ORIGIN,
-  contentSignature,
   toggleConnector,
   createBuilderState,
 } from './state';
+import { contentSignature, starterPrompt, toSavePayload } from './markdown';
 import { getResponseStatus } from '~/utils/errors';
 import { runTrial } from './trial';
 import useDraft from './useDraft';
 
-/** test-result 가 응답 저장보다 먼저 닿을 때를 위한 한 번의 재시도 간격. 검증 안 됨: 서버 저장 지연을 측정하지 않았다. */
+/** test-result 가 응답 저장보다 먼저 닿을 때 한 번 다시 시도하기까지의 간격. 서버 저장 지연을 측정해 정한 값은 아니다. */
 const TEST_RESULT_RETRY_MS = 1000;
 
 export type SessionDeps = {
@@ -67,7 +65,7 @@ function withSlug(state: BuilderState): BuilderState {
 /** 응용할 원본 id 와 원본으로 채운 첫 상태. 첫 상태는 「원본에서 변경」 비교 기준이 된다. */
 export type ForkOrigin = { id: string; state: BuilderState };
 /** `chat` 은 대화에서 정한 칸을 채운 첫 상태다(「이 작업을 agent로 저장」). */
-export type SessionInit = { text?: string; fork?: ForkOrigin; chat?: BuilderState };
+type SessionInit = { text?: string; fork?: ForkOrigin; chat?: BuilderState };
 
 const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
 

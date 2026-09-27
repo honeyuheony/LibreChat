@@ -21,16 +21,15 @@ export type TaskToolCallState = {
   name: TaskToolName;
   awaitingApproval: boolean;
   finished: boolean;
-  /** A `task_result` attachment names this call. A rejected, failed or empty-handed
-   *  call returns text too, so `finished` alone does not mean it ran to the end. */
+  /** `task_result` 첨부가 이 호출을 가리킨다. 거절·실패했거나 할 일이 없던 호출도 글을
+   *  돌려주므로 `finished` 만으로는 끝까지 돌았는지 알 수 없다. */
   hasResult: boolean;
-  /** The call paused for the user's confirmation before it ran. */
+  /** 실행 전에 사용자 확인을 기다리며 멈춘 적이 있다. */
   hadApproval: boolean;
 };
 
 const TASK_RESULT_ATTACHMENT = 'task_result';
 
-/** Ids of the tool calls that saved a result, read from `task_result` attachments. */
 function resultToolCallIds(messages: TMessage[] | undefined): Set<string> {
   const ids = new Set<string>();
   for (const message of messages ?? []) {
@@ -45,15 +44,14 @@ function resultToolCallIds(messages: TMessage[] | undefined): Set<string> {
 }
 
 /**
- * The SDK answers a rejected call (or one a policy stopped) with `Blocked: <reason>`
- * instead of running it. A finished call no longer carries its `approval`, so after a
- * reload this is what says it stopped at its confirmation.
+ * 거절했거나 정책이 막은 호출에는 SDK 가 실행 대신 `Blocked: <이유>` 를 답한다.
+ * 끝난 호출에는 `approval` 이 남지 않으므로, 다시 불러온 뒤에는 이 답으로 확인 단계에서 멈췄음을 안다.
  */
 export function isBlockedTaskOutput(output: string | null | undefined): boolean {
   return typeof output === 'string' && /^(?:Error: )?Blocked:/.test(output.trim());
 }
 
-/** The last task tool call in the conversation; the progress section follows only that one. */
+/** 대화의 마지막 작업 도구 호출. 진행 칸은 이 호출만 따라간다. */
 export function findLatestTaskToolCall(messages: TMessage[] | undefined): TaskToolCallState | null {
   let latest: TaskToolCallState | null = null;
   const withResult = resultToolCallIds(messages);
@@ -86,11 +84,10 @@ export type TaskStepState = 'done' | 'now' | 'stopped' | 'todo';
 export type TaskStepView = { id: string; label: TranslationKeys; state: TaskStepState };
 
 /**
- * Index of the step a call ended on without a result: the last step its progress
- * reached, else the confirmation step when it paused there (rejected, or stopped
- * right after), else the first step.
+ * 결과 없이 끝난 호출이 멈춘 단계. 진행 이벤트가 닿은 마지막 단계, 없으면 확인에서 멈췄을 때
+ * (거절했거나 바로 뒤에 멈춤) 확인 단계, 그것도 아니면 첫 단계다.
  */
-export function stoppedStepIndex(
+function stoppedStepIndex(
   stages: readonly TaskStage[],
   progress: TaskProgressEvent | null,
   hadApproval: boolean,
@@ -103,17 +100,15 @@ export function stoppedStepIndex(
   return Math.max(0, confirmIndex);
 }
 
-/** What a plan list needs to know about its call. */
-export type TaskPlanFacts = Pick<
+type TaskPlanFacts = Pick<
   TaskToolCallState,
   'awaitingApproval' | 'finished' | 'hasResult' | 'hadApproval'
 >;
 
 /**
- * The step a call's plan stands on and whether it is running or stopped there. A
- * call that saved its result is past every step; one that returned without a result
- * (rejected, failed, nothing to work on) stops on the step it reached; otherwise the
- * furthest of the latest progress event and, while paused, the confirmation step.
+ * 계획이 서 있는 단계와 그 단계가 진행 중인지 멈췄는지. 결과를 저장한 호출은 모든 단계를 지났고,
+ * 결과 없이 돌아온 호출(거절·실패·할 일 없음)은 닿은 단계에서 멈춘다. 그 밖에는 마지막 진행 이벤트와,
+ * 확인을 기다리는 동안이면 확인 단계 가운데 더 뒤의 것이다.
  */
 export function taskPlanPosition(
   stages: readonly TaskStage[],
@@ -136,7 +131,6 @@ export function taskPlanPosition(
   return { current: Math.max(0, progressIndex, confirmIndex), currentState: 'now' };
 }
 
-/** States for the plan list: steps before `current` done, `current` in `currentState`. */
 export function stepStates(
   count: number,
   current: number,
@@ -150,7 +144,7 @@ export function stepStates(
   });
 }
 
-/** The plan list for the panel, placed by the same rule as the message's plan card. */
+/** 패널의 계획 목록. 메시지의 계획 카드와 같은 규칙으로 단계를 놓는다. */
 export function resolveTaskSteps(
   call: TaskToolCallState,
   progress: TaskProgressEvent | null,
@@ -162,9 +156,8 @@ export function resolveTaskSteps(
 }
 
 /**
- * Whether the call still waits on its confirmation card. Its `approval` stays until
- * it returns, so a sent decision, or progress already past the confirmation step,
- * means the run went on.
+ * 호출이 아직 확인 카드를 기다리는지. `approval` 은 호출이 돌아올 때까지 남으므로,
+ * 결정을 보냈거나 진행이 확인 단계를 지났으면 실행이 이어진 것으로 본다.
  */
 export function isAwaitingTaskApproval(
   call: TaskToolCallState,
@@ -180,9 +173,9 @@ export function isAwaitingTaskApproval(
   return progressIndex <= confirmIndex;
 }
 
-export type TaskOutputKind = 'table' | 'summary' | 'report';
+type TaskOutputKind = 'table' | 'summary' | 'report';
 
-/** What a message attachment of type `task_result` carries; the body lives on the server. */
+/** `task_result` 첨부가 싣는 값. 본문은 서버에 있다. */
 export type TaskOutput = {
   resultId: string;
   kind: TaskOutputKind;
@@ -191,10 +184,7 @@ export type TaskOutput = {
   createdAt?: string;
 };
 
-/**
- * The attachment fields may sit on the attachment itself or under a
- * `task_result` key, the way other tools nest theirs; both are read.
- */
+/** 다른 도구처럼 값이 `task_result` 키 아래에 들어 있을 수도 있어 첨부 자체와 그 키를 함께 읽는다. */
 function toTaskOutput(attachment: unknown, fallbackTime?: string): TaskOutput | null {
   if (attachment == null || typeof attachment !== 'object') {
     return null;
@@ -223,13 +213,13 @@ function toTaskOutput(attachment: unknown, fallbackTime?: string): TaskOutput | 
   };
 }
 
-/** Every task result attached in this conversation, oldest first, each result once. */
+/** 대화에 붙은 작업 결과를 오래된 것부터 하나씩 모은다. */
 export function collectTaskOutputs(messages: TMessage[] | undefined): TaskOutput[] {
   const seen = new Set<string>();
   const outputs: TaskOutput[] = [];
   for (const message of messages ?? []) {
     for (const attachment of message.attachments ?? []) {
-      const output = toTaskOutput(attachment, message.createdAt as string | undefined);
+      const output = toTaskOutput(attachment, message.createdAt);
       if (output == null || seen.has(output.resultId)) {
         continue;
       }
@@ -240,7 +230,7 @@ export function collectTaskOutputs(messages: TMessage[] | undefined): TaskOutput
   return outputs;
 }
 
-/** How many footnotes — the quoted evidence — a summary or report cites. */
+/** 요약·보고서가 인용한 근거(각주) 수. */
 export function countTaskFootnotes(result: Pick<TaskDocResult, 'footnotes'>): number {
   return new Set(result.footnotes.map((footnote) => footnote.n)).size;
 }
@@ -248,12 +238,12 @@ export function countTaskFootnotes(result: Pick<TaskDocResult, 'footnotes'>): nu
 export type TaskActivity = {
   id: string;
   name: string;
-  /** The MCP server the tool belongs to, split off an `<tool>_mcp_<server>` key. */
+  /** `<도구>_mcp_<서버>` 키에서 떼어 낸 MCP 서버 이름. */
   serverName?: string;
   createdAt?: string;
 };
 
-/** Every tool call of the conversation in order, the panel's 「활동」 log. */
+/** 패널 「활동」 기록: 대화의 모든 도구 호출을 순서대로 모은다. */
 export function collectToolActivity(messages: TMessage[] | undefined): TaskActivity[] {
   const activity: TaskActivity[] = [];
   for (const message of messages ?? []) {
@@ -277,9 +267,9 @@ export function collectToolActivity(messages: TMessage[] | undefined): TaskActiv
   return activity;
 }
 
-export type TaskFile = { file_id: string; filename: string };
+type TaskFile = { file_id: string; filename: string };
 
-/** Distinct files the user attached anywhere in the conversation. */
+/** 사용자가 대화 어디에서든 붙인 파일을 겹치지 않게 모은다. */
 export function collectConversationFiles(messages: TMessage[] | undefined): TaskFile[] {
   const files = new Map<string, TaskFile>();
   for (const message of messages ?? []) {
@@ -293,7 +283,7 @@ export function collectConversationFiles(messages: TMessage[] | undefined): Task
   return [...files.values()];
 }
 
-/** 「HH:MM」, the time stamp the wireframe puts on outputs and result footers. */
+/** 결과물 목록과 결과 화면 아래에 적는 「HH:MM」 시각. */
 export function formatTaskTime(value: string | undefined): string {
   if (!value) {
     return '';

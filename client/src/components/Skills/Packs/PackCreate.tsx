@@ -17,7 +17,7 @@ import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 /** 팩에 담아야 하는 최소 agent 수. data-schemas `skillPack.ts` 스키마 검사와 같은 값이다. */
-export const PACK_MIN_SKILLS = 2;
+const PACK_MIN_SKILLS = 2;
 const NEW_PACK_ROOT = 'new-pack';
 
 type PackCreateProps = {
@@ -38,7 +38,7 @@ function SectionHead({ step, title, note }: { step: number; title: string; note?
   );
 }
 
-/** 팩 만들기 창(와이어프레임 `renderNewPack`): 이름·설명과 담을 agent, 오른쪽에 폴더와 MCP 서버 합집합. */
+/** 팩 만들기 창: 이름·설명과 담을 agent, 오른쪽에 폴더와 MCP 서버 합집합. */
 export default function PackCreate({ skills, userId, onClose }: PackCreateProps) {
   const localize = useLocalize();
   const { showToast } = useToastContext();

@@ -70,7 +70,7 @@ describe('TaskDocView', () => {
     expect(container.querySelector('strong')?.textContent).toBe('3년(2+1년)');
   });
 
-  /** The footnotes are the evidence; `stats.reflected` counts documents. */
+  /** 근거는 각주다. `stats.reflected` 는 문서 수다. */
   it('shows the footnote count and time in the footer', () => {
     render(<TaskDocView result={summary} />);
     expect(screen.getByText('com_ui_task_evidence_count {"count":2}')).toBeInTheDocument();

@@ -13,14 +13,14 @@ export type TrialTransport = {
   ) => () => void;
 };
 
-export type TrialRequest = {
+type TrialRequest = {
   skillName: string;
   prompt: string;
   spec: TModelSpec;
   onReply?: (reply: string) => void;
 };
 
-export type TrialOutcome = { conversationId: string; reply: string };
+type TrialOutcome = { conversationId: string; reply: string };
 
 export class TrialError extends Error {
   constructor(readonly reason: 'start' | 'stream' | 'response') {

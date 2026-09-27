@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { OGDialog, Spinner, useMediaQuery } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { TSkillSummary } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import {
   MINE_TAB,
   PACKS_TAB,
@@ -26,13 +25,14 @@ import { SidePanelGroup } from '~/components/SidePanel';
 import SkillDetailContent from './SkillDetailContent';
 import SkillCategoryTabs from './SkillCategoryTabs';
 import SkillRankRow from './SkillRankRow';
+import TabSection from './TabSection';
 
 const BASE_PATH = '/skills-market';
 const CREATE_PATH = '/skills/new';
 const POPULAR_LIMIT = 10;
 
 /**
- * Agent 마켓(와이어프레임 v29 `renderAgents`): 머리 · 누적 지표 · 분류 탭 · 순위 목록 · 상세 창.
+ * Agent 마켓: 머리 · 누적 지표 · 분류 탭 · 순위 목록 · 상세 창.
  * 목록 전체를 한 번 불러와 탭과 지표를 클라이언트에서 계산한다.
  */
 export default function SkillMarketplace() {
@@ -53,7 +53,7 @@ export default function SkillMarketplace() {
   const { data, isLoading, isError, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useSkillsInfiniteQuery({ limit: 100 });
 
-  /* Load every page so tabs, ranks and totals cover the full catalog (same as SkillsCommand). */
+  /** 탭·순위·합계가 목록 전체를 다루도록 모든 쪽을 불러온다(SkillsCommand 와 같다). */
   useEffect(() => {
     if (!isError && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -142,19 +142,18 @@ export default function SkillMarketplace() {
     const runs = mySkills.reduce((sum, skill) => sum + runsOf(skill), 0);
     const forks = mySkills.reduce((sum, skill) => sum + (skill.forkCount ?? 0), 0);
     tabContent = (
-      <section className="mt-8">
-        <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-          {localize('com_skills_mine_title', { count: mySkills.length })}
-        </h2>
-        <div className="mb-3.5 text-[13.5px] text-text-muted">
-          {mySkills.length > 0
+      <TabSection
+        title={localize('com_skills_mine_title', { count: mySkills.length })}
+        subtitle={
+          mySkills.length > 0
             ? localize('com_skills_mine_summary', {
                 runs: formatCount(runs),
                 forks: formatCount(forks),
                 hours: formatCount(sumSavedHours(mySkills)),
               })
-            : localize('com_skills_mine_empty')}
-        </div>
+            : localize('com_skills_mine_empty')
+        }
+      >
         <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 md:grid-cols-2">
           <button
             type="button"
@@ -180,18 +179,15 @@ export default function SkillMarketplace() {
           originTitle={originTitle}
           onSelect={selectSkill}
         />
-      </section>
+      </TabSection>
     );
   } else {
     const list = sortByRuns(allSkills.filter((skill) => skill.category === activeTab));
     tabContent = (
-      <section className="mt-8">
-        <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-          {getCategoryLabel(activeTab, localize)}
-        </h2>
-        <div className="mb-3.5 text-[13.5px] text-text-muted">
-          {localize('com_skills_category_subtitle', { count: list.length })}
-        </div>
+      <TabSection
+        title={getCategoryLabel(activeTab, localize)}
+        subtitle={localize('com_skills_category_subtitle', { count: list.length })}
+      >
         <RankList
           skills={list}
           numbered
@@ -202,7 +198,7 @@ export default function SkillMarketplace() {
           onSelect={selectSkill}
           emptyLabel={localize('com_skills_empty')}
         />
-      </section>
+      </TabSection>
     );
   }
 
@@ -255,7 +251,7 @@ export default function SkillMarketplace() {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-text-muted">
-                  {localize('com_skills_create_agent_hint' as TranslationKeys)}
+                  {localize('com_skills_create_agent_hint')}
                 </p>
                 <div className="mt-[18px] inline-flex flex-wrap justify-center gap-x-[22px] gap-y-1.5 rounded-full border border-border-light bg-surface-primary px-[18px] py-[9px] text-[13.5px] text-text-tertiary">
                   <span>

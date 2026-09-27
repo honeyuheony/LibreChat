@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   Button,
-  Spinner,
   OGDialog,
   OGDialogTitle,
   OGDialogContent,
@@ -11,21 +10,19 @@ import {
 } from '@librechat/client';
 import type { BuilderSession } from './useSession';
 import type { TranslationKeys } from '~/hooks';
-import type { PreviewBlock } from './Preview';
-import type { BuilderFile } from './state';
+import type { PreviewBlock } from './Blocks';
 import type { PeerExample } from './peers';
-import {
-  runsOf,
-  formatCount,
-  getSkillTitle,
-} from '~/components/Skills/Marketplace/skillCategories';
-import { SOURCE_ME, DRAFT_SLUG, pluginFiles, splitSentences } from './state';
-import SkillIcon from '~/components/Skills/Marketplace/SkillIcon';
-import Preview, { EMOJI_STYLE, PreviewHead } from './Preview';
+import { getSkillTitle } from '~/components/Skills/Marketplace/skillCategories';
+import { SOURCE_ME, DRAFT_SLUG, splitSentences } from './state';
 import SourceTag, { ChangedMark } from './SourceTag';
+import { pluginFiles } from './markdown';
 import TrialPanel from './TrialPanel';
 import { useLocalize } from '~/hooks';
+import PreviewHead from './Head';
+import AttachRow from './Attach';
+import Preview from './Preview';
 import Folder from './Folder';
+import PeekRow from './Peek';
 import { cn } from '~/utils';
 import Share from './Share';
 import Todo from './Todo';
@@ -47,14 +44,13 @@ type BuilderProps = {
 };
 
 /**
- * 와이어프레임 v29 `.ov`(946·986행): 옅은 막 rgba(23,21,43,.42)과 blur(6px), 투명도 줄이기 설정이면 흐림 없이 .6.
- * 공용 배경막(bg-black/80)에 막 색 역할이 없어 여기서만 덮어쓴다. 보랏빛 먹색 역할이 없어 검정으로 쓰고,
- * 흰 바탕 위 밝기가 와이어프레임과 같도록 농도를 .38·.55 로 낮췄다.
+ * 편집기 뒤 마켓이 비쳐 보이도록 옅게 흐린 막을 깐다. 투명도 줄이기 설정이면 흐림 없이 조금 더 짙게 깐다.
+ * 공용 배경막(bg-black/80)에는 막 색 역할이 없어 여기서만 덮어쓴다.
  */
 const OVERLAY_CLASS =
   'bg-black/[0.38] backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
 
-/** 와이어프레임 `.md .na>div`(647행): 칸마다 70vh 까지만 늘고 넘치면 칸 안에서 굴린다. */
+/** 칸마다 70vh 까지만 늘고 넘치면 칸 안에서 굴린다. */
 const COLUMN_CLASS = 'min-h-0 overflow-auto px-5 py-4 md:max-h-[70vh]';
 
 function draftStatusKey(draft: BuilderSession['draft']): TranslationKeys | null {
@@ -94,184 +90,6 @@ function headerText(
   };
 }
 
-/** 대화에서 가져온 문서 이름과 종류. 번역 파일에 아직 없는 키라 형을 맞춘다. */
-function FileChips({ files }: { files: BuilderFile[] }) {
-  const localize = useLocalize();
-  if (files.length === 0) {
-    return null;
-  }
-  return (
-    <ul
-      aria-label={localize('com_skills_builder_files_list' as TranslationKeys)}
-      className="contents"
-    >
-      {files.map((file) => (
-        <li
-          key={file.name}
-          className="inline-flex items-center gap-1 rounded-full border border-border-light bg-surface-secondary px-2 py-0.5 text-xs text-text-primary"
-        >
-          {file.name}
-          <span className="font-bold text-text-secondary">
-            {localize(`com_skills_builder_file_kind_${file.kind}` as TranslationKeys)}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** 양식·예시 문서 붙이기 줄. 첫 단계는 예시 없이 시험하므로 붙인 파일은 쓰지 않고 그렇다고 알린다. */
-function AttachRow({ files, onClear }: { files: BuilderFile[]; onClear: () => void }) {
-  const localize = useLocalize();
-  const input = useRef<HTMLInputElement>(null);
-  const [picked, setPicked] = useState(false);
-  const attached = picked || files.length > 0;
-  return (
-    <>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-solid border-border-medium bg-surface-primary px-2.5 py-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-auto gap-1 rounded-full border-border-medium px-[11px] py-[3px] text-[13px]"
-          onClick={() => input.current?.click()}
-        >
-          <span aria-hidden="true" style={EMOJI_STYLE}>
-            📎
-          </span>
-          {localize('com_skills_builder_files_attach')}
-        </Button>
-        {files.length > 0 ? (
-          <>
-            <FileChips files={files} />
-            <button
-              type="button"
-              onClick={() => {
-                setPicked(false);
-                onClear();
-              }}
-              className="rounded-full border border-border-medium px-2.5 py-0.5 text-xs text-text-secondary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-            >
-              {localize('com_ui_clear_all')}
-            </button>
-          </>
-        ) : (
-          <span className="text-xs text-text-secondary">
-            {localize('com_skills_builder_files_hint')}
-          </span>
-        )}
-        <input
-          ref={input}
-          type="file"
-          multiple
-          hidden
-          data-testid="builder-files"
-          onChange={(event) => {
-            setPicked((event.target.files?.length ?? 0) > 0);
-            event.target.value = '';
-          }}
-        />
-      </div>
-      <p role="status" className="text-xs text-text-secondary empty:hidden">
-        {attached ? localize('com_skills_builder_files_later') : ''}
-      </p>
-    </>
-  );
-}
-
-type PeekRowProps = {
-  /** 읽는 중이면 undefined 다. */
-  peers?: PeerExample[];
-  onPeek?: (open: boolean) => void;
-  onCopy: (peer: PeerExample) => void;
-};
-
-/** 와이어프레임 `pk1 .by`: 작성자 · 부서 · 실행 수. 「By」와 응용 수는 적지 않는다. */
-function peerByLine(skill: PeerExample['skill'], localize: ReturnType<typeof useLocalize>) {
-  return [
-    skill.authorName,
-    skill.authorDepartment,
-    localize('com_skills_meta_runs', { value: formatCount(runsOf(skill)) }),
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
-
-/** 「다른 사람이 쓴 예 보기」: 남의 agent 세 개와 그 글을 펼치고, 「이 글 가져오기」로 글칸에 넣는다. */
-function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
-  const localize = useLocalize();
-  const [open, setOpen] = useState(false);
-  const toggle = (next: boolean) => {
-    setOpen(next);
-    onPeek?.(next);
-  };
-  return (
-    <>
-      <div>
-        <Button
-          variant="ghost"
-          size="pill"
-          aria-expanded={open}
-          onClick={() => toggle(!open)}
-          className="text-text-tertiary"
-        >
-          {localize(open ? 'com_skills_builder_peek_close' : 'com_skills_builder_peek')}
-        </Button>
-      </div>
-      {open && (
-        <div className="flex flex-col gap-2.5 rounded-lg border border-border-light bg-surface-secondary p-2.5">
-          {peers == null && (
-            <Spinner
-              className="mx-auto text-text-secondary"
-              aria-label={localize('com_ui_loading')}
-            />
-          )}
-          {peers?.length === 0 && (
-            <p className="text-sm text-text-secondary">
-              {localize('com_skills_builder_peek_empty' as TranslationKeys)}
-            </p>
-          )}
-          {peers != null && peers.length > 0 && (
-            <ul aria-label={localize('com_skills_builder_peek')} className="flex flex-col gap-2.5">
-              {peers.map((peer) => (
-                <li
-                  key={peer.skill._id}
-                  className="rounded-lg border border-border-light bg-surface-primary p-2.5"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <SkillIcon skill={peer.skill} />
-                    <div className="min-w-0 flex-1">
-                      <b className="text-text-primary">{getSkillTitle(peer.skill)}</b>
-                      <div className="text-xs text-text-secondary">
-                        {peerByLine(peer.skill, localize)}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="pill"
-                      className="border-border-medium text-text-secondary"
-                      onClick={() => {
-                        toggle(false);
-                        onCopy(peer);
-                      }}
-                    >
-                      {localize('com_skills_builder_peek_copy' as TranslationKeys)}
-                    </Button>
-                  </div>
-                  <ol className="mt-2 list-decimal ps-5 font-sans text-[13px] leading-relaxed text-text-secondary">
-                    {peer.text.split('\n').map((line, index) => (
-                      <li key={index}>{line}</li>
-                    ))}
-                  </ol>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
-
 /** agent 만들기 편집기(마켓 위 모달): 왼쪽 입력창 하나, 오른쪽 미리보기·폴더·테스트, 아래 할 일과 단추. */
 export default function Builder({
   session,
@@ -302,9 +120,8 @@ export default function Builder({
   const textChanged = session.changed.has('text');
   const draftStatus = draftStatusKey(session.draft);
   const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
-  const statusText =
-    askText && empty ? ('com_skills_builder_test_needs_text' as TranslationKeys) : draftStatus;
-  /** 와이어프레임처럼 처음부터 누를 수 있다. 글이 없으면 저장이 실패하므로 요청 대신 글칸으로 안내한다. */
+  const statusText = askText && empty ? 'com_skills_builder_test_needs_text' : draftStatus;
+  /** 처음부터 누를 수 있다. 글이 없으면 저장이 실패하므로 요청 대신 글칸으로 안내한다. */
   const runTest = () => {
     if (empty) {
       setAskText(true);
@@ -321,12 +138,12 @@ export default function Builder({
     const name = getSkillTitle(skill);
     session.copyText(
       splitSentences(text).join('\n'),
-      localize('com_skills_builder_source_copied' as TranslationKeys, { name }),
+      localize('com_skills_builder_source_copied', { name }),
     );
     setActiveBlock('how');
     showToast({
       status: 'success',
-      message: localize('com_skills_builder_peek_copied' as TranslationKeys, { name }),
+      message: localize('com_skills_builder_peek_copied', { name }),
     });
   };
 

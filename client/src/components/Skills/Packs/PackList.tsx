@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { Spinner } from '@librechat/client';
 import type { TSkillPackSummary, TSkillSummary } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import { useListSkillPacksQuery, useSkillsInfiniteQuery } from '~/data-provider';
 import { formatCount } from '../Marketplace/skillCategories';
+import TabSection from '../Marketplace/TabSection';
 import { useLocalize } from '~/hooks';
 import usePackStats from './stats';
 
@@ -55,7 +55,7 @@ function PackCard({ pack, skills, onOpen }: PackCardProps) {
   );
 }
 
-/** 마켓 「팩」 탭(와이어프레임 `agTab==='packs'`): 팩 카드와 「팩 만들기」 카드. */
+/** 마켓 「팩」 탭: 팩 카드와 「팩 만들기」 카드. */
 export default function PackList({ onOpen, onCreate }: PackListProps) {
   const localize = useLocalize();
   const { data: packs = [], isLoading, isError } = useListSkillPacksQuery();
@@ -74,13 +74,10 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
   }
 
   return (
-    <section className="mt-8">
-      <h2 className="mb-0.5 text-[22px] font-bold text-text-primary">
-        {localize('com_skills_pack_tab_title' as TranslationKeys, { count: packs.length })}
-      </h2>
-      <div className="mb-3.5 text-[13.5px] text-text-muted">
-        {localize('com_skills_pack_tab_desc' as TranslationKeys)}
-      </div>
+    <TabSection
+      title={localize('com_skills_pack_tab_title', { count: packs.length })}
+      subtitle={localize('com_skills_pack_tab_desc')}
+    >
       {isError && (
         <div className="mb-3 text-sm text-text-secondary" role="alert">
           {localize('com_ui_error')}
@@ -106,11 +103,11 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
               {localize('com_skills_pack_create')}
             </b>
             <span className="text-[13.5px] text-text-tertiary">
-              {localize('com_skills_pack_create_hint' as TranslationKeys)}
+              {localize('com_skills_pack_create_hint')}
             </span>
           </span>
         </button>
       </div>
-    </section>
+    </TabSection>
   );
 }

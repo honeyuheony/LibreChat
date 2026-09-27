@@ -1,7 +1,7 @@
 import type { TaskEvidence } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 
-/** A numbered marker whose hover or focus card shows the quoted source text and where it sits. */
+/** 번호 표시. 마우스를 올리거나 초점이 가면 인용한 원문과 그 위치를 카드로 보인다. */
 export default function TaskFootnote({
   n,
   filename,

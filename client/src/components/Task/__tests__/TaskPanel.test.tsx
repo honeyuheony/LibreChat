@@ -22,7 +22,7 @@ jest.mock('~/hooks', () => ({
 jest.mock('~/data-provider', () => ({
   useGetMessagesByConvoId: () => ({ data: mockMessages }),
   useActiveJobStatus: () => mockJobStatus,
-  /** The list endpoint keys each config by server name; the values carry no `serverName`. */
+  /** 목록 응답은 서버 이름이 키라 값에 `serverName` 이 없다. */
   useMCPServersQuery: () => ({
     data: {
       drive: { title: '업무자료실' },
@@ -106,7 +106,7 @@ const userFiles = () =>
     ],
   }) as unknown as TMessage;
 
-/** The `task_result` attachment a call leaves when it saved its result. */
+/** 결과를 저장한 호출이 남기는 `task_result` 첨부. */
 const resultOf = (toolCallId: string) =>
   ({
     messageId: `m-result-${toolCallId}`,
@@ -264,8 +264,8 @@ describe('TaskPanel', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
   });
 
-  /** The call keeps its approval until it returns, so the plan card follows the
-   *  progress events past the confirmation; the panel follows the same ones. */
+  /** 호출은 돌아올 때까지 approval 을 지니므로, 계획 카드는 확인 뒤의 진행 이벤트를 따라간다.
+   *  패널도 같은 이벤트를 따른다. */
   it('follows the progress past the confirmation like the plan card', () => {
     mockJobStatus = 'requires_action';
     const progress: TaskProgressEvent = {
@@ -317,7 +317,7 @@ describe('TaskPanel', () => {
 
   it('lists three outputs with their kind icon and details', () => {
     mockMessages = [toolCall('t1', 'write_report', { output: 'ok' }), withOutputs()];
-    /** Evidence is the footnotes of the saved result, not the reflected document count. */
+    /** 근거는 반영한 문서 수가 아니라 저장된 결과의 각주다. */
     const footnotes = (count: number) =>
       Array.from({ length: count }, (_, index) => ({ n: index + 1 }));
     mockTaskResult.mockImplementation((resultId: string) => ({

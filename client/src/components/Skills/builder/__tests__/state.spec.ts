@@ -5,15 +5,12 @@ import {
   editField,
   applyDraft,
   todoItems,
-  toMarkdown,
-  pluginFiles,
   composeSteps,
-  toSavePayload,
   splitSentences,
   isPublishReady,
-  contentSignature,
   createBuilderState,
 } from '../state';
+import { toMarkdown, pluginFiles, toSavePayload, contentSignature } from '../markdown';
 
 const draft: TSkillDraft = {
   slug: 'trip-report',

@@ -2,10 +2,10 @@ import { Radio } from '@librechat/client';
 import type { TSkillPublishScope } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import { useLocalize } from '~/hooks';
-import { Block } from './Preview';
+import { Block } from './Blocks';
 import { cn } from '~/utils';
 
-/** 와이어프레임의 「직접 하면 보통」 선택지(분). */
+/** 「직접 하면 보통」 선택지(분). */
 const MINUTE_CHOICES: ReadonlyArray<[number, TranslationKeys]> = [
   [10, 'com_skills_builder_minutes_10'],
   [30, 'com_skills_builder_minutes_30'],

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { TranslationKeys } from '~/hooks';
 import { SOURCE_AI, SOURCE_ME, SOURCE_CHAT, SOURCE_ORIGIN } from './state';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -16,8 +15,7 @@ export default function SourceTag({ source, label, children }: SourceTagProps) {
     [SOURCE_AI]: localize('com_skills_builder_source_ai'),
     [SOURCE_ME]: localize('com_skills_builder_source_me'),
     [SOURCE_ORIGIN]: localize('com_skills_builder_source_origin'),
-    /** 번역 파일에 아직 없는 키라 형을 맞춘다. */
-    [SOURCE_CHAT]: localize('com_skills_builder_source_chat' as TranslationKeys),
+    [SOURCE_CHAT]: localize('com_skills_builder_source_chat'),
   };
   const text = label ?? known[source] ?? source;
   return (
