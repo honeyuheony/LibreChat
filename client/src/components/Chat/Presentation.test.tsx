@@ -57,8 +57,16 @@ jest.mock('~/components/Chat/Input/Files/DragDropWrapper', () => ({
 }));
 
 jest.mock('~/components/SidePanel', () => ({
-  SidePanelGroup: ({ panel, children }: { panel: React.ReactNode; children: React.ReactNode }) => (
-    <div>
+  SidePanelGroup: ({
+    panel,
+    panelKind,
+    children,
+  }: {
+    panel: React.ReactNode;
+    panelKind?: string;
+    children: React.ReactNode;
+  }) => (
+    <div data-testid="side-panel-group" data-panel-kind={panelKind}>
       {children}
       {panel}
     </div>
@@ -275,9 +283,11 @@ describe('Presentation Artifact loading', () => {
     fireEvent.click(screen.getByRole('button', { name: mockOpenArtifactLabel }));
     expect(await screen.findByText(mockArtifactPanelLabel)).toBeInTheDocument();
     expect(screen.queryByText(mockTaskPanelLabel)).not.toBeInTheDocument();
+    expect(screen.getByTestId('side-panel-group')).toHaveAttribute('data-panel-kind', 'artifacts');
 
     fireEvent.click(screen.getByRole('button', { name: mockOpenTaskResultLabel }));
     expect(await screen.findByText(mockTaskPanelLabel)).toBeInTheDocument();
     expect(screen.queryByText(mockArtifactPanelLabel)).not.toBeInTheDocument();
+    expect(screen.getByTestId('side-panel-group')).toHaveAttribute('data-panel-kind', 'task');
   });
 });

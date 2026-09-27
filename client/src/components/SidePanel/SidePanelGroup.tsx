@@ -1,24 +1,38 @@
 import { useState, memo } from 'react';
 import { useDefaultLayout } from 'react-resizable-panels';
 import { ResizablePanel, ResizablePanelGroup, useMediaQuery } from '@librechat/client';
+import type { PanelSlot } from './ArtifactsPanel';
 import ArtifactsPanel from './ArtifactsPanel';
 
+export type SidePanelKind = 'artifacts' | 'task';
+
 const PANEL_IDS_SINGLE = ['messages-view'];
-/** Keep the persisted id stable so existing artifact panel widths carry over. */
-const PANEL_IDS_SPLIT = ['messages-view', 'artifacts-panel'];
+
+/**
+ * The slot's panel id also names its saved layout. The artifact id stays as it was so
+ * existing widths carry over; the task panel opens at the wireframe's 360px and keeps
+ * a width of its own.
+ */
+const PANEL_SLOTS: Record<SidePanelKind, PanelSlot> = {
+  artifacts: { id: 'artifacts-panel', defaultSize: '50', minWidthClassName: 'min-w-[400px]' },
+  task: { id: 'task-panel', defaultSize: '360px' },
+};
 
 interface SidePanelProps {
   panel?: React.ReactNode;
+  /** Which panel fills the slot; decides its default and saved width. */
+  panelKind?: SidePanelKind;
   children: React.ReactNode;
 }
 
-const SidePanelGroup = memo(({ panel, children }: SidePanelProps) => {
+const SidePanelGroup = memo(({ panel, panelKind = 'artifacts', children }: SidePanelProps) => {
+  const slot = PANEL_SLOTS[panelKind];
   const [shouldRenderPanel, setShouldRenderPanel] = useState(panel != null);
   const isSmallScreen = useMediaQuery('(max-width: 767px)');
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'side-panel-layout',
-    panelIds: panel != null ? PANEL_IDS_SPLIT : PANEL_IDS_SINGLE,
+    panelIds: panel != null ? ['messages-view', slot.id] : PANEL_IDS_SINGLE,
     storage: localStorage,
   });
 
@@ -39,6 +53,7 @@ const SidePanelGroup = memo(({ panel, children }: SidePanelProps) => {
         {!isSmallScreen && (
           <ArtifactsPanel
             panel={panel}
+            slot={slot}
             minSizeMain={minSizeMain}
             shouldRender={shouldRenderPanel}
             onRenderChange={setShouldRenderPanel}
