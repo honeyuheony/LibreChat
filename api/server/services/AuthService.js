@@ -25,6 +25,7 @@ const {
   normalizeExpiresIn,
   createOpenIDSessionIdentity,
   resolveAppConfigForUser,
+  createDepartmentGroups,
 } = require('@librechat/api');
 const {
   findUser,
@@ -43,6 +44,7 @@ const {
   deleteUserById,
   generateRefreshToken,
 } = require('~/models');
+const db = require('~/models');
 const { registerSchema } = require('~/strategies/validators');
 const { getAppConfig } = require('~/server/services/Config');
 const { sendEmail } = require('~/server/utils');
@@ -715,6 +717,12 @@ const setAuthTokens = async (userId, res, _session = null, req = null) => {
     }
 
     const user = await getUserById(userId);
+    try {
+      await createDepartmentGroups(db).syncUser(user ?? {});
+    } catch (error) {
+      /** 부서 그룹은 「우리 팀」 공개에만 쓰이므로, 맞추지 못해도 로그인은 막지 않는다. */
+      logger.warn('[setAuthTokens] Could not sync the department group:', error);
+    }
     const sessionExpiry = math(process.env.SESSION_EXPIRY, DEFAULT_SESSION_EXPIRY);
     const token = await generateToken(user, sessionExpiry);
 

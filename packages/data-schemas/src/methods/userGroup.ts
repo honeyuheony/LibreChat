@@ -279,6 +279,17 @@ export function createUserGroupMethods(
     memberId: string,
     session?: ClientSession,
   ) => Promise<IGroup | null>;
+  setGroupMembersByDepartment: (params: {
+    idOnTheSource: string;
+    department: string;
+  }) => Promise<IGroup | null>;
+  syncUserLocalGroupMembership: (params: {
+    userId: string | Types.ObjectId;
+    idOnTheSource?: string | null;
+    prefix: string;
+    target: { idOnTheSource: string; name: string } | null;
+  }) => Promise<{ changed: boolean; groupId?: string }>;
+  findLocalGroupIdsByPrefix: (prefix: string) => Promise<Types.ObjectId[]>;
 } {
   const getPrincipalsCache = (): CacheStore | undefined =>
     deps.getCache?.(CacheKeys.USER_PRINCIPALS);
@@ -1397,6 +1408,99 @@ export function createUserGroupMethods(
     return group;
   }
 
+  /**
+   * Replaces a local group's members with every user whose `department` equals `department`
+   * (surrounding whitespace ignored), creating the group when it does not exist.
+   */
+  async function setGroupMembersByDepartment({
+    idOnTheSource,
+    department,
+  }: {
+    idOnTheSource: string;
+    department: string;
+  }): Promise<IGroup | null> {
+    const User = mongoose.models.User as Model<IUser>;
+    const users = await User.find(
+      { department: new RegExp(`^\\s*${escapeRegExp(department)}\\s*$`) },
+      { idOnTheSource: 1 },
+    ).lean<Array<{ _id: Types.ObjectId; idOnTheSource?: string }>>();
+    const memberIds = users.map((user) => user.idOnTheSource || user._id.toString());
+    return await upsertGroupByExternalId(idOnTheSource, 'local', {
+      name: department,
+      source: 'local',
+      memberIds,
+    });
+  }
+
+  /**
+   * Keeps one user in exactly one of the local groups whose `idOnTheSource` starts with
+   * `prefix`: `target`, created on first use, or none when `target` is null. Writes only
+   * when the membership differs, so it is cheap to call on every token issue.
+   */
+  async function syncUserLocalGroupMembership({
+    userId,
+    idOnTheSource,
+    prefix,
+    target,
+  }: {
+    userId: string | Types.ObjectId;
+    idOnTheSource?: string | null;
+    prefix: string;
+    target: { idOnTheSource: string; name: string } | null;
+  }): Promise<{ changed: boolean; groupId?: string }> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const memberId = idOnTheSource || userId.toString();
+    const current = await Group.find(
+      {
+        source: 'local',
+        memberIds: memberId,
+        idOnTheSource: { $regex: `^${escapeRegExp(prefix)}` },
+      },
+      { _id: 1, idOnTheSource: 1 },
+    ).lean<Array<{ _id: Types.ObjectId; idOnTheSource?: string }>>();
+
+    const staleIds = current
+      .filter((group) => group.idOnTheSource !== target?.idOnTheSource)
+      .map((group) => group._id);
+    const joined = current.find((group) => group.idOnTheSource === target?.idOnTheSource);
+    if (staleIds.length === 0 && (target === null || joined)) {
+      return { changed: false, ...(joined && { groupId: joined._id.toString() }) };
+    }
+
+    if (staleIds.length > 0) {
+      await Group.updateMany({ _id: { $in: staleIds } }, { $pull: { memberIds: memberId } });
+    }
+    let groupId = joined?._id.toString();
+    if (target && !joined) {
+      const filter = { idOnTheSource: target.idOnTheSource, source: 'local' };
+      const update = {
+        $setOnInsert: { name: target.name },
+        $addToSet: { memberIds: memberId },
+      };
+      const upsert = () =>
+        Group.findOneAndUpdate(filter, update, { upsert: true, new: true }).lean<IGroup>();
+      /** Two first logins of one department can race on the unique index; the loser retries as an update. */
+      const group = await upsert().catch((error: { code?: number }) => {
+        if (error?.code === 11000) {
+          return upsert();
+        }
+        throw error;
+      });
+      groupId = group?._id.toString();
+    }
+    await invalidateMemberGroupsCache([memberId]);
+    return { changed: true, ...(groupId && { groupId }) };
+  }
+
+  async function findLocalGroupIdsByPrefix(prefix: string): Promise<Types.ObjectId[]> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const groups = await Group.find(
+      { source: 'local', idOnTheSource: { $regex: `^${escapeRegExp(prefix)}` } },
+      { _id: 1 },
+    ).lean<Array<Pick<IGroup, '_id'>>>();
+    return groups.map((group) => group._id);
+  }
+
   return {
     findGroupById,
     findGroupByExternalId,
@@ -1421,6 +1525,9 @@ export function createUserGroupMethods(
     countGroups,
     deleteGroup,
     removeMemberById,
+    setGroupMembersByDepartment,
+    syncUserLocalGroupMembership,
+    findLocalGroupIdsByPrefix,
   };
 }
 
