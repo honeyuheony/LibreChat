@@ -51,6 +51,13 @@ test('places the create action in the top bar and keeps the content narrow', () 
   }
 
   expect(toolbar).toHaveClass('h-12');
+  /** A top-bar secondary action is the wireframe's short pill, not a 36px control. */
+  expect(createButton).toHaveClass(
+    'h-7',
+    'text-[13px]',
+    'font-normal',
+    'rounded-theme-control-round',
+  );
   expect(within(toolbar).getByText('com_ui_schedules_title')).toBeInTheDocument();
   const content = screen.getByRole('region', { name: 'com_ui_schedules_title' });
   expect(
