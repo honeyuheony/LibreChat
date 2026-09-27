@@ -1,6 +1,7 @@
 const {
   createSkillsHandlers,
   createDepartmentGroups,
+  isDeploymentSkillIdVisibleTo,
   findDeploymentTeamDepartments,
 } = require('@librechat/api');
 const { isValidObjectIdString } = require('@librechat/data-schemas');
@@ -70,10 +71,9 @@ function getSkillsHandlers() {
         ? withDeploymentSkillIds(await findPubliclyAccessibleResources(params))
         : findPubliclyAccessibleResources(params),
     hasPublicPermission: async (params) =>
-      params.resourceType === 'skill' && params.requiredPermissions === PermissionBits.VIEW
-        ? withDeploymentSkillIds([]).some((id) => id.toString() === params.resourceId.toString()) ||
-          hasPublicPermission(params)
-        : hasPublicPermission(params),
+      (params.resourceType === 'skill' && params.requiredPermissions === PermissionBits.VIEW
+        ? isDeploymentSkillIdVisibleTo(params.resourceId)
+        : undefined) ?? hasPublicPermission(params),
     grantPermission,
     isValidObjectIdString,
     countPublishedForks,

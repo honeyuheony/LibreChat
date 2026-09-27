@@ -381,9 +381,15 @@ export function getDeploymentSkillIds(): Types.ObjectId[] {
   return registry.ids();
 }
 
+/** 배포 스킬 id 면 ACL 과 상관없이 `user` 에게 보이는지로 판정한다. 배포 스킬이 아니면 undefined. */
+export function isDeploymentSkillIdVisibleTo(id: SkillId, user?: unknown): boolean | undefined {
+  const skill = registry.getById(id);
+  return skill ? isDeploymentSkillVisibleTo(skill, user) : undefined;
+}
+
 /**
- * 접근 가능한 id 에 `user` 가 볼 수 있는 배포 스킬 id 를 더한다. `user` 를 넘기지 않으면 부서를 알 수
- * 없으므로 `scope: 팀` 배포 스킬은 더하지 않는다.
+ * 접근 가능한 id 에 `user` 가 볼 수 있는 배포 스킬 id 를 더하고, 볼 수 없는 배포 스킬 id 는 ACL 에서 왔어도
+ * 뺀다. `user` 를 넘기지 않으면 부서를 알 수 없으므로 `scope: 팀` 배포 스킬은 남기지 않는다.
  */
 export function mergeDeploymentSkillIds(ids: Array<SkillId>, user?: unknown): Types.ObjectId[] {
   const visibleIds = registry
@@ -395,7 +401,7 @@ export function mergeDeploymentSkillIds(ids: Array<SkillId>, user?: unknown): Ty
   for (const id of [...ids, ...visibleIds]) {
     const oid = typeof id === 'string' ? new Types.ObjectId(id) : id;
     const key = oid.toString();
-    if (seen.has(key)) {
+    if (seen.has(key) || isDeploymentSkillIdVisibleTo(key, user) === false) {
       continue;
     }
     seen.add(key);

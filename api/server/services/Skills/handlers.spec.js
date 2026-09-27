@@ -34,6 +34,11 @@ jest.mock('~/models', () => ({
 }));
 
 const { initializeDeploymentSkills, getDeploymentSkillRegistry } = require('@librechat/api');
+const {
+  hasPublicPermission,
+  findAccessibleResources,
+  findPubliclyAccessibleResources,
+} = require('~/server/services/PermissionService');
 const { getUserById } = require('~/models');
 const { getSkillsHandlers } = require('./handlers');
 
@@ -110,6 +115,28 @@ describe('skill handler deps with scoped deployment skills', () => {
     getUserById.mockResolvedValueOnce({ department: '통일교육팀' });
     const ids = toStrings(await deps.findAccessibleResources({ ...skillView, userId: 'u2' }));
     expect(ids).toEqual([allId]);
+  });
+
+  describe('when the ACL already lists a team deployment skill', () => {
+    it('still does not count it as public', async () => {
+      hasPublicPermission.mockResolvedValueOnce(true);
+      await expect(deps.hasPublicPermission({ ...skillView, resourceId: teamId })).resolves.toBe(
+        false,
+      );
+    });
+
+    it('still leaves it out of the public ids', async () => {
+      findPubliclyAccessibleResources.mockResolvedValueOnce([teamId]);
+      const ids = toStrings(await deps.findPubliclyAccessibleResources(skillView));
+      expect(ids).toEqual([allId]);
+    });
+
+    it('still keeps it from a user in another department', async () => {
+      findAccessibleResources.mockResolvedValueOnce([teamId]);
+      getUserById.mockResolvedValueOnce({ department: '통일교육팀' });
+      const ids = toStrings(await deps.findAccessibleResources({ ...skillView, userId: 'u3' }));
+      expect(ids).toEqual([allId]);
+    });
   });
 
   it('labels a team deployment skill with its authoring department', async () => {
