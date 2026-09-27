@@ -144,6 +144,36 @@ describe('MetricsView', () => {
     expect(screen.getByText('com_metrics_staff_contributor_note')).toBeInTheDocument();
   });
 
+  it('matches the wireframe styling for metrics and rankings', async () => {
+    getMetrics.mockResolvedValue(metricsReport);
+    renderMetrics();
+
+    await screen.findByRole('heading', { name: 'com_metrics_title', level: 1 });
+
+    expect(screen.getByText('com_ui_admin')).toBeInTheDocument();
+    const registeredAgentsHeading = screen.getByRole('heading', {
+      name: 'com_metrics_registered_agents',
+    });
+    expect(registeredAgentsHeading.nextElementSibling).toHaveClass('text-accent-primary');
+
+    const tables = screen.getAllByRole('table');
+    expect(tables).toHaveLength(2);
+    tables.forEach((table) => {
+      expect(table).toHaveClass('text-[13px]');
+      expect(table.parentElement?.classList.contains('rounded-lg')).toBe(false);
+      expect(table.parentElement?.classList.contains('border-border-light')).toBe(false);
+    });
+
+    const firstAgentRow = screen.getByRole('row', { name: /주간보고 요약/ });
+    const runsCell = within(firstAgentRow).getByRole('cell', { name: '5,422' });
+    expect(runsCell).toHaveClass('px-2', 'py-1.5');
+    const runBar = runsCell.querySelector('span[aria-hidden="true"]');
+    expect(runBar).toHaveStyle({ width: '90px' });
+    expect(runBar?.classList.contains('bg-gradient-to-r')).toBe(true);
+    expect(runBar?.classList.contains('from-accent-primary')).toBe(true);
+    expect(runBar?.classList.contains('to-accent-primary-hover')).toBe(true);
+  });
+
   it('navigates to the selected skill detail when another cell in its row is clicked', async () => {
     getMetrics.mockResolvedValue(metricsReport);
     const { router } = renderMetrics();
@@ -171,7 +201,17 @@ describe('MetricsView', () => {
     renderMetrics();
 
     expect(await screen.findByText('com_metrics_empty_contributors')).toBeInTheDocument();
-    expect(screen.getByText('com_metrics_base_total:value=3')).toBeInTheDocument();
+    const baseTotalRow = screen.getByRole('row', { name: /com_metrics_base_total/ });
+    expect(baseTotalRow).toHaveClass('border-b', 'border-border-light');
+    const emptyContributorRow = screen.getByRole('row', {
+      name: /com_metrics_empty_contributors/,
+    });
+    expect(within(emptyContributorRow).getByRole('cell')).toHaveClass(
+      'border-b',
+      'border-border-light',
+      'px-2',
+      'py-1.5',
+    );
   });
 
   it('shows an error and retries the interrupted request', async () => {
