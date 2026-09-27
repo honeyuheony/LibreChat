@@ -1,10 +1,16 @@
+import { Types } from 'mongoose';
 import { createHash } from 'node:crypto';
 import { SCHEDULE_MAX_SKILLS, SCHEDULE_SKILL_NAME_MAX_LENGTH } from 'librechat-data-provider';
 import type { ISchedule, IScheduleRun } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { SchedulesHandlersDeps } from './handlers';
 import type { ServerRequest } from '~/types';
-import { createSchedulesHandlers, toWireSchedule, computeCreateDigest } from './handlers';
+import {
+  toWireSchedule,
+  computeCreateDigest,
+  createSchedulesHandlers,
+  filterViewableSkillNamesByAccess,
+} from './handlers';
 import { ScheduleMCPError } from './mcp';
 
 /** A lean schedule doc carrying both public fields and internal bookkeeping. */
@@ -491,6 +497,57 @@ describe('schedule skills', () => {
     expect(
       computeCreateDigest({ ...CREATE_BODY, target: 'new', enabled: true, skills: ['a'] }),
     ).not.toBe(createBodyDigest());
+  });
+});
+
+describe('filterViewableSkillNamesByAccess', () => {
+  const accessibleSkillIds = [new Types.ObjectId()];
+  const skill = (name: string, userInvocable?: boolean) => ({
+    _id: accessibleSkillIds[0],
+    name,
+    body: '# Skill',
+    author: 'author-1',
+    ...(userInvocable != null && { userInvocable }),
+  });
+
+  it('keeps names the ACL-scoped lookup resolves and drops the rest', async () => {
+    const getSkillByName = jest.fn(async (name: string) =>
+      name === 'hwp-report' ? skill(name) : null,
+    );
+
+    const names = await filterViewableSkillNamesByAccess({
+      names: ['hwp-report', 'private-report'],
+      accessibleSkillIds,
+      getSkillByName,
+    });
+
+    expect(names).toEqual(['hwp-report']);
+    expect(getSkillByName).toHaveBeenCalledWith('hwp-report', accessibleSkillIds, {
+      preferUserInvocable: true,
+    });
+  });
+
+  it('drops a model-only skill a manual pick would skip', async () => {
+    const names = await filterViewableSkillNamesByAccess({
+      names: ['model-only'],
+      accessibleSkillIds,
+      getSkillByName: async (name: string) => skill(name, false),
+    });
+
+    expect(names).toEqual([]);
+  });
+
+  it('resolves nothing without any accessible skill id', async () => {
+    const getSkillByName = jest.fn(async (name: string) => skill(name));
+
+    const names = await filterViewableSkillNamesByAccess({
+      names: ['hwp-report'],
+      accessibleSkillIds: [],
+      getSkillByName,
+    });
+
+    expect(names).toEqual([]);
+    expect(getSkillByName).not.toHaveBeenCalled();
   });
 });
 

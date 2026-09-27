@@ -16,6 +16,7 @@ import type {
   ScheduleLimits,
   FireResult,
 } from './types';
+import type { ResolveManualSkillsParams } from '../agents/skills';
 import type { ServerRequest } from '~/types';
 import {
   isValidCronExpression,
@@ -57,6 +58,29 @@ export interface SchedulesHandlersDeps {
   deleteSchedule: (id: string, userId: string) => Promise<ScheduleDeleteResult>;
   /** Whether this user's account deletion has begun. Fail-closed (unknown == true). */
   isUserDeleting: (userId: string) => Promise<boolean>;
+}
+
+/**
+ * Keeps the names a chat turn's `manualSkills` would resolve for this user: the same
+ * ACL-scoped `getSkillByName` lookup and user-invocable rule `resolveManualSkills` applies.
+ */
+export async function filterViewableSkillNamesByAccess({
+  names,
+  accessibleSkillIds,
+  getSkillByName,
+}: Pick<ResolveManualSkillsParams, 'names' | 'accessibleSkillIds' | 'getSkillByName'>): Promise<
+  string[]
+> {
+  if (accessibleSkillIds.length === 0) {
+    return [];
+  }
+  const skills = await Promise.all(
+    names.map((name) => getSkillByName(name, accessibleSkillIds, { preferUserInvocable: true })),
+  );
+  return names.filter((_, index) => {
+    const skill = skills[index];
+    return skill != null && skill.userInvocable !== false;
+  });
 }
 
 /**
