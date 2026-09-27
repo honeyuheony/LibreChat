@@ -117,18 +117,19 @@ function ToolsMenu({
           portal={true}
           portalElement={getMainLandmark}
           gutter={8}
+          flip={false}
           modal={false}
           unmountOnHide={true}
           aria-label={menuLabel}
           className={cn(
-            'z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col rounded-theme-surface',
+            'z-50 flex max-h-[min(420px,var(--popover-available-height))] w-[340px] max-w-[calc(100vw-2rem)] flex-col rounded-theme-surface',
             'border border-border-light bg-surface-primary p-1.5 shadow-lg',
             'origin-bottom-left opacity-0 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
             'data-[enter]:scale-100 data-[enter]:opacity-100',
             'scale-95 data-[leave]:scale-95 data-[leave]:opacity-0',
           )}
         >
-          <div className="flex max-h-[min(420px,var(--popover-available-height))] flex-col overflow-y-auto">
+          <div className="flex min-h-0 flex-col overflow-y-auto">
             {hasUploads && (
               <Ariakit.MenuGroup>
                 <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
