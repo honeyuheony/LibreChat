@@ -472,18 +472,21 @@ describe('TaskPanel', () => {
       } as TMessage,
     ];
     renderPanel();
-    const toggle = screen.getByRole('button', { name: 'com_ui_export_activity_label 3' });
+    const toggle = screen.getByRole('button', { name: 'com_ui_task_activity {"count":3}' });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('extract_table')).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
-    const log = screen.getByRole('list', { name: 'com_ui_export_activity_label 3' });
+    const log = screen.getByRole('list', { name: 'com_ui_task_activity {"count":3}' });
     expect(Array.from(log.children).map((row) => row.textContent)).toEqual([
       '09:01skill',
       '09:02search · 업무자료실',
       '09:03extract_table',
     ]);
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const close = screen.getByRole('button', { name: 'com_ui_task_activity_close' });
+    expect(close).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(close);
+    expect(screen.queryByRole('list', { name: 'com_ui_task_activity {"count":3}' })).toBeNull();
   });
 
   it('says there are no attachments when no file was uploaded', () => {

@@ -3400,6 +3400,8 @@
   "com_ui_task_schema_title": "추출 항목",
   "com_ui_task_add_field": "+ 추가",
   "com_ui_task_add_field_placeholder": "추가할 항목 이름",
+  "com_ui_task_activity": "활동 {{count}}",
+  "com_ui_task_activity_close": "활동 닫기",
   "com_ui_task_run": "실행",
   "com_ui_task_ran": "실행됨",
   "com_ui_task_estimate": "약 {{0}}~{{1}}분",

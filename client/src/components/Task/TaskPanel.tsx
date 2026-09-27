@@ -166,7 +166,7 @@ function ProgressSection({
 }) {
   const localize = useLocalize();
   const [logOpen, setLogOpen] = useState(false);
-  const activityLabel = `${localize('com_ui_export_activity_label')} ${activity.length}`;
+  const activityLabel = localize('com_ui_task_activity', { count: activity.length });
   const doneSteps = steps.filter((step) => step.state === 'done').length;
   const liveProgress = !call.finished && !awaiting ? progress : null;
   const percent =
@@ -181,7 +181,7 @@ function ProgressSection({
       action={
         activity.length > 0 && (
           <HeadingLink expanded={logOpen} onClick={() => setLogOpen((value) => !value)}>
-            {activityLabel}
+            {logOpen ? localize('com_ui_task_activity_close') : activityLabel}
           </HeadingLink>
         )
       }

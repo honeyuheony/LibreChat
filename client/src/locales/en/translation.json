@@ -3395,6 +3395,8 @@
   "com_ui_task_schema_title": "Fields to extract",
   "com_ui_task_add_field": "+ Add",
   "com_ui_task_add_field_placeholder": "Field name to add",
+  "com_ui_task_activity": "Activity {{count}}",
+  "com_ui_task_activity_close": "Hide activity",
   "com_ui_task_run": "Run",
   "com_ui_task_ran": "Ran",
   "com_ui_task_estimate": "About {{0}}–{{1}} min",
