@@ -17,6 +17,7 @@ const {
   createSkillPublishHandler,
   createSkillTestResultHandler,
   createDefaultAgentLLMFactory,
+  createDepartmentGroups,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
 const {
@@ -43,6 +44,7 @@ const {
   getAuthorSkillByName,
   findEntriesByResource,
   setSkillPublicationState,
+  getSkillAuthorDepartments,
 } = require('~/models');
 const checkAdmin = require('~/server/middleware/roles/admin');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
@@ -220,6 +222,8 @@ const publishHandler = createSkillPublishHandler({
   findEntriesByResource,
   bulkUpdateResourcePermissions,
   sharePolicy,
+  getSkillAuthorDepartments,
+  departmentGroups: createDepartmentGroups(require('~/models')),
 });
 
 // ---------------------------------------------------------------------------

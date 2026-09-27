@@ -202,6 +202,19 @@ async function setupTestData() {
       name: 'Skill Owner',
       email: 'skill-owner@test.com',
       role: SystemRoles.USER,
+      department: '정세분석팀',
+    }),
+    teammate: await User.create({
+      name: 'Teammate',
+      email: 'teammate@test.com',
+      role: SystemRoles.USER,
+      department: '정세분석팀',
+    }),
+    outsider: await User.create({
+      name: 'Outsider',
+      email: 'outsider@test.com',
+      role: SystemRoles.USER,
+      department: '운영지원팀',
     }),
     editor: await User.create({
       name: 'Skill Editor',
@@ -1602,13 +1615,84 @@ describe('Skill builder routes', () => {
       }
     });
 
-    it('rejects the team scope', async () => {
-      const tested = await createTestedSkill();
-      const res = await request(app)
-        .post(`/api/skills/${tested._id}/publish`)
-        .send({ scope: 'team' });
-      expect(res.status).toBe(400);
-      expect(res.body.code).toBe('SCOPE_UNAVAILABLE');
+    describe('team scope', () => {
+      afterEach(async () => {
+        await mongoose.models.Group.deleteMany({});
+      });
+
+      function publish(skillId, scope) {
+        return request(app).post(`/api/skills/${skillId}/publish`).send({ scope });
+      }
+
+      async function listIds() {
+        const res = await request(app).get('/api/skills');
+        expect(res.status).toBe(200);
+        return new Map(res.body.skills.map((skill) => [skill._id, skill]));
+      }
+
+      it('shows a team skill to the author department only', async () => {
+        const tested = await createTestedSkill();
+        const published = await publish(tested._id, 'team');
+        expect(published.status).toBe(200);
+        expect(published.body.scope).toBe('team');
+        expect(published.body.isPublic).toBe(false);
+
+        setTestUser(testUsers.teammate);
+        expect((await listIds()).get(tested._id)?.scope).toBe('team');
+        const detail = await request(app).get(`/api/skills/${tested._id}`);
+        expect(detail.status).toBe(200);
+        expect(detail.body.scope).toBe('team');
+
+        setTestUser(testUsers.outsider);
+        expect((await listIds()).has(tested._id)).toBe(false);
+        expect((await request(app).get(`/api/skills/${tested._id}`)).status).toBe(403);
+      });
+
+      it('leaves no grant from the previous scope when switching all, team and me', async () => {
+        const tested = await createTestedSkill();
+        const entries = () =>
+          AclEntry.find({ resourceType: ResourceType.SKILL, resourceId: tested._id }).lean();
+
+        expect((await publish(tested._id, 'all')).body.scope).toBe('all');
+        expect((await publish(tested._id, 'team')).status).toBe(200);
+        const team = await entries();
+        expect(team.map((entry) => entry.principalType).sort()).toEqual(
+          [PrincipalType.GROUP, PrincipalType.USER].sort(),
+        );
+
+        expect((await publish(tested._id, 'all')).status).toBe(200);
+        const all = await entries();
+        expect(all.map((entry) => entry.principalType).sort()).toEqual(
+          [PrincipalType.PUBLIC, PrincipalType.USER].sort(),
+        );
+
+        expect((await publish(tested._id, 'team')).status).toBe(200);
+        const me = await publish(tested._id, 'me');
+        expect(me.body.scope).toBe('me');
+        const remaining = await entries();
+        expect(remaining).toHaveLength(1);
+        expect(remaining[0].principalId.toString()).toBe(testUsers.owner._id.toString());
+
+        setTestUser(testUsers.teammate);
+        expect((await request(app).get(`/api/skills/${tested._id}`)).status).toBe(403);
+      });
+
+      it('rejects the team scope when the author has no department', async () => {
+        const tested = await createTestedSkill();
+        await User.updateOne({ _id: testUsers.owner._id }, { $unset: { department: '' } });
+        try {
+          const res = await publish(tested._id, 'team');
+          expect(res.status).toBe(400);
+          expect(res.body.code).toBe('DEPARTMENT_REQUIRED');
+          expect(await AclEntry.countDocuments({ resourceId: tested._id })).toBe(1);
+          expect((await Skill.findById(tested._id).lean()).publishedAt).toBeUndefined();
+        } finally {
+          await User.updateOne(
+            { _id: testUsers.owner._id },
+            { $set: { department: '정세분석팀' } },
+          );
+        }
+      });
     });
 
     it('rejects an editor who cannot share', async () => {

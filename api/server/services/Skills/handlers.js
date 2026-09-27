@@ -1,6 +1,6 @@
-const { createSkillsHandlers } = require('@librechat/api');
+const { createSkillsHandlers, createDepartmentGroups } = require('@librechat/api');
 const { isValidObjectIdString } = require('@librechat/data-schemas');
-const { PermissionBits } = require('librechat-data-provider');
+const { PermissionBits, ResourceType } = require('librechat-data-provider');
 const {
   createSkill,
   updateSkill,
@@ -21,6 +21,7 @@ const {
   withDeploymentSkillIds,
   getSkillStrategyFunctions,
 } = require('~/server/services/Endpoints/agents/skillDeps');
+const db = require('~/models');
 
 function getSkillsHandlers() {
   const skillDbMethods = getSkillDbMethods();
@@ -53,6 +54,8 @@ function getSkillsHandlers() {
     countPublishedForks,
     getDeploymentSkillUsage,
     getSkillAuthorDepartments,
+    findTeamSharedSkillIds: (ids) =>
+      createDepartmentGroups(db).findSharedResourceIds(ResourceType.SKILL, ids),
   });
 }
 module.exports = { getSkillsHandlers };

@@ -10,6 +10,7 @@ import type { TSkillConflictResponse, TSkillPublishScope } from 'librechat-data-
 import type { ISkill, UpdateSkillResult } from '@librechat/data-schemas';
 import type { NextFunction, Response } from 'express';
 import type { Types } from 'mongoose';
+import type { DepartmentGroups } from '~/user/department';
 import type { ServerRequest } from '~/types';
 import { serializeSkill } from './handlers';
 
@@ -83,11 +84,16 @@ export interface SkillPublishDeps extends SkillLookupDeps {
     grantedBy: string;
   }) => Promise<{ errors?: Array<{ error: string }> } | undefined>;
   sharePolicy: SkillSharePolicy;
+  /** 작성자 id별 부서. 'team' 게시는 작성자 부서 그룹에 부여한다. */
+  getSkillAuthorDepartments: (
+    authorIds: Array<string | Types.ObjectId>,
+  ) => Promise<Record<string, string>>;
+  departmentGroups: Pick<DepartmentGroups, 'syncDepartment' | 'findGroupIds'>;
 }
 
 type SkillRequest = ServerRequest & { resourceAccess?: { resourceInfo?: SkillDoc } };
 
-const PUBLISH_SCOPES = new Set<string>(['all', 'me']);
+const PUBLISH_SCOPES = new Set<string>(['all', 'team', 'me']);
 const CLEAN_FINISH_REASONS = new Set<string>(['stop']);
 const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
 
@@ -268,26 +274,72 @@ async function passesSharePolicy(
   return passed;
 }
 
-/** 'all' 은 public viewer 를 주고, 'me' 는 작성자 항목만 남기고 public·사용자·그룹·역할 항목을 모두 거둔다. */
+type PublishPrincipals = {
+  updatedPrincipals: PublishPrincipal[];
+  revokedPrincipals: PublishPrincipal[];
+};
+
+const PUBLIC_PRINCIPAL = { type: PrincipalType.PUBLIC, id: null };
+
+/**
+ * 'all' 은 public viewer 를, 'team' 은 작성자 부서 그룹 viewer 를 주고 서로의 부여와 다른 부서 그룹
+ * 부여를 거둔다. 사람이 준 공유는 둘 다 남긴다. 'me' 는 작성자 항목만 남기고 모두 거둔다.
+ */
 async function publishPrincipals(
   deps: SkillPublishDeps,
   scope: TSkillPublishScope,
   skill: SkillDoc,
-): Promise<{ updatedPrincipals: PublishPrincipal[]; revokedPrincipals: PublishPrincipal[] }> {
-  const publicPrincipal = { type: PrincipalType.PUBLIC, id: null };
+  teamGroupId: string | null,
+): Promise<PublishPrincipals> {
+  const authorId = skill.author.toString();
+  const entries = (await deps.findEntriesByResource(ResourceType.SKILL, skill._id))
+    .filter((entry) => entry.principalType !== PrincipalType.PUBLIC)
+    .map((entry) => ({ type: entry.principalType, id: entry.principalId?.toString() ?? null }));
+
+  if (scope === 'me') {
+    const shared = entries.filter(
+      (principal) => !(principal.type === PrincipalType.USER && principal.id === authorId),
+    );
+    return { updatedPrincipals: [], revokedPrincipals: [PUBLIC_PRINCIPAL, ...shared] };
+  }
+
+  const departmentGroupIds = await deps.departmentGroups.findGroupIds();
+  const staleDepartmentGrants = entries.filter(
+    (principal) =>
+      principal.type === PrincipalType.GROUP &&
+      principal.id !== null &&
+      principal.id !== teamGroupId &&
+      departmentGroupIds.has(principal.id),
+  );
   if (scope === 'all') {
     return {
-      updatedPrincipals: [{ ...publicPrincipal, accessRoleId: AccessRoleIds.SKILL_VIEWER }],
-      revokedPrincipals: [],
+      updatedPrincipals: [{ ...PUBLIC_PRINCIPAL, accessRoleId: AccessRoleIds.SKILL_VIEWER }],
+      revokedPrincipals: staleDepartmentGrants,
     };
   }
+  return {
+    updatedPrincipals: [
+      { type: PrincipalType.GROUP, id: teamGroupId, accessRoleId: AccessRoleIds.SKILL_VIEWER },
+    ],
+    revokedPrincipals: [PUBLIC_PRINCIPAL, ...staleDepartmentGrants],
+  };
+}
+
+async function readAuthorDepartment(
+  deps: SkillPublishDeps,
+  skill: SkillDoc,
+): Promise<string | undefined> {
   const authorId = skill.author.toString();
-  const entries = await deps.findEntriesByResource(ResourceType.SKILL, skill._id);
-  const shared = entries
-    .filter((entry) => entry.principalType !== PrincipalType.PUBLIC)
-    .map((entry) => ({ type: entry.principalType, id: entry.principalId?.toString() ?? null }))
-    .filter((principal) => !(principal.type === PrincipalType.USER && principal.id === authorId));
-  return { updatedPrincipals: [], revokedPrincipals: [publicPrincipal, ...shared] };
+  const departments = await deps.getSkillAuthorDepartments([authorId]);
+  return departments[authorId];
+}
+
+async function syncTeamGroup(deps: SkillPublishDeps, department: string): Promise<string> {
+  const groupId = await deps.departmentGroups.syncDepartment(department);
+  if (!groupId) {
+    throw new Error(`Could not create the department group for ${department}`);
+  }
+  return groupId;
 }
 
 /** `POST /api/skills/:id/publish`: 게시 조건을 확인하고 공개 범위를 ACL 에 적은 뒤 `publishedAt` 을 남긴다. */
@@ -301,13 +353,8 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     const scope = (req.body as { scope?: unknown } | undefined)?.scope;
-    if (scope === 'team') {
-      return res
-        .status(400)
-        .json({ error: 'Team scope is not available yet', code: 'SCOPE_UNAVAILABLE' });
-    }
     if (typeof scope !== 'string' || !PUBLISH_SCOPES.has(scope)) {
-      return res.status(400).json({ error: "scope must be 'all' or 'me'" });
+      return res.status(400).json({ error: "scope must be 'all', 'team' or 'me'" });
     }
     const publishScope = scope as TSkillPublishScope;
     try {
@@ -318,6 +365,14 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
       const blocker = publishBlocker(skill);
       if (blocker) {
         return res.status(400).json(blocker);
+      }
+      const department =
+        publishScope === 'team' ? await readAuthorDepartment(deps, skill) : undefined;
+      if (publishScope === 'team' && !department) {
+        return res.status(400).json({
+          error: "Set the author's department before publishing to the team",
+          code: 'DEPARTMENT_REQUIRED',
+        });
       }
       const isPublic = publishScope === 'all';
       if (!(await passesSharePolicy(deps.sharePolicy.checkShareAccess, req, res, isPublic))) {
@@ -330,7 +385,9 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
         return;
       }
 
-      const principals = await publishPrincipals(deps, publishScope, skill);
+      /** 그룹 구성원을 쓰는 일이므로 공유 권한 검사를 통과한 뒤에 한다. */
+      const teamGroupId = department ? await syncTeamGroup(deps, department) : null;
+      const principals = await publishPrincipals(deps, publishScope, skill, teamGroupId);
       const published = await deps.setSkillPublicationState({
         id: skill._id.toString(),
         expectedVersion: skill.version,
@@ -370,7 +427,9 @@ export function createSkillPublishHandler(deps: SkillPublishDeps) {
           .status(500)
           .json({ error: 'Failed to update sharing for the skill', code: 'PUBLISH_ACL_FAILED' });
       }
-      return res.status(200).json(serializeSkill(published.skill, isPublic));
+      return res
+        .status(200)
+        .json(serializeSkill(published.skill, isPublic, publishScope === 'team'));
     } catch (error) {
       logger.error('[skillPublish] Failed to publish skill', error);
       return res.status(500).json({ error: 'Failed to publish skill' });

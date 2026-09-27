@@ -273,6 +273,8 @@ describe('createSkillPublishHandler', () => {
   }
 
   const TESTED = { version: 4, seconds: 42.5, conversationId: 'convo-1', at: new Date() };
+  const TEAM_GROUP = new Types.ObjectId();
+  const OLD_TEAM_GROUP = new Types.ObjectId();
 
   function createDeps(overrides: Partial<SkillPublishDeps> = {}) {
     return {
@@ -288,11 +290,20 @@ describe('createSkillPublishHandler', () => {
       findEntriesByResource: jest.fn(async () => []),
       bulkUpdateResourcePermissions: jest.fn(async () => ({})),
       sharePolicy: createPolicy(),
+      getSkillAuthorDepartments: jest.fn(async () => ({ [USER_ID]: '정세분석팀' })),
+      departmentGroups: {
+        syncDepartment: jest.fn(async () => TEAM_GROUP.toString()),
+        findGroupIds: jest.fn(
+          async () => new Set([TEAM_GROUP.toString(), OLD_TEAM_GROUP.toString()]),
+        ),
+      },
       ...overrides,
     } as SkillPublishDeps & {
       setSkillPublicationState: jest.Mock;
       findEntriesByResource: jest.Mock;
       bulkUpdateResourcePermissions: jest.Mock;
+      getSkillAuthorDepartments: jest.Mock;
+      departmentGroups: { syncDepartment: jest.Mock; findGroupIds: jest.Mock };
       sharePolicy: { checkShareAccess: jest.Mock; checkSharePublicAccess: jest.Mock };
     };
   }
@@ -307,7 +318,6 @@ describe('createSkillPublishHandler', () => {
   }
 
   it.each([
-    ['team scope', { scope: 'team' }],
     ['unknown scope', { scope: 'world' }],
     ['missing scope', {}],
   ])('rejects %s with 400 before touching anything', async (_label, body) => {
@@ -432,6 +442,99 @@ describe('createSkillPublishHandler', () => {
     expect(deps.bulkUpdateResourcePermissions.mock.calls[0][0].revokedPrincipals).toEqual([
       { type: PrincipalType.PUBLIC, id: null },
     ]);
+  });
+
+  it('publishes to the author department group and revokes public and old department grants', async () => {
+    const colleague = new Types.ObjectId();
+    const manualGroup = new Types.ObjectId();
+    const deps = createDeps({
+      findEntriesByResource: jest.fn(async () => [
+        { principalType: PrincipalType.USER, principalId: new Types.ObjectId(USER_ID) },
+        { principalType: PrincipalType.USER, principalId: colleague },
+        { principalType: PrincipalType.GROUP, principalId: manualGroup },
+        { principalType: PrincipalType.GROUP, principalId: OLD_TEAM_GROUP },
+        { principalType: PrincipalType.PUBLIC, principalId: null },
+      ]),
+    });
+    const res = await run(deps, { scope: 'team' });
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(deps.getSkillAuthorDepartments).toHaveBeenCalledWith([USER_ID]);
+    expect(deps.departmentGroups.syncDepartment).toHaveBeenCalledWith('정세분석팀');
+    expect(deps.bulkUpdateResourcePermissions).toHaveBeenCalledWith({
+      resourceType: ResourceType.SKILL,
+      resourceId: SKILL_ID,
+      updatedPrincipals: [
+        {
+          type: PrincipalType.GROUP,
+          id: TEAM_GROUP.toString(),
+          accessRoleId: AccessRoleIds.SKILL_VIEWER,
+        },
+      ],
+      revokedPrincipals: [
+        { type: PrincipalType.PUBLIC, id: null },
+        { type: PrincipalType.GROUP, id: OLD_TEAM_GROUP.toString() },
+      ],
+      grantedBy: USER_ID,
+    });
+    const body = res.json.mock.calls[0][0];
+    expect(body.scope).toBe('team');
+    expect(body.isPublic).toBe(false);
+  });
+
+  it('does not ask for public sharing rights for the team scope', async () => {
+    const deps = createDeps();
+    await run(deps, { scope: 'team' });
+    expect(deps.sharePolicy.checkShareAccess).toHaveBeenCalledTimes(1);
+    expect(deps.sharePolicy.checkSharePublicAccess).not.toHaveBeenCalled();
+  });
+
+  it('does not touch the department group when the share policy denies the caller', async () => {
+    const deny: SkillSharePolicy['checkShareAccess'] = async (_req, res) => {
+      res.status(403).json({ error: 'Forbidden' });
+    };
+    const deps = createDeps({ sharePolicy: createPolicy({ checkShareAccess: jest.fn(deny) }) });
+    const res = await run(deps, { scope: 'team' });
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(deps.departmentGroups.syncDepartment).not.toHaveBeenCalled();
+    expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
+  });
+
+  it('rejects the team scope when the author has no department', async () => {
+    const deps = createDeps({ getSkillAuthorDepartments: jest.fn(async () => ({})) });
+    const res = await run(deps, { scope: 'team' });
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'DEPARTMENT_REQUIRED' }));
+    expect(deps.departmentGroups.syncDepartment).not.toHaveBeenCalled();
+    expect(deps.setSkillPublicationState).not.toHaveBeenCalled();
+    expect(deps.bulkUpdateResourcePermissions).not.toHaveBeenCalled();
+  });
+
+  it('revokes department grants when publishing to everyone', async () => {
+    const manualGroup = new Types.ObjectId();
+    const deps = createDeps({
+      findEntriesByResource: jest.fn(async () => [
+        { principalType: PrincipalType.USER, principalId: new Types.ObjectId(USER_ID) },
+        { principalType: PrincipalType.GROUP, principalId: manualGroup },
+        { principalType: PrincipalType.GROUP, principalId: TEAM_GROUP },
+      ]),
+    });
+    const res = await run(deps, { scope: 'all' });
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(deps.bulkUpdateResourcePermissions.mock.calls[0][0]).toMatchObject({
+      updatedPrincipals: [
+        { type: PrincipalType.PUBLIC, id: null, accessRoleId: AccessRoleIds.SKILL_VIEWER },
+      ],
+      revokedPrincipals: [{ type: PrincipalType.GROUP, id: TEAM_GROUP.toString() }],
+    });
+    expect(res.json.mock.calls[0][0].scope).toBe('all');
+  });
+
+  it('reports the me scope in the response', async () => {
+    const res = await run(createDeps(), { scope: 'me' });
+    expect(res.json.mock.calls[0][0].scope).toBe('me');
   });
 
   it('answers 409 without touching the ACL when the skill changed first', async () => {
