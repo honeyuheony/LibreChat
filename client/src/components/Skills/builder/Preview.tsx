@@ -588,6 +588,7 @@ export default function Preview({
         title={
           <>
             {localize('com_skills_builder_data')}
+            <SourceTag source={sources.connectors} />
             <ChangedMark show={changed.has('connectors')} />
           </>
         }

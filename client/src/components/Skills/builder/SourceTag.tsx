@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { SOURCE_AI, SOURCE_ME, SOURCE_ORIGIN } from './state';
+import type { TranslationKeys } from '~/hooks';
+import { SOURCE_AI, SOURCE_ME, SOURCE_CHAT, SOURCE_ORIGIN } from './state';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 type SourceTagProps = { source?: string; label?: string; children?: ReactNode };
 
-/** 필드 출처 표시: AI가 정함 · 내가 고침 · 그 밖의 글자(「원본 그대로」 등)는 그대로 보인다. */
+/** 필드 출처 표시: AI가 정함 · 내가 고침 · 원본 그대로 · 대화에서 확정, 그 밖의 글자는 그대로 보인다. */
 export default function SourceTag({ source, label, children }: SourceTagProps) {
   const localize = useLocalize();
   if (!source) {
@@ -15,6 +16,8 @@ export default function SourceTag({ source, label, children }: SourceTagProps) {
     [SOURCE_AI]: localize('com_skills_builder_source_ai'),
     [SOURCE_ME]: localize('com_skills_builder_source_me'),
     [SOURCE_ORIGIN]: localize('com_skills_builder_source_origin'),
+    /** 번역 파일에 아직 없는 키라 형을 맞춘다. */
+    [SOURCE_CHAT]: localize('com_skills_builder_source_chat' as TranslationKeys),
   };
   const text = label ?? known[source] ?? source;
   return (

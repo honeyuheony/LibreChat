@@ -10,6 +10,7 @@ import {
 import type { BuilderSession } from './useSession';
 import type { TranslationKeys } from '~/hooks';
 import type { PreviewBlock } from './Preview';
+import type { BuilderFile } from './state';
 import SourceTag, { ChangedMark } from './SourceTag';
 import Preview, { PreviewHead } from './Preview';
 import { SOURCE_ME, pluginFiles } from './state';
@@ -69,11 +70,38 @@ function headerText(
   };
 }
 
+/** 대화에서 가져온 문서 이름과 종류. 번역 파일에 아직 없는 키라 형을 맞춘다. */
+function FileChips({ files }: { files: BuilderFile[] }) {
+  const localize = useLocalize();
+  if (files.length === 0) {
+    return null;
+  }
+  return (
+    <ul
+      aria-label={localize('com_skills_builder_files_list' as TranslationKeys)}
+      className="contents"
+    >
+      {files.map((file) => (
+        <li
+          key={file.name}
+          className="inline-flex items-center gap-1 rounded-full border border-border-light bg-surface-secondary px-2 py-0.5 text-xs text-text-primary"
+        >
+          {file.name}
+          <span className="font-bold text-text-secondary">
+            {localize(`com_skills_builder_file_kind_${file.kind}` as TranslationKeys)}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** 양식·예시 문서 붙이기 줄. 첫 단계는 예시 없이 시험하므로 붙인 파일은 쓰지 않고 그렇다고 알린다. */
-function AttachRow() {
+function AttachRow({ files }: { files: BuilderFile[] }) {
   const localize = useLocalize();
   const input = useRef<HTMLInputElement>(null);
-  const [attached, setAttached] = useState(false);
+  const [picked, setPicked] = useState(false);
+  const attached = picked || files.length > 0;
   return (
     <>
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-border-medium bg-surface-primary px-2.5 py-2">
@@ -81,9 +109,13 @@ function AttachRow() {
           <span aria-hidden="true">📎</span>
           {localize('com_skills_builder_files_attach')}
         </Button>
-        <span className="text-xs text-text-secondary">
-          {localize('com_skills_builder_files_hint')}
-        </span>
+        {files.length > 0 ? (
+          <FileChips files={files} />
+        ) : (
+          <span className="text-xs text-text-secondary">
+            {localize('com_skills_builder_files_hint')}
+          </span>
+        )}
         <input
           ref={input}
           type="file"
@@ -91,7 +123,7 @@ function AttachRow() {
           hidden
           data-testid="builder-files"
           onChange={(event) => {
-            setAttached((event.target.files?.length ?? 0) > 0);
+            setPicked((event.target.files?.length ?? 0) > 0);
             event.target.value = '';
           }}
         />
@@ -214,7 +246,7 @@ export default function Builder({
               <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
                 {draftStatus ? localize(draftStatus) : ''}
               </p>
-              <AttachRow />
+              <AttachRow files={state.files} />
               <PeekRow />
             </section>
           </div>
