@@ -10,9 +10,14 @@ interface NormalizedText {
 const normalizedCache = new WeakMap<TaskDocument, NormalizedText>();
 
 const isSpace = (ch: string) => /\s/.test(ch);
+const isDigitOrLatin = (ch: string | undefined) => ch != null && /[0-9A-Za-z]/.test(ch);
 
-/** NFKC per character plus whitespace runs folded to one space, keeping an offset map back. */
-function normalizeWithOrigin(source: string): NormalizedText {
+/**
+ * NFKC per character with whitespace runs folded to one space, keeping an offset map back.
+ * `dropWordSpaces` drops a run unless a digit or Latin letter touches it: HWP wraps lines inside
+ * words, while `1\n200` must not read as `1200` nor `is land` as `island`.
+ */
+function normalizeWithOrigin(source: string, dropWordSpaces = false): NormalizedText {
   let text = '';
   const origin: number[] = [];
   let pendingSpace = false;
@@ -22,12 +27,15 @@ function normalizeWithOrigin(source: string): NormalizedText {
       pendingSpace = text.length > 0;
       continue;
     }
-    if (pendingSpace) {
+    const parts = ch.normalize('NFKC');
+    const keepSpace =
+      !dropWordSpaces || isDigitOrLatin(text[text.length - 1]) || isDigitOrLatin(parts[0]);
+    if (pendingSpace && keepSpace) {
       text += ' ';
       origin.push(i);
-      pendingSpace = false;
     }
-    for (const part of ch.normalize('NFKC')) {
+    pendingSpace = false;
+    for (const part of parts) {
       text += part;
       origin.push(i);
     }
@@ -35,6 +43,7 @@ function normalizeWithOrigin(source: string): NormalizedText {
   return { text, origin };
 }
 
+/** Folds every whitespace run to one space; quote matching also drops spaces between words. */
 export function normalizeQuote(quote: string): string {
   return normalizeWithOrigin(quote).text;
 }
@@ -42,7 +51,7 @@ export function normalizeQuote(quote: string): string {
 function getNormalized(doc: TaskDocument): NormalizedText {
   let normalized = normalizedCache.get(doc);
   if (!normalized) {
-    normalized = normalizeWithOrigin(doc.text);
+    normalized = normalizeWithOrigin(doc.text, true);
     normalizedCache.set(doc, normalized);
   }
   return normalized;
@@ -79,17 +88,40 @@ function pageAt(pageStarts: number[] | undefined, offset: number): number | unde
   return page;
 }
 
-/** Finds `quote` verbatim (after normalization) in the document; `null` when absent. */
+/** Models join excerpts from separate places with a blank line, as the prompt asks. */
+const EXCERPT_BREAK = /\n[^\S\n]*\n/;
+/**
+ * Letters and digits each excerpt of a multi-excerpt quote needs, so short pieces cannot be
+ * combined into a value the text never states. 5 measured on 55 stored demo cells: 47 pass, 8 at 8.
+ */
+const MIN_EXCERPT_CHARS = 5;
+const WORD_CHAR = /[\p{L}\p{N}]/gu;
+
+const splitExcerpts = (quote: string) =>
+  quote.split(EXCERPT_BREAK).filter((excerpt) => excerpt.trim().length > 0);
+
+/**
+ * Finds `quote` verbatim (after normalization) in the document; `null` when absent. A quote
+ * of several excerpts counts only when every excerpt is long enough and found, in any order,
+ * and is located at the excerpt earliest in the text.
+ */
 export function locateQuote(doc: TaskDocument, quote: string): TaskEvidence | null {
-  const needle = normalizeQuote(quote);
-  if (needle.length === 0) {
+  const needles = splitExcerpts(quote).map((excerpt) => normalizeWithOrigin(excerpt, true).text);
+  if (needles.length === 0) {
+    return null;
+  }
+  if (
+    needles.length > 1 &&
+    needles.some((needle) => (needle.match(WORD_CHAR)?.length ?? 0) < MIN_EXCERPT_CHARS)
+  ) {
     return null;
   }
   const haystack = getNormalized(doc);
-  const index = haystack.text.indexOf(needle);
-  if (index < 0) {
+  const indexes = needles.map((needle) => haystack.text.indexOf(needle));
+  if (indexes.some((found) => found < 0)) {
     return null;
   }
+  const index = Math.min(...indexes);
   const offset = haystack.origin[index];
   const page = pageAt(doc.pageStarts, offset);
   const pageOffset = page != null && doc.pageStarts ? doc.pageStarts[page - 1] : 0;
@@ -142,5 +174,8 @@ export function formatFootnote(source: Pick<FootnoteSource, 'filename' | 'eviden
   ]
     .filter(Boolean)
     .join(' ');
-  return [source.filename, `「${evidence.quote}」`, position].filter(Boolean).join(' · ');
+  const quote = splitExcerpts(evidence.quote)
+    .map((excerpt) => normalizeQuote(excerpt))
+    .join(' … ');
+  return [source.filename, `「${quote}」`, position].filter(Boolean).join(' · ');
 }

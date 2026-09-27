@@ -3256,6 +3256,7 @@
   "com_ui_task_estimate": "약 {{0}}~{{1}}분",
   "com_ui_task_estimate_cached": "캐시 일부 사용",
   "com_ui_task_estimate_first": "처음 실행",
+  "com_ui_task_estimate_single": "약 {{0}}분",
   "com_ui_task_view_intro": "요약 관점을 골라 주세요. 관점이 없으면 일반론이 됩니다.",
   "com_ui_task_view_custom": "+ 직접 입력",
   "com_ui_task_view_custom_placeholder": "관점을 입력하세요",

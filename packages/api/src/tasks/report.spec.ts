@@ -190,4 +190,53 @@ describe('loadReportTemplate', () => {
       'Unknown report template',
     );
   });
+
+  describe('a skill with a second template', () => {
+    let dir: string;
+    const general: ReportTemplate = { ...weekly, templateId: 'hwp-report-general', title: '범용' };
+
+    beforeAll(async () => {
+      dir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-templates-'));
+      const assets = path.join(dir, 'hwp-report', 'assets');
+      await fs.mkdir(assets, { recursive: true });
+      const { templateId: _id, ...defaultSlots } = weekly;
+      const { templateId: _general, ...generalSlots } = general;
+      await fs.writeFile(path.join(assets, 'slots.json'), JSON.stringify(defaultSlots));
+      await fs.writeFile(path.join(assets, 'slots-general.json'), JSON.stringify(generalSlots));
+      await fs.writeFile(path.join(assets, 'slots-other.json'), JSON.stringify(generalSlots));
+    });
+
+    afterAll(async () => {
+      await fs.rm(dir, { recursive: true, force: true });
+    });
+
+    it('reads hwp-report-general from hwp-report/assets/slots-general.json', async () => {
+      await expect(loadReportTemplate('hwp-report-general', dir)).resolves.toEqual(general);
+    });
+
+    it('keeps reading slots.json for the skill folder id itself', async () => {
+      await expect(loadReportTemplate('hwp-report', dir)).resolves.toEqual({
+        ...weekly,
+        templateId: 'hwp-report',
+      });
+    });
+
+    it('rejects a variant-shaped id that is not in the allowlist', async () => {
+      await expect(loadReportTemplate('hwp-report-other', dir)).rejects.toThrow(
+        'Unknown report template',
+      );
+    });
+
+    it.each(['..', '.', 'hwp-report/..', `..${path.sep}hwp-report`, '/etc', 'HWP-REPORT', ''])(
+      'rejects %j without touching the file system',
+      async (id) => {
+        const readFile = jest.spyOn(fs, 'readFile');
+        await expect(loadReportTemplate(id, path.join(dir, 'hwp-report'))).rejects.toThrow(
+          'Unknown report template',
+        );
+        expect(readFile).not.toHaveBeenCalled();
+        readFile.mockRestore();
+      },
+    );
+  });
 });
