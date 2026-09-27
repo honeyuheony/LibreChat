@@ -1,4 +1,5 @@
-import { TASK_PROGRESS_EVENT, type TaskToolArguments } from './tasks';
+import type { TTaskResultsResponse, TaskToolArguments } from './tasks';
+import { TASK_PROGRESS_EVENT } from './tasks';
 import { TaskTools } from './tools';
 
 it('exports each task tool argument contract', () => {
@@ -18,4 +19,28 @@ it('exports the task tool names and progress event contract', () => {
     'write_report',
   ]);
   expect(TASK_PROGRESS_EVENT).toBe('on_task_progress');
+});
+
+it('exports the task results page contract', () => {
+  const page: TTaskResultsResponse = {
+    results: [
+      {
+        resultId: 'result-1',
+        conversationId: 'conversation-1',
+        conversationTitle: '주간 보고서',
+        kind: 'report',
+        title: '주간 보고서',
+        fileName: 'weekly-report.hwpx',
+        createdAt: '2026-09-27T00:00:00.000Z',
+      },
+    ],
+    nextCursor: 'next-page',
+  };
+
+  expect(page.results).toHaveLength(1);
+  expect(page.results[0]).toMatchObject({
+    kind: 'report',
+    fileName: 'weekly-report.hwpx',
+  });
+  expect(page.nextCursor).toBe('next-page');
 });

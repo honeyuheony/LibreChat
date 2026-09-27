@@ -78,6 +78,22 @@ export type TaskDocResult = {
 
 export type TaskResult = TaskTableResult | TaskDocResult;
 
+export type TTaskResultListItem = {
+  resultId: string;
+  conversationId: string;
+  conversationTitle: string;
+  kind: TaskResult['kind'];
+  title: string;
+  rows?: number;
+  fileName?: string;
+  createdAt: string;
+};
+
+export type TTaskResultsResponse = {
+  results: TTaskResultListItem[];
+  nextCursor: string | null;
+};
+
 export type TaskProgressEvent = {
   toolCallId: string;
   stage: string;

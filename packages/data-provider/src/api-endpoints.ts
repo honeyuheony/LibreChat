@@ -44,6 +44,7 @@ export const health = () => `${BASE_URL}/health`;
 export const user = () => `${BASE_URL}/api/user`;
 export const userPreferences = () => `${user()}/preferences`;
 export const userConnectorDefaults = () => `${userPreferences()}/connectors`;
+export const workspacePreferences = () => `${userPreferences()}/workspace`;
 
 export const balance = () => `${BASE_URL}/api/balance`;
 
@@ -173,6 +174,8 @@ export const projectConversation = (conversationId: string) =>
   `${projectsRoot}/conversations/${encodeURIComponent(conversationId)}`;
 
 const tasksRoot = `${BASE_URL}/api/tasks`;
+export const taskResults = (cursor?: string | null) =>
+  `${tasksRoot}/results${buildQuery({ cursor })}`;
 export const taskEstimate = (conversationId: string, fields: string[]) =>
   `${tasksRoot}/estimate${buildQuery({ conversationId, kind: 'table', fields })}`;
 export const taskResult = (resultId: string) =>
@@ -514,6 +517,7 @@ export const conversationTraceRecord = (
     { message: messageId, ...(sourceId ? { source: sourceId } : {}) },
   ).toString()}`;
 
+export const adminSkillMetrics = () => `${BASE_URL}/api/admin/skills/metrics`;
 export const adminSkillsSync = () => `${BASE_URL}/api/admin/skills/sync`;
 export const adminSkillsSyncStatus = () => `${adminSkillsSync()}/status`;
 export const adminSkillsSyncRun = () => `${adminSkillsSync()}/run`;
