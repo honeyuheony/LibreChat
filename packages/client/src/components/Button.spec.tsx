@@ -32,6 +32,27 @@ describe('Button', () => {
     );
   });
 
+  /** The wireframe's secondary action is a short pill in regular-weight 13px
+   *  type; the default recipe's 36-40px, 14px medium control reads as a primary
+   *  action next to it. */
+  it('offers the small pill secondary action as a size', () => {
+    render(
+      <Button size="pill" variant="outline">
+        New
+      </Button>,
+    );
+
+    const button = screen.getByRole('button', { name: 'New' });
+    expect(button).toHaveClass(
+      'h-7',
+      'px-3',
+      'text-[13px]',
+      'font-normal',
+      'rounded-theme-control-round',
+    );
+    expect(button).not.toHaveClass('rounded-lg', 'h-10', 'text-sm', 'font-medium');
+  });
+
   it('renders the header-action toggle from semantic tokens', () => {
     render(<Button variant="header-action">Toggle</Button>);
 
