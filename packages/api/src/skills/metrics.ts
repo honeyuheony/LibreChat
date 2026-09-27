@@ -2,8 +2,8 @@ import { logger } from '@librechat/data-schemas';
 import type { TSkillMarketProfile, TSkillSummary } from 'librechat-data-provider';
 import type { Response } from 'express';
 import type { SkillSeedMetrics, SkillUsageCountersInput } from './market';
+import type { SkillUsageCounters } from './usage';
 import type { ServerRequest } from '~/types';
-import { computeSkillUsageMetrics } from './usage';
 import { applyDeploymentUsage } from './market';
 
 type SkillIdValue = { toString(): string };
@@ -51,7 +51,8 @@ export type SkillMetricsAgent = {
   authorDepartment?: string;
   runs: number;
   forks: number;
-  savedHours: number;
+  /** 측정 기록이나 수작업 분이 없으면 null. 합계에는 0으로 더한다. */
+  savedHours: number | null;
 };
 
 export type SkillMetricsContributor = {
@@ -90,24 +91,33 @@ export type SkillMetricsDeps = {
 const BASE_KIND = '기본';
 const RANKING_SIZE = 8;
 
-type MetricsRow = SkillMetricsAgent & { isBase: boolean; isFork: boolean };
+type MetricsRow = SkillMetricsAgent & { isBase: boolean };
 
 type MetricsTotals = { runs: number; forks: number; savedHours: number };
 
-function roundToTenth(value: number): number {
-  return Math.round(value * 10) / 10;
+/** 와이어프레임 `recalcSave`·`savedH`처럼 회당 단축 분과 agent 별 시간을 정수로 반올림한다. */
+function wireframeSavedHours(counters: SkillUsageCounters): number | null {
+  const samples = counters.runTimeSampleCount ?? 0;
+  if (samples <= 0 || counters.manualMinutes == null) {
+    return null;
+  }
+  const averageRunSeconds = (counters.runTimeTotalSeconds ?? 0) / samples;
+  const savedMinutesPerRun = Math.max(
+    0,
+    Math.round(counters.manualMinutes - averageRunSeconds / 60),
+  );
+  return Math.round((Math.max(0, counters.useCount ?? 0) * savedMinutesPerRun) / 60);
 }
 
 function sumTotals(rows: MetricsRow[]): MetricsTotals {
-  const totals = rows.reduce(
+  return rows.reduce(
     (sum, row) => ({
       runs: sum.runs + row.runs,
       forks: sum.forks + row.forks,
-      savedHours: sum.savedHours + row.savedHours,
+      savedHours: sum.savedHours + (row.savedHours ?? 0),
     }),
     { runs: 0, forks: 0, savedHours: 0 },
   );
-  return { ...totals, savedHours: roundToTenth(totals.savedHours) };
 }
 
 function byRunsThenName(a: { runs: number; name: string }, b: { runs: number; name: string }) {
@@ -140,9 +150,8 @@ function toDeploymentRow(skill: MetricsDeploymentSkill, input: SkillMetricsInput
     ...(skill.authorDepartment !== undefined && { authorDepartment: skill.authorDepartment }),
     runs: usage.useCount ?? 0,
     forks: (seed?.forks ?? 0) + (input.publishedForks[id] ?? 0),
-    savedHours: usage.usageMetrics?.savedHours ?? 0,
+    savedHours: wireframeSavedHours(usage),
     isBase: skill.marketProfile?.kind === BASE_KIND,
-    isFork: skill.forkOf != null,
   };
 }
 
@@ -157,14 +166,20 @@ function toUserRow(skill: MetricsUserSkill, input: SkillMetricsInput): MetricsRo
     ...(authorDepartment !== undefined && { authorDepartment }),
     runs: Math.max(0, skill.useCount ?? 0),
     forks: input.publishedForks[id] ?? 0,
-    savedHours: computeSkillUsageMetrics(skill).savedHours ?? 0,
+    savedHours: wireframeSavedHours(skill),
     isBase: false,
-    isFork: skill.forkOf != null,
   };
 }
 
-function toAgent({ isBase: _isBase, isFork: _isFork, ...agent }: MetricsRow): SkillMetricsAgent {
+function toAgent({ isBase: _isBase, ...agent }: MetricsRow): SkillMetricsAgent {
   return agent;
+}
+
+/** 배포 스킬은 모두 전체 공개이므로 배포 응용본은 다 세고, DB 응용본은 게시된 것만 센다. */
+function countPublishedForkAgents(input: SkillMetricsInput): number {
+  const deploymentForks = input.deploymentSkills.filter((skill) => skill.forkOf != null).length;
+  const publishedUserForks = Object.values(input.publishedForks).reduce((sum, n) => sum + n, 0);
+  return deploymentForks + publishedUserForks;
 }
 
 /** 와이어프레임처럼 작성자 이름과 부서가 같으면 한 사람으로 묶는다. */
@@ -185,7 +200,7 @@ function groupContributors(rows: MetricsRow[]): SkillMetricsContributor[] {
       agents: current.agents + 1,
       runs: current.runs + row.runs,
       forks: current.forks + row.forks,
-      savedHours: roundToTenth(current.savedHours + row.savedHours),
+      savedHours: current.savedHours + (row.savedHours ?? 0),
     });
   }
   return Array.from(byAuthor.values()).sort(
@@ -211,10 +226,10 @@ export function computeSkillMetrics(input: SkillMetricsInput): SkillMetricsRepor
     runs: { total: base.runs + staff.runs, staff: staff.runs },
     forks: {
       total: base.forks + staff.forks,
-      forkedAgents: rows.filter((row) => row.isFork).length,
+      forkedAgents: countPublishedForkAgents(input),
     },
     savedHours: {
-      total: roundToTenth(base.savedHours + staff.savedHours),
+      total: base.savedHours + staff.savedHours,
       staff: staff.savedHours,
     },
     ranking: staffRows.slice().sort(byRunsThenName).slice(0, RANKING_SIZE).map(toAgent),

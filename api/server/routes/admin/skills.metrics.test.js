@@ -163,7 +163,7 @@ describe('GET /api/admin/skills/metrics (skill metrics)', () => {
     expect(res.status).toBe(200);
     expect(res.body.agents).toEqual({ total: 4, base: 0, staff: 4 });
     expect(res.body.runs).toEqual({ total: 162, staff: 162 });
-    expect(res.body.forks).toEqual({ total: 1, forkedAgents: 2 });
+    expect(res.body.forks).toEqual({ total: 1, forkedAgents: 1 });
     expect(res.body.savedHours).toEqual({ total: 81, staff: 81 });
     expect(res.body.baseTotal).toEqual({ count: 0, runs: 0, forks: 0, savedHours: 0 });
     expect(res.body.ranking.map((agent) => agent.name)).toEqual([

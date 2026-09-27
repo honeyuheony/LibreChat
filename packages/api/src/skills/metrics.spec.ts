@@ -102,7 +102,7 @@ describe('computeSkillMetrics', () => {
 
     expect(report.agents).toEqual({ total: 15, base: 3, staff: 12 });
     expect(report.runs).toEqual({ total: 1476, staff: 1266 });
-    expect(report.forks).toEqual({ total: 7, forkedAgents: 3 });
+    expect(report.forks).toEqual({ total: 7, forkedAgents: 2 });
     expect(report.savedHours).toEqual({ total: 752, staff: 652 });
   });
 
@@ -128,7 +128,7 @@ describe('computeSkillMetrics', () => {
       forks: 3,
       savedHours: 125,
     });
-    expect(report.ranking[4]).toMatchObject({ id: 'u4', runs: 120, savedHours: 0 });
+    expect(report.ranking[4]).toMatchObject({ id: 'u4', runs: 120, savedHours: null });
   });
 
   it('기본 agent 합계 줄은 기본 agent 들의 합과 작성자 값을 싣는다', () => {
@@ -201,6 +201,94 @@ describe('computeSkillMetrics', () => {
       baseTotal: { count: 0, runs: 0, forks: 0, savedHours: 0 },
       contributors: [],
     });
+  });
+
+  it('평균 실행 시간이 60초 배수가 아니면 회당 단축 분을 반올림해 절감 시간을 낸다', () => {
+    const report = computeSkillMetrics({
+      deploymentSkills: [
+        deployment(
+          'd9',
+          '공유',
+          '서국제',
+          '국제협력팀',
+          { runs: 100, forks: 0, runSeconds: 90 },
+          10,
+        ),
+      ],
+      userSkills: [userSkill('u9', 'userA', '김정세', 100, 90, 10)],
+      publishedForks: {},
+      deploymentUsage: {},
+      authorDepartments: {},
+    });
+
+    expect(report.ranking.map((agent) => agent.savedHours)).toEqual([15, 15]);
+    expect(report.savedHours).toEqual({ total: 30, staff: 30 });
+  });
+
+  it('합계는 agent 별로 반올림한 절감 시간을 더한다', () => {
+    const report = computeSkillMetrics({
+      deploymentSkills: [],
+      userSkills: [
+        userSkill('u1', 'userA', '김정세', 2, 90, 10),
+        userSkill('u2', 'userA', '김정세', 2, 90, 10),
+      ],
+      publishedForks: {},
+      deploymentUsage: {},
+      authorDepartments: {},
+    });
+
+    expect(report.ranking.map((agent) => agent.savedHours)).toEqual([0, 0]);
+    expect(report.savedHours).toEqual({ total: 0, staff: 0 });
+    expect(report.contributors[0].savedHours).toBe(0);
+  });
+
+  it('측정 기록이 없는 agent 는 절감 시간을 비워 두고 합계에는 0으로 더한다', () => {
+    const report = computeSkillMetrics({
+      deploymentSkills: [],
+      userSkills: [
+        userSkill('u1', 'userA', '김정세', 30, null, 10),
+        userSkill('u2', 'userA', '김정세', 12, 60, 11),
+      ],
+      publishedForks: {},
+      deploymentUsage: {},
+      authorDepartments: {},
+    });
+
+    expect(report.ranking.map((agent) => agent.savedHours)).toEqual([null, 2]);
+    expect(report.savedHours).toEqual({ total: 2, staff: 2 });
+  });
+
+  it('응용으로 생긴 agent 는 게시된 응용본과 배포 응용본만 센다', () => {
+    const report = computeSkillMetrics({
+      deploymentSkills: [
+        deployment(
+          'd1',
+          '공유',
+          '박지원',
+          '운영지원팀',
+          { runs: 10, forks: 0, runSeconds: 60 },
+          11,
+        ),
+        deployment(
+          'd2',
+          '공유',
+          '이협력',
+          '교류협력팀',
+          { runs: 5, forks: 0, runSeconds: 60 },
+          11,
+          'd1',
+        ),
+      ],
+      userSkills: [
+        userSkill('u1', 'userA', '김정세', 3, 60, 11, 'd1'),
+        userSkill('u2', 'userA', '김정세', 0, null, 11, 'd1'),
+      ],
+      publishedForks: { d1: 1 },
+      deploymentUsage: {},
+      authorDepartments: {},
+    });
+
+    expect(report.forks).toEqual({ total: 1, forkedAgents: 2 });
   });
 
   it('실행 수가 같으면 이름순으로 순위를 정한다', () => {
@@ -287,8 +375,14 @@ function renderMetrics(all: WireframeAgent[]) {
   };
 }
 
-/** 같은 입력을 와이어프레임 모양으로 옮긴다. 실행 수·응용 수는 서버가 내는 값을 그대로 쓴다. */
-function toWireframeAgents(input: SkillMetricsInput): WireframeAgent[] {
+/**
+ * 같은 입력을 와이어프레임 모양으로 옮긴다. 와이어프레임에는 게시하지 않은 응용본이 없으므로
+ * `unpublishedForkIds`의 `forkOf`는 뺀다.
+ */
+function toWireframeAgents(
+  input: SkillMetricsInput,
+  unpublishedForkIds: ReadonlySet<string> = new Set(['u10']),
+): WireframeAgent[] {
   const deploymentAgents = input.deploymentSkills.map((skill) => {
     const id = skill._id.toString();
     const seed = skill.seedMetrics ?? { runs: 0, forks: 0, runSeconds: 0 };
@@ -323,7 +417,7 @@ function toWireframeAgents(input: SkillMetricsInput): WireframeAgent[] {
          수작업 분 전체가 실행 시간으로 걸린 것으로 둔다. */
       runSec:
         samples > 0 ? (skill.runTimeTotalSeconds ?? 0) / samples : (skill.manualMinutes ?? 0) * 60,
-      forkOf: skill.forkOf?.toString() ?? undefined,
+      forkOf: unpublishedForkIds.has(id) ? undefined : (skill.forkOf?.toString() ?? undefined),
     };
   });
   const agents = [...deploymentAgents, ...userAgents];
@@ -333,7 +427,26 @@ function toWireframeAgents(input: SkillMetricsInput): WireframeAgent[] {
 
 describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 비교', () => {
   it('같은 입력으로 지표 네 칸·순위·기본 합계 줄·기여자 순위가 같다', () => {
-    const input = fixture();
+    const base = fixture();
+    const input: SkillMetricsInput = {
+      ...base,
+      deploymentSkills: [
+        ...base.deploymentSkills,
+        deployment(
+          'd3',
+          '공유',
+          '서국제',
+          '국제협력팀',
+          { runs: 50, forks: 1, runSeconds: 45 },
+          20,
+        ),
+      ],
+      userSkills: [
+        ...base.userSkills,
+        userSkill('u11', 'userB', '최분석', 100, 90, 10),
+        userSkill('u12', 'userB', '최분석', 1, 90, 10),
+      ],
+    };
     const wireframe = renderMetrics(toWireframeAgents(input));
     const report = computeSkillMetrics(input);
 
@@ -353,7 +466,7 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
         id: agent.id,
         runs: agent.runs,
         forks: agent.forks,
-        hours: agent.savedHours,
+        hours: agent.savedHours ?? 0,
       })),
     ).toEqual(wireframe.top);
     expect({
@@ -373,7 +486,7 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
     ).toEqual(wireframe.people);
   });
 
-  it('회당 단축 분이 정수가 아니면 와이어프레임은 분을 반올림하고 서버는 소수 첫째 자리까지 둔다', () => {
+  it('회당 단축 분과 agent 별 절감 시간을 와이어프레임처럼 정수로 반올림한다', () => {
     const input: SkillMetricsInput = {
       deploymentSkills: [],
       userSkills: [userSkill('u1', 'userA', '김정세', 2140, 40, 41)],
@@ -385,7 +498,7 @@ describe('computeSkillMetrics 와 와이어프레임 renderMetrics 의 계산 �
     const report = computeSkillMetrics(input);
 
     expect(wireframe.top[0].hours).toBe(1427);
-    expect(report.ranking[0].savedHours).toBe(1438.6);
+    expect(report.ranking[0].savedHours).toBe(1427);
   });
 });
 
