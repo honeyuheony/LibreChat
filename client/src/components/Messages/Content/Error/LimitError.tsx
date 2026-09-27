@@ -139,6 +139,15 @@ export default function LimitError({ json, message }: ErrorRendererProps) {
         headline = localize('com_error_limit_reached');
       }
       break;
+    case ViolationTypes.SKILL_DRAFT_LIMIT:
+      headline =
+        max != null && windowLabel != null
+          ? localize('com_error_skill_draft_limit', {
+              0: formatNumber(max),
+              1: windowLabel,
+            })
+          : localize('com_error_limit_reached');
+      break;
     case ViolationTypes.CONCURRENT:
       headline =
         limit != null && limit > 1

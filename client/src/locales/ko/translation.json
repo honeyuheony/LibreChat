@@ -474,6 +474,7 @@
   "com_error_retry_at": "{{0}}에 다시 메시지를 보낼 수 있습니다.",
   "com_error_retry_countdown": "{{0}} 후에 다시 메시지를 보낼 수 있습니다.",
   "com_error_share_limit": "공유 링크 요청이 너무 많습니다. 잠시 후 다시 시도하세요.",
+  "com_error_skill_draft_limit": "AI 초안 요청 한도({{1}}당 {{0}}회)에 도달했습니다. 잠시 후 다시 시도해 주세요.",
   "com_error_stateful_code_environment_not_allowed": "이 배포 환경에서는 이 에이전트가 요청한 지속형 코드 환경을 허용하지 않습니다. 관리자에게 활성화를 요청하거나 임시 환경에서 코드를 실행하는 에이전트를 사용하세요.",
   "com_error_stream_expired": "응답 스트림이 만료 또는 이미 완료되었습니다. 다시 시도해 주십시오.",
   "com_error_stt_limit": "음성 텍스트 변환 한도({{1}}당 {{0}}회)에 도달했습니다.",

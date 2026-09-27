@@ -713,6 +713,7 @@
   "com_error_retry_at": "You can send another message at {{0}}.",
   "com_error_retry_countdown": "You can send another message in {{0}}.",
   "com_error_share_limit": "Too many shared link requests. Wait a moment and try again.",
+  "com_error_skill_draft_limit": "You've reached the limit of {{0}} AI draft requests per {{1}}. Please try again later.",
   "com_error_stateful_code_environment_not_allowed": "This deployment does not allow the persistent code environment this agent requested. Ask an administrator to enable it, or use an agent that runs code in a temporary environment.",
   "com_error_stream_expired": "The response stream has expired or already completed. Please try again.",
   "com_error_stt_limit": "You have reached the speech-to-text limit of {{0}} requests per {{1}}.",
