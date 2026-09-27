@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, MessagesSquare, Plug, Store } from 'lucide-react';
 import { useUserKeyQuery } from 'librechat-data-provider/react-query';
 import { getConfigDefaults, getEndpointField } from 'librechat-data-provider';
+import { BarChart3, BookOpen, MessagesSquare, Plug, Store } from 'lucide-react';
 import type { TEndpointsConfig } from 'librechat-data-provider';
 import type { NavLink } from '~/common';
 import {
@@ -22,9 +22,8 @@ import store from '~/store';
 const defaultInterface = getConfigDefaults().interface;
 const SKILLS_MARKET_PATH = '/skills-market';
 
-/** The files panel is managed from settings under Data, and the agent panel by the market's
- *  「내 agent」 tab. */
-const panelsReplacedElsewhere = new Set(['files', 'skills']);
+/** 이 패널들은 대화 사이드바 대신 전용 화면이나 탭에서 관리한다. */
+const panelsReplacedElsewhere = new Set(['files', 'skills', 'schedules']);
 
 export default function useUnifiedSidebarLinks() {
   const navigate = useNavigate();
@@ -116,8 +115,18 @@ export default function useUnifiedSidebarLinks() {
         ]
       : [];
 
+    const libraryLink: NavLink = {
+      title: 'com_ui_library',
+      label: '',
+      icon: BookOpen,
+      id: 'library',
+      activePath: '/library',
+      glyph: '▣',
+      onClick: () => navigate('/library'),
+    };
+
     const otherLinks = sideNavLinks.filter((link) => !panelsReplacedElsewhere.has(link.id));
-    const leadingLinks = [conversationLink, ...marketLinks, connectorsLink];
+    const leadingLinks = [conversationLink, ...marketLinks, connectorsLink, libraryLink];
 
     if (
       !insightsFeatureEnabled ||

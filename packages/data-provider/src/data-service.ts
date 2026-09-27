@@ -1270,6 +1270,21 @@ export function getSkillCategories(): Promise<sk.TSkillCategoriesResponse> {
   return request.get(endpoints.skillCategories());
 }
 
+type TDemoSwitchUserResponse = {
+  target: {
+    name: string;
+    department?: string;
+  };
+};
+
+export function getDemoSwitchUser(): Promise<TDemoSwitchUserResponse> {
+  return request.get(endpoints.demoSwitchUser());
+}
+
+export function switchDemoUser(): Promise<TDemoSwitchUserResponse> {
+  return request.post(endpoints.demoSwitchUser(), {});
+}
+
 export function getSchedules(): Promise<sch.TSchedulesResponse> {
   return request.get(endpoints.schedules());
 }

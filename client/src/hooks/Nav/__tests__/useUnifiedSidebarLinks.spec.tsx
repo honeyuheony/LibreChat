@@ -34,6 +34,12 @@ jest.mock('~/hooks', () => ({ useAuthContext: () => ({ user: { id: 'user-a' } })
 jest.mock('~/components/UnifiedSidebar/ConversationsSection', () => () => null);
 
 const skillsPanel: NavLink = { title: 'com_ui_skills', icon: Sparkles, id: 'skills' };
+const filesPanel: NavLink = { title: 'com_nav_my_files', icon: Sparkles, id: 'files' };
+const schedulesPanel: NavLink = {
+  title: 'com_ui_schedules_title',
+  icon: Sparkles,
+  id: 'schedules',
+};
 
 function renderLinks() {
   const { result } = renderHook(() => useUnifiedSidebarLinks(), {
@@ -62,6 +68,7 @@ describe('useUnifiedSidebarLinks', () => {
       'conversations',
       'skills-market',
       'connectors',
+      'library',
     ]);
   });
 
@@ -85,11 +92,33 @@ describe('useUnifiedSidebarLinks', () => {
     const links = renderLinks();
     links.find((link) => link.id === 'skills-market')?.onClick?.();
     links.find((link) => link.id === 'connectors')?.onClick?.();
-    expect(mockNavigate.mock.calls).toEqual([['/skills-market'], ['/connectors']]);
+    links.find((link) => link.id === 'library')?.onClick?.();
+    expect(mockNavigate.mock.calls).toEqual([['/skills-market'], ['/connectors'], ['/library']]);
+  });
+
+  it('adds the library page and hides the replaced schedules panel', () => {
+    mockSideNavLinks.current = [skillsPanel, filesPanel, schedulesPanel];
+
+    const links = renderLinks();
+    const library = links.find((link) => link.id === 'library');
+
+    expect(library).toMatchObject({
+      title: 'com_ui_library',
+      id: 'library',
+      glyph: '▣',
+      activePath: '/library',
+    });
+    expect(library?.onClick).toBeDefined();
+    expect(links.some((link) => link.id === 'schedules')).toBe(false);
+    expect(links.some((link) => link.id === 'files')).toBe(false);
   });
 
   it('leaves the market out when agents are unavailable', () => {
     mockSideNavLinks.current = [];
-    expect(renderLinks().map((link) => link.id)).toEqual(['conversations', 'connectors']);
+    expect(renderLinks().map((link) => link.id)).toEqual([
+      'conversations',
+      'connectors',
+      'library',
+    ]);
   });
 });

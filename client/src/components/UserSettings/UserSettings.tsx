@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSetAtom } from 'jotai';
 import { Link } from 'react-router-dom';
 import { Button, Spinner, useMediaQuery, useToastContext } from '@librechat/client';
 import {
   DEFAULT_USER_APPROVAL_MODE,
   MAX_USER_INSTRUCTIONS_LENGTH,
+  SettingsTabValues,
   USER_APPROVAL_MODES,
 } from 'librechat-data-provider';
 import type { UserApprovalMode } from 'librechat-data-provider';
@@ -13,6 +15,7 @@ import {
   useUpdateWorkspacePreferencesMutation,
   useWorkspacePreferencesQuery,
 } from '~/data-provider/User';
+import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import { useLocalize } from '~/hooks';
 
@@ -33,6 +36,7 @@ export default function UserSettings() {
   const localize = useLocalize();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { showToast } = useToastContext();
+  const setSettingsDialogTab = useSetAtom(settingsDialogTabAtom);
   const { data: preferences, isError, isLoading, refetch } = useWorkspacePreferencesQuery();
   const [instructions, setInstructions] = useState('');
   const [approvalMode, setApprovalMode] = useState<UserApprovalMode>(DEFAULT_USER_APPROVAL_MODE);
@@ -195,6 +199,14 @@ export default function UserSettings() {
           {localize('com_nav_settings')}
         </h1>
         {settingsContent}
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-6 w-full justify-start"
+          onClick={() => setSettingsDialogTab(SettingsTabValues.GENERAL)}
+        >
+          {localize('com_ui_account_settings_more')}
+        </Button>
       </div>
     </main>
   );
