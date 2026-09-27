@@ -148,12 +148,28 @@ describe('UserSettings', () => {
     expect(instructions.closest('section')?.classList.contains('border')).toBe(false);
     expect(screen.getByText('com_ui_user_settings_global_instructions')).toHaveClass(
       'font-normal',
-      'text-text-tertiary',
+      'text-text-muted',
     );
+    expect(screen.getByText('com_ui_user_settings_approval_mode')).toHaveClass('text-text-muted');
+    expect(screen.getByText('com_ui_user_settings_global_instructions_hint')).toHaveClass(
+      'text-[13px]',
+      'text-text-muted',
+    );
+    expect(
+      screen.getByRole('link', { name: 'com_ui_user_settings_data_integrations' }),
+    ).not.toHaveClass('underline');
 
     expect(
       screen.getByRole('combobox', { name: 'com_ui_user_settings_approval_mode' }),
-    ).toHaveClass('w-full', 'max-w-[520px]', 'bg-surface-secondary');
+    ).toHaveClass(
+      'w-full',
+      'max-w-[520px]',
+      'bg-surface-tertiary',
+      'border-border-medium',
+      'rounded-lg',
+      'py-2',
+      'text-[14.5px]',
+    );
     expect(screen.getByRole('button', { name: 'com_ui_account_settings_more' })).toHaveClass(
       'border-t',
       'border-border-light',
