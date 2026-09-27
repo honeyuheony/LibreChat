@@ -25,6 +25,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
   const localize = useLocalize();
   return (
     <Block
+      active={manualMinutes > 0}
       title={
         <>
           {localize('com_skills_builder_share')}
@@ -50,9 +51,9 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
               aria-pressed={manualMinutes === minutes}
               onClick={() => onMinutes(minutes)}
               className={cn(
-                'rounded-full border px-3 py-1 text-[13px]',
+                'h-[30px] rounded-full border px-3 py-1 text-[13px]',
                 manualMinutes === minutes
-                  ? 'border-border-brand bg-surface-brand-subtle font-semibold text-text-primary'
+                  ? 'border-surface-submit bg-surface-brand-subtle font-semibold text-text-primary'
                   : 'border-border-light bg-surface-primary text-text-secondary hover:border-border-medium',
               )}
             >

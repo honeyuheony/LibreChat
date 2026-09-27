@@ -87,7 +87,7 @@ function stripTriggerSummary(summary: string, triggers: readonly string[] = []):
   }
   const triggerSentence = summary.slice(sentenceBoundary + 2);
   if (
-    !/(?:할 때\s*(?:씁니다|사용합니다))\.?$/.test(triggerSentence) ||
+    !/(?:할 때\s*(?:씁니다|사용합니다|쓴다))\.?$/.test(triggerSentence) ||
     !triggers.some((trigger) => triggerSentence.includes(trigger))
   ) {
     return summary;

@@ -474,6 +474,33 @@ describe('Builder sized and styled like the wireframe editor (07)', () => {
     expect(share.querySelector('h5')).toHaveClass('text-text-muted');
   });
 
+  it('matches the empty result table rows to the reference', () => {
+    const chat = chatState('출장 메모를 보고서로 정리한다.', {
+      output: 'report',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+
+    const output = block('com_skills_builder_output') as HTMLElement;
+    const table = within(output).getByRole('table');
+    const header = within(table).getByRole('columnheader');
+    expect(header).toHaveClass(
+      'h-[30px]',
+      'text-[11.5px]',
+      'font-medium',
+      'text-text-muted',
+      'text-start',
+    );
+    expect(header.closest('thead')?.classList.contains('bg-surface-primary')).toBe(true);
+
+    const emptyCell = within(table).getByRole('cell');
+    expect(emptyCell).toHaveClass('text-[13px]', 'text-start');
+    expect(emptyCell.closest('tr')?.classList.contains('h-[37px]')).toBe(true);
+    expect(table.parentElement?.classList.contains('border-dashed')).toBe(false);
+  });
+
   it('uses reference text sizes and color for empty hints and the input placeholder', () => {
     render(<Harness />);
 
@@ -535,8 +562,9 @@ describe('Share step matches the reference screen (12)', () => {
     const share = block('com_skills_builder_share') as HTMLElement;
     const minutes = within(share).getByRole('button', { name: 'com_skills_builder_minutes_30' });
     expect(minutes).toHaveClass(
+      'h-[30px]',
       'rounded-full',
-      'border-border-brand',
+      'border-surface-submit',
       'bg-surface-brand-subtle',
       'font-semibold',
       'text-text-primary',
@@ -556,6 +584,18 @@ describe('Share step matches the reference screen (12)', () => {
       'aria-checked:font-semibold',
       'aria-checked:text-text-on-status',
     );
+  });
+
+  it('outlines the share card after selecting a time', () => {
+    render(<Harness />);
+
+    const share = block('com_skills_builder_share') as HTMLElement;
+    expect(share).toHaveAttribute('data-active', 'false');
+
+    fireEvent.click(within(share).getByRole('button', { name: 'com_skills_builder_minutes_10' }));
+
+    expect(share).toHaveAttribute('data-active', 'true');
+    expect(share).toHaveClass('border-ring-primary', 'ring-[3px]', 'ring-border-brand');
   });
 
   it('uses the reference size for share guidance labels', () => {
