@@ -148,23 +148,33 @@ describe('MetricsView', () => {
     getMetrics.mockResolvedValue(metricsReport);
     renderMetrics();
 
-    await screen.findByRole('heading', { name: 'com_metrics_title', level: 1 });
+    const pageTitle = await screen.findByRole('heading', { name: 'com_metrics_title', level: 1 });
 
+    expect(pageTitle.closest('div.mx-auto')).toHaveClass('pt-4', 'pb-8');
     expect(screen.getByText('com_ui_admin')).toBeInTheDocument();
     const registeredAgentsHeading = screen.getByRole('heading', {
       name: 'com_metrics_registered_agents',
     });
     expect(registeredAgentsHeading.nextElementSibling).toHaveClass('text-accent-primary');
+    expect(registeredAgentsHeading).toHaveClass('text-[12.5px]', 'font-normal');
+    expect(registeredAgentsHeading.closest('section')).toHaveClass('px-3.5', 'py-3');
+    expect(registeredAgentsHeading.closest('section')?.parentElement).toHaveClass('mb-[18px]');
+    expect(registeredAgentsHeading.nextElementSibling).toHaveClass('mt-0.5', 'text-2xl');
+    expect(registeredAgentsHeading.nextElementSibling?.nextElementSibling).toHaveClass('text-xs');
 
     const tables = screen.getAllByRole('table');
     expect(tables).toHaveLength(2);
     tables.forEach((table) => {
       expect(table).toHaveClass('text-[13px]');
+      expect(table.querySelector('thead tr')).toHaveClass('bg-surface-secondary');
       expect(table.parentElement?.classList.contains('rounded-lg')).toBe(false);
       expect(table.parentElement?.classList.contains('border-border-light')).toBe(false);
     });
 
     const firstAgentRow = screen.getByRole('row', { name: /주간보고 요약/ });
+    expect(screen.getByRole('link', { name: '주간보고 요약' })).toHaveClass('font-normal');
+    const baseTotalLabel = screen.getByText('com_metrics_base_total:value=3');
+    expect(baseTotalLabel.closest('tr')).toHaveClass('bg-surface-secondary');
     const runsCell = within(firstAgentRow).getByRole('cell', { name: '5,422' });
     expect(runsCell).toHaveClass('px-2', 'py-1.5');
     const runBar = runsCell.querySelector('span[aria-hidden="true"]');

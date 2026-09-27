@@ -63,10 +63,10 @@ function skillPath(skillId: string): string {
 
 function MetricCard({ label, value, detail }: MetricCardProps) {
   return (
-    <section className="min-w-0 rounded-lg border border-border-light bg-surface-primary p-4 dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
-      <h2 className="text-sm font-semibold text-text-secondary">{label}</h2>
-      <p className="mt-2 text-3xl font-semibold text-accent-primary">{value}</p>
-      <p className="mt-1 text-sm text-text-tertiary">{detail}</p>
+    <section className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3.5 py-3 dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
+      <h2 className="text-[12.5px] font-normal text-text-secondary">{label}</h2>
+      <p className="mt-0.5 text-2xl font-semibold text-accent-primary">{value}</p>
+      <p className="text-xs text-text-tertiary">{detail}</p>
     </section>
   );
 }
@@ -155,7 +155,7 @@ function AgentRanking({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light text-left text-xs text-text-secondary">
+            <tr className="border-b border-border-light bg-surface-secondary text-left text-xs text-text-secondary">
               <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_agent_name')}
               </th>
@@ -191,7 +191,7 @@ function AgentRanking({
                   <td className="px-2 py-1.5">
                     <Link
                       to={path}
-                      className="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+                      className="font-normal underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
                     >
                       {title}
                     </Link>
@@ -218,7 +218,7 @@ function AgentRanking({
                 </tr>
               );
             })}
-            <tr className="border-b border-border-light text-text-secondary">
+            <tr className="border-b border-border-light bg-surface-secondary text-text-secondary">
               <td className="px-2 py-1.5">
                 {localize('com_metrics_base_total', {
                   value: formatNumber(report.baseTotal.count, locale),
@@ -264,7 +264,7 @@ function ContributorRanking({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light text-left text-xs text-text-secondary">
+            <tr className="border-b border-border-light bg-surface-secondary text-left text-xs text-text-secondary">
               <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_author')}
               </th>
@@ -337,7 +337,7 @@ export default function MetricsView() {
     return (
       <main className="h-full w-full overflow-y-auto bg-presentation">
         <MetricsTopBar localize={localize} />
-        <div className="mx-auto w-full max-w-[960px] px-4 py-8">
+        <div className="mx-auto w-full max-w-[960px] px-4 pb-8 pt-4">
           <PageHeader localize={localize} />
           <StatusPanel
             localize={localize}
@@ -382,7 +382,7 @@ export default function MetricsView() {
   return (
     <main className="h-full w-full overflow-y-auto bg-presentation">
       <MetricsTopBar localize={localize} />
-      <div className="mx-auto w-full max-w-[960px] px-4 py-8">
+      <div className="mx-auto w-full max-w-[960px] px-4 pb-8 pt-4">
         <PageHeader localize={localize} />
         {isError && (
           <div className="mb-4">
@@ -394,7 +394,7 @@ export default function MetricsView() {
             />
           </div>
         )}
-        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-[18px] grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
             <MetricCard key={card.label} {...card} />
           ))}

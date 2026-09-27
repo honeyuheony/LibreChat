@@ -46,7 +46,7 @@ const GLYPHS = {
 const itemClassName =
   'flex w-full cursor-pointer items-center gap-2.5 rounded-theme-control px-2.5 py-2 text-left text-[14.5px] text-text-secondary outline-none hover:bg-surface-hover data-[active-item]:bg-surface-hover';
 const RESET_CONFIRMATION_OVERLAY_CLASS =
-  'bg-black/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
+  'bg-text-primary/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-text-primary/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
 
 function formatUsedSize(bytes: number): string {
   const units = ['KB', 'MB', 'GB'];
@@ -258,7 +258,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           </OGDialogDescription>
           <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-4 py-3">
             <OGDialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="ghost">
                 {localize('com_ui_cancel')}
               </Button>
             </OGDialogClose>
