@@ -5,6 +5,7 @@ import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { TSkillSummary } from 'librechat-data-provider';
 import {
   MINE_TAB,
+  PACKS_TAB,
   POPULAR_TAB,
   SKILL_CATEGORIES,
   formatCount,
@@ -19,6 +20,7 @@ import {
 import { useAuthContext, useDocumentTitle, useHasAccess, useLocalize } from '~/hooks';
 import { useGetEndpointsQuery, useSkillsInfiniteQuery } from '~/data-provider';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { PackCreate, PackDetail, PackList } from '../Packs';
 import { SidePanelGroup } from '~/components/SidePanel';
 import SkillDetailContent from './SkillDetailContent';
 import SkillCategoryTabs from './SkillCategoryTabs';
@@ -41,6 +43,8 @@ export default function SkillMarketplace() {
   const activeTab = category || POPULAR_TAB;
   const userId = user?.id;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
+  const [creatingPack, setCreatingPack] = useState(false);
 
   useDocumentTitle(`${localize('com_skills_marketplace')} | LibreChat`);
   useGetEndpointsQuery();
@@ -102,6 +106,7 @@ export default function SkillMarketplace() {
 
   const tabs = [
     { value: POPULAR_TAB, label: localize('com_skills_tab_popular') },
+    { value: PACKS_TAB, label: localize('com_skills_pack') },
     ...SKILL_CATEGORIES.map((value) => ({ value, label: getCategoryLabel(value, localize) })),
     { value: MINE_TAB, label: localize('com_skills_tab_mine') },
   ];
@@ -130,6 +135,8 @@ export default function SkillMarketplace() {
         </div>
       </>
     );
+  } else if (activeTab === PACKS_TAB) {
+    tabContent = <PackList onOpen={setSelectedPackId} onCreate={() => setCreatingPack(true)} />;
   } else if (activeTab === MINE_TAB) {
     const runs = mySkills.reduce((sum, skill) => sum + runsOf(skill), 0);
     const forks = mySkills.reduce((sum, skill) => sum + (skill.forkCount ?? 0), 0);
@@ -285,6 +292,29 @@ export default function SkillMarketplace() {
             userId={userId}
             onSelectSkill={selectSkill}
           />
+        )}
+      </OGDialog>
+      <OGDialog
+        open={selectedPackId != null}
+        onOpenChange={(open) => !open && setSelectedPackId(null)}
+      >
+        {selectedPackId && (
+          <PackDetail
+            key={selectedPackId}
+            packId={selectedPackId}
+            skills={allSkills}
+            userId={userId}
+            onSelectSkill={(skill) => {
+              setSelectedPackId(null);
+              selectSkill(skill);
+            }}
+            onDeleted={() => setSelectedPackId(null)}
+          />
+        )}
+      </OGDialog>
+      <OGDialog open={creatingPack} onOpenChange={setCreatingPack}>
+        {creatingPack && (
+          <PackCreate skills={allSkills} userId={userId} onClose={() => setCreatingPack(false)} />
         )}
       </OGDialog>
     </div>

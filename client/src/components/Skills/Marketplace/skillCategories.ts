@@ -6,6 +6,7 @@ export const SKILL_CATEGORIES = ['문서작성', '정리·분석', '검토', '�
 
 export const POPULAR_TAB = 'popular';
 export const MINE_TAB = 'mine';
+export const PACKS_TAB = 'packs';
 
 const CATEGORY_LABEL_KEYS: Record<string, TranslationKeys> = {
   문서작성: 'com_skills_category_writing',
