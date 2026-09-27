@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const { logger, MAX_SKILL_PACK_SKILLS } = require('@librechat/data-schemas');
-const { generateCheckAccess } = require('@librechat/api');
+const { generateCheckAccess, dropHiddenDeploymentSkillIds } = require('@librechat/api');
 const {
   PermissionBits,
   PermissionTypes,
@@ -47,7 +47,7 @@ async function findViewableSkillIdSet(user) {
     resourceType: ResourceType.SKILL,
     requiredPermissions: PermissionBits.VIEW,
   });
-  return new Set(skillIds.map((skillId) => skillId.toString()));
+  return new Set(dropHiddenDeploymentSkillIds(skillIds, user).map((skillId) => skillId.toString()));
 }
 
 function toVisibleSkillIds(pack, viewableSkillIdSet) {
@@ -128,7 +128,9 @@ router.post('/', checkSkillCreate, async (req, res) => {
       resourceType: ResourceType.SKILL,
       requiredPermissions: PermissionBits.VIEW,
     });
-    const publicSkillIdSet = new Set(publicSkillIds.map((skillId) => skillId.toString()));
+    const publicSkillIdSet = new Set(
+      dropHiddenDeploymentSkillIds(publicSkillIds).map((skillId) => skillId.toString()),
+    );
     if (!normalizedSkillIds.every((skillId) => publicSkillIdSet.has(skillId))) {
       return res.status(400).json({ error: 'Every skill in a pack must be public' });
     }

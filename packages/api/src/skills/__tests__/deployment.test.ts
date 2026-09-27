@@ -15,6 +15,7 @@ import {
   resolveDeploymentSkillDirectory,
   findDeploymentTeamDepartments,
   isDeploymentSkillIdVisibleTo,
+  dropHiddenDeploymentSkillIds,
 } from '../deployment';
 
 const DESCRIPTION = 'Use this skill when the deployment needs a shared testing fixture.';
@@ -833,6 +834,21 @@ describe('department-scoped deployment skill ids', () => {
     expect(isDeploymentSkillIdVisibleTo(teamId, { department: '교육센터' })).toBe(true);
     expect(isDeploymentSkillIdVisibleTo(allId)).toBe(true);
     expect(isDeploymentSkillIdVisibleTo(new Types.ObjectId())).toBeUndefined();
+  });
+
+  it('drops only the hidden deployment skill ids from ACL ids without adding others', async () => {
+    const { teamId } = await loadScopedSkills();
+    const dbId = new Types.ObjectId();
+    expect(ids(dropHiddenDeploymentSkillIds([dbId, new Types.ObjectId(teamId)]))).toEqual([
+      dbId.toString(),
+    ]);
+    expect(
+      ids(
+        dropHiddenDeploymentSkillIds([dbId, new Types.ObjectId(teamId)], {
+          department: '교육센터',
+        }),
+      ),
+    ).toEqual([dbId.toString(), teamId]);
   });
 
   it('reports the authoring department of team deployment skills only', async () => {

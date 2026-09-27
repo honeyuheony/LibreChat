@@ -387,6 +387,11 @@ export function isDeploymentSkillIdVisibleTo(id: SkillId, user?: unknown): boole
   return skill ? isDeploymentSkillVisibleTo(skill, user) : undefined;
 }
 
+/** ACL 조회 결과에서 `user` 가 볼 수 없는 배포 스킬 id 만 뺀다. 배포 스킬을 새로 더하지는 않는다. */
+export function dropHiddenDeploymentSkillIds<T extends SkillId>(ids: T[], user?: unknown): T[] {
+  return ids.filter((id) => isDeploymentSkillIdVisibleTo(id, user) !== false);
+}
+
 /**
  * 접근 가능한 id 에 `user` 가 볼 수 있는 배포 스킬 id 를 더하고, 볼 수 없는 배포 스킬 id 는 ACL 에서 왔어도
  * 뺀다. `user` 를 넘기지 않으면 부서를 알 수 없으므로 `scope: 팀` 배포 스킬은 남기지 않는다.

@@ -118,8 +118,12 @@ describe('skill handler deps with scoped deployment skills', () => {
   });
 
   describe('when the ACL already lists a team deployment skill', () => {
+    afterEach(() => {
+      hasPublicPermission.mockResolvedValue(false);
+    });
+
     it('still does not count it as public', async () => {
-      hasPublicPermission.mockResolvedValueOnce(true);
+      hasPublicPermission.mockResolvedValue(true);
       await expect(deps.hasPublicPermission({ ...skillView, resourceId: teamId })).resolves.toBe(
         false,
       );
