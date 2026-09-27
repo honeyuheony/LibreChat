@@ -122,6 +122,15 @@ describe('SkillMarketplace', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the chat-to-agent hint below the creation action', () => {
+    renderAt('/skills-market');
+
+    const createAction = screen.getByRole('button', {
+      name: 'com_skills_create_agent',
+    }).parentElement;
+    expect(createAction?.nextElementSibling).toHaveTextContent('com_skills_create_agent_hint');
+  });
+
   it('lists every agent of a category, including base agents', () => {
     renderAt(`/skills-market/${encodeURIComponent('문서작성')}`);
     expect(rowTitles()).toEqual([

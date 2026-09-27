@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { OGDialog, Spinner, useMediaQuery } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { TSkillSummary } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import {
   MINE_TAB,
   PACKS_TAB,
@@ -253,6 +254,9 @@ export default function SkillMarketplace() {
                     {localize('com_skills_create_agent')}
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-text-muted">
+                  {localize('com_skills_create_agent_hint' as TranslationKeys)}
+                </p>
                 <div className="mt-[18px] inline-flex flex-wrap justify-center gap-x-[22px] gap-y-1.5 rounded-full border border-border-light bg-surface-primary px-[18px] py-[9px] text-[13.5px] text-text-tertiary">
                   <span>
                     {localize('com_skills_impact_agents')}{' '}
