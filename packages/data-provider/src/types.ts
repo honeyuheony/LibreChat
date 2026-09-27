@@ -338,6 +338,9 @@ export type TUser = {
     statefulCodeEnvironment?: StatefulCodeEnvironment;
     /** Per-connector "use in new chats" switch. Key = MCP server name. */
     connectorDefaults?: Record<string, boolean>;
+    /** The user's global instructions, added to every conversation's shared context. */
+    instructions?: string;
+    approvalMode?: UserApprovalMode;
   };
   createdAt: string;
   updatedAt: string;
@@ -350,6 +353,28 @@ export type TUpdateUserPreferencesRequest = {
 export type TUpdateUserPreferencesResponse = {
   updated: boolean;
   preferences: TUpdateUserPreferencesRequest;
+};
+
+/**
+ * How the user answers approvals for the tools that honor it (document import, re-fetch,
+ * export, share): `manual` asks every time, `auto` runs them and only logs.
+ */
+export const USER_APPROVAL_MODES = ['manual', 'auto'] as const;
+export type UserApprovalMode = (typeof USER_APPROVAL_MODES)[number];
+export const DEFAULT_USER_APPROVAL_MODE: UserApprovalMode = 'manual';
+export const MAX_USER_INSTRUCTIONS_LENGTH = 2000;
+
+/** Workspace preferences to change; fields left out keep their current value. */
+export type TUpdateWorkspacePreferencesRequest = {
+  instructions?: string;
+  approvalMode?: UserApprovalMode;
+};
+
+export type TWorkspacePreferences = Required<TUpdateWorkspacePreferencesRequest>;
+
+export type TUpdateWorkspacePreferencesResponse = {
+  updated: boolean;
+  preferences: TWorkspacePreferences;
 };
 
 /** Connectors to switch for new chats; names left out keep their current value. */

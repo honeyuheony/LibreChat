@@ -1,5 +1,6 @@
 import type {
   TUserFavorite,
+  UserApprovalMode,
   RefillIntervalUnit,
   StatefulCodeEnvironment,
 } from 'librechat-data-provider';
@@ -67,6 +68,8 @@ export interface IUser extends Document {
     statefulCodeEnvironment?: StatefulCodeEnvironment;
     /** Per-connector "use in new chats" switch. Key = MCP server name. */
     connectorDefaults?: Record<string, boolean>;
+    instructions?: string;
+    approvalMode?: UserApprovalMode;
   };
   favorites?: TUserFavorite[];
   /** Display order for the sidebar's Pinned section: favorite and pinned-chat
@@ -120,6 +123,8 @@ export interface UpdateUserRequest {
     statefulCodeEnvironment?: StatefulCodeEnvironment;
     /** Per-connector "use in new chats" switch. Key = MCP server name. */
     connectorDefaults?: Record<string, boolean>;
+    instructions?: string;
+    approvalMode?: UserApprovalMode;
   };
   skillStates?: Record<string, boolean>;
 }

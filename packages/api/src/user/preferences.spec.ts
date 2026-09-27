@@ -1,6 +1,14 @@
+import { MAX_USER_INSTRUCTIONS_LENGTH } from 'librechat-data-provider';
 import type { IUser } from '@librechat/data-schemas';
 import type { Request, Response } from 'express';
-import { createConnectorDefaultsHandler, createUserPreferencesHandler } from './preferences';
+import {
+  resolveWorkspacePreferences,
+  createUserPreferencesHandler,
+  formatUserInstructionsContext,
+  createConnectorDefaultsHandler,
+  getWorkspacePreferencesHandler,
+  createWorkspacePreferencesHandler,
+} from './preferences';
 
 interface MockResponse extends Partial<Response> {
   statusCode: number;
@@ -186,5 +194,141 @@ describe('createConnectorDefaultsHandler', () => {
     );
 
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('createWorkspacePreferencesHandler', () => {
+  function run(body: object, updated: Partial<IUser> | null = null, authenticated = true) {
+    const updateWorkspacePreferences = jest.fn().mockResolvedValue(updated);
+    const handler = createWorkspacePreferencesHandler({ updateWorkspacePreferences });
+    const response = createResponse();
+    const done = handler(
+      createRequest(body, authenticated) as Parameters<typeof handler>[0],
+      response as Response,
+    );
+    return { done, response, updateWorkspacePreferences };
+  }
+
+  it('saves workspace instructions and approval mode and answers with both values', async () => {
+    const { done, response, updateWorkspacePreferences } = run(
+      { instructions: 'Answer in Korean.', approvalMode: 'auto' },
+      { personalization: { instructions: 'Answer in Korean.', approvalMode: 'auto' } },
+    );
+    await done;
+
+    expect(updateWorkspacePreferences).toHaveBeenCalledWith('user-1', {
+      instructions: 'Answer in Korean.',
+      approvalMode: 'auto',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({
+      updated: true,
+      preferences: { instructions: 'Answer in Korean.', approvalMode: 'auto' },
+    });
+  });
+
+  it('saves one workspace field without sending the other', async () => {
+    const { done, updateWorkspacePreferences } = run(
+      { approvalMode: 'manual', memories: false },
+      { personalization: { approvalMode: 'manual' } },
+    );
+    await done;
+
+    expect(updateWorkspacePreferences).toHaveBeenCalledWith('user-1', { approvalMode: 'manual' });
+  });
+
+  it('accepts workspace instructions exactly at the length limit', async () => {
+    const instructions = 'a'.repeat(MAX_USER_INSTRUCTIONS_LENGTH);
+    const { done, response } = run({ instructions }, { personalization: { instructions } });
+    await done;
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it.each([
+    [
+      'instructions over the length limit',
+      { instructions: 'a'.repeat(MAX_USER_INSTRUCTIONS_LENGTH + 1) },
+    ],
+    ['non-string instructions', { instructions: 42 }],
+    ['an approval mode outside the allowed values', { approvalMode: 'always' }],
+    ['a non-string approval mode', { approvalMode: true }],
+    ['a body with neither workspace field', { memories: false }],
+  ])('rejects workspace preferences with %s', async (_label, body) => {
+    const { done, response, updateWorkspacePreferences } = run(body);
+    await done;
+
+    expect(response.statusCode).toBe(400);
+    expect(updateWorkspacePreferences).not.toHaveBeenCalled();
+  });
+
+  it('requires an authenticated user for workspace preferences', async () => {
+    const { done, response, updateWorkspacePreferences } = run(
+      { approvalMode: 'auto' },
+      null,
+      false,
+    );
+    await done;
+
+    expect(response.statusCode).toBe(401);
+    expect(updateWorkspacePreferences).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 when the workspace preferences owner no longer exists', async () => {
+    const { done, response } = run({ approvalMode: 'auto' }, null);
+    await done;
+
+    expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('getWorkspacePreferencesHandler', () => {
+  it('reads the workspace preferences of the signed-in user with defaults filled in', () => {
+    const response = createResponse();
+    getWorkspacePreferencesHandler(
+      { user: { id: 'user-1', personalization: { instructions: 'Cite sources.' } } } as Parameters<
+        typeof getWorkspacePreferencesHandler
+      >[0],
+      response as Response,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ instructions: 'Cite sources.', approvalMode: 'manual' });
+  });
+
+  it('requires an authenticated user to read workspace preferences', () => {
+    const response = createResponse();
+    getWorkspacePreferencesHandler(
+      {} as Parameters<typeof getWorkspacePreferencesHandler>[0],
+      response as Response,
+    );
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('resolveWorkspacePreferences', () => {
+  it('fills workspace defaults for a user without stored values', () => {
+    expect(resolveWorkspacePreferences(undefined)).toEqual({
+      instructions: '',
+      approvalMode: 'manual',
+    });
+  });
+});
+
+describe('formatUserInstructionsContext', () => {
+  it('puts the user instructions under their own heading', () => {
+    expect(
+      formatUserInstructionsContext({ personalization: { instructions: '  Answer in Korean.\n' } }),
+    ).toBe('# 사용자 전역 지침\nAnswer in Korean.');
+  });
+
+  it.each([
+    ['no user', undefined],
+    ['no personalization', {}],
+    ['empty user instructions', { personalization: { instructions: '' } }],
+    ['blank user instructions', { personalization: { instructions: ' \n ' } }],
+  ])('adds nothing for %s', (_label, user) => {
+    expect(formatUserInstructionsContext(user)).toBeUndefined();
   });
 });

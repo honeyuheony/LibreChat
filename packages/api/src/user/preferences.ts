@@ -1,9 +1,17 @@
 import { logger } from '@librechat/data-schemas';
 import {
+  USER_APPROVAL_MODES,
   STATEFUL_CODE_ENVIRONMENTS,
+  DEFAULT_USER_APPROVAL_MODE,
+  MAX_USER_INSTRUCTIONS_LENGTH,
   resolveAllowedStatefulCodeEnvironments,
 } from 'librechat-data-provider';
-import type { StatefulCodeEnvironment } from 'librechat-data-provider';
+import type {
+  UserApprovalMode,
+  TWorkspacePreferences,
+  StatefulCodeEnvironment,
+  TUpdateWorkspacePreferencesRequest,
+} from 'librechat-data-provider';
 import type { IUser } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { ServerRequest } from '~/types';
@@ -141,6 +149,106 @@ export function createConnectorDefaultsHandler(
     } catch (error) {
       logger.error('[UserPreferences] Error updating connector defaults:', error);
       return res.status(500).json({ message: 'Failed to update connector defaults' });
+    }
+  };
+}
+
+type WorkspacePreferencesRequest = Omit<ServerRequest, 'body' | 'user'> & {
+  body: { instructions?: unknown; approvalMode?: unknown };
+  user?: IUser;
+};
+
+export interface WorkspacePreferencesHandlerDeps {
+  updateWorkspacePreferences: (
+    userId: string,
+    preferences: TUpdateWorkspacePreferencesRequest,
+  ) => Promise<IUser | null>;
+}
+
+type PersonalizationHolder = Pick<IUser, 'personalization'> | null | undefined;
+
+function isUserApprovalMode(value: unknown): value is UserApprovalMode {
+  return USER_APPROVAL_MODES.some((mode) => mode === value);
+}
+
+/** Reads the body's workspace fields; `null` when a field is invalid or none is present. */
+function parseWorkspacePreferences(body: {
+  instructions?: unknown;
+  approvalMode?: unknown;
+}): TUpdateWorkspacePreferencesRequest | null {
+  const { instructions, approvalMode } = body ?? {};
+  if (instructions === undefined && approvalMode === undefined) {
+    return null;
+  }
+  if (
+    instructions !== undefined &&
+    (typeof instructions !== 'string' || instructions.length > MAX_USER_INSTRUCTIONS_LENGTH)
+  ) {
+    return null;
+  }
+  if (approvalMode !== undefined && !isUserApprovalMode(approvalMode)) {
+    return null;
+  }
+  return {
+    ...(instructions !== undefined && { instructions }),
+    ...(approvalMode !== undefined && { approvalMode }),
+  };
+}
+
+/** The user's workspace preferences, with defaults for the values never saved. */
+export function resolveWorkspacePreferences(user: PersonalizationHolder): TWorkspacePreferences {
+  return {
+    instructions: user?.personalization?.instructions ?? '',
+    approvalMode: user?.personalization?.approvalMode ?? DEFAULT_USER_APPROVAL_MODE,
+  };
+}
+
+/** The user's global instructions as a shared-context block, or `undefined` when there are none. */
+export function formatUserInstructionsContext(user: PersonalizationHolder): string | undefined {
+  const instructions = user?.personalization?.instructions?.trim();
+  return instructions ? `# 사용자 전역 지침\n${instructions}` : undefined;
+}
+
+/** Answers with the signed-in user's own workspace preferences; there is no way to name another user. */
+export function getWorkspacePreferencesHandler(
+  req: Pick<WorkspacePreferencesRequest, 'user'>,
+  res: Response,
+): Response {
+  if (!req.user?.id) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  return res.status(200).json(resolveWorkspacePreferences(req.user));
+}
+
+/** Saves the global instructions and approval mode; a field left out keeps its stored value. */
+export function createWorkspacePreferencesHandler(
+  deps: WorkspacePreferencesHandlerDeps,
+): (req: WorkspacePreferencesRequest, res: Response) => Promise<Response> {
+  return async (req: WorkspacePreferencesRequest, res: Response): Promise<Response> => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const preferences = parseWorkspacePreferences(req.body);
+    if (!preferences) {
+      return res.status(400).json({
+        message: `Send instructions (at most ${MAX_USER_INSTRUCTIONS_LENGTH} characters) and/or approvalMode (one of: ${USER_APPROVAL_MODES.join(', ')})`,
+      });
+    }
+
+    try {
+      const updatedUser = await deps.updateWorkspacePreferences(userId, preferences);
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      return res.status(200).json({
+        updated: true,
+        preferences: resolveWorkspacePreferences(updatedUser),
+      });
+    } catch (error) {
+      logger.error('[UserPreferences] Error updating workspace preferences:', error);
+      return res.status(500).json({ message: 'Failed to update workspace preferences' });
     }
   };
 }
