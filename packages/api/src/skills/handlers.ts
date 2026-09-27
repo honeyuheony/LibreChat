@@ -34,7 +34,12 @@ import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
 import type { SkillUsageCountersInput } from './market';
-import { applyDeploymentUsage, isVisibleToDepartment, readUserDepartment } from './market';
+import {
+  applyDeploymentUsage,
+  isVisibleToDepartment,
+  readDeploymentMarketFields,
+  readUserDepartment,
+} from './market';
 import { getDeploymentSkillIds, getDeploymentSkillRegistry } from './deployment';
 import { extractSkillContent, inspectContentWithTraversal } from '~/protection';
 import { contentFilterBlockResponse } from '~/middleware/contentFilter';
@@ -49,6 +54,8 @@ type SkillValidationError = Error & { code?: string; issues?: ValidationIssue[] 
 
 /** Mongo duplicate-key shape. */
 type DuplicateKeyError = Error & { code?: number | string };
+
+type SkillFrontmatterById = Map<string, Record<string, unknown> | undefined>;
 
 /**
  * All dependencies required to serve skill HTTP requests. Every dep is resolved
@@ -492,8 +499,11 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     return skills.map((skill) => ({ ...skill, forkCount: counts[skill._id] ?? 0 }));
   }
 
-  /** 배포 스킬에는 `metadata` 값과 출발값을 더한 지표를, 사용자 스킬에는 작성자 부서를 싣는다. */
-  async function withMarketFields<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
+  /** 배포 스킬에는 `metadata` 값과 출발값을 더한 지표를, 사용자 스킬에는 부서와 머리말 triggers를 싣는다. */
+  async function withMarketFields<T extends TSkillSummary>(
+    skills: T[],
+    frontmatterById?: SkillFrontmatterById,
+  ): Promise<T[]> {
     const registry = getDeploymentSkillRegistry();
     const deploymentIds = skills.filter((skill) => registry.hasId(skill._id)).map((s) => s._id);
     const authorIds = skills.filter((skill) => !registry.hasId(skill._id)).map((s) => s.author);
@@ -509,7 +519,17 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       const deployment = registry.getById(skill._id);
       if (!deployment) {
         const authorDepartment = departmentByAuthor[skill.author];
-        return authorDepartment ? { ...skill, authorDepartment } : skill;
+        const frontmatter = frontmatterById?.get(skill._id);
+        const triggers = frontmatter
+          ? readDeploymentMarketFields(frontmatter).marketProfile?.triggers
+          : undefined;
+        return {
+          ...skill,
+          ...(authorDepartment && { authorDepartment }),
+          ...(triggers !== undefined && {
+            marketProfile: { ...skill.marketProfile, triggers },
+          }),
+        };
       }
       const seed = deployment.seedMetrics;
       return {
@@ -525,8 +545,11 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     });
   }
 
-  async function withCountsAndMarketFields<T extends TSkillSummary>(skills: T[]): Promise<T[]> {
-    return withMarketFields(await withForkCounts(skills));
+  async function withCountsAndMarketFields<T extends TSkillSummary>(
+    skills: T[],
+    frontmatterById?: SkillFrontmatterById,
+  ): Promise<T[]> {
+    return withMarketFields(await withForkCounts(skills), frontmatterById);
   }
 
   /** O(1) public check for a single skill (avoids fetching all public IDs). */
@@ -592,8 +615,12 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         const deployment = registry.getById(row._id);
         return !deployment || isVisibleToDepartment(deployment, userDepartment);
       });
+      const frontmatterById = new Map(
+        visibleRows.map((skill) => [skill._id.toString(), skill.frontmatter] as const),
+      );
       const skills = await withCountsAndMarketFields(
         visibleRows.map((s) => serializeSkillSummary(s, publicSet)),
+        frontmatterById,
       );
 
       return res.status(200).json({

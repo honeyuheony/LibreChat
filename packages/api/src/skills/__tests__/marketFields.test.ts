@@ -124,6 +124,7 @@ function buildDeps(overrides: Partial<SkillsHandlersDeps> = {}) {
         'Compare report 5.',
         'Compare report 6.',
       ],
+      metadata: { triggers: ['주간보고', '주간 실적'] },
     },
     builder: {
       text: 'Stored editor state.',
@@ -208,6 +209,16 @@ describe('skill list market fields', () => {
       savedMinutesPerRun: 25,
       savedHours: 1304,
     });
+  });
+
+  it('adds user-skill triggers to the market profile without changing deployment fields', async () => {
+    const { deps } = buildDeps();
+    const skills = await listFor(undefined, deps);
+    const userSkill = skills.find((skill) => skill.name === 'my-draft');
+    const deploymentSkill = skills.find((skill) => skill.name === 'weekly-report');
+
+    expect(userSkill?.marketProfile).toEqual({ triggers: ['주간보고', '주간 실적'] });
+    expect(deploymentSkill?.marketProfile?.triggers).toBeUndefined();
   });
 
   it('limits serialized frontmatter examples and omits builder state from list rows', async () => {

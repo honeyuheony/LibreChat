@@ -598,6 +598,25 @@ describe('Skill routes', () => {
   });
 
   describe('GET /api/skills', () => {
+    it('includes user-skill triggers in the list response', async () => {
+      const created = await createSkillAsOwner({
+        name: 'trigger-skill',
+        frontmatter: { metadata: { triggers: ['주간 보고', '주간보고'] } },
+      });
+      expect(created.status).toBe(201);
+
+      const res = await request(app).get('/api/skills');
+      expect(res.status).toBe(200);
+      expect(res.body.skills).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'trigger-skill',
+            marketProfile: { triggers: ['주간 보고', '주간보고'] },
+          }),
+        ]),
+      );
+    });
+
     it('returns only skills the caller can access', async () => {
       const mine = await createSkillAsOwner({ name: 'mine-skill' });
       expect(mine.status).toBe(201);
