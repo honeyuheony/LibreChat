@@ -209,10 +209,10 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
       <div>
         <Button
           variant="ghost"
-          size="sm"
+          size="pill"
           aria-expanded={open}
           onClick={() => toggle(!open)}
-          className="font-normal"
+          className="text-text-tertiary"
         >
           {localize(open ? 'com_skills_builder_peek_close' : 'com_skills_builder_peek')}
         </Button>
@@ -247,7 +247,8 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                     </div>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="pill"
+                      className="border-border-medium text-text-secondary"
                       onClick={() => {
                         toggle(false);
                         onCopy(peer);

@@ -166,12 +166,23 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(screen.queryByRole('list', { name: 'com_skills_builder_peek' })).not.toBeInTheDocument();
   });
 
-  it('uses normal weight for the close-examples button', () => {
+  it('draws the example toggle and the copy action as quiet pills', () => {
     render(<Harness peers={[peer]} />);
+    const pill = ['h-7', 'text-[13px]', 'font-normal', 'rounded-theme-control-round'];
+    expect(screen.getByRole('button', { name: 'com_skills_builder_peek' })).toHaveClass(
+      ...pill,
+      'text-text-tertiary',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
 
     expect(screen.getByRole('button', { name: 'com_skills_builder_peek_close' })).toHaveClass(
-      'font-normal',
+      ...pill,
+      'text-text-tertiary',
+    );
+    expect(screen.getByRole('button', { name: 'com_skills_builder_peek_copy' })).toHaveClass(
+      ...pill,
+      'border-border-medium',
+      'text-text-secondary',
     );
   });
 
