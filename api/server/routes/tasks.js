@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const {
   buildTaskWorkbook,
   estimateTask,
@@ -6,18 +7,91 @@ const {
   loadConversationDocuments,
   normalizeKey,
 } = require('@librechat/api');
-const { TaskExtraction, TaskResult } = require('~/db/models');
+const { Conversation, TaskExtraction, TaskResult } = require('~/db/models');
 const { getAgent, getConvo, getFiles, getMessages } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 
 const router = express.Router();
 router.use(requireJwtAuth);
 
+const TASK_RESULTS_PAGE_SIZE = 50;
+const TASK_RESULTS_FETCH_SIZE = TASK_RESULTS_PAGE_SIZE + 1;
+
 function getQueryFields(value) {
   if (Array.isArray(value)) {
     return value.filter((field) => typeof field === 'string');
   }
   return typeof value === 'string' && value.length > 0 ? [value] : [];
+}
+
+function parseTaskResultsCursor(value) {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    return undefined;
+  }
+  try {
+    const cursorData = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+    if (
+      cursorData == null ||
+      typeof cursorData !== 'object' ||
+      Array.isArray(cursorData) ||
+      typeof cursorData.createdAt !== 'string' ||
+      typeof cursorData.id !== 'string' ||
+      !/^[a-f\d]{24}$/i.test(cursorData.id)
+    ) {
+      return undefined;
+    }
+    const createdAt = new Date(cursorData.createdAt);
+    if (!Number.isFinite(createdAt.getTime()) || createdAt.toISOString() !== cursorData.createdAt) {
+      return undefined;
+    }
+    return { createdAt, id: new mongoose.Types.ObjectId(cursorData.id) };
+  } catch {
+    return undefined;
+  }
+}
+
+function createTaskResultsFilter(userId, cursor) {
+  if (cursor == null) {
+    return { user: userId };
+  }
+  return {
+    user: userId,
+    $or: [
+      { createdAt: { $lt: cursor.createdAt } },
+      { createdAt: cursor.createdAt, _id: { $lt: cursor.id } },
+    ],
+  };
+}
+
+function encodeTaskResultsCursor(taskResult) {
+  return Buffer.from(
+    JSON.stringify({
+      createdAt: new Date(taskResult.createdAt).toISOString(),
+      id: String(taskResult._id),
+    }),
+  ).toString('base64url');
+}
+
+function toTaskResultListItem(taskResult, conversationTitle) {
+  const storedResult = taskResult.result;
+  const listItem = {
+    resultId: taskResult.resultId,
+    conversationId: taskResult.conversationId,
+    conversationTitle,
+    kind: taskResult.kind,
+    title: storedResult.title,
+    createdAt: taskResult.createdAt,
+  };
+  if (taskResult.kind === 'table' && Array.isArray(storedResult.rows)) {
+    listItem.rows = storedResult.rows.length;
+  }
+  if (taskResult.kind === 'report' && typeof storedResult.file?.filename === 'string') {
+    listItem.fileName = storedResult.file.filename;
+  }
+  return listItem;
 }
 
 router.get('/estimate', async (req, res, next) => {
@@ -57,6 +131,59 @@ router.get('/estimate', async (req, res, next) => {
           .lean()
       : [];
     return res.json(estimateTask({ docs, fields, cachedCells }));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/results', async (req, res, next) => {
+  const cursor = parseTaskResultsCursor(req.query.cursor);
+  if (cursor === undefined) {
+    return res.status(400).json({ error: 'Invalid cursor.' });
+  }
+  try {
+    const userId = req.user.id;
+    const taskResults = await TaskResult.find(createTaskResultsFilter(userId, cursor))
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(TASK_RESULTS_FETCH_SIZE)
+      .lean();
+    const conversations = taskResults.length
+      ? await Conversation.find({
+          user: userId,
+          conversationId: {
+            $in: [...new Set(taskResults.map(({ conversationId }) => conversationId))],
+          },
+          isArchived: { $ne: true },
+        })
+          .select('conversationId title')
+          .lean()
+      : [];
+    const conversationsById = new Map(
+      conversations.map((conversation) => [conversation.conversationId, conversation]),
+    );
+    const listEntries = [];
+    for (const taskResult of taskResults) {
+      const conversation = conversationsById.get(taskResult.conversationId);
+      if (!conversation) {
+        continue;
+      }
+      listEntries.push({
+        taskResult,
+        item: toTaskResultListItem(taskResult, conversation.title),
+      });
+    }
+    const pageEntries = listEntries.slice(0, TASK_RESULTS_PAGE_SIZE);
+    const hasMore =
+      listEntries.length > TASK_RESULTS_PAGE_SIZE || taskResults.length > TASK_RESULTS_PAGE_SIZE;
+    const lastReturned = pageEntries[pageEntries.length - 1];
+    const cursorResult =
+      listEntries.length > TASK_RESULTS_PAGE_SIZE
+        ? pageEntries[pageEntries.length - 1].taskResult
+        : (lastReturned?.taskResult ?? taskResults[TASK_RESULTS_PAGE_SIZE]);
+    return res.json({
+      results: pageEntries.map(({ item }) => item),
+      nextCursor: hasMore && cursorResult ? encodeTaskResultsCursor(cursorResult) : null,
+    });
   } catch (error) {
     return next(error);
   }
