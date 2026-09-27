@@ -4,9 +4,10 @@
  */
 const path = require('path');
 const mongoose = require('mongoose');
-const { runAsSystem } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { processDeleteRequest } = require('~/server/services/Files/process');
+const { File } = require('~/db/models');
 const { getAppConfig } = require('~/server/services/Config');
 const { parseCliArgs, createDemoData } = require('./demo-data');
 const { createResetDemoFileDeleter } = require('./reset-demo-files');
@@ -26,7 +27,9 @@ const connect = require('./connect');
   await connect();
   const appConfig = dryRun ? undefined : await getAppConfig({ baseOnly: true });
   const deleteFiles = createResetDemoFileDeleter({
+    File,
     appConfig,
+    logger,
     processDeleteRequest,
     runAsSystem,
   });

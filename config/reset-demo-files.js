@@ -1,15 +1,5 @@
-const createResetDemoFileDeleter =
-  ({ appConfig, processDeleteRequest, runAsSystem }) =>
-  (user, files) =>
-    runAsSystem(() =>
-      processDeleteRequest({
-        req: {
-          user: { id: String(user._id), email: user.email, tenantId: user.tenantId },
-          config: appConfig,
-          body: {},
-        },
-        files,
-      }),
-    );
+const { createDemoFileDeleter } = require('@librechat/api');
+
+const createResetDemoFileDeleter = createDemoFileDeleter;
 
 module.exports = { createResetDemoFileDeleter };

@@ -14,6 +14,7 @@ const {
   parseEmails,
   createDemoData,
 } = require('../demo-data');
+const { createResetDemoFileDeleter } = require('../reset-demo-files');
 
 logger.silent = true;
 
@@ -440,6 +441,28 @@ describe('resetDemo', () => {
     expect(await col('Token').find({}).sort({ _id: 1 }).toArray()).toEqual(tokensBefore);
 
     expect(await col('Conversation').countDocuments({ user: String(ids.admin) })).toBe(2);
+  });
+
+  it('keeps files held by protected accounts when a reset file id is shared', async () => {
+    await col('File').insertOne(makeFile(ids.admin, 'lee-file-2'));
+    const deleteFilesForCli = createResetDemoFileDeleter({
+      File: models.File,
+      appConfig: {},
+      logger,
+      processDeleteRequest: async ({ files }) => {
+        const fileIds = files.map(({ file_id }) => file_id);
+        await col('File').deleteMany({ file_id: { $in: fileIds } });
+        return { deletedFileIds: fileIds, failedFileIds: [] };
+      },
+      runAsSystem: (action) => action(),
+    });
+
+    await run({ deleteFiles: deleteFilesForCli });
+
+    const protectedFile = await col('File').findOne({ user: ids.admin, file_id: 'lee-file-2' });
+    const targetFile = await col('File').findOne({ user: ids.lee, file_id: 'lee-file-2' });
+    expect(protectedFile).toMatchObject({ user: ids.admin, file_id: 'lee-file-2' });
+    expect(targetFile).toMatchObject({ user: ids.lee, file_id: 'lee-file-2' });
   });
 
   it('DR1-3 leaves shared data alone unless --include-shared is given', async () => {
