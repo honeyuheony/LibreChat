@@ -138,6 +138,8 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
       setState((prev) => editField(prev, field, value)),
     [],
   );
+  /** 붙인 문서를 한꺼번에 뗀다. 문서는 저장하지 않으므로 테스트 결과는 그대로 둔다. */
+  const clearFiles = useCallback(() => setState((prev) => ({ ...prev, files: [] })), []);
   const stepOff = useCallback(
     (step: string) => setState((prev) => ({ ...prev, aiOff: [...prev.aiOff, step] })),
     [],
@@ -293,6 +295,7 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
     setText,
     copyText,
     edit,
+    clearFiles,
     stepOff,
     stepsRestore,
     connector,

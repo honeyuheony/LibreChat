@@ -2,9 +2,11 @@ import React from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { TSkill, TSkillDraft } from 'librechat-data-provider';
 import type { SessionDeps } from '../useSession';
+import type { BuilderState } from '../state';
 import type { PeerExample } from '../peers';
 import { DRAFT_DEBOUNCE_MS } from '../useDraft';
 import useSession from '../useSession';
+import { chatState } from '../chat';
 import Builder from '../Builder';
 
 jest.mock('~/hooks', () => ({
@@ -40,13 +42,14 @@ const deps: SessionDeps = {
 };
 
 type HarnessProps = {
+  chat?: BuilderState;
   department?: string;
   peers?: PeerExample[];
   onPeek?: (open: boolean) => void;
 };
 
-function Harness({ department, peers = [], onPeek }: HarnessProps) {
-  const session = useSession(deps);
+function Harness({ chat, department, peers = [], onPeek }: HarnessProps) {
+  const session = useSession(deps, { chat });
   return (
     <Builder
       session={session}
@@ -119,6 +122,32 @@ describe('Builder laid out like the wireframe editor', () => {
     });
     expect(screen.getByRole('status')).toHaveTextContent('com_skills_builder_files_later');
     expect(screen.queryByText('출장보고 양식.hwp')).not.toBeInTheDocument();
+  });
+
+  it('takes every attached document off at once with 모두 지우기 next to the chips', () => {
+    const chat = chatState('출장 메모를 보고서로 만든다.', {
+      output: 'report',
+      fields: [],
+      files: ['출장 메모.hwp', '지난 보고.pdf'],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+    const chips = screen.getByRole('list', { name: 'com_skills_builder_files_list' });
+    expect(within(chips).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByRole('status')).toHaveTextContent('com_skills_builder_files_later');
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_clear_all' }));
+
+    expect(screen.queryByRole('list', { name: 'com_skills_builder_files_list' })).toBeNull();
+    expect(screen.queryByText('출장 메모.hwp')).toBeNull();
+    expect(screen.getByText('com_skills_builder_files_hint')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('shows no 모두 지우기 while no document is attached', () => {
+    render(<Harness />);
+    expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();
   });
 
   it('lists others’ agents with their text and closes the list again', () => {

@@ -121,7 +121,7 @@ function FileChips({ files }: { files: BuilderFile[] }) {
 }
 
 /** 양식·예시 문서 붙이기 줄. 첫 단계는 예시 없이 시험하므로 붙인 파일은 쓰지 않고 그렇다고 알린다. */
-function AttachRow({ files }: { files: BuilderFile[] }) {
+function AttachRow({ files, onClear }: { files: BuilderFile[]; onClear: () => void }) {
   const localize = useLocalize();
   const input = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState(false);
@@ -141,7 +141,19 @@ function AttachRow({ files }: { files: BuilderFile[] }) {
           {localize('com_skills_builder_files_attach')}
         </Button>
         {files.length > 0 ? (
-          <FileChips files={files} />
+          <>
+            <FileChips files={files} />
+            <button
+              type="button"
+              onClick={() => {
+                setPicked(false);
+                onClear();
+              }}
+              className="rounded-full border border-border-medium px-2.5 py-0.5 text-xs text-text-secondary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+            >
+              {localize('com_ui_clear_all')}
+            </button>
+          </>
         ) : (
           <span className="text-xs text-text-secondary">
             {localize('com_skills_builder_files_hint')}
@@ -381,7 +393,7 @@ export default function Builder({
               <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
                 {statusText ? localize(statusText) : ''}
               </p>
-              <AttachRow files={state.files} />
+              <AttachRow files={state.files} onClear={session.clearFiles} />
               <PeekRow peers={peers} onPeek={peek} onCopy={copyPeer} />
             </section>
           </div>
