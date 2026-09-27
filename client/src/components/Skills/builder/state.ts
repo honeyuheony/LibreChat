@@ -465,6 +465,7 @@ export function forkState(skill: TSkill, department?: string): BuilderState {
       connectors: asStrings(metadata.connectors),
     },
     manualMinutes: skill.manualMinutes ?? 0,
+    scope: skill.scope ?? 'all',
   };
 }
 

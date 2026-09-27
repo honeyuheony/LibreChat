@@ -273,6 +273,7 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
         payload: { scope: state.scope },
       });
       setSkill(published);
+      setState((prev) => ({ ...prev, scope: published.scope ?? prev.scope }));
       return published;
     } finally {
       setPublishing(false);

@@ -139,6 +139,11 @@ describe('forkState', () => {
     expect(Object.values(state.sources).every((source) => source === SOURCE_ORIGIN)).toBe(true);
   });
 
+  it('restores the publication scope from the loaded skill response', () => {
+    expect(forkState({ ...original, scope: 'team' }).scope).toBe('team');
+    expect(forkState({ ...original, scope: 'me' }).scope).toBe('me');
+  });
+
   it('uses the saved text of a direct-mode original as is', () => {
     const state = forkState({
       ...original,
