@@ -17,7 +17,7 @@ const TASK_RESULT_ATTACHMENT = 'task_result';
 
 const STEP_ICON: Record<TaskStepState, string> = { done: '✓', now: '▶', stopped: '✕', todo: '○' };
 
-function taskResultsOf(attachments: TAttachment[] | undefined): TaskResultAttachment[] {
+export function taskResultsOf(attachments: TAttachment[] | undefined): TaskResultAttachment[] {
   const results: TaskResultAttachment[] = [];
   for (const attachment of attachments ?? []) {
     const record = attachment as unknown as Record<string, unknown>;

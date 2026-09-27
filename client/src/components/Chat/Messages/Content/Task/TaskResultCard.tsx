@@ -27,7 +27,6 @@ import { useListSkillsQuery } from '~/data-provider/Skills';
 import { useGetStartupConfig } from '~/data-provider';
 import { ChatContext } from '~/Providers/ChatContext';
 import { taskPanelState } from '~/store/task';
-import TaskSaveOffer from './TaskSaveOffer';
 import { cn } from '~/utils';
 import store from '~/store';
 
@@ -50,7 +49,10 @@ export function topValueCounts(result: TaskTableResult, localize: Localize): str
 }
 
 /** The last user message sent at or before the result was saved: the request it answered. */
-function requestForResult(messages: TMessage[], resultCreatedAt: string): TMessage | undefined {
+export function requestForResult(
+  messages: TMessage[],
+  resultCreatedAt: string,
+): TMessage | undefined {
   const resultTimestamp = Date.parse(resultCreatedAt);
   if (!Number.isFinite(resultTimestamp)) {
     return undefined;
@@ -155,11 +157,6 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
     !(typeof schedulesConfig === 'object' && schedulesConfig.use === false);
   const canSchedule =
     inChat && canCreateSchedules && schedulesEnabled && (conversation?.agent_id ?? '') !== '';
-  const canCreateSkills = useHasAccess({
-    permissionType: PermissionTypes.SKILLS,
-    permission: Permissions.CREATE,
-  });
-  const canOfferAgent = inChat && canCreateSkills && conversation?.conversationId != null;
   const { data: listedSkills } = useListSkillsQuery({ limit: 100 }, { enabled: canSchedule });
   const createSchedule = useCreateScheduleMutation();
   const scheduleRequestId = useRef(v4());
@@ -168,23 +165,11 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
   const setArtifactsVisible = useSetRecoilState(store.artifactsVisibility);
   const { resultId, kind, stats } = result;
 
-  const resultQuery = useTaskResultQuery(kind === 'table' || canOfferAgent ? resultId : null);
+  const resultQuery = useTaskResultQuery(kind === 'table' ? resultId : null);
   const valueCounts = useMemo(
     () => (resultQuery.data?.kind === 'table' ? topValueCounts(resultQuery.data, localize) : []),
     [resultQuery.data, localize],
   );
-  /** Offered for a request typed in the chat, not for one that already ran a saved agent. */
-  const offerRequest = useMemo(() => {
-    if (!canOfferAgent || resultQuery.data == null) {
-      return undefined;
-    }
-    const request = requestForResult(
-      chatContext?.getMessages?.() ?? [],
-      resultQuery.data.createdAt,
-    );
-    const text = request?.text?.trim();
-    return text && (request?.manualSkills?.length ?? 0) === 0 ? text : undefined;
-  }, [canOfferAgent, resultQuery.data, chatContext]);
 
   const openResult = () => {
     setArtifactsVisible(false);
@@ -342,14 +327,6 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
           />
         )}
       </div>
-      {offerRequest != null && conversation?.conversationId != null && (
-        <TaskSaveOffer
-          conversationId={conversation.conversationId}
-          resultId={resultId}
-          request={offerRequest}
-          getMessages={() => chatContext?.getMessages?.()}
-        />
-      )}
     </div>
   );
 }

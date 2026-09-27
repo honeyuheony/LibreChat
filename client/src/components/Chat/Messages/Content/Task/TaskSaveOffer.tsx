@@ -1,11 +1,18 @@
+import { useContext, useMemo } from 'react';
 import { Button } from '@librechat/client';
 import { useNavigate } from 'react-router-dom';
-import { Constants, splitMCPToolKey } from 'librechat-data-provider';
+import { Constants, Permissions, PermissionTypes, splitMCPToolKey } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
+import type { ContextType } from 'react';
 import type { BuilderEntryState } from '~/components/Skills/builder';
 import type { TranslationKeys } from '~/hooks';
 import { BUILDER_PATH } from '~/components/Chat/Input/AgentSuggestChips';
-import { useLocalize } from '~/hooks';
+import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
+import { useGetMessagesByConvoId } from '~/data-provider';
+import { ChatContext } from '~/Providers/ChatContext';
+import { useHasAccess, useLocalize } from '~/hooks';
+import { requestForResult } from './TaskResultCard';
+import { taskResultsOf } from './TaskPlanCard';
 
 function toolCallName(part: unknown): string | undefined {
   const name = (part as { tool_call?: { name?: unknown } } | null)?.tool_call?.name;
@@ -36,6 +43,20 @@ type TaskSaveOfferProps = {
   request: string;
   getMessages: () => TMessage[] | undefined;
 };
+
+type LatestResult = { messageId: string; resultId: string };
+
+/** The newest task result in the conversation and the answer that carries it. */
+function latestTaskResult(messages: TMessage[] | undefined): LatestResult | null {
+  let latest: LatestResult | null = null;
+  for (const message of messages ?? []) {
+    const results = taskResultsOf(message.attachments);
+    if (results.length > 0) {
+      latest = { messageId: message.messageId, resultId: results[results.length - 1].resultId };
+    }
+  }
+  return latest;
+}
 
 /**
  * "Do you do this again?" card under a finished task. It opens the agent editor with the
@@ -74,4 +95,61 @@ export default function TaskSaveOffer({
       </Button>
     </div>
   );
+}
+
+function ChatSaveOffer({
+  messageId,
+  chatContext,
+}: {
+  messageId: string;
+  chatContext: NonNullable<ContextType<typeof ChatContext>>;
+}) {
+  const conversationId = chatContext.conversation?.conversationId ?? '';
+  const canCreateSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.CREATE,
+  });
+  const { data: latest } = useGetMessagesByConvoId(conversationId, {
+    enabled: false,
+    select: latestTaskResult,
+  });
+  const resultId =
+    canCreateSkills && conversationId !== '' && latest?.messageId === messageId
+      ? latest.resultId
+      : null;
+  const { data: result } = useTaskResultQuery(resultId);
+  /** Offered for a request typed in the chat, not for one that already ran a saved agent. */
+  const request = useMemo(() => {
+    if (resultId == null || result == null) {
+      return undefined;
+    }
+    const message = requestForResult(chatContext.getMessages?.() ?? [], result.createdAt);
+    const text = message?.text?.trim();
+    return text && (message?.manualSkills?.length ?? 0) === 0 ? text : undefined;
+  }, [resultId, result, chatContext]);
+
+  if (resultId == null || request == null) {
+    return null;
+  }
+  return (
+    <TaskSaveOffer
+      conversationId={conversationId}
+      resultId={resultId}
+      request={request}
+      getMessages={() => chatContext.getMessages?.()}
+    />
+  );
+}
+
+/**
+ * The save offer at the end of an answer, the way the wireframe appends it once the task
+ * is done: only under the answer that carries the conversation's newest task result, so
+ * a conversation shows it once. Without an open chat (search results) it renders nothing.
+ */
+export function MessageSaveOffer({ messageId }: { messageId: string }) {
+  const chatContext = useContext(ChatContext);
+  if (chatContext == null) {
+    return null;
+  }
+  return <ChatSaveOffer messageId={messageId} chatContext={chatContext} />;
 }
