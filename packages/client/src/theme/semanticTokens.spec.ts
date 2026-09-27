@@ -64,7 +64,7 @@ describe('shared component color guardrail', () => {
   });
 });
 
-/** style.css is what renders when no theme definition is applied, so it must restate the themes. */
+/** 테마 정의가 없을 때는 style.css가 적용되므로 기본값을 테마와 맞춘다. */
 describe.each([
   'rgb-surface-dialog',
   'rgb-surface-hover',
@@ -79,7 +79,7 @@ describe.each([
       'utf8',
     );
     const property = token.slice(4);
-    /** The sidebar ink scope repaints a subtree on purpose; it is not a theme default. */
+    /** sidebar-ink는 하위 영역의 색을 덮으므로 테마 기본값 비교에서 제외한다. */
     const themeDefaults = appStyles.replace(/\.sidebar-ink\s*\{[^}]*\}/g, '');
     const declared = [...themeDefaults.matchAll(new RegExp(`--${property}:\\s*([^;]+);`, 'g'))].map(
       (match) => match[1].trim(),
@@ -244,7 +244,7 @@ describe.each([
   });
 });
 
-/** User messages carry body copy, and the brand-subtle fill carries brand-coloured labels. */
+/** 사용자 메시지는 본문을 담고, brand-subtle 배경에는 브랜드색 라벨을 표시한다. */
 describe.each([
   ['default', defaultTheme],
   ['dark', darkTheme],

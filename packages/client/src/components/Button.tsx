@@ -121,12 +121,7 @@ const buttonVariantRecipe = cva(
          */
         'icon-theme': 'size-theme-control p-0',
         theme: 'h-theme-control gap-theme-compact px-theme-normal',
-        /**
-         * A secondary action that should not compete with the screen's primary
-         * one — a header's "new" button, a dialog's footer pair, a card's
-         * inline offer. Short, regular weight and fully rounded, so it reads
-         * as a quiet chip rather than as another 40px control.
-         */
+        /** 화면의 주 동작과 경쟁하지 않는 짧고 가벼운 보조 동작에 사용한다. */
         pill: 'h-7 gap-1 rounded-theme-control-round px-3 text-[13px] font-normal',
       },
       shape: {
