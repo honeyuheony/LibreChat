@@ -57,6 +57,7 @@ describe('extractFields', () => {
       cache: memoryCache(),
     });
     expect(prompts[0]).toContain('separate them with a blank line');
+    expect(prompts[0]).toContain('in the order they appear in the document');
     expect(rows[0].cells[0]).toMatchObject({ status: 'ok', evidence: { paragraph: 1 } });
   });
 
