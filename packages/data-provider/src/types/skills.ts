@@ -407,6 +407,64 @@ export type TUpdateSkillPayload = {
   builder?: TSkillBuilderState;
 };
 
+/** 편집기가 만드는 결과물 종류. */
+export type TSkillDraftOutput = 'report' | 'organize' | 'summary' | 'draft' | 'ask';
+export const SKILL_DRAFT_OUTPUTS: readonly TSkillDraftOutput[] = [
+  'report',
+  'organize',
+  'summary',
+  'draft',
+  'ask',
+];
+
+/** 결과물에 덧붙이는 처리. */
+export type TSkillDraftExtra = 'translate' | 'polish' | 'law';
+export const SKILL_DRAFT_EXTRAS: readonly TSkillDraftExtra[] = ['translate', 'polish', 'law'];
+
+/** 스킬 파일이 놓이는 폴더. 폴더가 곧 파일 종류다(양식·예시·참고). */
+export type TSkillFileKind = 'assets' | 'examples' | 'references';
+
+/** POST `/api/skills/draft` 요청 본문. `context.conversationId` 는 요청한 사람의 대화여야 한다. */
+export type TSkillDraftRequest = {
+  text: string;
+  direct?: boolean;
+  files?: Array<{ name: string }>;
+  context?: { conversationId: string };
+};
+
+/**
+ * AI 초안 제안. 서버는 모든 칸을 채워 돌려주고, 사람이 고친 칸을 덮지 않는 일은 브라우저가 맡는다.
+ * `origin` 은 모델 응답을 받아들였는지(`model`) 규칙 기반 값으로 채웠는지(`rules`)를 알린다.
+ */
+export type TSkillDraft = {
+  slug: string;
+  title: string;
+  description: string;
+  triggers: string[];
+  output: TSkillDraftOutput;
+  extras: TSkillDraftExtra[];
+  fields: string[];
+  icon: string;
+  steps: string[];
+  connectors: string[];
+  fileKinds: Array<{ name: string; kind: TSkillFileKind }>;
+  origin: 'model' | 'rules';
+};
+
+/** POST `/api/skills/:id/test-result` 요청 본문. `version` 은 시험한 스킬 버전이다. */
+export type TSkillTestResultRequest = {
+  conversationId: string;
+  version: number;
+};
+
+/** 게시 범위. 전 부서(public viewer)와 나만(공개 항목 없음)이다. */
+export type TSkillPublishScope = 'all' | 'me';
+
+/** POST `/api/skills/:id/publish` 요청 본문. */
+export type TSkillPublishRequest = {
+  scope: TSkillPublishScope;
+};
+
 /** POST `/api/skills/:id/fork` 요청 본문. 이름을 비우면 원본 이름을 쓰고, 겹치면 `-fork` 꼬리를 붙인다. */
 export type TForkSkillRequest = {
   name?: string;

@@ -687,6 +687,14 @@ export type UpdateSkillInput = {
   lastTest?: ISkill['lastTest'];
 };
 
+/** 게시 상태 칸만 바꾸는 요청. 스킬 내용이 아니므로 `version` 을 올리지 않는다. */
+export type SetSkillPublicationStateParams = {
+  id: string;
+  expectedVersion: number;
+  lastTest?: ISkill['lastTest'];
+  publishedAt?: Date | null;
+};
+
 export type GetAuthorSkillByNameParams = {
   name: string;
   author: Types.ObjectId | string;
@@ -1178,6 +1186,7 @@ export function createSkillMethods(
     reviewedAt: Date | null;
     reviewedBy: Types.ObjectId | string | null;
   }) => Promise<{ matchedCount: number }>;
+  setSkillPublicationState: (params: SetSkillPublicationStateParams) => Promise<UpdateSkillResult>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
       skillId: Types.ObjectId | string;
@@ -2225,6 +2234,45 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount };
   }
 
+  async function setSkillPublicationState(
+    params: SetSkillPublicationStateParams,
+  ): Promise<UpdateSkillResult> {
+    const { id, expectedVersion, lastTest, publishedAt } = params;
+    if (!isValidObjectIdString(id)) {
+      return { status: 'not_found' };
+    }
+    const setPayload: Record<string, unknown> = {};
+    const unsetPayload: Record<string, ''> = {};
+    if (lastTest !== undefined) setPayload.lastTest = lastTest;
+    if (publishedAt === null) {
+      unsetPayload.publishedAt = '';
+    } else if (publishedAt !== undefined) {
+      setPayload.publishedAt = publishedAt;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const result = await Skill.findOneAndUpdate(
+      { _id: new ObjectId(id), version: expectedVersion },
+      {
+        $set: setPayload,
+        ...(Object.keys(unsetPayload).length > 0 && { $unset: unsetPayload }),
+      },
+      // updatedAt 은 마지막 내용 저장 시각으로 남긴다. 시험 기록 판정이 이 값을 기준으로 쓴다.
+      { new: true, timestamps: false },
+    ).lean();
+    if (result) {
+      return {
+        status: 'updated',
+        skill: result as unknown as ISkill & { _id: Types.ObjectId },
+        warnings: [],
+      };
+    }
+    const current = await Skill.findById(id).lean();
+    if (!current) {
+      return { status: 'not_found' };
+    }
+    return { status: 'conflict', current: current as unknown as ISkill & { _id: Types.ObjectId } };
+  }
+
   return {
     createSkill,
     getSkillById,
@@ -2236,6 +2284,7 @@ export function createSkillMethods(
     getDeploymentSkillUsage,
     getSkillAuthorDepartments,
     updateSkillReview,
+    setSkillPublicationState,
     listSkillsByAccess,
     listAlwaysApplySkills,
     updateSkill,

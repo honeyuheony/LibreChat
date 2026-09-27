@@ -3602,6 +3602,10 @@ export enum ViolationTypes {
    * Shared link retrieval limit violations.
    */
   SHARE_LIMIT = 'share_limit',
+  /**
+   * Skill draft (AI suggestion) request limit violations.
+   */
+  SKILL_DRAFT_LIMIT = 'skill_draft_limit',
 }
 
 /**

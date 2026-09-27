@@ -660,6 +660,119 @@ describe('Skill CRUD methods', () => {
     expect(result.status === 'updated' && result.skill.publishedAt).toBeUndefined();
   });
 
+  describe('setSkillPublicationState', () => {
+    const lastTest = {
+      version: 1,
+      seconds: 12.5,
+      conversationId: 'conversation-test',
+      at: new Date('2026-09-27T11:00:00.000Z'),
+    };
+
+    it('records the last test without bumping the version', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput());
+
+      const result = await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        lastTest,
+      });
+
+      expect(result.status).toBe('updated');
+      const reloaded = await methods.getSkillById(skill._id);
+      expect(reloaded?.version).toBe(1);
+      expect(reloaded?.lastTest).toEqual(lastTest);
+    });
+
+    it('sets and clears the publish time without touching the last test', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput({ lastTest }));
+      const publishedAt = new Date('2026-09-27T12:00:00.000Z');
+
+      await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        publishedAt,
+      });
+      const published = await methods.getSkillById(skill._id);
+      expect(published?.version).toBe(1);
+      expect(published?.publishedAt).toEqual(publishedAt);
+      expect(published?.lastTest).toEqual(lastTest);
+
+      await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        publishedAt: null,
+      });
+      const draft = await methods.getSkillById(skill._id);
+      expect(draft?.publishedAt).toBeUndefined();
+      expect(draft?.version).toBe(1);
+    });
+
+    it('reports a conflict when the skill moved past the expected version', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput());
+      await methods.updateSkill({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        update: { description: 'A changed description that is long enough.' },
+      });
+
+      const result = await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        lastTest,
+      });
+
+      expect(result.status).toBe('conflict');
+      expect(result.status === 'conflict' && result.current.version).toBe(2);
+      expect((await methods.getSkillById(skill._id))?.lastTest).toBeUndefined();
+    });
+
+    it('keeps updatedAt as the last content save time', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput());
+      const before = (await methods.getSkillById(skill._id))?.updatedAt;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        lastTest,
+        publishedAt: new Date('2026-09-27T12:00:00.000Z'),
+      });
+
+      const after = await methods.getSkillById(skill._id);
+      expect(after?.lastTest).toEqual(lastTest);
+      expect(after?.updatedAt).toEqual(before);
+    });
+
+    it('reports not_found for an unknown id', async () => {
+      const result = await methods.setSkillPublicationState({
+        id: new mongoose.Types.ObjectId().toString(),
+        expectedVersion: 1,
+        lastTest,
+      });
+      expect(result.status).toBe('not_found');
+    });
+
+    it('lets a content edit invalidate a recorded test by bumping the version', async () => {
+      const { skill } = await methods.createSkill(makeSkillInput());
+      await methods.setSkillPublicationState({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        lastTest,
+      });
+
+      const edited = await methods.updateSkill({
+        id: skill._id.toString(),
+        expectedVersion: 1,
+        update: { body: '# Changed instructions' },
+      });
+
+      expect(edited.status).toBe('updated');
+      const reloaded = await methods.getSkillById(skill._id);
+      expect(reloaded?.version).toBe(2);
+      expect(reloaded?.lastTest?.version).toBe(1);
+    });
+  });
+
   it('rejects an invalid manualMinutes on update', async () => {
     const { skill } = await methods.createSkill(makeSkillInput());
     await expect(
