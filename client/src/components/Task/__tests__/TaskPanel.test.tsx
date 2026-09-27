@@ -22,13 +22,19 @@ jest.mock('~/hooks', () => ({
 jest.mock('~/data-provider', () => ({
   useGetMessagesByConvoId: () => ({ data: mockMessages }),
   useActiveJobStatus: () => mockJobStatus,
+  /** The list endpoint keys each config by server name; the values carry no `serverName`. */
   useMCPServersQuery: () => ({
     data: {
-      drive: { serverName: 'drive', title: '업무자료실' },
-      mail: { serverName: 'mail', title: '업무 메일' },
-      hidden: { serverName: 'hidden', chatMenu: false },
+      drive: { title: '업무자료실' },
+      mail: { title: '업무 메일' },
+      hidden: { chatMenu: false },
     },
   }),
+}));
+
+jest.mock('~/components/Chat/Input/Files/MyFilesModal', () => ({
+  MyFilesModal: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog" aria-label="my-files" /> : null,
 }));
 
 jest.mock('~/data-provider/Tasks/queries', () => ({
@@ -432,6 +438,52 @@ describe('TaskPanel', () => {
     expect(screen.getByText('업무 메일').nextSibling).toHaveTextContent('com_ui_task_on');
     expect(screen.queryByText('hidden')).not.toBeInTheDocument();
     expect(screen.getByText('chat-model')).toBeInTheDocument();
+  });
+
+  it('opens file management from the references heading once files are attached', () => {
+    mockMessages = [userFiles(), toolCall('t1', 'extract_table')];
+    renderPanel();
+    expect(screen.queryByRole('dialog', { name: 'my-files' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'com_sidepanel_manage_files' }));
+    expect(screen.getByRole('dialog', { name: 'my-files' })).toBeInTheDocument();
+  });
+
+  it('offers no file management while nothing is attached', () => {
+    mockMessages = [toolCall('t1', 'extract_table')];
+    renderPanel();
+    expect(
+      screen.queryByRole('button', { name: 'com_sidepanel_manage_files' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("counts the conversation's tool calls as activity and lists them on demand", () => {
+    mockMessages = [
+      {
+        ...toolCall('s1', 'skill'),
+        createdAt: '2026-09-26T09:01:00',
+      } as TMessage,
+      {
+        ...toolCall('m1', 'search_mcp_drive', { output: 'ok' }),
+        createdAt: '2026-09-26T09:02:00',
+      } as TMessage,
+      {
+        ...toolCall('t1', 'extract_table', { output: 'ok' }),
+        createdAt: '2026-09-26T09:03:00',
+      } as TMessage,
+    ];
+    renderPanel();
+    const toggle = screen.getByRole('button', { name: 'com_ui_export_activity_label 3' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('extract_table')).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    const log = screen.getByRole('list', { name: 'com_ui_export_activity_label 3' });
+    expect(Array.from(log.children).map((row) => row.textContent)).toEqual([
+      '09:01skill',
+      '09:02search · 업무자료실',
+      '09:03extract_table',
+    ]);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('says there are no attachments when no file was uploaded', () => {

@@ -1,4 +1,4 @@
-import { ContentTypes, TaskTools } from 'librechat-data-provider';
+import { Constants, ContentTypes, TaskTools } from 'librechat-data-provider';
 import type {
   Agents,
   TMessage,
@@ -243,6 +243,38 @@ export function collectTaskOutputs(messages: TMessage[] | undefined): TaskOutput
 /** How many footnotes — the quoted evidence — a summary or report cites. */
 export function countTaskFootnotes(result: Pick<TaskDocResult, 'footnotes'>): number {
   return new Set(result.footnotes.map((footnote) => footnote.n)).size;
+}
+
+export type TaskActivity = {
+  id: string;
+  name: string;
+  /** The MCP server the tool belongs to, split off an `<tool>_mcp_<server>` key. */
+  serverName?: string;
+  createdAt?: string;
+};
+
+/** Every tool call of the conversation in order, the panel's 「활동」 log. */
+export function collectToolActivity(messages: TMessage[] | undefined): TaskActivity[] {
+  const activity: TaskActivity[] = [];
+  for (const message of messages ?? []) {
+    for (const part of message.content ?? []) {
+      if (part?.type !== ContentTypes.TOOL_CALL) {
+        continue;
+      }
+      const toolCall = (part as Agents.ToolCallContent).tool_call;
+      if (!toolCall?.name) {
+        continue;
+      }
+      const [name, serverName] = toolCall.name.split(Constants.mcp_delimiter);
+      activity.push({
+        id: toolCall.id ?? `${message.messageId}-${activity.length}`,
+        name: serverName ? name : toolCall.name,
+        serverName: serverName || undefined,
+        createdAt: message.createdAt,
+      });
+    }
+  }
+  return activity;
 }
 
 export type TaskFile = { file_id: string; filename: string };
