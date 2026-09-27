@@ -16,7 +16,6 @@ import useSkillActiveState from '~/hooks/Skills/useSkillActiveState';
 import { useSkillsInfiniteQuery } from '~/data-provider/Skills';
 import { useListAgentsQuery } from '~/data-provider/Agents';
 import { useAuthContext, useLocalize } from '~/hooks';
-import { localizeScheduleText } from './localize';
 
 const FORM_ID = 'schedules-create-form';
 
@@ -76,7 +75,7 @@ export default function ScheduleDialog({ open, onOpenChange, isAtLimit }: Schedu
       const cadenceLabel = formatScheduleCadence(variables.cadence, localize);
       showToast({
         status: 'success',
-        message: localizeScheduleText(localize, 'com_ui_schedules_created', {
+        message: localize('com_ui_schedules_created', {
           agent: variables.name,
           cadence: cadenceLabel,
         }),
@@ -143,14 +142,14 @@ export default function ScheduleDialog({ open, onOpenChange, isAtLimit }: Schedu
   return (
     <OGDialog open={open} onOpenChange={onOpenChange}>
       <OGDialogTemplate
-        title={localizeScheduleText(localize, 'com_ui_schedules_dialog_title')}
+        title={localize('com_ui_schedules_dialog_title')}
         showCloseButton={false}
         className="w-11/12 max-w-2xl"
         main={
           <form id={FORM_ID} onSubmit={submit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="schedules-skill" className="text-sm font-medium text-text-primary">
-                {localizeScheduleText(localize, 'com_ui_schedules_agent_label')}
+                {localize('com_ui_schedules_agent_label')}
               </Label>
               <select
                 id="schedules-skill"
@@ -161,7 +160,7 @@ export default function ScheduleDialog({ open, onOpenChange, isAtLimit }: Schedu
                 required
               >
                 <option value="" disabled>
-                  {localizeScheduleText(localize, 'com_ui_schedules_no_skills')}
+                  {localize('com_ui_schedules_no_skills')}
                 </option>
                 {activeSkills.map((skill) => (
                   <option key={skill._id} value={skill.name}>
@@ -177,7 +176,7 @@ export default function ScheduleDialog({ open, onOpenChange, isAtLimit }: Schedu
                   onClick={() => void skillsQuery.fetchNextPage()}
                   disabled={skillsQuery.isFetchingNextPage || createSchedule.isLoading}
                 >
-                  {localizeScheduleText(localize, 'com_ui_load_more')}
+                  {localize('com_ui_load_more')}
                 </Button>
               )}
             </div>
@@ -194,14 +193,14 @@ export default function ScheduleDialog({ open, onOpenChange, isAtLimit }: Schedu
               >
                 {SCHEDULE_CADENCE_OPTIONS.map((option) => (
                   <option key={option.key} value={option.key}>
-                    {localizeScheduleText(localize, option.labelKey)}
+                    {localize(option.labelKey)}
                   </option>
                 ))}
               </select>
             </div>
             {isAtLimit && (
               <p className="text-sm text-text-secondary md:col-span-2" role="alert">
-                {localizeScheduleText(localize, 'com_ui_schedules_limit_reached')}
+                {localize('com_ui_schedules_limit_reached')}
               </p>
             )}
             {(skillsQuery.isError || skillStateError || agentError) && (
@@ -211,7 +210,7 @@ export default function ScheduleDialog({ open, onOpenChange, isAtLimit }: Schedu
             )}
             {!isLoading && (agents?.length ?? 0) === 0 && !agentError && (
               <p className="text-sm text-text-secondary md:col-span-2" role="alert">
-                {localizeScheduleText(localize, 'com_ui_schedules_no_agent')}
+                {localize('com_ui_schedules_no_agent')}
               </p>
             )}
           </form>

@@ -20,7 +20,6 @@ import {
   SCHEDULE_TIMEZONE,
 } from '~/components/Schedules/cadence';
 import { useAuthContext, useHasAccess, useLocalize, useSubmitMessage } from '~/hooks';
-import { localizeScheduleText } from '~/components/Schedules/localize';
 import { useCreateScheduleMutation } from '~/data-provider/Schedules';
 import { taskDocToMarkdown } from '~/components/Task/TaskDocView';
 import { useListSkillsQuery } from '~/data-provider/Skills';
@@ -227,7 +226,7 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
           setIsPreparingSchedule(false);
           showToast({
             status: 'success',
-            message: localizeScheduleText(localize, 'com_ui_schedules_weekly_created'),
+            message: localize('com_ui_schedules_weekly_created'),
           });
         },
         onError: () => {
@@ -313,7 +312,7 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
         )}
         {canSchedule && (
           <ActionButton
-            label={localizeScheduleText(localize, 'com_ui_task_schedule_weekly')}
+            label={localize('com_ui_task_schedule_weekly')}
             onClick={createWeeklySchedule}
             disabled={isPreparingSchedule || createSchedule.isLoading}
           />

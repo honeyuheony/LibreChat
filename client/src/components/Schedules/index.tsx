@@ -9,7 +9,6 @@ import { useSkillsInfiniteQuery } from '~/data-provider/Skills';
 import { useSchedulesQuery } from '~/data-provider/Schedules';
 import useRunSync from '../SidePanel/Schedules/useRunSync';
 import { useHasAccess, useLocalize } from '~/hooks';
-import { localizeScheduleText } from './localize';
 import ScheduleDialog from './ScheduleDialog';
 import ScheduleCard from './ScheduleCard';
 
@@ -62,23 +61,19 @@ export default function Schedules() {
       <div className="flex flex-col items-start gap-3" role="alert">
         <p className="text-sm text-text-secondary">{localize('com_ui_schedules_error')}</p>
         <Button type="button" variant="outline" onClick={() => void refetch()}>
-          {localizeScheduleText(localize, 'com_ui_schedules_retry')}
+          {localize('com_ui_schedules_retry')}
         </Button>
       </div>
     );
   } else if (schedules.length === 0) {
     scheduleContent = (
       <p className="rounded-xl border border-border-light bg-surface-primary p-6 text-sm text-text-secondary">
-        {localizeScheduleText(localize, 'com_ui_schedules_empty')}
+        {localize('com_ui_schedules_empty')}
       </p>
     );
   } else {
     scheduleContent = (
-      <div
-        className="space-y-3"
-        role="list"
-        aria-label={localizeScheduleText(localize, 'com_ui_schedules_title')}
-      >
+      <div className="space-y-3" role="list" aria-label={localize('com_ui_schedules_title')}>
         {schedules.map((schedule) => (
           <div key={schedule.id} role="listitem">
             <ScheduleCard
@@ -101,7 +96,7 @@ export default function Schedules() {
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-surface-secondary">
       <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
         <span className="font-semibold text-text-primary">
-          {localizeScheduleText(localize, 'com_ui_schedules_title')}
+          {localize('com_ui_schedules_title')}
         </span>
         {canCreate && (
           <Button
@@ -118,15 +113,13 @@ export default function Schedules() {
       </header>
       <main
         role="region"
-        aria-label={localizeScheduleText(localize, 'com_ui_schedules_title')}
+        aria-label={localize('com_ui_schedules_title')}
         className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col gap-3 overflow-y-auto px-6 py-4"
       >
         <h1 className="text-xl font-semibold text-text-primary">
-          {localizeScheduleText(localize, 'com_ui_schedules_title')}
+          {localize('com_ui_schedules_title')}
         </h1>
-        <p className="text-sm text-text-secondary">
-          {localizeScheduleText(localize, 'com_ui_schedules_description')}
-        </p>
+        <p className="text-sm text-text-secondary">{localize('com_ui_schedules_description')}</p>
         {scheduleContent}
         {createOpen && (
           <ScheduleDialog open={createOpen} onOpenChange={setCreateOpen} isAtLimit={atLimit} />
