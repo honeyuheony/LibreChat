@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { render, screen, waitFor } from '@testing-library/react';
+import { createMemoryRouter, MemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
 
 jest.mock('~/components/Auth', () => ({
   Login: () => null,
@@ -66,6 +66,7 @@ type RouteNode = {
   path?: string;
   children?: RouteNode[];
   lazy?: () => Promise<{ Component?: React.ComponentType }>;
+  hydrateFallbackElement?: React.ReactNode;
 };
 
 function flattenPaths(routes: RouteNode[]): string[] {
@@ -87,6 +88,13 @@ function findRoute(path: string, routes: RouteNode[]): RouteNode | undefined {
   }
 }
 
+function findLazyRoutes(routes: RouteNode[]): RouteNode[] {
+  return routes.flatMap((route) => [
+    ...(route.lazy ? [route] : []),
+    ...(route.children ? findLazyRoutes(route.children) : []),
+  ]);
+}
+
 function RouteLocation() {
   return <span data-testid="route-location">{useLocation().pathname}</span>;
 }
@@ -103,6 +111,40 @@ describe('skills routes', () => {
       const route = findRoute(path, routes);
       const loadedRoute = await route?.lazy?.();
       expect(loadedRoute?.Component).toBeDefined();
+    }
+  });
+
+  it('defines a hydration fallback for every lazy route', () => {
+    const routes = (router as unknown as { routes: RouteNode[] }).routes;
+    const lazyRoutes = findLazyRoutes(routes);
+
+    expect(lazyRoutes.length).toBeGreaterThan(0);
+    expect(lazyRoutes.every((route) => route.hydrateFallbackElement != null)).toBe(true);
+  });
+
+  it('does not warn when /library hydrates its lazy route', async () => {
+    const routes = (router as unknown as { routes: RouteNode[] }).routes;
+    const libraryRoute = findRoute('library', routes);
+    expect(libraryRoute?.lazy).toBeDefined();
+    if (!libraryRoute) {
+      return;
+    }
+
+    const hydrationRouter = createMemoryRouter([{ ...libraryRoute, path: '/library' }], {
+      initialEntries: ['/library'],
+    });
+    const warning = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      render(<RouterProvider router={hydrationRouter} />);
+      await waitFor(() => expect(hydrationRouter.state.initialized).toBe(true));
+      expect(warning).not.toHaveBeenCalledWith(
+        expect.stringContaining(
+          'No `HydrateFallback` element provided to render during initial hydration',
+        ),
+      );
+    } finally {
+      warning.mockRestore();
+      hydrationRouter.dispose();
     }
   });
 
