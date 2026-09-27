@@ -94,7 +94,7 @@ const {
 const { TaskExtraction, TaskSummary, TaskResult } = require('~/db/models');
 
 /**
- * Stores a task output file (the report HWPX) as a message attachment the download route serves.
+ * 작업 도구가 만든 파일(보고서 HWPX)을 다운로드 경로가 내려 주는 메시지 첨부로 저장한다.
  * @param {ServerRequest} req
  * @param {{ buffer: Buffer, filename: string, type: string }} file
  * @returns {Promise<{ file_id: string, filename: string }>}
@@ -131,7 +131,7 @@ const saveTaskFile = async (req, { buffer, filename, type }) => {
 };
 
 /**
- * Streams task progress to the client like other tool events; a failed emit never fails the task.
+ * 작업 진행 상황을 다른 도구 이벤트처럼 클라이언트로 흘려보낸다. 전송이 실패해도 작업은 실패시키지 않는다.
  * @param {LoadToolOptions} options
  */
 const createTaskProgressEmitter = (options) => {

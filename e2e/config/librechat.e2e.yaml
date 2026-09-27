@@ -86,8 +86,7 @@ fileConfig:
           'application/pdf': 'provider'
           'text/plain': 'text'
           'text/csv': 'none'
-    # task-mode.spec.ts uploads its twelve fixture documents in one pick, like the
-    # deployment's 50-file limit; the default limit is 10.
+    # task-mode.spec.ts 는 배포 환경의 50개 한도처럼 문서 12개를 한 번에 올린다. 기본 한도는 10개다.
     'Mock Tasks':
       fileLimit: 50
     'Mock Provider A':
@@ -134,8 +133,7 @@ endpoints:
       mode: bypass
       ask:
         - approval_probe_mcp_e2e-memory
-        # The document task tools pause for their field and viewpoint cards
-        # (task-mode.spec.ts); no other mock agent carries them, so nothing else pauses.
+        # 문서 작업 도구는 항목·관점 카드에서 멈춘다(task-mode.spec.ts). 다른 목 agent 에는 없는 도구라 다른 곳은 멈추지 않는다.
         - extract_table
         - summarize_documents
       reason: E2E approval required before running {tool}.
@@ -240,9 +238,9 @@ endpoints:
       activityPhaseLabel: true
       activityPhaseModel: 'mock-phase-label-model'
 
-    # Agent endpoint for task-mode.spec.ts. The chat turn is still the in-process
-    # fake model; the task tools' per-document calls go to this baseURL, served by
-    # e2e/setup/fake-task-model-server.js from e2e/fixtures/task-mode/documents.json.
+    # task-mode.spec.ts 용 agent 엔드포인트. 대화 turn 은 프로세스 안의 가짜 모델이 그대로 맡고,
+    # 작업 도구의 문서별 호출만 이 baseURL 로 간다. 응답은 e2e/setup/fake-task-model-server.js 가
+    # e2e/fixtures/task-mode/documents.json 에서 만든다.
     - name: 'Mock Tasks'
       apiKey: 'e2e-mock-tasks'
       baseURL: 'http://127.0.0.1:8893/v1'

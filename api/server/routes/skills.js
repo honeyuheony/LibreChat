@@ -185,7 +185,7 @@ const importHandler = createImportHandler({
 });
 
 // ---------------------------------------------------------------------------
-// Fork handler (응용: 남의 스킬을 복사해 호출자 소유로 만든다)
+// 응용: 남의 스킬을 복사해 호출자 소유로 만든다
 // ---------------------------------------------------------------------------
 const skillDbMethods = getSkillDbMethods();
 const forkHandler = createForkSkillHandler({
@@ -357,8 +357,7 @@ router.post(
   importHandler,
 );
 
-// Category counts for the marketplace tabs — registered before `/:id` so it is not
-// swallowed as a skill id.
+// 마켓 탭의 분류별 개수. 스킬 id 로 잘못 잡히지 않도록 `/:id` 보다 먼저 등록한다.
 const categoriesHandler = createSkillCategoriesHandler({
   findAccessibleResources,
   findPubliclyAccessibleResources,
@@ -370,7 +369,7 @@ router.get('/categories', categoriesHandler);
 router.post('/draft', checkSkillCreate, draftIpLimiter, draftUserLimiter, draftHandler);
 
 // 검수 표시(마켓 카드의 "검수됨" 배지). 관리자만 켜고 끌 수 있으며 배포 폴더 스킬은 DB 문서가
-// 없어 대상이 아니다(docs/agent-market-plan.md 4.2절의 검수 항목을 통과한 뒤 누른다).
+// 없어 대상이 아니다.
 router.post('/:id/review', checkAdmin, async (req, res) => {
   try {
     await markSkillReviewed(

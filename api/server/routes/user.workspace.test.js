@@ -5,7 +5,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const { createModels } = require('@librechat/data-schemas');
 const { MAX_USER_INSTRUCTIONS_LENGTH } = require('librechat-data-provider');
 
-/** Loads the caller's user document per request, the way the JWT strategy does. */
+/** JWT 전략처럼 요청마다 호출자의 사용자 문서를 읽는다. */
 jest.mock('~/server/middleware', () => {
   const pass = (req, res, next) => next();
   return {

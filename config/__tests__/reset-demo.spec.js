@@ -42,7 +42,7 @@ let warnings;
 const db = () => mongoose.connection.db;
 const col = (modelName) => db().collection(models[modelName].collection.collectionName);
 
-/** Every document of every collection, keyed by collection name, in `_id` order. */
+/** 모든 컬렉션의 모든 문서를 컬렉션 이름별로 `_id` 순서로 모은다. */
 async function dumpAll() {
   const collections = await db().listCollections().toArray();
   const names = collections.map((c) => c.name).sort();
@@ -55,7 +55,7 @@ async function dumpAll() {
   return Object.fromEntries(entries);
 }
 
-/** The protected accounts' conversations, messages, files and user documents. */
+/** 보호 계정의 대화·메시지·파일·사용자 문서. */
 async function dumpProtected() {
   const userIds = [ids.admin, ids.demo];
   const owners = [...userIds, ...userIds.map(String)];
@@ -206,7 +206,7 @@ async function seedBaselineState() {
   ]);
 }
 
-/** Changes made after the baseline was taken: what a demo run leaves behind. */
+/** 기준 데이터를 뜬 뒤의 변경, 곧 데모를 한 번 돌리고 남는 흔적. */
 async function driftAfterBaseline() {
   await col('Conversation').insertMany([
     makeConvo(ids.lee, 'lee-convo-2', '새 대화'),
@@ -277,7 +277,7 @@ async function driftAfterBaseline() {
   });
 }
 
-/** Stands in for `processDeleteRequest`: removes the metadata the way the service does. */
+/** `processDeleteRequest` 대신 서비스와 같은 방식으로 메타데이터를 지운다. */
 const deleteFiles = jest.fn(async (_user, files) => {
   await col('File').deleteMany({ _id: { $in: files.map((f) => f._id) } });
   return { deletedFileIds: files.map((f) => f.file_id), failedFileIds: [] };
@@ -385,7 +385,7 @@ describe('resetDemo', () => {
       ...options,
     });
 
-  it('DR1-1 leaves protected accounts exactly as they were', async () => {
+  it('leaves protected accounts exactly as they were', async () => {
     const before = await dumpProtected();
     await run({ includeShared: true });
     const after = await dumpProtected();
@@ -394,7 +394,7 @@ describe('resetDemo', () => {
     expect(warnings.filter((w) => w.includes(ADMIN) || w.includes(DEMO)).length).toBeGreaterThan(0);
   });
 
-  it('DR1-2 restores the target account and keeps credentials', async () => {
+  it('restores the target account and keeps credentials', async () => {
     const tokensBefore = await col('Token').find({}).sort({ _id: 1 }).toArray();
     const baselineConvo = JSON.parse(
       fs.readFileSync(path.join(baselineDir, 'conversations.json'), 'utf8'),
@@ -472,7 +472,7 @@ describe('resetDemo', () => {
     expect(targetFile).toMatchObject({ user: ids.lee, file_id: 'lee-file-2' });
   });
 
-  it('DR1-3 leaves shared data alone unless --include-shared is given', async () => {
+  it('leaves shared data alone unless --include-shared is given', async () => {
     await run();
     let agent = await col('Agent').findOne({ id: DEFAULT_AGENT_ID });
     expect(agent.instructions).toBe('바뀐 지시문');
@@ -488,7 +488,7 @@ describe('resetDemo', () => {
     expect(usage.map((u) => [u.name, u.useCount])).toEqual([['deployed', 5]]);
   });
 
-  it('DR1-4 dry run reports counts and does not change the database', async () => {
+  it('dry run reports counts and does not change the database', async () => {
     const before = await dumpAll();
     const summary = await run({ dryRun: true, includeShared: true });
     expect(await dumpAll()).toEqual(before);

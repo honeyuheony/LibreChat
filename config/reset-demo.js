@@ -1,6 +1,6 @@
 /**
- * Restores the demo accounts from a baseline folder written by `export-demo-baseline.js`.
- * Usage: node config/reset-demo.js <baseline-dir> [--users a@x,b@y] [--include-shared] [--dry-run]
+ * `export-demo-baseline.js` 가 쓴 기준 폴더로 데모 계정을 되돌린다.
+ * 사용법: node config/reset-demo.js <baseline-dir> [--users a@x,b@y] [--include-shared] [--dry-run]
  */
 const path = require('path');
 const mongoose = require('mongoose');

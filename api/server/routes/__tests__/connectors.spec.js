@@ -22,7 +22,7 @@ jest.mock('@librechat/api', () => ({
   createDeskStatusHandler: jest.fn(() => (req, res) => res.json({})),
   createDeskPermissionsHandler: jest.fn(() => (req, res) => res.json([])),
   createDeskAppReleaseHandler: jest.fn(() => (req, res) => res.json({})),
-  /** The real handler, without loading the rest of the package. */
+  /** 패키지의 나머지를 불러오지 않고 실제 처리 함수만 쓴다. */
   createConnectorActivityHandler:
     jest.requireActual(mockActivitySource).createConnectorActivityHandler,
 }));

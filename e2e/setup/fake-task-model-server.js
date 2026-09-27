@@ -1,12 +1,11 @@
 /**
- * OpenAI-compatible fixture for the per-document calls the task tools make.
+ * 작업 도구의 문서별 호출에 답하는 OpenAI 호환 픽스처.
  *
- * `extract_table`, `summarize_documents` and `write_report` call the conversation
- * agent's endpoint directly (packages/api/src/tasks/llm.ts), outside the graph
- * model that `e2e/setup/fake-model.js` overrides. The `Mock Tasks` endpoint in
- * e2e/config/librechat.e2e.yaml points its `baseURL` here, and every answer comes
- * from e2e/fixtures/task-mode/documents.json so a spec knows each cell in advance.
- * Calls are counted per kind so a spec can prove a cache hit made no model call.
+ * `extract_table`·`summarize_documents`·`write_report` 는 `e2e/setup/fake-model.js` 가 바꿔 끼우는
+ * 그래프 모델을 거치지 않고 대화 agent 의 엔드포인트를 직접 부른다(packages/api/src/tasks/llm.ts).
+ * e2e/config/librechat.e2e.yaml 의 `Mock Tasks` 엔드포인트가 `baseURL` 로 이곳을 가리키고, 모든 답을
+ * e2e/fixtures/task-mode/documents.json 에서 만들어 spec 이 셀 값을 미리 안다. 호출 수를 종류별로 세어
+ * 캐시가 맞았을 때 모델 호출이 없었음을 spec 이 확인할 수 있다.
  */
 const http = require('http');
 const path = require('path');
@@ -22,9 +21,9 @@ const REPORT_PROMPT = 'You write the prose sections of the report';
 
 const EMPTY_COUNTS = { extract: 0, summary: 0, merge: 0, report: 0, other: 0 };
 let counts = { ...EMPTY_COUNTS };
-/** Filenames per call kind, newest last, so a spec can see which documents reached the model. */
+/** 호출 종류별 파일 이름(최신이 끝). spec 이 어떤 문서가 모델에 갔는지 본다. */
 let documentsSeen = { extract: [], summary: [] };
-/** Per-call delay a spec sets to keep a run visibly in progress (sidebar spinner). */
+/** spec 이 실행 중 상태(사이드바 회전 표시)를 붙잡아 두려고 정하는 호출별 지연. */
 let delayMs = 0;
 
 function readJson(req) {
@@ -66,7 +65,7 @@ function documentName(prompt) {
   return /^Document name: (.+)$/m.exec(prompt)?.[1]?.trim() ?? '';
 }
 
-/** Field names from the extraction prompt's `  "field": { "value": ..., "quote": ... }` lines. */
+/** 추출 프롬프트의 `  "field": { "value": ..., "quote": ... }` 줄에서 항목 이름을 읽는다. */
 function requestedFields(prompt) {
   return Array.from(prompt.matchAll(/^ {2}("(?:[^"\\]|\\.)*"): \{ "value"/gm), (match) =>
     JSON.parse(match[1]),
@@ -94,7 +93,7 @@ function summaryAnswer(prompt) {
   return doc.summary;
 }
 
-/** Cites the first point id the prompt offers, so the merged text carries one footnote. */
+/** 프롬프트에 나온 첫 요점 id 를 인용해 합친 글에 각주가 하나 붙게 한다. */
 function mergeAnswer(prompt) {
   const pointId = /\[\^?(d\d+p\d+)\]/.exec(prompt)?.[1] ?? /\b(d\d+p\d+)\b/.exec(prompt)?.[1];
   const marker = pointId ? `[^${pointId}]` : '';
@@ -104,7 +103,7 @@ function mergeAnswer(prompt) {
   };
 }
 
-/** One sentence per section, each citing the first value id listed in the prompt. */
+/** 절마다 한 문장을 쓰고, 각 문장이 프롬프트의 첫 값 id 를 인용한다. */
 function reportAnswer(prompt) {
   const sections = Array.from(prompt.matchAll(/^- ("(?:[^"\\]|\\.)*") \(use fields:/gm), (match) =>
     JSON.parse(match[1]),

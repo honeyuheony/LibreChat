@@ -120,7 +120,7 @@ beforeAll(async () => {
 
   app = express();
   app.use(express.json());
-  /** checkBan assigns req.ip; plain CJS ignores the getter-only write, Jest's strict transform throws. */
+  /** checkBan 이 req.ip 에 값을 넣는데, getter 뿐인 속성에 쓰면 일반 CJS 는 무시하지만 Jest 의 strict 변환은 예외를 던진다. */
   app.use((req, _res, next) => {
     Object.defineProperty(req, 'ip', { value: req.ip, writable: true, configurable: true });
     next();

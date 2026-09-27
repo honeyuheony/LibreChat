@@ -39,7 +39,7 @@ const getSwitchUsers = () => [
   ),
 ];
 
-/** Resolves the account the current user switches to; null keeps the route hidden (404). */
+/** 현재 사용자가 전환해 들어갈 계정을 찾는다. null 이면 경로를 숨긴다(404). */
 const findSwitchTarget = async (user) => {
   const switchUsers = getSwitchUsers();
   const index = switchUsers.indexOf(user.email?.toLowerCase());
@@ -63,7 +63,7 @@ const readSwitchOrigin = (req) => {
   }
 };
 
-/** An admin target is reachable only by the session that switched away from that same admin. */
+/** 관리자 계정으로는 바로 그 관리자에게서 전환해 나온 session 만 돌아갈 수 있다. */
 const canSwitchTo = (req, target) => {
   if (target.twoFactorEnabled) {
     return false;
@@ -118,7 +118,7 @@ router.post('/switch-user', requireSameOrigin, async (req, res) => {
       return res.status(403).json({ message: 'Switching to this account is not allowed' });
     }
 
-    /** logoutUser without a refresh token matches any session of the user, so skip it then. */
+    /** refresh token 없이 logoutUser 를 부르면 그 사용자의 모든 session 이 걸리므로 그때는 건너뛴다. */
     const previousRefreshToken = cookies.parse(req.headers.cookie ?? '').refreshToken;
     if (previousRefreshToken) {
       const logout = await logoutUser(req, previousRefreshToken);
@@ -142,7 +142,7 @@ router.post('/switch-user', requireSameOrigin, async (req, res) => {
   }
 });
 
-/** Admins named in DEMO_SWITCH_USERS may reset; the list's other accounts are the targets. */
+/** DEMO_SWITCH_USERS 에 든 관리자만 초기화할 수 있고, 목록의 나머지 계정이 초기화 대상이다. */
 const canReset = (user) =>
   user.role === SystemRoles.ADMIN && getSwitchUsers().includes(user.email?.toLowerCase());
 
@@ -154,7 +154,7 @@ const getResetTargets = () => {
   };
 };
 
-/** Reset rewrites profile fields on the user document, so cached `req.user` copies must go. */
+/** 초기화가 사용자 문서의 프로필 필드를 다시 쓰므로 캐시된 `req.user` 를 비운다. */
 const invalidateResetUsers = async (rows) => {
   const emails = [...new Set(rows.filter((row) => row.collection === 'users').map((r) => r.email))];
   const store = getLogStores(CacheKeys.AUTH_USER_DOC);
@@ -166,7 +166,7 @@ const invalidateResetUsers = async (rows) => {
   );
 };
 
-/** One reset per process; a second request while one runs gets 409. */
+/** 프로세스마다 초기화는 한 번에 하나만 돈다. 도는 중에 온 요청은 409 를 받는다. */
 let resetInProgress = false;
 
 router.post('/reset', requireSameOrigin, async (req, res) => {
@@ -205,7 +205,7 @@ router.post('/reset', requireSameOrigin, async (req, res) => {
       }),
       warn: (message) => logger.warn(`[demo] ${message}`),
     });
-    /** The reset already happened; a stale cached `req.user` expires with its TTL. */
+    /** 초기화는 이미 끝났으므로, 남은 `req.user` 캐시는 TTL 이 지나면 사라진다. */
     await invalidateResetUsers(rows).catch((error) =>
       logger.warn('[demo] Reset done but clearing the auth user cache failed', error),
     );

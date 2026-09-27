@@ -1358,8 +1358,8 @@ async function loadToolDefinitionsWrapper({
     }
   }
 
-  /** `mcpSettings.skipOAuthInChat`: servers the user has not signed in to are dropped for this
-   *  turn instead of prompting and waiting; sign-in happens from the MCP panel. */
+  /** `mcpSettings.skipOAuthInChat`: 로그인하지 않은 서버는 로그인을 묻고 기다리는 대신 이번 turn 에서
+   *  뺀다. 로그인은 MCP 패널에서 한다. */
   if (pendingOAuthServers.size > 0 && appConfig?.mcpSettings?.skipOAuthInChat === true) {
     const skippedServers = new Set(pendingOAuthServers);
     pendingOAuthServers.clear();

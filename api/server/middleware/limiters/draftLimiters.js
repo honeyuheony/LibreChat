@@ -5,8 +5,8 @@ const logViolation = require('~/cache/logViolation');
 
 /**
  * 스킬 편집기의 AI 초안 요청(POST /api/skills/draft) 한도. 편집기는 입력이 약 1초 멈출 때마다 부른다.
- * 검증 안 됨: 사용자 30회/분은 그 호출 빈도를 보고 정한 값, IP 300회/분은 한 사무실이 IP 하나를
- * 나눠 쓰는 경우를 막지 않으려고 넉넉히 잡은 값이며 둘 다 이 환경에서 측정하지 않았다.
+ * 사용자 30회/분은 그 호출 빈도에 맞춘 값, IP 300회/분은 한 사무실이 IP 하나를 나눠 써도 막히지
+ * 않게 넉넉히 잡은 값이다. 둘 다 실제 부하로 측정한 값은 아니다.
  */
 const getEnvironmentVariables = () => {
   const DRAFT_IP_MAX = parseInt(process.env.DRAFT_IP_MAX) || 300;

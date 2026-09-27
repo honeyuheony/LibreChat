@@ -64,7 +64,7 @@ const handlers = createSchedulesHandlers({
     });
     return (files ?? []).map((file) => file.file_id);
   },
-  // The VIEW-scoped ids (DB plus deployment skills) a chat turn resolves `manualSkills` against.
+  // 대화 turn 이 `manualSkills` 를 풀 때 쓰는 것과 같은 VIEW 범위 id(DB 스킬과 배포 스킬)로 거른다.
   filterViewableSkillNames: async (names, req) =>
     filterViewableSkillNamesByAccess({
       names,

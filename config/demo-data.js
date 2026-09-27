@@ -1,21 +1,21 @@
 /**
- * Demo baseline export and reset shared by `export-demo-baseline.js` and `reset-demo.js`.
- * Reads and writes the raw collections so `_id`, ObjectIds and dates round-trip through EJSON.
+ * `export-demo-baseline.js` 와 `reset-demo.js` 가 함께 쓰는 데모 기준 데이터 내보내기·초기화.
+ * `_id`·ObjectId·날짜가 EJSON 을 거쳐 그대로 돌아오도록 컬렉션을 모델 없이 직접 읽고 쓴다.
  */
 const fs = require('fs');
 const path = require('path');
 const { BSON } = require('mongodb');
 const { createModels } = require('@librechat/data-schemas');
 
-/** Never exported or reset; `DEMO_RESET_PROTECTED` can add to this list but not remove from it. */
+/** 내보내지도 초기화하지도 않는 계정. `DEMO_RESET_PROTECTED` 로 더할 수는 있어도 뺄 수는 없다. */
 const PROTECTED_EMAILS = ['admin@admin.com', 'demo@example.com'];
 
-/** Demo default agent (`librechat.yaml` modelSpecs), same id as `add-task-tools-to-agent.js`. */
+/** 데모 기본 agent(`librechat.yaml` 의 modelSpecs). */
 const DEFAULT_AGENT_ID = 'agent_mFf0h9SHTwJ6za2e8HUiv';
 
 /**
- * Per-account collections and the field holding the owner id (String or ObjectId per schema);
- * `searchKey` marks the Meilisearch primary key of collections the search index mirrors.
+ * 계정별 컬렉션과 소유자 id 를 담은 필드(스키마에 따라 String 또는 ObjectId).
+ * `searchKey` 는 검색 색인이 따라 담는 컬렉션의 Meilisearch 기본 키다.
  */
 const ACCOUNT_COLLECTIONS = [
   { model: 'Conversation', owner: 'user', searchKey: 'conversationId' },
@@ -31,7 +31,7 @@ const ACCOUNT_COLLECTIONS = [
   { model: 'SkillPack', owner: 'author' },
 ];
 
-/** Profile and settings fields restored on the user document; password and tokens are not among them. */
+/** 사용자 문서에서 되돌리는 프로필·설정 필드. 비밀번호와 토큰은 넣지 않는다. */
 const USER_FIELDS = [
   'name',
   'department',
@@ -42,7 +42,7 @@ const USER_FIELDS = [
 
 const AGENT_FIELDS = ['instructions', 'tools'];
 
-/** mongoMeili bookkeeping copied into the baseline at export; it describes the index back then. */
+/** 내보낼 때 기준 데이터에 함께 담긴 mongoMeili 기록 필드. 그 시점의 색인 상태라 되돌리지 않는다. */
 const SEARCH_STATE_FIELDS = [
   '_meiliIndexAttempted',
   '_meiliIndexVersion',
@@ -51,7 +51,6 @@ const SEARCH_STATE_FIELDS = [
 
 const MANIFEST_FILE = 'manifest.json';
 
-/** @param {string | undefined} list @returns {string[]} */
 function parseEmails(list) {
   return (list ?? '')
     .split(',')
@@ -59,14 +58,13 @@ function parseEmails(list) {
     .filter(Boolean);
 }
 
-/** @param {string | undefined} extra @returns {Set<string>} */
 function resolveProtectedEmails(extra) {
   return new Set([...PROTECTED_EMAILS, ...parseEmails(extra)]);
 }
 
 /**
- * Reads `<dir> [--users a,b] [--include-shared] [--dry-run]`; `DEMO_RESET_USERS`,
- * `DEMO_RESET_PROTECTED` and `DEMO_BASELINE_DIR` fill in what the arguments leave out.
+ * `<dir> [--users a,b] [--include-shared] [--dry-run]` 를 읽는다. 인자로 주지 않은 값은
+ * `DEMO_RESET_USERS`·`DEMO_RESET_PROTECTED`·`DEMO_BASELINE_DIR` 에서 채운다.
  * @param {string[]} argv @param {NodeJS.ProcessEnv} env
  */
 function parseCliArgs(argv, env) {
@@ -84,7 +82,6 @@ function parseCliArgs(argv, env) {
   };
 }
 
-/** @param {Record<string, unknown>} doc @param {string} dotted */
 function getPath(doc, dotted) {
   return dotted.split('.').reduce((value, key) => (value == null ? undefined : value[key]), doc);
 }
@@ -101,21 +98,21 @@ function readJson(dir, file) {
   return BSON.EJSON.parse(fs.readFileSync(filePath, 'utf8'), { relaxed: false });
 }
 
-/** Owner ids are stored as String in some schemas and ObjectId in others; match both. */
+/** 소유자 id 를 String 으로 두는 스키마와 ObjectId 로 두는 스키마가 섞여 있어 둘 다 맞춘다. */
 const ownerFilter = (owner, userId) => ({ [owner]: { $in: [userId, String(userId)] } });
 
 const idKey = (id) => String(id);
 
 const fileOf = (collection) => `${collection.collectionName}.json`;
 
-/** Restored documents start unindexed, so a failed index write still leaves them for the next sync. */
+/** 되돌린 문서를 색인 전 상태로 두어, 색인 쓰기가 실패해도 다음 동기화에서 다시 잡히게 한다. */
 const asUnindexed = (doc) => ({
   ...Object.fromEntries(Object.entries(doc).filter(([key]) => !SEARCH_STATE_FIELDS.includes(key))),
   _meiliIndex: false,
 });
 
 /**
- * Builds export and reset over the given mongoose connection, the way `createModels(mongoose)` does.
+ * `createModels(mongoose)` 처럼 넘겨받은 mongoose 연결 위에 내보내기와 초기화를 만든다.
  * @param {typeof import('mongoose')} mongoose
  */
 function createDemoData(mongoose) {
@@ -126,7 +123,7 @@ function createDemoData(mongoose) {
   const agents = collectionOf('Agent');
   const usage = collectionOf('DeploymentSkillUsage');
 
-  /** Drops protected and missing accounts with a warning; returns the users to work on. */
+  /** 보호 계정과 없는 계정은 경고하고 빼며, 작업할 사용자를 돌려준다. */
   async function findTargetUsers({ emails, protectedEmails, warn }) {
     const allowed = emails.filter((email) => {
       if (!protectedEmails.has(email)) {
@@ -146,7 +143,7 @@ function createDemoData(mongoose) {
   }
 
   /**
-   * Writes the target accounts' data (and the shared data with `includeShared`) to `dir`.
+   * 대상 계정의 데이터(`includeShared` 면 공용 데이터도)를 `dir` 에 쓴다.
    * @param {{ dir: string, emails: string[], includeShared?: boolean, agentId?: string,
    *   protectedEmails?: Set<string>, warn: (message: string) => void }} params
    */
@@ -208,8 +205,8 @@ function createDemoData(mongoose) {
   }
 
   /**
-   * Makes `collection` hold exactly `baselineDocs` among the documents matching `filter`:
-   * removes the rest, then replaces or creates each baseline document under its `_id`.
+   * `filter` 에 맞는 문서가 정확히 `baselineDocs` 만 남도록 나머지는 지우고, 기준 문서는
+   * 같은 `_id` 로 바꿔 쓰거나 새로 만든다.
    */
   async function syncDocuments({ collection, filter, baselineDocs, dryRun, beforeDelete }) {
     const current = await collection.find(filter, { projection: { _id: 1 } }).toArray();
@@ -228,7 +225,7 @@ function createDemoData(mongoose) {
     }
 
     const deletableIds = beforeDelete ? await beforeDelete(staleIds) : staleIds;
-    // Delete before restoring: unique indexes (schedule slot, skill name) may be held by a stale row.
+    // 남은 문서가 고유 색인(예약 시간대, 스킬 이름)을 쥐고 있을 수 있어 되돌리기 전에 먼저 지운다.
     if (deletableIds.length > 0) {
       await collection.deleteMany({ _id: { $in: deletableIds } });
     }
@@ -243,7 +240,7 @@ function createDemoData(mongoose) {
     return { ...counts, deleted: deletableIds.length };
   }
 
-  /** Removes originals through `deleteFiles`; returns the ids whose metadata may go too. */
+  /** 원본 파일을 `deleteFiles` 로 지우고, 메타데이터까지 지워도 되는 id 를 돌려준다. */
   function fileDeleter({ collection, user, deleteFiles, warn }) {
     return async (staleIds) => {
       if (staleIds.length === 0) {
@@ -286,8 +283,8 @@ function createDemoData(mongoose) {
   }
 
   /**
-   * Restored ids another account also holds; the index keeps one document per id, so re-adding
-   * these would overwrite that account's entry.
+   * 되돌린 id 가운데 다른 계정도 가진 것. 색인은 id 하나에 문서 하나만 두므로 이것을 다시
+   * 넣으면 그 계정의 항목을 덮어쓴다.
    */
   async function findSharedSearchKeys({ collection, owner, searchKey, user, baselineDocs }) {
     const keys = baselineDocs.map((doc) => doc[searchKey]);
@@ -301,8 +298,8 @@ function createDemoData(mongoose) {
   }
 
   /**
-   * Raw writes skip the mongoMeili hooks: drop the account's index documents by user, then index
-   * the restored documents whose id no other account holds. The reset stands even if this fails.
+   * 직접 쓰기는 mongoMeili 훅을 거치지 않으므로, 계정의 색인 문서를 사용자 기준으로 지운 뒤
+   * 다른 계정과 겹치지 않는 되돌린 문서만 색인한다. 여기서 실패해도 초기화는 유지한다.
    */
   async function syncSearchIndex({
     collection,
@@ -397,7 +394,7 @@ function createDemoData(mongoose) {
   }
 
   /**
-   * Restores the target accounts (and the shared data with `includeShared`) from the baseline in `dir`.
+   * `dir` 의 기준 데이터로 대상 계정(`includeShared` 면 공용 데이터도)을 되돌린다.
    * @param {{ dir: string, emails: string[], includeShared?: boolean, dryRun?: boolean,
    *   protectedEmails?: Set<string>, warn: (message: string) => void,
    *   deleteFiles: (user: { _id: unknown, email: string }, files: object[]) =>
