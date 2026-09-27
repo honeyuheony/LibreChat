@@ -235,9 +235,9 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
             resetDemoButtonRef.current?.focus();
           }}
           overlayClassName={RESET_CONFIRMATION_OVERLAY_CLASS}
-          className="w-11/12 max-w-[450px] gap-0 overflow-hidden p-0"
+          className="min-h-[159px] w-11/12 max-w-[440px] gap-0 overflow-hidden p-0"
         >
-          <header className="relative border-b border-border-light px-4 pb-4 pr-12 pt-4 text-left">
+          <header className="relative border-b border-border-light px-4 pb-[14px] pr-12 pt-[14px] text-left">
             <OGDialogTitle className="text-[16.5px] font-bold leading-[25px]">
               {localize('com_ui_demo_reset_title')}
             </OGDialogTitle>
@@ -270,7 +270,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
                 size="pill"
                 disabled={resetDemoMutation.isLoading}
                 onClick={() => resetDemoMutation.mutate()}
-                className="focus:ring-2 focus:ring-ring-primary focus-visible:ring-ring-primary"
+                className="h-[27px] min-w-[60px] focus:ring-2 focus:ring-ring-primary focus:ring-offset-2 focus:ring-offset-surface-secondary focus-visible:ring-ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-secondary"
               >
                 {resetDemoMutation.isLoading ? (
                   <Spinner className="size-4 text-text-primary" />

@@ -244,8 +244,13 @@ describe('account menu', () => {
     const cancelButton = screen.getByRole('button', { name: 'com_ui_cancel' });
     const overlay = document.querySelector('[class*="backdrop-blur"]');
 
-    expect(dialog).toHaveClass('w-11/12', 'max-w-[450px]');
-    expect(dialog.children[0]).toHaveClass('border-b', 'border-border-light', 'pt-4', 'pb-4');
+    expect(dialog).toHaveClass('w-11/12', 'max-w-[440px]', 'min-h-[159px]');
+    expect(dialog.children[0]).toHaveClass(
+      'border-b',
+      'border-border-light',
+      'pt-[14px]',
+      'pb-[14px]',
+    );
     expect(dialog.children[1]).toHaveClass('border-b', 'border-border-light');
     expect(dialog.children[2]).toHaveClass('bg-surface-secondary', 'pt-5', 'pb-3');
     expect(screen.getByRole('heading', { name: 'com_ui_demo_reset_title' })).toHaveClass(
@@ -260,19 +265,34 @@ describe('account menu', () => {
     );
     expect(cancelButton).toHaveClass('hover:bg-surface-hover');
     expect(cancelButton).not.toHaveClass('border', 'border-border-light');
-    expect(resetButton).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-ring-primary');
-    expect(resetButton).toHaveClass('focus:ring-2', 'focus:ring-ring-primary');
+    expect(resetButton).toHaveClass(
+      'focus-visible:ring-2',
+      'focus-visible:ring-ring-primary',
+      'focus-visible:ring-offset-2',
+      'focus-visible:ring-offset-surface-secondary',
+    );
+    expect(resetButton).toHaveClass(
+      'focus:ring-2',
+      'focus:ring-ring-primary',
+      'focus:ring-offset-2',
+      'focus:ring-offset-surface-secondary',
+    );
     expect(resetButton).toHaveFocus();
     expect(screen.getByRole('heading', { name: 'com_ui_demo_reset_title' })).toHaveClass(
       'font-bold',
     );
-    [cancelButton, resetButton].forEach((button) =>
-      expect(button).toHaveClass(
-        'h-7',
-        'text-[13px]',
-        'font-normal',
-        'rounded-theme-control-round',
-      ),
+    expect(cancelButton).toHaveClass(
+      'h-7',
+      'text-[13px]',
+      'font-normal',
+      'rounded-theme-control-round',
+    );
+    expect(resetButton).toHaveClass(
+      'h-[27px]',
+      'min-w-[60px]',
+      'text-[13px]',
+      'font-normal',
+      'rounded-theme-control-round',
     );
     expect(cancelButton).toHaveClass('text-text-tertiary');
   });
