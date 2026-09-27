@@ -80,6 +80,7 @@ const SKILL_BODY_MAX = SKILL_BODY_MAX_LENGTH;
 const SKILL_FILE_PATH_MAX = 500;
 const SKILL_NAME_PATTERN = SKILL_NAME_PATTERN_SHARED;
 const RELATIVE_PATH_CHARS = /^[a-zA-Z0-9._\-/]+$/;
+const NON_CONTENT_SKILL_UPDATE_FIELDS = new Set(['manualMinutes', 'publishedAt', 'lastTest']);
 
 /**
  * Brand namespaces reserved for Anthropic-published skills and first-party
@@ -842,11 +843,10 @@ export type ListSkillsByAccessParams = {
 
 export type ListSkillsByAccessResult = {
   /**
-   * Summary rows — `body` and `frontmatter` are intentionally omitted at the
-   * query projection layer to keep list payloads small. Callers that need the
-   * full document must fetch the detail via `getSkillById`.
+   * Summary rows include only `frontmatter.examples` and
+   * `frontmatter.metadata.triggers`; the body and remaining frontmatter stay unloaded.
    */
-  skills: Array<ISkillSummary & { _id: Types.ObjectId }>;
+  skills: Array<ISkillSummary & { _id: Types.ObjectId; frontmatter?: Record<string, unknown> }>;
   has_more: boolean;
   after: string | null;
 };
@@ -1471,15 +1471,13 @@ export function createSkillMethods(
     const rows = await Skill.find(filter)
       .sort({ updatedAt: -1, _id: 1 })
       .limit(limit + 1)
-      /* Only `frontmatter.examples` is projected so list responses can expose
-         examples without loading the remaining frontmatter fields. */
+      /* List responses need examples and trigger metadata, not the full body or frontmatter. */
       .select(
-        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon publishedAt lastTest frontmatter.examples createdAt updatedAt',
+        'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon publishedAt lastTest frontmatter.examples frontmatter.metadata.triggers createdAt updatedAt',
       )
       .lean();
 
-    /* The examples-only projection does not contain invocation settings, so
-       the existing fallback leaves these summary fields unchanged. */
+    /* This projection omits invocation settings, so the fallback leaves those fields unchanged. */
     for (const row of rows) {
       backfillDerivedFromFrontmatter(row as unknown as ISkill);
     }
@@ -1496,7 +1494,7 @@ export function createSkillMethods(
         : null;
 
     return {
-      skills: sliced as unknown as Array<ISkillSummary & { _id: Types.ObjectId }>,
+      skills: sliced as unknown as ListSkillsByAccessResult['skills'],
       has_more,
       after,
     };
@@ -1730,10 +1728,13 @@ export function createSkillMethods(
       setPayload.alwaysApply = derivedAlwaysApply;
     }
 
-    const updateOps: Record<string, unknown> = {
-      $set: setPayload,
-      $inc: { version: 1 },
-    };
+    const hasContentChanges =
+      Object.keys(setPayload).some((field) => !NON_CONTENT_SKILL_UPDATE_FIELDS.has(field)) ||
+      Object.keys(unsetPayload).some((field) => !NON_CONTENT_SKILL_UPDATE_FIELDS.has(field));
+    const updateOps: Record<string, unknown> = { $set: setPayload };
+    if (hasContentChanges) {
+      updateOps.$inc = { version: 1 };
+    }
     if (Object.keys(unsetPayload).length > 0) {
       updateOps.$unset = unsetPayload;
     }

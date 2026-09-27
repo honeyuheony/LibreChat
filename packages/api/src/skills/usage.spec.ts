@@ -1,7 +1,7 @@
 import { computeSkillUsageMetrics } from './usage';
 
 describe('computeSkillUsageMetrics', () => {
-  it('multiplies runs by manual minutes minus the average run time', () => {
+  it('rounds saved minutes before calculating saved hours', () => {
     expect(
       computeSkillUsageMetrics({
         useCount: 120,
@@ -9,7 +9,7 @@ describe('computeSkillUsageMetrics', () => {
         runTimeSampleCount: 4,
         manualMinutes: 30,
       }),
-    ).toEqual({ averageRunSeconds: 45, savedMinutesPerRun: 29.3, savedHours: 58.5 });
+    ).toEqual({ averageRunSeconds: 45, savedMinutesPerRun: 29, savedHours: 58 });
   });
 
   it('never reports a negative saving when a run takes longer than the manual work', () => {

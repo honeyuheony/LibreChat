@@ -4,6 +4,7 @@ import type { Response } from 'express';
 import type { SkillSeedMetrics, SkillUsageCountersInput } from './market';
 import type { SkillUsageCounters } from './usage';
 import type { ServerRequest } from '~/types';
+import { computeSkillSavedTime } from './usage';
 import { applyDeploymentUsage } from './market';
 
 type SkillIdValue = { toString(): string };
@@ -95,18 +96,17 @@ type MetricsRow = SkillMetricsAgent & { isBase: boolean };
 
 type MetricsTotals = { runs: number; forks: number; savedHours: number };
 
-/** 와이어프레임 `recalcSave`·`savedH`처럼 회당 단축 분과 agent 별 시간을 정수로 반올림한다. */
+/** 와이어프레임과 같은 정수 반올림을 적용한다. */
 function wireframeSavedHours(counters: SkillUsageCounters): number | null {
   const samples = counters.runTimeSampleCount ?? 0;
   if (samples <= 0 || counters.manualMinutes == null) {
     return null;
   }
-  const averageRunSeconds = (counters.runTimeTotalSeconds ?? 0) / samples;
-  const savedMinutesPerRun = Math.max(
-    0,
-    Math.round(counters.manualMinutes - averageRunSeconds / 60),
-  );
-  return Math.round((Math.max(0, counters.useCount ?? 0) * savedMinutesPerRun) / 60);
+  return computeSkillSavedTime({
+    runs: counters.useCount ?? 0,
+    averageRunSeconds: (counters.runTimeTotalSeconds ?? 0) / samples,
+    manualMinutes: counters.manualMinutes,
+  }).savedHours;
 }
 
 function sumTotals(rows: MetricsRow[]): MetricsTotals {

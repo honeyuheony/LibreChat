@@ -124,6 +124,7 @@ function buildDeps(overrides: Partial<SkillsHandlersDeps> = {}) {
         'Compare report 5.',
         'Compare report 6.',
       ],
+      metadata: { triggers: ['주간보고', '주간 실적'] },
     },
     builder: {
       text: 'Stored editor state.',
@@ -202,12 +203,22 @@ describe('skill list market fields', () => {
       forkCount: 41,
       marketProfile: { scope: '전 부서' },
     });
-    // 평균 125,400초 / 3,130회 = 40.06초, 회당 단축 26 − 0.67 = 25.33분, 3,130회 × 25.33분 = 1,321.5시간
+    // 평균 125,400초 / 3,130회 = 40.06초. 회당 26 − 0.67분을 25분으로, 누적 3,130 × 25 / 60시간을 1,304시간으로 반올림한다.
     expect(weekly?.usageMetrics).toEqual({
       averageRunSeconds: 40.1,
-      savedMinutesPerRun: 25.3,
-      savedHours: 1321.5,
+      savedMinutesPerRun: 25,
+      savedHours: 1304,
     });
+  });
+
+  it('adds user-skill triggers to the market profile without changing deployment fields', async () => {
+    const { deps } = buildDeps();
+    const skills = await listFor(undefined, deps);
+    const userSkill = skills.find((skill) => skill.name === 'my-draft');
+    const deploymentSkill = skills.find((skill) => skill.name === 'weekly-report');
+
+    expect(userSkill?.marketProfile).toEqual({ triggers: ['주간보고', '주간 실적'] });
+    expect(deploymentSkill?.marketProfile?.triggers).toBeUndefined();
   });
 
   it('limits serialized frontmatter examples and omits builder state from list rows', async () => {

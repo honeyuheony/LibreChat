@@ -12,9 +12,24 @@ function roundToTenth(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
-/** 절감 시간 = 실행 수 × max(0, 수작업 분 − 평균 실행 초 / 60). 평균은 측정된 실행만으로 낸다. */
+export function computeSkillSavedTime(params: {
+  runs: number;
+  averageRunSeconds: number;
+  manualMinutes: number;
+}): { savedMinutesPerRun: number; savedHours: number } {
+  const savedMinutesPerRun = Math.max(
+    0,
+    Math.round(params.manualMinutes - params.averageRunSeconds / 60),
+  );
+  return {
+    savedMinutesPerRun,
+    savedHours: Math.round((Math.max(0, params.runs) * savedMinutesPerRun) / 60),
+  };
+}
+
+/** 회당 절감 분과 누적 절감 시간을 각각 정수로 반올림한다. */
 export function computeSkillUsageMetrics(counters: SkillUsageCounters): TSkillUsageMetrics {
-  const runs = Math.max(0, counters.useCount ?? 0);
+  const runs = counters.useCount ?? 0;
   const samples = counters.runTimeSampleCount ?? 0;
   const averageRunSeconds = samples > 0 ? (counters.runTimeTotalSeconds ?? 0) / samples : null;
   const manualMinutes = counters.manualMinutes;
@@ -26,10 +41,9 @@ export function computeSkillUsageMetrics(counters: SkillUsageCounters): TSkillUs
       savedHours: null,
     };
   }
-  const savedMinutesPerRun = Math.max(0, manualMinutes - averageRunSeconds / 60);
+  const savedTime = computeSkillSavedTime({ runs, averageRunSeconds, manualMinutes });
   return {
     averageRunSeconds: roundToTenth(averageRunSeconds),
-    savedMinutesPerRun: roundToTenth(savedMinutesPerRun),
-    savedHours: roundToTenth((runs * savedMinutesPerRun) / 60),
+    ...savedTime,
   };
 }

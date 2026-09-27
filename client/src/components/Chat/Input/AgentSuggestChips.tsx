@@ -56,7 +56,7 @@ export function matchSuggestedSkills<T extends TSkillSummary>(
       if (profile?.kind === BASE_KIND || !isUserInvocable(skill)) {
         return false;
       }
-      // 목록 응답에는 배포 스킬의 `marketProfile.triggers` 만 실린다. 사용자 스킬의 트리거는 아직 없다.
+      // 목록 응답에는 배포·사용자 스킬의 머리말 triggers가 marketProfile에 실린다.
       const triggers = profile?.triggers ?? [];
       return (
         triggers.some((trigger) => trigger !== '' && text.includes(trigger)) && isActive(skill)
