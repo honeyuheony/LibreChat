@@ -30,6 +30,7 @@ import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import { PromptsAccordion } from '~/components/Prompts';
 import { SkillsAccordion } from '~/components/Skills';
+import { isSchedulesEnabled } from './schedules';
 
 export default function useSideNavLinks({
   hidePanel,
@@ -135,11 +136,7 @@ export default function useSideNavLinks({
     // Mirrors getLimits exactly — absent/null/`false` are all off, `true` is on, and the
     // object form is on unless it sets `use: false`. Any mismatch would show an entry
     // whose create/run operations the backend rejects.
-    const schedulesConfig = interfaceConfig.schedules;
-    const schedulesEnabled =
-      schedulesConfig != null &&
-      schedulesConfig !== false &&
-      !(typeof schedulesConfig === 'object' && schedulesConfig.use === false);
+    const schedulesEnabled = isSchedulesEnabled(interfaceConfig.schedules);
     if (hasAccessToSchedules && schedulesEnabled) {
       links.push({
         title: 'com_ui_schedules',

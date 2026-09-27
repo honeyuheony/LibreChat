@@ -96,8 +96,10 @@ describe('skills routes', () => {
     const routes = (router as unknown as { routes: RouteNode[] }).routes;
     const paths = flattenPaths(routes);
 
-    expect(paths).toEqual(expect.arrayContaining(['library', 'schedules', 'metrics', 'settings']));
-    for (const path of ['library', 'schedules', 'metrics', 'settings']) {
+    expect(paths).toEqual(
+      expect.arrayContaining(['library', 'schedules', 'operations', 'settings']),
+    );
+    for (const path of ['library', 'schedules', 'operations', 'settings']) {
       const route = findRoute(path, routes);
       const loadedRoute = await route?.lazy?.();
       expect(loadedRoute?.Component).toBeDefined();
@@ -106,10 +108,10 @@ describe('skills routes', () => {
 
   it('renders the metrics screen only for administrators', async () => {
     const routes = (router as unknown as { routes: RouteNode[] }).routes;
-    const metricsRoute = findRoute('metrics', routes);
+    const operationsRoute = findRoute('operations', routes);
 
-    expect(metricsRoute?.lazy).toBeDefined();
-    const loadedRoute = await metricsRoute?.lazy?.();
+    expect(operationsRoute?.lazy).toBeDefined();
+    const loadedRoute = await operationsRoute?.lazy?.();
     const MetricsRoute = loadedRoute?.Component;
 
     expect(MetricsRoute).toBeDefined();
@@ -119,7 +121,7 @@ describe('skills routes', () => {
     mockRouteUser.current = { role: 'ADMIN' };
     mockMetricsView.mockClear();
     const { unmount } = render(
-      <MemoryRouter initialEntries={['/metrics']}>
+      <MemoryRouter initialEntries={['/operations']}>
         <MetricsRoute />
         <RouteLocation />
       </MemoryRouter>,
@@ -130,7 +132,7 @@ describe('skills routes', () => {
     mockRouteUser.current = { role: 'USER' };
     mockMetricsView.mockClear();
     render(
-      <MemoryRouter initialEntries={['/metrics']}>
+      <MemoryRouter initialEntries={['/operations']}>
         <MetricsRoute />
         <RouteLocation />
       </MemoryRouter>,
