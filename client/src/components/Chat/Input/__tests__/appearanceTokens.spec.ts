@@ -20,7 +20,8 @@ const themedControls = [
   ['TokenUsage/index.tsx', ['size-theme-control', 'rounded-theme-control-round']],
   ['Files/AttachFile.tsx', ['size-theme-control', 'rounded-theme-control-round']],
   ['Files/AttachFileMenu.tsx', ['size-theme-control', 'rounded-theme-control border']],
-  ['ToolsMenu.tsx', ['rounded-theme-control border', 'border-border-light']],
+  ['ToolsMenu.tsx', ['border-border-light']],
+  ['ToolRows.tsx', ['rounded-theme-control border', 'border-border-light']],
   /** Floats over the thread rather than sitting in the composer, but stacks
    *  over Send on the same rail, so it takes the row's geometry from the shared
    *  `Button` recipe; the tokens behind those variants are asserted in `Button.spec`. */
