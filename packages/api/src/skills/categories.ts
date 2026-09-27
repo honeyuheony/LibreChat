@@ -54,8 +54,8 @@ async function countDbSkillCategories(
   return counts;
 }
 
-/** 배포 스킬은 권한 자원이 아니라 항상 접근 가능하므로(`mergeDeploymentSkillIds`가 무조건
- *  합치는 것과 같은 규칙) accessibleIds로 거르지 않는다. 팀 공개 agent 만 목록과 같게 부서로 거른다. */
+/** 배포 스킬은 권한 자원이 아니므로 accessibleIds 대신 사용자 부서로 거른다. `scope: 팀` 배포
+ *  스킬은 작성 부서 사용자에게만 세며, `mergeDeploymentSkillIds`의 실행 경로 판정과 같은 규칙이다. */
 function countDeploymentSkillCategories(userDepartment: string | undefined): Map<string, number> {
   const counts = new Map<string, number>();
   for (const skill of getDeploymentSkillRegistry().list()) {
