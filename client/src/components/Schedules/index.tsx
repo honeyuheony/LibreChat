@@ -68,7 +68,7 @@ export default function Schedules() {
     );
   } else if (schedules.length === 0) {
     scheduleContent = (
-      <p className="rounded-xl border border-border-light p-6 text-sm text-text-secondary">
+      <p className="rounded-xl border border-border-light bg-surface-primary p-6 text-sm text-text-secondary">
         {localizeScheduleText(localize, 'com_ui_schedules_empty')}
       </p>
     );
@@ -98,18 +98,15 @@ export default function Schedules() {
   }
 
   return (
-    <main
-      role="region"
-      aria-label={localizeScheduleText(localize, 'com_ui_schedules_title')}
-      className="mx-auto flex h-full w-full max-w-5xl flex-col gap-5 overflow-y-auto p-4 md:p-8"
-    >
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-text-primary">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-surface-secondary">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+        <span className="font-semibold text-text-primary">
           {localizeScheduleText(localize, 'com_ui_schedules_title')}
-        </h1>
+        </span>
         {canCreate && (
           <Button
             type="button"
+            size="sm"
             variant="outline"
             disabled={atLimit || isLoading || isError}
             onClick={() => setCreateOpen(true)}
@@ -119,13 +116,22 @@ export default function Schedules() {
           </Button>
         )}
       </header>
-      <p className="text-sm text-text-secondary">
-        {localizeScheduleText(localize, 'com_ui_schedules_description')}
-      </p>
-      {scheduleContent}
-      {createOpen && (
-        <ScheduleDialog open={createOpen} onOpenChange={setCreateOpen} isAtLimit={atLimit} />
-      )}
-    </main>
+      <main
+        role="region"
+        aria-label={localizeScheduleText(localize, 'com_ui_schedules_title')}
+        className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col gap-3 overflow-y-auto px-6 py-4"
+      >
+        <h1 className="text-xl font-semibold text-text-primary">
+          {localizeScheduleText(localize, 'com_ui_schedules_title')}
+        </h1>
+        <p className="text-sm text-text-secondary">
+          {localizeScheduleText(localize, 'com_ui_schedules_description')}
+        </p>
+        {scheduleContent}
+        {createOpen && (
+          <ScheduleDialog open={createOpen} onOpenChange={setCreateOpen} isAtLimit={atLimit} />
+        )}
+      </main>
+    </div>
   );
 }

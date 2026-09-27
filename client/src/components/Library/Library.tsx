@@ -36,6 +36,17 @@ type LibraryKey =
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HWP_FILE = /\.hwpx?$/i;
 
+const libraryTitle = (item: TTaskResultListItem) => {
+  if (item.kind !== 'table') {
+    return item.title;
+  }
+  const [title] = item.title.split(' · ', 1);
+  if (item.rows === undefined) {
+    return title;
+  }
+  return `${title} · ${item.rows}건`;
+};
+
 const resultPath = (item: TTaskResultListItem) =>
   `/c/${encodeURIComponent(item.conversationId)}?${RESULT_QUERY_PARAM}=${encodeURIComponent(item.resultId)}`;
 
@@ -110,14 +121,22 @@ export default function Library() {
     }
     return (
       <>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{localize('com_ui_name')}</TableHead>
-              <TableHead>{localize('com_ui_library_col_type')}</TableHead>
-              <TableHead>{localize('com_ui_conversation')}</TableHead>
-              <TableHead>{localize('com_ui_library_col_created')}</TableHead>
-              <TableHead>
+        <Table className="table-fixed text-[13px]">
+          <TableHeader className="bg-surface-secondary">
+            <TableRow className="h-7">
+              <TableHead className="h-7 w-[38%] px-2 py-1 text-[11.5px]">
+                {localize('com_ui_name')}
+              </TableHead>
+              <TableHead className="h-7 w-[13%] whitespace-nowrap px-2 py-1 text-[11.5px]">
+                {localize('com_ui_library_col_type')}
+              </TableHead>
+              <TableHead className="h-7 w-[27%] px-2 py-1 text-[11.5px]">
+                {localize('com_ui_conversation')}
+              </TableHead>
+              <TableHead className="h-7 w-[14%] whitespace-nowrap px-2 py-1 text-[11.5px]">
+                {localize('com_ui_library_col_created')}
+              </TableHead>
+              <TableHead className="h-7 w-[8%] whitespace-nowrap px-2 py-1 text-[11.5px]">
                 <span className="sr-only">{localize('com_ui_library_col_action')}</span>
               </TableHead>
             </TableRow>
@@ -125,7 +144,7 @@ export default function Library() {
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-text-secondary">
+                <TableCell colSpan={5} className="px-2 py-2 text-text-secondary">
                   {localize('com_ui_library_empty')}
                 </TableCell>
               </TableRow>
@@ -135,23 +154,27 @@ export default function Library() {
                 return (
                   <TableRow
                     key={item.resultId}
-                    className="cursor-pointer"
+                    className="h-9 cursor-pointer"
                     onClick={(event) => openRow(event, item)}
                   >
-                    <TableCell className="text-text-primary">
+                    <TableCell className="px-2 py-2 text-text-primary">
                       <span aria-hidden="true" className="mr-1.5 text-text-secondary">
                         {item.kind === 'table' ? '▦' : '≡'}
                       </span>
                       <Link to={resultPath(item)} className="hover:underline">
-                        {item.title}
+                        {libraryTitle(item)}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-text-secondary">{typeLabel(item)}</TableCell>
-                    <TableCell className="text-text-secondary">{item.conversationTitle}</TableCell>
-                    <TableCell className="whitespace-nowrap text-text-secondary">
+                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-secondary">
+                      {typeLabel(item)}
+                    </TableCell>
+                    <TableCell className="px-2 py-2 text-text-secondary">
+                      {item.conversationTitle}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-secondary">
                       {`${localize(dayLabelKey(createdAt, now))} ${clockTime(createdAt)}`}
                     </TableCell>
-                    <TableCell className="text-text-tertiary">
+                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-tertiary">
                       {item.kind === 'table'
                         ? localize('com_ui_task_excel')
                         : localize('com_ui_task_copy')}
@@ -187,7 +210,7 @@ export default function Library() {
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_ui_library')}</span>
       </header>
-      <div className="mx-auto w-full max-w-4xl px-4 pb-10 pt-6 md:pt-8">
+      <div className="mx-auto w-full max-w-[900px] px-6 pb-10 pt-6 md:pt-8">
         <h1 className="text-2xl font-bold text-text-primary">{localize('com_ui_library')}</h1>
         {!isLoading && !isError && (
           <p className="mb-3 mt-1 text-sm text-text-secondary">
