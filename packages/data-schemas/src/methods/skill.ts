@@ -1091,6 +1091,35 @@ export function validateAlwaysApplyInBody(body: string | undefined): ValidationI
   return [];
 }
 
+type SkillMetricsDatabaseRow = Pick<
+  ISkill & { _id: Types.ObjectId },
+  | '_id'
+  | 'name'
+  | 'displayTitle'
+  | 'author'
+  | 'authorName'
+  | 'useCount'
+  | 'runTimeTotalSeconds'
+  | 'runTimeSampleCount'
+  | 'manualMinutes'
+  | 'forkOf'
+>;
+
+type SkillMetricsRecord = Pick<
+  ISkill,
+  | 'name'
+  | 'displayTitle'
+  | 'authorName'
+  | 'useCount'
+  | 'runTimeTotalSeconds'
+  | 'runTimeSampleCount'
+  | 'manualMinutes'
+> & {
+  _id: string;
+  author: string;
+  forkOf?: string | null;
+};
+
 export function createSkillMethods(
   mongoose: typeof import('mongoose'),
   deps: SkillDeps,
@@ -1127,6 +1156,7 @@ export function createSkillMethods(
   getAuthorSkillByName: (
     params: GetAuthorSkillByNameParams,
   ) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
+  listSkillsForMetrics: () => Promise<SkillMetricsRecord[]>;
   listSkillsByAccess: (params: ListSkillsByAccessParams) => Promise<ListSkillsByAccessResult>;
   listAlwaysApplySkills: (
     params: ListAlwaysApplySkillsParams,
@@ -2196,6 +2226,21 @@ export function createSkillMethods(
     return usage;
   }
 
+  async function listSkillsForMetrics(): Promise<SkillMetricsRecord[]> {
+    const Skill = mongoose.models.Skill as Model<ISkill>;
+    const rows = await Skill.find({})
+      .select(
+        'name displayTitle author authorName useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf',
+      )
+      .lean<SkillMetricsDatabaseRow[]>();
+    return rows.map(({ _id, author, forkOf, ...skill }) => ({
+      ...skill,
+      _id: _id.toString(),
+      author: author.toString(),
+      ...(forkOf === undefined ? {} : { forkOf: forkOf?.toString() ?? null }),
+    }));
+  }
+
   /**
    * 작성자 id별 부서. user 스키마에 `department`가 없던 때의 문서도 있으므로 값이 문자열로
    * 있을 때만 싣는다. user 스키마를 이 모듈이 정하지 않으므로 lean 문서에서 그대로 읽는다.
@@ -2284,6 +2329,7 @@ export function createSkillMethods(
     recordDeploymentSkillRuns,
     getDeploymentSkillUsage,
     getSkillAuthorDepartments,
+    listSkillsForMetrics,
     updateSkillReview,
     setSkillPublicationState,
     listSkillsByAccess,

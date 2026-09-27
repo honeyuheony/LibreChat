@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const {
   createSkillMetricsHandler,
   getDeploymentSkillRegistry,
@@ -15,6 +14,7 @@ const {
   upsertSkillSyncCredential,
   deleteSkillSyncCredential,
   getSkillAuthorDepartments,
+  listSkillsForMetrics,
 } = require('~/models');
 const { getGitHubSkillSyncRunnerForRequest } = require('~/server/services/Skills/sync');
 const { getAppConfig } = require('~/server/services/Config');
@@ -35,12 +35,7 @@ const handlers = createAdminSkillsSyncHandlers({
 });
 
 const metricsHandler = createSkillMetricsHandler({
-  listUserSkills: () =>
-    mongoose.models.Skill.find({})
-      .select(
-        'name displayTitle author authorName useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf',
-      )
-      .lean(),
+  listUserSkills: listSkillsForMetrics,
   listDeploymentSkills: () => getDeploymentSkillRegistry().list(),
   countPublishedForks,
   getDeploymentSkillUsage,
