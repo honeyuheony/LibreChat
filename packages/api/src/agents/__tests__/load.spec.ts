@@ -398,6 +398,95 @@ describe('loadAgent', () => {
     });
   });
 
+  describe('model chosen by a model spec preset', () => {
+    const presetAgentId = 'agent_preset_model';
+    const modelSpecs = {
+      list: [
+        {
+          name: 'gpt-6-luna',
+          label: 'GPT-6 Luna',
+          preset: { endpoint: 'agents', agent_id: presetAgentId, model: 'gpt-6-luna' },
+        },
+        {
+          name: 'gpt-6-sol',
+          label: 'GPT-6 Sol',
+          preset: { endpoint: 'agents', agent_id: presetAgentId, model: 'gpt-6-sol' },
+        },
+        {
+          name: 'agent-only',
+          label: 'Agent only',
+          preset: { endpoint: 'agents', agent_id: presetAgentId },
+        },
+        {
+          name: 'other-agent',
+          label: 'Other agent',
+          preset: { endpoint: 'agents', agent_id: 'agent_other', model: 'gpt-6-sol' },
+        },
+      ],
+    } as unknown as AppConfig['modelSpecs'];
+
+    beforeEach(async () => {
+      await createAgent({
+        id: presetAgentId,
+        name: 'Work Assistant',
+        provider: 'openai',
+        model: 'gpt-5.6-luna',
+        model_parameters: { model: 'gpt-5.6-luna', temperature: 0.2 },
+        author: new mongoose.Types.ObjectId(),
+        tools: ['search_mcp_google'],
+        instructions: 'Shared instructions',
+      });
+    });
+
+    function loadWithSpec(
+      spec: string | undefined,
+      body?: LoadAgentParams['req']['body'] & { model?: string },
+    ) {
+      return loadAgent(
+        {
+          req: { user: { id: 'user123' }, config: { modelSpecs } as AppConfig, body },
+          spec,
+          agent_id: presetAgentId,
+          endpoint: 'agents',
+          applyChatMCPSelection: true,
+        },
+        deps,
+      );
+    }
+
+    test('runs the saved agent on the model its spec names', async () => {
+      const result = await loadWithSpec('gpt-6-sol');
+
+      expect(result?.model).toBe('gpt-6-sol');
+      expect(result?.model_parameters?.model).toBe('gpt-6-sol');
+      expect(result?.model_parameters?.temperature).toBe(0.2);
+      expect(result?.tools).toEqual(['search_mcp_google']);
+      expect(result?.instructions).toBe('Shared instructions');
+    });
+
+    test('keeps the saved model when the spec names none', async () => {
+      expect((await loadWithSpec('agent-only'))?.model).toBe('gpt-5.6-luna');
+      expect((await loadWithSpec(undefined))?.model).toBe('gpt-5.6-luna');
+      expect((await loadWithSpec('missing-spec'))?.model).toBe('gpt-5.6-luna');
+    });
+
+    test('ignores a spec that belongs to another agent', async () => {
+      expect((await loadWithSpec('other-agent'))?.model).toBe('gpt-5.6-luna');
+    });
+
+    test('never takes the model from the request body', async () => {
+      const result = await loadWithSpec(undefined, { model: 'gpt-6-sol' });
+
+      expect(result?.model).toBe('gpt-5.6-luna');
+    });
+
+    test('leaves the stored agent unchanged', async () => {
+      await loadWithSpec('gpt-6-sol');
+
+      expect((await getAgent({ id: presetAgentId }))?.model).toBe('gpt-5.6-luna');
+    });
+  });
+
   describe('removeDisabledMCPTools', () => {
     test('resolves a server name that itself contains the MCP delimiter', () => {
       const tools = ['run_mcp_foo_mcp_bar', 'run_mcp_bar'];

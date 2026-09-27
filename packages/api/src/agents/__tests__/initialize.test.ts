@@ -136,6 +136,7 @@ jest.mock('../../middleware/modelBoundContent', () => {
 
 import { initializeAgent } from '../initialize';
 import { primeResources } from '../resources';
+import { loadAgent } from '../load';
 import { isFatalAgentInitializationError } from '../errors';
 
 const realUtils = jest.requireActual<typeof import('~/utils')>('~/utils');
@@ -953,6 +954,61 @@ describe('initializeAgent — custom provider token lookup', () => {
     // optionalChainWithEmptyCheck → Math.max formula. The toHaveBeenCalledWith
     // assertion above catches the actual provider-resolution regression.
     expect(result.maxContextTokens).toBe(Math.round((65536 - 4096) * 0.95));
+  });
+});
+
+describe('initializeAgent — model spec preset model', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sends the model named by the selected spec to the provider request', async () => {
+    const { agent, req, res, loadTools, db } = createMocks({ model: 'gpt-5.6-luna' });
+    agent.id = 'agent_work_assistant';
+    const getOptions = jest.fn().mockResolvedValue({
+      llmConfig: { model: 'gpt-6-sol', maxTokens: 4096 },
+    } satisfies InitializeResultBase);
+    mockGetProviderConfig.mockReturnValue({ getOptions, overrideProvider: Providers.OPENAI });
+    const modelSpecs = {
+      list: [
+        {
+          name: 'gpt-6-sol',
+          label: 'GPT-6 Sol',
+          preset: { endpoint: EModelEndpoint.agents, agent_id: agent.id, model: 'gpt-6-sol' },
+        },
+      ],
+    };
+    const specReq = { ...req, config: { modelSpecs } } as unknown as ServerRequest;
+
+    const loaded = await loadAgent(
+      {
+        req: { user: { id: 'user-1' }, config: specReq.config },
+        spec: 'gpt-6-sol',
+        agent_id: agent.id,
+        endpoint: EModelEndpoint.agents,
+      },
+      { getAgent: async () => agent, getMCPServerTools: async () => null },
+    );
+    await initializeAgent(
+      {
+        req: specReq,
+        res,
+        agent: loaded as Agent,
+        loadTools,
+        endpointOption: {
+          endpoint: EModelEndpoint.agents,
+          spec: 'gpt-6-sol',
+          model_parameters: { model: 'gpt-3.5-turbo-test' },
+        },
+        allowedProviders: new Set([agent.provider]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(getOptions).toHaveBeenCalledTimes(1);
+    expect(getOptions.mock.calls[0][0].model_parameters.model).toBe('gpt-6-sol');
+    expect(agent.model).toBe('gpt-5.6-luna');
   });
 });
 
