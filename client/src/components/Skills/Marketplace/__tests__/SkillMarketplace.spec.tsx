@@ -11,6 +11,7 @@ import {
   weeklyFork,
 } from '../__fixtures__/skills';
 import SkillMarketplace from '../SkillMarketplace';
+import { SkillTags } from '../SkillMeta';
 
 const mockDetail = jest.fn((_props: { skill: TSkillSummary }) => null);
 const mockPacks = [
@@ -91,6 +92,23 @@ function rowTitles(): string[] {
 
 describe('SkillMarketplace', () => {
   beforeEach(() => mockDetail.mockClear());
+
+  it('shows database publication scope and the granted department in badges', () => {
+    const databaseSkill = {
+      ...weekly,
+      marketProfile: undefined,
+      scope: 'team' as const,
+      scopeDepartment: '옛 부서',
+    };
+    const { rerender } = render(<SkillTags skill={databaseSkill} />);
+
+    expect(
+      screen.getByText('com_skills_scope_team_department:{"department":"옛 부서"}'),
+    ).toBeInTheDocument();
+
+    rerender(<SkillTags skill={{ ...databaseSkill, scope: 'me', scopeDepartment: undefined }} />);
+    expect(screen.getByText('com_skills_scope_me')).toBeInTheDocument();
+  });
 
   it('ranks only agents built by staff on the popular tab, most run first', () => {
     renderAt('/skills-market');
