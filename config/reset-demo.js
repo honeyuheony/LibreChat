@@ -9,6 +9,7 @@ require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { processDeleteRequest } = require('~/server/services/Files/process');
 const { getAppConfig } = require('~/server/services/Config');
 const { parseCliArgs, createDemoData } = require('./demo-data');
+const { createResetDemoFileDeleter } = require('./reset-demo-files');
 const { silentExit } = require('./helpers');
 const connect = require('./connect');
 
@@ -24,17 +25,11 @@ const connect = require('./connect');
 
   await connect();
   const appConfig = dryRun ? undefined : await getAppConfig({ baseOnly: true });
-  const deleteFiles = (user, files) =>
-    runAsSystem(() =>
-      processDeleteRequest({
-        req: {
-          user: { id: String(user._id), email: user.email, tenantId: user.tenantId },
-          config: appConfig,
-          body: {},
-        },
-        files,
-      }),
-    );
+  const deleteFiles = createResetDemoFileDeleter({
+    appConfig,
+    processDeleteRequest,
+    runAsSystem,
+  });
 
   const rows = await createDemoData(mongoose).resetDemo({
     dir: path.resolve(dir),

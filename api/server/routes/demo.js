@@ -5,7 +5,12 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { SystemRoles, CacheKeys } = require('librechat-data-provider');
 const { logger, runAsSystem, DEFAULT_REFRESH_TOKEN_EXPIRY } = require('@librechat/data-schemas');
-const { math, shouldUseSecureCookie, invalidateCachedAuthUserDoc } = require('@librechat/api');
+const {
+  math,
+  shouldUseSecureCookie,
+  invalidateCachedAuthUserDoc,
+  createDemoFileDeleter,
+} = require('@librechat/api');
 const { requireJwtAuth, requireSameOrigin, checkBan } = require('~/server/middleware');
 const { setAuthTokens, logoutUser } = require('~/server/services/AuthService');
 const { processDeleteRequest } = require('~/server/services/Files/process');
@@ -147,44 +152,6 @@ const getResetTargets = () => {
   };
 };
 
-/** File ids that another account's File document also carries. */
-const findSharedFileIds = async (user, files) => {
-  const owners = [user._id, String(user._id)];
-  const shared = await File.find(
-    { file_id: { $in: files.map((file) => file.file_id) }, user: { $nin: owners } },
-    'file_id',
-  ).lean();
-  return new Set(shared.map((file) => file.file_id));
-};
-
-/**
- * Deletes originals the way `config/reset-demo.js` does, outside the caller's tenant scope.
- * processDeleteRequest removes File documents and agent references by file_id alone, so a
- * file_id another account also holds is skipped and reported back as failed.
- */
-const createFileDeleter = (appConfig) => (user, files) =>
-  runAsSystem(async () => {
-    const sharedIds = await findSharedFileIds(user, files);
-    if (sharedIds.size > 0) {
-      logger.warn(
-        `[demo] ${user.email}: file ids also held by another account, kept: ${[...sharedIds].join(', ')}`,
-      );
-    }
-    const deletable = files.filter((file) => !sharedIds.has(file.file_id));
-    const result =
-      deletable.length > 0
-        ? await processDeleteRequest({
-            req: {
-              user: { id: String(user._id), email: user.email, tenantId: user.tenantId },
-              config: appConfig,
-              body: {},
-            },
-            files: deletable,
-          })
-        : {};
-    return { ...result, failedFileIds: [...(result.failedFileIds ?? []), ...sharedIds] };
-  });
-
 /** Reset rewrites profile fields on the user document, so cached `req.user` copies must go. */
 const invalidateResetUsers = async (rows) => {
   const emails = [...new Set(rows.filter((row) => row.collection === 'users').map((r) => r.email))];
@@ -221,7 +188,13 @@ router.post('/reset', requireSameOrigin, async (req, res) => {
       includeShared: false,
       dryRun: false,
       protectedEmails,
-      deleteFiles: createFileDeleter(appConfig),
+      deleteFiles: createDemoFileDeleter({
+        File,
+        processDeleteRequest,
+        runAsSystem,
+        logger,
+        appConfig,
+      }),
       warn: (message) => logger.warn(`[demo] ${message}`),
     });
     /** The reset already happened; a stale cached `req.user` expires with its TTL. */
