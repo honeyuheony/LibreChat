@@ -42,6 +42,13 @@ type BuilderProps = {
   onPublish: () => void;
 };
 
+/**
+ * 와이어프레임 v29 `.ov`(946·986행): 옅은 막 rgba(23,21,43,.42)과 blur(6px), 투명도 줄이기 설정이면 흐림 없이 .6.
+ * 공용 배경막(bg-black/80)에 막 색 역할이 없어 여기서만 덮어쓴다.
+ */
+const OVERLAY_CLASS =
+  'bg-black/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
+
 function draftStatusKey(draft: BuilderSession['draft']): TranslationKeys | null {
   if (draft.pending) {
     return 'com_skills_builder_draft_pending';
@@ -263,6 +270,7 @@ export default function Builder({
     <OGDialog open onOpenChange={(open) => !open && onCancel()}>
       <OGDialogContent
         showCloseButton={false}
+        overlayClassName={OVERLAY_CLASS}
         className="flex w-[1180px] max-w-[97vw] flex-col gap-0 overflow-hidden rounded-[22px] bg-presentation p-0"
       >
         <header className="flex items-center gap-3 border-b border-border-light px-5 py-3">

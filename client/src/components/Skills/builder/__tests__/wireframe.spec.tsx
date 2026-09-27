@@ -95,6 +95,17 @@ describe('Builder laid out like the wireframe editor', () => {
     expect(dialog.className).toContain('w-[1180px]');
   });
 
+  it('dims the page behind the editor with a light, blurred scrim like the wireframe .ov', () => {
+    render(<Harness />);
+    const overlay = document.querySelector('[data-state="open"].fixed.inset-0');
+    expect(overlay).toHaveClass('bg-black/40', 'backdrop-blur-[6px]');
+    expect(overlay).not.toHaveClass('bg-black/80');
+    expect(overlay).toHaveClass(
+      '[@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none',
+      '[@media(prefers-reduced-transparency:reduce)]:bg-black/60',
+    );
+  });
+
   it('offers to attach sample documents, says they are optional, and only explains an attachment', () => {
     render(<Harness />);
     expect(screen.getByRole('button', { name: /com_skills_builder_files_attach/ })).toBeVisible();
