@@ -666,8 +666,7 @@ describe('useResumableSSE', () => {
     unmount();
   });
 
-  /** Every optimistic write to the active jobs cache, applied to a cache whose other
-   *  conversation is paused for approval. */
+  /** 다른 대화가 승인 대기인 캐시에 각 상태 변경을 적용한다. */
   const activeJobsWrites = () => {
     const old = {
       activeJobIds: ['other-convo', 'stream-123'],

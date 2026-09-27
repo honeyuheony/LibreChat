@@ -79,7 +79,6 @@ export function describeDesk(
 
 const FOLDERS_SHOWN = 2;
 
-/** "Folders (3): 문서, 바탕 화면 and 1 more" — the first two names, then a count. */
 export function summarizeFolders(folders: string[], localize: Localize): string {
   if (folders.length === 0) {
     return localize('com_ui_connectors_desk_no_folders');

@@ -1,9 +1,5 @@
 import type { TTaskResultListItem } from 'librechat-data-provider';
 
-/**
- * A table result's saved title joins its column names after the first ` · `,
- * so lists show only the leading part and the row count.
- */
 export function shortResultTitle(
   { kind, title, rows }: Pick<TTaskResultListItem, 'kind' | 'title' | 'rows'>,
   formatCount: (rowCount: number) => string,

@@ -33,7 +33,6 @@ import Header from './Header';
 import { cn } from '~/utils';
 import store from '~/store';
 
-/** The wireframe home's violet and pink glow behind the greeting and the composer. */
 const landingGlow = {
   backgroundImage:
     'radial-gradient(ellipse 55% 38% at 50% 40%, rgba(124,58,237,.10), transparent 70%), radial-gradient(ellipse 35% 25% at 62% 52%, rgba(219,39,119,.06), transparent 70%)',
@@ -119,8 +118,6 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
     (!messagesTree || messagesTree.length === 0) &&
     (conversationId === Constants.NEW_CONVO || !conversationId);
 
-  /** The AgentHub wireframe has no footer line under the composer on any screen, so
-   *  neither the welcome screen's disclaimer nor a configured footer is drawn. */
   const footerBelow = false;
   const isNavigating = (!messagesTree || messagesTree.length === 0) && conversationId != null;
   const isProjectLandingPage = isLandingPage && project != null;
@@ -194,7 +191,6 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                       <div
                         className={cn(
                           'w-full [view-transition-name:chat-form]',
-                          /* The home keeps the glow showing around the composer. */
                           isLandingPage ? 'bg-transparent' : 'bg-presentation',
                           !isLandingPage && 'scrollbar-gutter-spacer',
                           isLandingPage && 'max-w-[48.5rem] transition-all duration-200',
@@ -218,8 +214,7 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                           />
                         )}
                         {isLandingPage && !isSubagentThreadReadOnly && (
-                          /* ChatForm keeps a clearance band under the landing composer
-                             (sm:mb-28 centred, sm:mb-10 otherwise); the hint sits inside it. */
+                          /* 안내 문구를 입력창 아래 확보한 여백 안에 배치한다. */
                           <p
                             className={cn(
                               'px-4 pt-4 text-center text-sm text-text-tertiary',

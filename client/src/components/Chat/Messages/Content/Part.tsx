@@ -403,8 +403,7 @@ const Part = memo(function Part({
         } else if (toolCall.name?.startsWith(Constants.LC_TRANSFER_TO_)) {
           return <AgentHandoff args={toolCall.args ?? ''} name={toolCall.name || ''} />;
         } else if (isTaskToolName(toolCall.name)) {
-          /** Task tools draw their own field/perspective picker instead of the
-           *  generic approval controls, so the approval block below skips them. */
+          /** task 도구는 자체 선택 카드를 사용하므로 일반 승인 UI를 표시하지 않는다. */
           return (
             <TaskPlanCard
               toolName={toolCall.name}

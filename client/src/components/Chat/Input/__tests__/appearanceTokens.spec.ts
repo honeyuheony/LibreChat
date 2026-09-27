@@ -19,7 +19,6 @@ const themedControls = [
   ['CodeApprovalMenu.tsx', ['composerControlClasses()', 'md:px-theme-normal']],
   ['TokenUsage/index.tsx', ['size-theme-control', 'rounded-theme-control-round']],
   ['Files/AttachFile.tsx', ['size-theme-control', 'rounded-theme-control-round']],
-  /** The `+` control and the tools trigger are bordered rounded squares, like Send. */
   ['Files/AttachFileMenu.tsx', ['size-theme-control', 'rounded-theme-control border']],
   ['ToolsMenu.tsx', ['rounded-theme-control border', 'border-border-light']],
   /** Floats over the thread rather than sitting in the composer, but stacks

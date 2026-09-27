@@ -55,7 +55,7 @@ function ModelSelectorContent() {
     [localize, agentsMap, modelSpecs, selectedValues, mappedEndpoints],
   );
 
-  /* Sits in the composer's action row beside Send, naming the agent in plain text. */
+  /* 입력창의 동작 행에서 전송 버튼 옆에 agent 이름을 텍스트로 표시한다. */
   const trigger = (
     <TooltipAnchor
       aria-label={localize('com_ui_select_model')}

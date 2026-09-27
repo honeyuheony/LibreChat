@@ -2,10 +2,9 @@ import { lazy, Suspense, useCallback } from 'react';
 import { useAtom } from 'jotai';
 import { settingsDialogTabAtom } from './state';
 
-/** Lazy so the settings registry stays out of the sidebar chunk until the dialog first opens. */
+/** 설정 대화상자를 처음 열 때만 registry를 불러 sidebar bundle을 줄인다. */
 const SettingsDialog = lazy(() => import('./Dialog'));
 
-/** Renders the settings dialog for whichever control opened it (account menu, sidebar row). */
 export default function SettingsHost() {
   const [tab, setTab] = useAtom(settingsDialogTabAtom);
   const handleOpenChange = useCallback(

@@ -4,7 +4,7 @@ import type { TTaskResultsResponse } from 'librechat-data-provider';
 
 export const taskResultsQueryKey = ['taskResults'] as const;
 
-/** The signed-in user's saved results, newest first, 50 per page from the server. */
+/** 저장된 결과를 최신순으로 페이지당 50개 가져온다. */
 export const useTaskResultsInfiniteQuery = () =>
   useInfiniteQuery<TTaskResultsResponse>({
     queryKey: taskResultsQueryKey,

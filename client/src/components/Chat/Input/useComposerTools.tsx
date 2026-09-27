@@ -26,25 +26,21 @@ export interface BuiltinTool {
   icon: React.ReactNode;
   enabled: boolean;
   onToggle: () => void;
-  /** An extra control drawn beside the switch, such as the web search key settings. */
+  /** 스위치 옆에 표시할 추가 제어 항목으로, 웹 검색 키 설정 등이 있다. */
   accessory?: React.ReactNode;
 }
 
-/**
- * What the composer can switch on for this conversation: connectors (MCP servers) and the
- * built-in tools, with which are on and how to flip them. Reads the badge row context, so
- * it runs under `BadgeRowProvider`.
- */
+/** BadgeRowProvider 안에서만 사용할 수 있는 context를 읽는다. */
 export default function useComposerTools({
   showBuiltinTools,
   showConnectors = true,
   agentId,
 }: {
-  /** Built-in toggles only reach the model on endpoints that build an ephemeral agent. */
+  /** 내장 도구 전환은 ephemeral agent를 만드는 endpoint에서만 모델에 전달된다. */
   showBuiltinTools: boolean;
-  /** Connectors reach every endpoint that runs tools; the composer turns them off elsewhere. */
+  /** 도구를 실행하는 endpoint에서는 connector를 사용할 수 있고, 그 밖에서는 숨긴다. */
   showConnectors?: boolean;
-  /** The conversation's agent; a saved agent's connectors switch through `disabled_mcp`. */
+  /** saved agent의 connector 전환은 disabled_mcp에 기록한다. */
   agentId?: string | null;
 }) {
   const localize = useLocalize();
@@ -192,8 +188,7 @@ export default function useComposerTools({
     [manager?.mcpValues],
   );
   const { isSavedAgent, agentServerNames } = agentConnectors;
-  /* A saved agent switches only the connectors it carries; the chat selection
-     (`mcp`) belongs to ephemeral agents and would not reach its tools. */
+  /* saved agent는 가진 connector만 전환하며, ephemeral agent의 mcp 선택은 해당 도구에 전달되지 않는다. */
   const isConnectorOn = isSavedAgent
     ? agentConnectors.isEnabled
     : (serverName: string) => selectedServerNames.has(serverName);
@@ -206,8 +201,7 @@ export default function useComposerTools({
   const unavailableServers = isSavedAgent
     ? servers.filter((server) => !agentServerNames.has(server.serverName))
     : [];
-  /** Counts what the menu offers, never the raw selection: a selected name the
-   *  catalog has not returned renders no row and cannot be turned off here. */
+  /** 메뉴에 표시되지 않아 끌 수 없는 connector는 활성 도구 수에서 제외한다. */
   const enabledCount =
     switchableServers.filter((server) => isConnectorOn(server.serverName)).length +
     builtinTools.filter((tool) => tool.enabled).length;

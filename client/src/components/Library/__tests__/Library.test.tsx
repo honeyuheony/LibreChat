@@ -67,7 +67,7 @@ describe('Library', () => {
     getTaskResults.mockRestore();
   });
 
-  it('labels each result type and its last column the way the wireframe does', async () => {
+  it('labels each result type and its last column', async () => {
     getTaskResults.mockResolvedValue(
       page([
         item({ resultId: 'r1', kind: 'table', title: '분야별 비교표', rows: 12 }),
@@ -143,8 +143,6 @@ describe('Library', () => {
     expect(cells[4]).toHaveClass('whitespace-nowrap');
   });
 
-  /** The wireframe sets the intro in its muted 13px `.muted` line, lighter than
-   *  the rows it introduces, and starts the heading 24px below the top bar. */
   it('sets the intro in the muted theme role under a heading 24px down', async () => {
     getTaskResults.mockResolvedValue(page([item({})]));
     renderLibrary();

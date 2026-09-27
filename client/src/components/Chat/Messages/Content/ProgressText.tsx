@@ -70,7 +70,7 @@ export default function ProgressText({
   authText?: string;
   icon?: React.ReactNode;
   subtitle?: string;
-  /** Short result summary ("2개"), pushed to the right edge of the row. */
+  /** 행 오른쪽에 표시할 짧은 결과 요약이다. */
   trailing?: string;
   /** Wall-clock duration of the run step, from `PartMetadata.runStepDurationMs`. */
   durationMs?: number;

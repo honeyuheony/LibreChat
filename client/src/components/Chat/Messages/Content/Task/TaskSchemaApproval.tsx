@@ -11,7 +11,7 @@ import { useLocalize } from '~/hooks';
 
 type FieldChip = { name: string; on: boolean };
 
-/** Chip clicks within this window share one estimate request. */
+/** 이 시간 안에 칩을 여러 번 눌러도 예상치 요청은 한 번만 보낸다. */
 const ESTIMATE_DEBOUNCE_MS = 400;
 
 function initialChips(args: Record<string, unknown>): FieldChip[] {
@@ -27,18 +27,13 @@ function sameList(a: string[], b: string[]) {
   return a.length === b.length && a.every((item, index) => item === b[index]);
 }
 
-/**
- * The same card after the call ran: the fields it ran with stay on, the unused
- * suggestions off, nothing can be changed. `args` come from the saved tool call,
- * which the completion step rewrites with the arguments the tool actually got, so
- * fields the user edited on the card show here.
- */
+/** 완료된 tool call의 args에는 승인 후 카드에서 고른 필드가 저장된다. */
 export function TaskSchemaRan({
   args,
   cancelled = false,
 }: {
   args: Record<string, unknown>;
-  /** Cancelled at this card, so the fields shown were never run. */
+  /** 이 카드에서 취소했으므로 표시한 필드는 실행하지 않았다. */
   cancelled?: boolean;
 }) {
   const localize = useLocalize();
@@ -65,7 +60,6 @@ export function TaskSchemaRan({
   );
 }
 
-/** Field confirmation card for a paused `extract_table` call. */
 export default function TaskSchemaApproval({
   approval,
   toolCallId,
@@ -92,7 +86,7 @@ export default function TaskSchemaApproval({
   const [adding, setAdding] = useState(false);
   const [draftField, setDraftField] = useState('');
   const selected = useMemo(() => chips.filter((chip) => chip.on).map((chip) => chip.name), [chips]);
-  /** The estimate follows the chips once they settle; the last one stays shown meanwhile. */
+  /** 칩을 바꾼 뒤 새 예상치를 받을 때까지 이전 예상치를 표시한다. */
   const settledKey = useDebounce(JSON.stringify(selected), ESTIMATE_DEBOUNCE_MS);
   const estimateFields = useMemo(() => JSON.parse(settledKey) as string[], [settledKey]);
 
@@ -162,7 +156,7 @@ export default function TaskSchemaApproval({
           )}
           {adding && (
             <input
-              // The field only appears after the user presses the add chip, so focus follows that press.
+              // 추가 칩을 눌러 입력 칸이 생기면 바로 입력하도록 초점을 옮긴다.
               // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               value={draftField}

@@ -4,8 +4,7 @@ import { render, screen, act } from '@testing-library/react';
 import type { TConversation } from 'librechat-data-provider';
 
 let mockActiveJobStatus: 'running' | 'requires_action' | undefined;
-/** Stands in for the query cache: the row subscribes itself, so a status change must
- *  reach it even though its memoized props stay equal. */
+/** query cache의 구독을 흉내 내며, props가 같아도 상태 변경을 대화 행에 알린다. */
 const mockStatusListeners = new Set<() => void>();
 const mockSetStatus = (status: typeof mockActiveJobStatus) => {
   mockActiveJobStatus = status;
@@ -125,7 +124,7 @@ describe('Conversation row job status', () => {
     expect(screen.getByTestId('spinner')).toBeInTheDocument();
   });
 
-  it("keeps the wireframe row's 「생성 중」 dot for a running job", () => {
+  it('shows the running indicator instead of the approval prompt while a job runs', () => {
     mockActiveJobStatus = 'running';
     renderRow({ isGenerating: true, editActions: true });
 

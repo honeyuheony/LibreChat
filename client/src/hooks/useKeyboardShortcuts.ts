@@ -715,7 +715,7 @@ export function useShortcutActions(): ShortcutAction[] {
       document.querySelector<HTMLButtonElement>('#attach-file-menu-button') ??
       document.querySelector<HTMLButtonElement>('#attach-file-button') ??
       document.querySelector<HTMLButtonElement>('#attach-file') ??
-      /* The composer's `+` menu, which carries the uploads now. */
+      /* 파일 첨부는 컴포저의 `+` 메뉴에서 연다. */
       document.querySelector<HTMLButtonElement>('#tools-menu-button');
     return clickTarget(btn);
   }, []);

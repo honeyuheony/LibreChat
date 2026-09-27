@@ -129,10 +129,7 @@ export const useUpdateUserPreferencesMutation = (
   );
 };
 
-/**
- * Saves a connector's "use in new chats" switch. The switch flips at once and rolls back if
- * the server refuses, so the data hub never waits on the round trip.
- */
+/** 빠른 피드백을 위해 새 채팅 기본값을 먼저 바꾸고, 서버가 거부하면 이전 값으로 되돌린다. */
 export const useUpdateConnectorDefaultsMutation = (): UseMutationResult<
   t.TUpdateConnectorDefaultsResponse,
   Error,

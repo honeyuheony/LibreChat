@@ -1,8 +1,7 @@
 import type { TranslationKeys } from '~/hooks';
 import { cleanToolError, isError } from './ToolOutput';
 
-/** Human-readable tool step lines: a verb phrase from the tool name and arguments, plus a result summary.
- *  Korean particles depend on the word before them, so phrases take them as `{{1}}`. */
+/** 조사에 맞는 tool step 문장을 만들도록 번역 문자열에 `{{1}}` 자리를 둔다. */
 
 type Localize = (key: TranslationKeys, values?: Record<string, string | number>) => string;
 type Args = Record<string, unknown>;
@@ -10,10 +9,10 @@ type Args = Record<string, unknown>;
 const HANGUL_FIRST = 0xac00;
 const HANGUL_LAST = 0xd7a3;
 const FINAL_RIEUL = 8;
-/** Latin letters and digits read aloud in Korean: L(엘) M(엠) N(엔) R(알) end in a final consonant. */
+/** L(엘), M(엠), N(엔), R(알)은 한글로 읽으면 받침으로 끝난다. */
 const LATIN_WITH_FINAL = new Set(['l', 'm', 'n', 'r']);
 const LATIN_WITH_RIEUL = new Set(['l', 'r']);
-/** 영 일 삼 육 칠 팔 end in a final consonant; 일 칠 팔 in ㄹ. */
+/** 영·일·삼·육·칠·팔은 받침으로 끝나고, 일·칠·팔은 ㄹ 받침으로 끝난다. */
 const DIGIT_WITH_FINAL = new Set(['0', '1', '3', '6', '7', '8']);
 const DIGIT_WITH_RIEUL = new Set(['1', '7', '8']);
 
@@ -42,17 +41,15 @@ function finalSound(word: string): FinalSound {
   return 'none';
 }
 
-/** 을/를 */
 export function objectParticle(word: string): string {
   return finalSound(word) === 'none' ? '를' : '을';
 }
 
-/** 이/가 */
 export function subjectParticle(word: string): string {
   return finalSound(word) === 'none' ? '가' : '이';
 }
 
-/** 으로/로 — ㄹ 받침 뒤에도 '로' 를 쓴다. */
+/** ㄹ 받침 뒤에는 `으로` 대신 `로`를 쓴다. */
 export function directionParticle(word: string): string {
   return finalSound(word) === 'other' ? '으로' : '로';
 }
@@ -70,7 +67,7 @@ export function parseToolArgs(args: unknown): Args {
       ? (parsed as Args)
       : {};
   } catch {
-    // Streaming args arrive as partial JSON; the phrase falls back to its argument-free form.
+    // Streaming 중에는 args가 일부 JSON일 수 있어 인자 없는 표현을 쓴다.
     return {};
   }
 }
@@ -98,7 +95,7 @@ function hostName(url: string): string {
   }
 }
 
-/** MCP servers written in TypeScript use dashes (`tavily-search`); tool keys may keep either form. */
+/** MCP 서버의 하이픈 도구 이름을 이 파일의 밑줄 키 형식에 맞춘다. */
 function normalizeToolName(name: string): string {
   return name.replace(/-/g, '_');
 }
@@ -134,14 +131,11 @@ const searchFiles: PhraseBuilder = (args, localize) => {
 const webSearch: PhraseBuilder = (args, localize) =>
   withObject('com_ui_tool_step_web_search', stringArg(args, 'query', 'q'), localize);
 
-/** Tool name (MCP function half, dashes as underscores) → verb phrase. */
 export const TOOL_STEP_PHRASES: Record<string, PhraseBuilder> = {
-  // 내 PC 폴더 (desk-relay)
   list_folder: listFolder,
   read_file: readFile,
   search_files: searchFiles,
   read_hangul_file: readFile,
-  // 공유 폴더 문서 (@modelcontextprotocol/server-filesystem)
   list_directory: listFolder,
   list_directory_with_sizes: listFolder,
   directory_tree: listFolder,
@@ -162,12 +156,10 @@ export const TOOL_STEP_PHRASES: Record<string, PhraseBuilder> = {
     localize('com_ui_tool_step_create_folder', { 0: baseName(stringArg(args, 'path')) }),
   move_file: (args, localize) =>
     withObject('com_ui_tool_step_move_file', baseName(stringArg(args, 'source')), localize),
-  // 한글 문서 읽기 (hwp-mcp)
   list_hangul_files: (_args, localize) => localize('com_ui_tool_step_list_hangul_files'),
   read_hangul_text: readFile,
   read_hangul_tables: (args, localize) =>
     localize('com_ui_tool_step_read_tables', { 0: baseName(stringArg(args, 'path')) }),
-  // 웹 검색 (tavily-mcp) and the built-in web search
   tavily_search: webSearch,
   web_search: webSearch,
   tavily_extract: (_args, localize) => localize('com_ui_tool_step_web_extract'),
@@ -175,14 +167,12 @@ export const TOOL_STEP_PHRASES: Record<string, PhraseBuilder> = {
     localize('com_ui_tool_step_web_crawl', { 0: hostName(stringArg(args, 'url')) }),
   tavily_map: (args, localize) =>
     localize('com_ui_tool_step_web_crawl', { 0: hostName(stringArg(args, 'url')) }),
-  // Google 캘린더와 메일 (google-mcp)
   calendar_list_events: (_args, localize) => localize('com_ui_tool_step_calendar_list'),
   calendar_create_event: (args, localize) =>
     withObject('com_ui_tool_step_calendar_create', stringArg(args, 'title'), localize),
   gmail_search: (args, localize) =>
     withObject('com_ui_tool_step_mail_search', stringArg(args, 'query'), localize),
   gmail_read: (_args, localize) => localize('com_ui_tool_step_mail_read'),
-  // Slack 메시지 (korotovsky/slack-mcp-server)
   channels_list: (_args, localize) => localize('com_ui_tool_step_slack_channels'),
   conversations_history: (_args, localize) => localize('com_ui_tool_step_slack_history'),
   conversations_replies: (_args, localize) => localize('com_ui_tool_step_slack_replies'),
@@ -204,7 +194,7 @@ export function describeToolStep(
   return build(parseToolArgs(args), localize);
 }
 
-/** Tools whose output is a list; FastMCP sends each list item as its own JSON text block. */
+/** FastMCP는 목록 항목마다 별도의 JSON 텍스트 블록을 반환한다. */
 const LIST_TOOLS = new Set([
   'list_folder',
   'search_files',
@@ -218,7 +208,6 @@ const TEXT_READ_TOOLS = new Set([
   'read_text_file',
   'read_hangul_text',
 ]);
-/** What FastMCP returns for an empty list. */
 const EMPTY_MCP_RESPONSE = '(No response)';
 
 function countListItems(output: string): number | null {
@@ -230,7 +219,7 @@ function countListItems(output: string): number | null {
     const parsed: unknown = JSON.parse(trimmed);
     return Array.isArray(parsed) ? parsed.length : 1;
   } catch {
-    // Several JSON blocks separated by blank lines, or plain lines from server-filesystem.
+    // FastMCP는 JSON 블록을 빈 줄로 구분하고 filesystem 서버는 일반 텍스트 행을 보낸다.
   }
   const blocks = trimmed.split(/\n\s*\n/).filter((block) => block.trim() !== '');
   if (blocks.length > 1) {
@@ -239,7 +228,6 @@ function countListItems(output: string): number | null {
   return trimmed.split('\n').filter((line) => line.trim() !== '').length;
 }
 
-/** Short right-hand summary of a finished step, or null when nothing useful fits. */
 export function summarizeToolOutput(
   toolName: string,
   output: string | null | undefined,
@@ -259,10 +247,9 @@ export function summarizeToolOutput(
   return null;
 }
 
-/** The desktop app's answer when the user refused or let the permission prompt expire (desk-app `DENIED_MESSAGE`). */
+/** PC 앱은 권한 요청이 거절되거나 만료되면 이 문구를 보낸다. */
 const DESK_PERMISSION_DENIED = '사용자가 이 폴더 읽기를 허락하지 않았습니다.';
 
-/** The readable failure message of a step, without the transport prefixes. */
 export function getToolErrorMessage(output: string | null | undefined): string | null {
   if (typeof output !== 'string') {
     return null;
@@ -271,7 +258,7 @@ export function getToolErrorMessage(output: string | null | undefined): string |
   return isError(trimmed) ? cleanToolError(trimmed) : null;
 }
 
-/** The failure line under a step; a refused PC permission reads as a short label rather than the app's sentence. */
+/** PC 권한 거절은 앱의 상세 문구 대신 짧은 상태 표시로 보여 준다. */
 export function describeToolError(
   output: string | null | undefined,
   localize: Localize,
@@ -286,7 +273,6 @@ export function describeToolError(
 const ARG_SUMMARY_LIMIT = 3;
 const ARG_VALUE_LIMIT = 40;
 
-/** One line of the leading arguments ("path: memo.txt · pattern: 예산") for an approval card. */
 export function summarizeToolArgs(args: unknown): string {
   return Object.entries(parseToolArgs(args))
     .filter(([, value]) => value != null && value !== '')

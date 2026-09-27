@@ -200,7 +200,7 @@ export const getMsUntilNextGreeting = (date: Date = new Date()): number => {
   return boundary.getTime() - date.getTime();
 };
 
-/** Local hour each part of the day starts at; evening runs through the night until morning. */
+/** 시간대별 시작 시각은 현지 시간이며, 저녁은 다음 날 아침까지 이어진다. */
 const daypartStarts = { morning: 5, afternoon: 12, evening: 18 } as const;
 
 export type Daypart = keyof typeof daypartStarts;
@@ -239,7 +239,7 @@ export const getDaypartGreetingKey = (
   return hasName ? option.namedKey : option.key;
 };
 
-/** Milliseconds from `date` until the next part of the day starts (local time). */
+/** 시간대 전환은 UTC가 아니라 실행 환경의 현지 시각을 따른다. */
 export const getMsUntilNextDaypart = (date: Date = new Date()): number => {
   const hours = date.getHours();
   const nextStart = Object.values(daypartStarts).find((start) => start > hours);
@@ -255,13 +255,11 @@ export type GreetingSchedule = {
   getMsUntilNext: (date: Date) => number;
 };
 
-/** Varied greetings that rotate by weekday and calendar day. */
 export const rotatingGreetingSchedule: GreetingSchedule = {
   getKey: getGreetingKey,
   getMsUntilNext: getMsUntilNextGreeting,
 };
 
-/** One fixed greeting per morning, afternoon and evening. */
 export const daypartGreetingSchedule: GreetingSchedule = {
   getKey: getDaypartGreetingKey,
   getMsUntilNext: getMsUntilNextDaypart,

@@ -91,7 +91,7 @@ jest.mock('../ProgressText', () => ({
     icon?: React.ReactNode;
   }) => (
     <div data-testid="progress-text" onClick={onClick}>
-      {/* Only the grouped-row status glyph renders; ToolIcon needs icons this file does not mock. */}
+      {/* ToolIcon의 아이콘은 이 테스트에서 준비하지 않아 묶인 행 상태 아이콘만 렌더링한다. */}
       {icon != null &&
       typeof icon === 'object' &&
       'props' in icon &&

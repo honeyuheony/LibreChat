@@ -216,9 +216,9 @@ const ChatForm = memo(function ChatForm({
     [conversation?.spec, startupConfig],
   );
   const hideBadgeRow = modelSpec?.hideBadgeRow === true;
-  /** Connectors on every endpoint that runs tools. */
+  /** 도구를 실행하는 모든 endpoint에서 connector를 사용할 수 있다. */
   const showToolsMenu = !!endpoint && !hideBadgeRow && !isAssistantsEndpoint(endpoint);
-  /** The built-in tool toggles only reach ephemeral agents. */
+  /** 내장 도구 전환은 ephemeral agent에서만 모델에 전달된다. */
   const showEphemeralBadges =
     !!endpoint && !hideBadgeRow && !isAgentsEndpoint(endpoint) && !isAssistantsEndpoint(endpoint);
   const toolsAgentId = isAgentsEndpoint(endpoint) ? conversation?.agent_id : undefined;
@@ -629,7 +629,7 @@ const ChatForm = memo(function ChatForm({
     () =>
       cn(
         'm-0 w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
-        /* The empty conversation's composer is the page's one control, so it reads larger. */
+        /* 빈 대화 화면의 유일한 입력창을 더 크게 표시한다. */
         isLandingPage ? 'text-[17px]' : 'text-base',
         isCollapsed ? 'max-h-[52px]' : 'max-h-[45vh] md:max-h-[55vh]',
         isMoreThanThreeRows ? 'pl-1' : 'px-1',
@@ -661,8 +661,7 @@ const ChatForm = memo(function ChatForm({
     [],
   );
 
-  /** "…하는 agent 만들어줘" opens the agent editor with the tail stripped instead of asking the
-   *  model. Answer mode, during-run sends, attachments and picked skills keep the ordinary send. */
+  /** agent 생성 요청은 꼬리를 떼어 편집기로 넘기고, answer mode·steering·첨부·선택 스킬이 있으면 보통 전송한다. */
   const openBuilderInstead = useCallback(
     (text: string): boolean => {
       if (!canCreateSkills || answerMode.active || steering.duringRunActive || files.size > 0) {
@@ -700,9 +699,7 @@ const ChatForm = memo(function ChatForm({
     ],
   );
 
-  /** An agent build request opens the editor; otherwise answer mode, then during-run
-   *  steering or queueing (a run in flight, or a queued follow-up about to start), then an
-   *  ordinary send: the same route for typed, dictated, and shortcut-bound submissions. */
+  /** 입력은 agent 편집기, answer mode, 실행 중 steering·대기, 일반 전송 순으로 처리한다. */
   const submitComposerText = useCallback(
     (data: { text: string }): false | void => {
       if (openBuilderInstead(data.text)) {
@@ -736,7 +733,7 @@ const ChatForm = memo(function ChatForm({
            asked for less motion gets the new position outright — this one is a
            slide across the page rather than decoration. */
         'mx-auto flex w-full flex-row gap-3 transition-[max-width,margin-bottom] duration-300 motion-reduce:transition-none sm:px-2',
-        /* Same box as MessageRow: 48.5rem less the `sm:px-2` gutters is the 760px column. */
+        /* MessageRow와 같은 760px 폭에 맞추려고 여백을 뺀 48.5rem을 쓴다. */
         maximizeChatSpace ? 'max-w-full' : 'md:max-w-[48.5rem]',
         bottomClearance,
       )}
@@ -818,7 +815,6 @@ const ChatForm = memo(function ChatForm({
                 'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
                 isTextAreaFocused ? 'shadow-md' : 'shadow-sm',
-                /* The wireframe pads the box alike on the home and in a conversation. */
                 'gap-1.5 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
@@ -886,8 +882,6 @@ const ChatForm = memo(function ChatForm({
                 isSubmitting={isSubmitting}
                 observeToolAuthorization={showToolsMenu}
               >
-                {/* The wireframe's composer: `+`, the question and the round send button on one
-                    line; the switched-on tools and the model on the line below. */}
                 <div
                   className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : 'flex-row')}
                 >
@@ -936,8 +930,7 @@ const ChatForm = memo(function ChatForm({
                           disabled={disableInputs || isNotAppendable || answerMode.composerLocked}
                           onPaste={handlePaste}
                           onKeyDown={(e) => {
-                            // Answer mode consumes option-navigation keys from the
-                            // empty composer; everything else follows the normal path.
+                            // 비어 있는 입력창에서는 answer mode가 선택 이동 키를 먼저 처리한다.
                             if (answerMode.handleComposerKeyDown(e)) {
                               return;
                             }
@@ -1000,7 +993,7 @@ const ChatForm = memo(function ChatForm({
                     isRTL ? 'flex-row-reverse' : 'flex-row',
                   )}
                 >
-                  {/* Chips wrap inside their own box so the model stays on the right edge. */}
+                  {/* 칩은 자체 영역에서 줄바꿈해 모델 선택기를 오른쪽 끝에 둔다. */}
                   <div
                     className={cn(
                       'flex min-w-0 flex-1 flex-wrap items-center gap-2',

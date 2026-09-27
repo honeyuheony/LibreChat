@@ -55,7 +55,7 @@ export function useSettingsContext(): SettingsContextValue {
     () => ({
       balanceEnabled,
       hasAnyPersonalizationFeature,
-      /** Opting out of memory means nothing where the deployment turned memory off. */
+      /** 서버에서 memory를 끄면 opt-out 설정이 있어도 적용되지 않는다. */
       hasMemoryOptOut: hasMemoryOptOut && hasMemories === true,
       hasStatefulCodeSessions,
       hasRemoteAgents: hasRemoteAgentsBool,

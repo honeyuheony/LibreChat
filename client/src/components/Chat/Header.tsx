@@ -26,18 +26,12 @@ import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
 
-/** Distinct files attached anywhere in the conversation, for the header's 「문서 N」. */
+/** 같은 파일을 여러 번 첨부해도 헤더에는 고유 파일 수를 표시한다. */
 const countAttachedFiles = (messages: TMessage[]) =>
   new Set(messages.flatMap((message) => (message.files ?? []).map((file) => file.file_id ?? '')))
     .size;
 
-/**
- * The conversation's title on the left and sharing on the right. The model
- * picker lives in the composer; the remaining conversation actions (trace,
- * temporary chat, bookmarks, compare) stay in the mobile overflow menu.
- * Branching is CSS-only — `useMediaQuery` resolves after paint and would pop
- * the row a frame late on every mount.
- */
+/** CSS로 분기해 첫 render 뒤 useMediaQuery가 바뀌며 행이 튀는 현상을 막는다. */
 function Header({
   parentConversationId,
   readOnly = false,
@@ -57,14 +51,13 @@ function Header({
    *  conversation has no id in the route yet, so absence counts as new too. */
   const { conversationId: routeConversationId } = useParams();
   const isNewChat = routeConversationId == null || routeConversationId === Constants.NEW_CONVO;
-  /** Reads what the conversation view already loaded rather than asking again. */
+  /** 대화 화면에서 이미 불러온 값을 다시 요청하지 않고 읽는다. */
   const { data: documentCount = 0 } = useGetMessagesByConvoId<number>(routeConversationId ?? '', {
     enabled: false,
     select: countAttachedFiles,
   });
 
-  /** A conversation that ran a task tool shows the task panel's status, so the two
-   *  never disagree (a cancelled task read 「완료」 here and 「중단됨」 there). */
+  /** 작업 도구를 쓴 대화는 작업 패널과 같은 상태를 보여 헤더와 내용이 어긋나지 않게 한다. */
   const task = useTaskRunState(isNewChat ? '' : routeConversationId);
   let statusDot = isSubmitting ? 'bg-amber-500' : 'bg-green-600';
   let statusLabel: TranslationKeys = isSubmitting ? 'com_ui_convo_generating' : 'com_ui_convo_done';

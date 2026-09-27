@@ -904,9 +904,7 @@ const ContentPartsBody = memo(function ContentPartsBody({
              *  further makes the card safe for exactly that content, and
              *  agent runs that produce files are the ones with the longest
              *  lists to fold. */
-            /** Task calls leave the fold for the same reason files do: their
-             *  card carries the result the run was for. They render right under
-             *  the card, still in the span's order among themselves. */
+            /** 결과가 연결된 task 카드는 접기 밖에 두고 원래 순서대로 표시한다. */
             const { kept, hoisted: taskParts } = splitTaskToolParts(
               segment.content,
               segment.contentIndices,
@@ -979,8 +977,7 @@ const ContentPartsBody = memo(function ContentPartsBody({
                 )}
               </ActivityPhaseGroup>
             );
-            /** One element type whether or not a task call has arrived yet, so
-             *  the card is not remounted (and its disclosure reset) when one does. */
+            /** task call이 도착해도 카드가 다시 마운트되어 접힘 상태가 초기화되지 않도록 요소를 고정한다. */
             return (
               <Fragment key={`activity-phase-${cardKey}`}>
                 {phaseCard}

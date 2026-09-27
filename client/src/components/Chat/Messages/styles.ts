@@ -85,11 +85,7 @@ export const hoverButtonClasses = ({
     className,
   );
 
-/**
- * Reply body typography: 17px / 1.7 from the redesign, with headings, lists, quotes and
- * tables on theme tokens. `!` because the `.markdown` rules in style.css come after
- * Tailwind's utilities and would otherwise win at equal specificity.
- */
+/** style.css의 `.markdown` 규칙이 뒤에 와 같은 특이도에서 우선하도록 `!`를 붙인다. */
 export const agentReplyClasses = cn(
   '[--markdown-font-size:var(--font-size-chat)] !leading-[var(--line-height-chat)]',
   '[&_h1]:!mb-3 [&_h1]:!mt-6 [&_h1]:!text-[1.375rem] [&_h1]:!font-semibold [&_h1]:!leading-snug',

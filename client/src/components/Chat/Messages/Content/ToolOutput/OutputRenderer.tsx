@@ -12,10 +12,9 @@ interface ContentBlock {
 }
 
 const ERROR_INNER = /^Error\s+\w+ing to endpoint\s*\(HTTP \d+\):\s*/i;
-/** The MCP Python SDK (FastMCP) wraps an exception raised by a tool this way and
- *  returns it as ordinary text, so the run step still closes as `completed`. */
+/** FastMCP는 도구 예외를 일반 텍스트로 반환해 호출이 완료로 보이므로 접두어를 검사한다. */
 const MCP_EXECUTION_ERROR_PREFIX = /^Error executing tool [^\s:]+:\s*/;
-/** LibreChat's own MCP failures without "tool call failed:", e.g. an OAuth 401 from the server. */
+/** OAuth 401 같은 LibreChat MCP 오류는 `tool call failed:` 없이 `[MCP]` 접두어를 쓴다. */
 const MCP_TAGGED_ERROR_PREFIX = /^Error:\s*\[MCP\](?:\[[^\]]*\])+\s*/;
 
 export function cleanToolError(text: string): string {

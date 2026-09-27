@@ -6,11 +6,10 @@ import BrandMark from '~/components/ui/BrandMark';
 import temporaryStore from '~/store/temporary';
 import { cn } from '~/utils';
 
-/** A Korean full name (홍길동) is greeted by its given name (길동), as the wireframe does. */
+/** 한국어 전체 이름에는 성을 빼고 이름으로 인사한다. */
 export const greetingName = (name?: string) =>
   name != null && /^[가-힣]{3,4}$/.test(name) ? name.slice(1) : name;
 
-/** The empty conversation's heading: a greeting for the time of day, or the temporary-chat notice. */
 export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: boolean }) {
   const { user } = useAuthContext();
   const localize = useLocalize();

@@ -15,8 +15,6 @@ import type { BadgeItem } from '~/common';
 import { useChatBadges } from '~/hooks';
 import store from '~/store';
 
-/** The composer's draggable ephemeral badges. It reads nothing from the badge row
- *  context; the composer mounts that provider around the whole input. */
 interface BadgeRowProps {
   onChange: (badges: Pick<BadgeItem, 'id'>[]) => void;
   onToggle?: (badgeId: string, currentActive: boolean) => void;

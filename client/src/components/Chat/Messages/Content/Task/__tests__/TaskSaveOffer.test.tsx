@@ -86,7 +86,6 @@ function toolReply(names: string[]): TMessage {
   } as unknown as TMessage;
 }
 
-/** An answer that carries a saved task result, the way the server attaches it. */
 function resultReply(messageId: string, resultId: string, createdAt: string): TMessage {
   return {
     messageId,
@@ -112,7 +111,6 @@ const conversation = {
   updatedAt: '',
 } as TConversation;
 
-/** Seeds the conversation's message cache and renders `element` in chat, under a router. */
 function renderInChat(messages: TMessage[], element: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

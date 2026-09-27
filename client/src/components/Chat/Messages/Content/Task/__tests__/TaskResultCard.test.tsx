@@ -66,7 +66,7 @@ const mockFetchResult = jest.mocked(dataService.getTaskResult);
 const mockFetchExcel = jest.mocked(dataService.getTaskResultExport);
 const mockFetchFile = jest.mocked(dataService.getFileDownload);
 
-/** Stubs the object URL calls jsdom lacks and returns them for assertions. */
+/** jsdom에는 Object URL 구현이 없어 다운로드 테스트에서 대체한다. */
 function stubObjectUrls(url: string) {
   const createObjectURL = jest.fn((_blob: Blob) => url);
   const revokeObjectURL = jest.fn((_url: string) => undefined);

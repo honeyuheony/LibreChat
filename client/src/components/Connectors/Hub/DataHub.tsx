@@ -31,11 +31,7 @@ import { cn } from '~/utils';
 type Filter = Exclude<HubStatus, 'checking'>;
 const FILTERS: Filter[] = ['available', 'needs_connection', 'unavailable'];
 
-/**
- * The list's groups, sorted by name so the order does not follow whichever connector the
- * registry happened to list first. Connectors without a `category` in their config share one
- * group, kept last. Inside a group the list keeps its own order (desktop folder first).
- */
+/** 그룹을 이름순으로 정렬해 레지스트리 응답 순서에 좌우되지 않게 한다. */
 function groupByCategory(servers: MCPServerDefinition[]) {
   const groups = new Map<string | undefined, MCPServerDefinition[]>();
   for (const server of servers) {
@@ -52,14 +48,13 @@ function groupByCategory(servers: MCPServerDefinition[]) {
     });
 }
 
-/** Every configured connector, what the signed-in user can do with each, and recent use. */
 export default function DataHub() {
   const localize = useLocalize();
   const navigate = useNavigate();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { serverName: selectedParam } = useParams();
   const { user } = useAuthContext();
-  /** Whose access the list reflects, as the wireframe's 「홍길동 · 정세분석팀 기준」. */
+  /** 목록이 어느 사용자의 권한을 반영하는지 표시한다. */
   const viewer = [user?.name, user?.department].filter(Boolean).join(' · ');
   const [filter, setFilter] = useState<Filter | null>(null);
   useDocumentTitle(`${localize('com_ui_data_hub')} | LibreChat`);

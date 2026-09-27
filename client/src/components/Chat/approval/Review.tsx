@@ -18,20 +18,13 @@ import { useLocalize } from '~/hooks';
 
 const approvalPanelOpenFamily = atomFamily((_conversationId: string) => atom(false));
 
-/**
- * Calls whose approval card sits in the message itself (field chips, perspective
- * picker); the composer panel would only repeat them as raw JSON. `write_report`
- * has no such card, so it stays here.
- */
+/** 승인 카드가 있는 도구는 메시지에서 처리하고, 카드가 없는 `write_report`는 여기서 검토한다. */
 const IN_MESSAGE_APPROVAL_TOOLS = new Set<string>([
   TaskTools.extract_table,
   TaskTools.summarize_documents,
 ]);
 
-/**
- * The pending batch, the calls in it this panel reviews, and the ids left to the
- * message cards; null when the panel has nothing to review.
- */
+/** 대기 승인 묶음에서 패널과 메시지 카드가 처리할 도구 ID를 나눈다. */
 function usePendingToolApproval(conversationId: string) {
   const pendingAction = useAtomValue(pendingApprovalActionFamily(conversationId));
   return useMemo(() => {
@@ -117,7 +110,7 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
   const reviewedIds = new Set(reviews.map(({ request }) => request.tool_call_id));
   const allDecisions = getDecisions(pendingAction.actionId);
   const decisions = allDecisions.filter((decision) => reviewedIds.has(decision.tool_call_id));
-  /** The batch is sent whole, so continue also waits on the cards in the message. */
+  /** 요청 묶음 전체를 보내므로 메시지 카드의 승인도 끝나야 계속 진행할 수 있다. */
   const decidedIds = new Set(allDecisions.map((decision) => decision.tool_call_id));
   const cardsPending = (pending?.cardToolCallIds ?? []).filter((id) => !decidedIds.has(id)).length;
   const status = getStatus(pendingAction.actionId);

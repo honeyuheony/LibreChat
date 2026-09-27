@@ -2,16 +2,12 @@ import { memo } from 'react';
 import useComposerTools from './useComposerTools';
 import { useLocalize } from '~/hooks';
 
-/** The wireframe closes a chip with this character rather than an icon. */
 const CLOSE_GLYPH = '×';
 
 const chipClassName =
   'inline-flex max-w-[220px] items-center gap-1 rounded-full border border-accent-primary/25 bg-surface-brand-subtle py-0.5 pl-2.5 pr-1.5 text-[13px] text-accent-primary';
 
-/**
- * The connectors and tools switched on for this message, one chip each under the input.
- * The × on a chip switches that one off, the same as its switch in the `+` menu.
- */
+/** 활성 connector·tool을 칩으로 표시하고, ×는 해당 항목을 끈다. */
 function ActiveToolChips({
   showBuiltinTools,
   showConnectors,

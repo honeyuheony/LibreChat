@@ -6,12 +6,12 @@ import type { TranslationKeys } from '~/hooks';
 import { useDeskPermissionsQuery } from '~/data-provider/Connectors/queries';
 import { useLocalize } from '~/hooks';
 
-/** Long enough for a local loopback answer; an unreachable port on another PC fails well before this. */
+/** 로컬 요청에는 충분하고, 다른 PC에서 닿지 않는 주소는 그 전에 실패한다. */
 const LOCAL_CHECK_TIMEOUT_MS = 2000;
 
 type CardState = 'checking' | 'same-pc' | 'other-pc' | 'sending' | 'answered' | 'failed';
 
-/** The app's 127.0.0.1 endpoint is reachable only from a browser on the PC that asked. */
+/** 127.0.0.1 주소는 요청한 PC의 브라우저에서만 연결할 수 있다. */
 const localUrl = (permission: DeskPermission) =>
   `http://127.0.0.1:${permission.localPort}/permissions/${permission.requestId}`;
 
@@ -96,7 +96,7 @@ function DeskPermissionCard({ permission }: { permission: DeskPermission }) {
   );
 }
 
-/** Permission cards under a running PC-folder step; answers go straight to the app on this PC, never through the server. */
+/** 권한 응답은 서버를 거치지 않고 요청한 PC의 앱으로 직접 보낸다. */
 export default function DeskPermissionPrompt() {
   const localize = useLocalize();
   const { data: permissions = [] } = useDeskPermissionsQuery();

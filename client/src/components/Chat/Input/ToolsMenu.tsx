@@ -23,7 +23,7 @@ import { useBadgeRowContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
-/** Portals into the page's `main` landmark so the menu stays inside one; `body` where there is none. */
+/** 접근성 랜드마크를 유지하려 메뉴를 main 안에 두고, 없으면 body에 렌더링한다. */
 const getMainLandmark = () => document.querySelector<HTMLElement>('main') ?? document.body;
 
 const sectionLabelClassName = 'px-2.5 pb-1 pt-2 text-xs font-semibold text-text-tertiary';
@@ -98,7 +98,7 @@ function ConnectorRow({
   statusIconProps?: MCPServerStatusIconProps | null;
   onToggle: (serverName: string) => void;
   onOpenDataHub: (serverName: string) => void;
-  /** 「내 PC 폴더」 only: the relay sees no running desktop app for this user. */
+  /** 「내 PC 폴더」 connector에서 relay가 데스크톱 앱 실행 여부를 알린다. */
   deskAppOff?: boolean;
 }) {
   const localize = useLocalize();
@@ -172,8 +172,7 @@ function ConnectorRow({
   );
 }
 
-/** A connector the conversation's saved agent does not carry: listed so the user
- *  knows it exists, but it has no switch because the agent cannot use it. */
+/** saved agent에서 사용할 수 없는 connector도 목록에 보이되 전환은 막는다. */
 function UnavailableConnectorRow({ server }: { server: MCPServerDefinition }) {
   const localize = useLocalize();
   const displayName = server.config?.title || server.serverName;
@@ -218,7 +217,6 @@ function BuiltinRow({ tool }: { tool: BuiltinTool }) {
   );
 }
 
-/** An upload or attach entry handed over by the composer's file menu. */
 function UploadRow({ item }: { item: MenuItemProps }) {
   return (
     <Ariakit.MenuItem
@@ -237,7 +235,6 @@ function UploadRow({ item }: { item: MenuItemProps }) {
   );
 }
 
-/** Upload entries as rows: nested sources (SharePoint) are laid out flat, separators kept. */
 function UploadRows({ items }: { items: MenuItemProps[] }) {
   return (
     <>
@@ -261,10 +258,6 @@ function UploadRows({ items }: { items: MenuItemProps[] }) {
   );
 }
 
-/**
- * The composer's `+`: file uploads, connectors (MCP servers) and the built-in tool
- * toggles in a single popover, with the number of tools turned on as a badge.
- */
 function ToolsMenu({
   showBuiltinTools,
   showConnectors = true,
@@ -272,13 +265,9 @@ function ToolsMenu({
   uploadItems = [],
   disabled = false,
 }: {
-  /** Built-in toggles only reach the model on endpoints that build an ephemeral agent. */
   showBuiltinTools: boolean;
-  /** Connectors reach every endpoint that runs tools. */
   showConnectors?: boolean;
-  /** The conversation's agent; a saved agent's connectors switch through `disabled_mcp`. */
   agentId?: string | null;
-  /** The file menu's entries (uploads, attach an agent), listed first. */
   uploadItems?: MenuItemProps[];
   disabled?: boolean;
 }) {
@@ -308,9 +297,7 @@ function ToolsMenu({
   const configDialogOpen = manager?.getConfigDialogProps()?.isOpen === true;
   useMCPRefresh({ enabled: (isOpen || configDialogOpen) && servers.length > 0 });
 
-  /** Ariakit only takes Escape for a menu when the event target is the menu, its
-   *  trigger, or `body`, so the Escape that closes the connect dialog leaves the
-   *  menu open behind it. Closing on the dialog's close keeps the two in step. */
+  /** 연결 설정 창이 닫혀도 Ariakit 메뉴가 남으므로, 창을 닫을 때 메뉴도 닫는다. */
   const configDialogWasOpen = useRef(false);
   useEffect(() => {
     if (configDialogWasOpen.current && !configDialogOpen) {

@@ -33,7 +33,6 @@ describe('SpeechToTextSwitch', () => {
     const switchElement = getByTestId('SpeechToText');
     fireEvent.click(switchElement);
 
-    /* Off by default: the AgentHub composer shows no microphone until the user asks for it. */
     expect(mockSetSpeechToText).toHaveBeenCalledWith(true);
   });
 });

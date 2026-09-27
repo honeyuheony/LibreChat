@@ -238,7 +238,7 @@ function ChildMessage({
       ariaLabel={label}
       headerPrefix=""
       isCreatedByUser={false}
-      /** A child thread is written by the subagent, not the conversation's agent. */
+      /** 하위 대화는 현재 대화의 agent가 아니라 subagent가 작성한다. */
       showAuthor
       fullWidth={fullWidth}
     >

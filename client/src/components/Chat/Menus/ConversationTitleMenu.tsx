@@ -14,10 +14,7 @@ import { useLocalize } from '~/hooks';
 
 const noop = () => {};
 
-/**
- * The title as the conversation list holds it. Title generation and rename write
- * the list caches, while the chat context keeps the title it loaded with.
- */
+/** 제목 생성과 이름 변경이 갱신하는 대화 목록 cache에서 최신 제목을 읽는다. */
 function useListedConversationTitle(conversationId: string | null): string | undefined {
   const queryClient = useQueryClient();
   const subscribe = useCallback(
@@ -42,11 +39,6 @@ function useListedConversationTitle(conversationId: string | null): string | und
   return useSyncExternalStore(subscribe, readTitle);
 }
 
-/**
- * The conversation header's title. Pressing it opens the same options the
- * sidebar row carries (rename, share, archive, delete, ...), and rename edits
- * the title in place.
- */
 function ConversationTitleMenu() {
   const localize = useLocalize();
   const { showToast } = useToastContext();

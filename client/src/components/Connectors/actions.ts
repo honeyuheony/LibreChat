@@ -22,7 +22,7 @@ interface RunConnectorActionInput {
   onDetails: () => void;
 }
 
-/** A server that needs the user's own values is set up in its dialog before it can connect. */
+/** 사용자별 값이 필요한 서버는 연결 전에 설정 대화상자에서 값을 입력한다. */
 export function runConnectorAction(
   event: MouseEvent<HTMLButtonElement>,
   {

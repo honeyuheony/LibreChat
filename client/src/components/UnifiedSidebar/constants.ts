@@ -1,5 +1,5 @@
 export const COLLAPSED_WIDTH = 52;
-/** The AgentHub wireframe's sidebar width (its grid column is 260px); users can drag it wider. */
+/** 열린 sidebar는 기본 레이아웃에 맞춰 최소 260px를 유지하고 드래그로 더 넓힐 수 있다. */
 export const EXPANDED_MIN = 260;
 
 /**

@@ -8,10 +8,8 @@ export type SidePanelKind = 'artifacts' | 'task';
 
 const PANEL_IDS_SINGLE = ['messages-view'];
 
-/**
- * The slot's panel id also names its saved layout. The artifact id stays as it was so
- * existing widths carry over; the task panel opens at the wireframe's 360px and keeps
- * a width of its own.
+/** 기존 너비를 이어 쓰도록 artifact ID를 유지하고 panel ID마다 저장할 layout을 분리한다.
+ * task panel은 기본 너비 360px로 열리고 artifact panel과 너비를 따로 저장한다.
  */
 const PANEL_SLOTS: Record<SidePanelKind, PanelSlot> = {
   artifacts: { id: 'artifacts-panel', defaultSize: '50', minWidthClassName: 'min-w-[400px]' },
@@ -20,7 +18,6 @@ const PANEL_SLOTS: Record<SidePanelKind, PanelSlot> = {
 
 interface SidePanelProps {
   panel?: React.ReactNode;
-  /** Which panel fills the slot; decides its default and saved width. */
   panelKind?: SidePanelKind;
   children: React.ReactNode;
 }

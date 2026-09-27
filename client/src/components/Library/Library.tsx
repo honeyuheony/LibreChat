@@ -20,7 +20,6 @@ import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import { shortResultTitle } from '~/utils/results';
 import { useLocalize } from '~/hooks';
 
-/** New keys that DA adds to the translation files; drop the cast in `useLibraryLocalize` then. */
 type LibraryKey =
   | 'com_ui_library'
   | 'com_ui_library_intro'
@@ -40,7 +39,7 @@ const HWP_FILE = /\.hwpx?$/i;
 const resultPath = (item: TTaskResultListItem) =>
   `/c/${encodeURIComponent(item.conversationId)}?${RESULT_QUERY_PARAM}=${encodeURIComponent(item.resultId)}`;
 
-/** The wireframe's four day buckets, counted in local calendar days. */
+/** 결과는 경과 시간이 아니라 현지 달력 날짜를 기준으로 분류한다. */
 function dayLabelKey(createdAt: Date, now: Date): TranslationKeys | LibraryKey {
   const startOf = (date: Date) =>
     new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
@@ -83,7 +82,6 @@ export default function Library() {
   };
 
   const openRow = (event: MouseEvent<HTMLTableRowElement>, item: TTaskResultListItem) => {
-    /** The title link navigates on its own; the row covers clicks on the other cells. */
     if ((event.target as Element).closest('a')) {
       return;
     }

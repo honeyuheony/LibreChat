@@ -181,7 +181,7 @@ describe('useTextarea composer placeholder', () => {
     mockConversation = { endpoint: 'openAI', conversationId: 'convo-1' };
   });
 
-  it('asks the wireframe question whichever model answers', async () => {
+  it('uses the localized default composer placeholder', async () => {
     const { textArea } = renderTextareaHook();
 
     await waitFor(() => expect(textArea).toHaveAttribute('placeholder', 'How can I help you?'));

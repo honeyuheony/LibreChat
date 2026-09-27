@@ -53,26 +53,20 @@ export function useStreamStatus(conversationId: string | undefined, enabled = tr
 
 export const genTitleQueryKey = (conversationId: string) => ['genTitle', conversationId] as const;
 
-/** An active job and the status that keeps it active. */
 export interface ActiveJob {
   id: string;
-  /** `requires_action`: the run is paused until the user answers an approval. */
+  /** 승인 응답이 올 때까지 실행이 멈춘 상태다. */
   status: 'running' | 'requires_action';
 }
 
 /** Response type for active jobs query */
 export interface ActiveJobsResponse {
   activeJobIds: string[];
-  /** Absent from servers that predate it. */
+  /** 이전 서버 응답에는 이 필드가 없다. */
   jobs?: ActiveJob[];
 }
 
-/**
- * The cache after a stream starts or resumes (its job runs), or pauses for an
- * approval (`requires_action`): its id is listed with that status. Other jobs keep
- * theirs, so a conversation paused for approval stays 「승인 대기」 in the sidebar
- * while another one streams.
- */
+/** 작업을 실행·승인 대기 상태로 바꾸고, 다른 작업의 상태는 유지한다. */
 export function withActiveJob(
   old: ActiveJobsResponse | undefined,
   jobId: string,
@@ -85,7 +79,6 @@ export function withActiveJob(
   };
 }
 
-/** The cache after a stream ends: its id and job are dropped, the others kept. */
 export function withoutActiveJob(
   old: ActiveJobsResponse | undefined,
   jobId: string,
@@ -338,8 +331,7 @@ export function useActiveJobs(enabled = true, expectsSuccessor = false) {
   });
 }
 
-/** The listed status of one conversation's job, or `undefined` when the list does
- *  not say. A job the list names only by id is treated as running. */
+/** 이전 응답처럼 ID만 있는 작업은 실행 중으로 취급한다. */
 export function selectActiveJobStatus(
   data: ActiveJobsResponse | undefined,
   conversationId: string | null | undefined,
@@ -350,12 +342,7 @@ export function selectActiveJobStatus(
   return data.jobs?.find((job) => job.id === conversationId)?.status ?? 'running';
 }
 
-/**
- * One conversation's status from the active jobs list, for a sidebar row.
- * The observer never fetches or polls on its own: the list that renders the rows
- * keeps `useActiveJobs` mounted, and a row only re-renders when its own status
- * changes.
- */
+/** 부모가 가져온 활성 작업 목록에서 이 대화 상태만 읽고, 행마다 다시 요청하지 않는다. */
 export function useActiveJobStatus(conversationId: string | null | undefined) {
   const { data } = useQuery({
     queryKey: [QueryKeys.activeJobs],

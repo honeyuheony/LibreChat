@@ -19,7 +19,6 @@ const INSTALL_STEPS: TranslationKeys[] = [
   'com_ui_desk_download_step_sign_in',
 ];
 
-/** "0.1.2 판 · 106MB · 2026. 9. 25. 배포" with whatever latest.yml actually carried. */
 export function describeRelease(release: DeskAppReleaseResponse, localize: Localize): string {
   const parts = [
     release.version ? localize('com_ui_desk_download_version', { 0: release.version }) : '',
@@ -33,10 +32,7 @@ export function describeRelease(release: DeskAppReleaseResponse, localize: Local
   return parts.filter(Boolean).join(' · ');
 }
 
-/**
- * Public page (no sign-in) that every "get the desktop app" entry leads to, so the
- * SmartScreen warning is explained before the user meets it.
- */
+/** 로그인 없이 열리는 공개 페이지에서 다운로드 전에 SmartScreen 경고를 안내한다. */
 export default function DeskDownload() {
   const localize = useLocalize();
   const { data: release, isLoading } = useDeskAppReleaseQuery();

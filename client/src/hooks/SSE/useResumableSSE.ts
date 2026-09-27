@@ -1519,9 +1519,7 @@ export default function useResumableSSE(
           currentSubmission.conversation?.conversationId ??
           currentStreamId;
         jotaiStore.set(pendingApprovalActionFamily(pendingConversationId), pendingAction);
-        /** The sidebar row reads the active jobs list, which otherwise says
-         *  `running` until the next poll — or for good, when this pane's own
-         *  start or resume write lands after the poll that saw the pause. */
+        /** 시작·재개 갱신이 늦게 도착해도 사이드바에는 승인 대기를 유지한다. */
         if (attempt === 0) {
           addActiveJob(currentStreamId, 'requires_action');
         }

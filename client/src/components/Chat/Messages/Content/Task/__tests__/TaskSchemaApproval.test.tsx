@@ -216,7 +216,6 @@ describe('TaskSchemaApproval', () => {
     expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
   });
 
-  /** Another call paused in the same batch, decided the way the composer panel does it. */
   function OtherCall() {
     const { registerToolCall, setDecision } = useApprovalContext();
     const { submitToolApproval } = useResumeSubmit();

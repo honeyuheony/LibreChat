@@ -281,7 +281,7 @@ export default function ToolCallGroup({
     [parts, attachmentsByToolCallId],
   );
   const count = toolMetadata.length;
-  /** Every call in the group went to the same MCP server: the header names that connector. */
+  /** 그룹의 모든 호출이 같은 MCP 서버로 가면 헤더에 connector 이름을 표시한다. */
   const connectorServer = useMemo(() => {
     const servers = new Set(
       toolMetadata.map((m) => (m.name ? getMCPServerName(m.name, mcpServerNames) : '')),
@@ -603,7 +603,7 @@ export default function ToolCallGroup({
   } else if (!allSubagents && !allAskQuestions && !connectorServer && count > 1) {
     groupDetailParts.push(activitySummary.toolNameSummary);
   }
-  /** Sum of the steps' own durations; shown only when every step reported one. */
+  /** 일부 단계만 시간을 보고하면 합계가 부정확하므로 모두 보고한 경우에만 표시한다. */
   const totalDurationMs = toolMetadata.every((m) => typeof m.durationMs === 'number')
     ? toolMetadata.reduce((sum, m) => sum + (m.durationMs ?? 0), 0)
     : undefined;
@@ -673,11 +673,7 @@ export default function ToolCallGroup({
           aria-label={groupAriaLabel}
         >
           {allSubagents || allAskQuestions ? (
-            /** Homogeneous category groups get a single category glyph instead
-             *  of StackedToolIcons' generic wrenches: a Users glyph for
-             *  subagents, a question glyph for ask_user_question — matching
-             *  their individual card headers and reading as the category
-             *  rather than "tools". */
+            /** 하위 에이전트와 사용자 질문은 개별 카드와 같은 아이콘으로 그룹 종류를 표시한다. */
             <div
               className={cn(
                 ROW_GLYPH_SLOT,
@@ -743,12 +739,7 @@ export default function ToolCallGroup({
                       if (part.type === ContentTypes.THINK) {
                         const think = part.think;
                         const reasoning = typeof think === 'string' ? think : (think?.value ?? '');
-                        /** A detached-subagent projection carries an empty THINK
-                         *  part flagged `reasoning_unavailable`, which `Part`
-                         *  renders as a `ReasoningMarker`. `ReasoningCompact` has
-                         *  no text to show and returns null, so the marker has to
-                         *  keep going through the standalone path or it vanishes
-                         *  the moment its call joins a group. */
+                        /** 빈 THINK는 ReasoningCompact가 생략해 ReasoningMarker를 따로 표시한다. */
                         if (reasoning.trim() === '' && part.reasoning_unavailable === true) {
                           return renderPart(
                             part,
@@ -761,8 +752,7 @@ export default function ToolCallGroup({
                         const isAfterTool =
                           partIndex > 0 &&
                           parts[partIndex - 1]?.part.type === ContentTypes.TOOL_CALL;
-                        /** Mirrors the standalone `Reasoning` path: the authored
-                         *  label wins, generic text is only a fallback. */
+                        /** 작성자가 지정한 제목을 우선하고, 없을 때만 일반 문구를 표시한다. */
                         const generatedLabel = part.reasoning_label?.trim();
                         const label =
                           generatedLabel ||

@@ -38,7 +38,6 @@ const overviewRows: Array<[keyof NonNullable<MCPOptions['overview']>, Translatio
   ['contact', 'com_ui_data_hub_overview_contact'],
 ];
 
-/** One line per connector: whose account the connector reads with. */
 function describeScope(
   server: MCPServerDefinition,
   hasCustomUserVars: boolean,
@@ -67,7 +66,6 @@ function describeAuth(
   return localize('com_ui_data_hub_admin_auth_shared');
 }
 
-/** The desktop app's own state and switched-on folders, worded as the app reports them. */
 function DeskScope({
   deskStatus,
   deskError,
@@ -160,8 +158,7 @@ export default function ConnectorDetail({
             variant="submit"
             data-testid="data-hub-new-chat"
             onClick={() => {
-              /* The new chat starts from the user's defaults with this connector on as well;
-                 the composer lays both on once the new chat has mounted. */
+              /* 새 채팅이 마운트된 뒤 composer가 기본값과 추가 커넥터를 적용하므로 먼저 저장한다. */
               setExtraOn({ serverName: server.serverName, at: Date.now() });
               startNewChat();
             }}

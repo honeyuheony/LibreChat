@@ -2,10 +2,7 @@ import { DESK_SERVER_NAME, getHubStatus, toHubStatusProps } from '~/components/C
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import { useMCPServerManager } from '~/hooks/MCP/useMCPServerManager';
 
-/**
- * How many connectors the data hub would mark 「연결 필요」 for this user, for the sidebar's
- * pending badge. It reads the same statuses the hub does, so the badge and the hub agree.
- */
+/** 데이터 허브와 같은 연결 상태를 세어 사이드바 배지와 목록을 맞춘다. */
 export default function usePendingConnectorCount(): number {
   const { availableMCPServers, getServerStatusIconProps, isInitializing } = useMCPServerManager({
     observeToolAuthorization: true,

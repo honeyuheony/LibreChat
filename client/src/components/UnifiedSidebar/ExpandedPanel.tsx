@@ -29,7 +29,6 @@ const rowClassName =
 const railButtonClassName =
   'flex size-9 items-center justify-center rounded-theme-control transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
 
-/** A collapsed row keeps only its icon, so its label moves into a tooltip. */
 function RowTooltip({
   expanded,
   label,
@@ -65,7 +64,7 @@ const NewChatRow = memo(function NewChatRow({
   }, [switchToHistory, setActive]);
 
   const { handleNewChatClick } = useNewChat({ onNewChat: handlePanelSwitch });
-  /** The wireframe lights this row up while the empty new-chat screen is showing. */
+  /** 새 대화 화면에서도 새 대화 항목을 활성 상태로 표시한다. */
   const isOnNewChat = useLocation().pathname === '/c/new';
 
   return (
@@ -97,10 +96,7 @@ const NewChatRow = memo(function NewChatRow({
   );
 });
 
-/**
- * Expanded, the row is the search field itself. Collapsed, it opens the sidebar on the
- * conversation list and focuses that field once the slide has committed.
- */
+/** sidebar를 연 뒤 transition이 끝나야 검색창에 focus를 둘 수 있다. */
 const SearchRow = memo(function SearchRow({
   expanded,
   isConversationsActive,
@@ -162,7 +158,7 @@ const NavRow = memo(function NavRow({
   link: NavLink;
   isActive: boolean;
   expanded: boolean;
-  /** Drawn as the heading of the list below it rather than as a row. */
+  /** 아래 목록의 제목으로 표시하고 항목으로 렌더링하지 않는다. */
   section?: boolean;
   setActive: (id: string) => void;
   onExpand?: () => void;
@@ -288,8 +284,7 @@ function BrandHeader({
     return <div className="flex flex-col items-center gap-1 pb-2">{toggle}</div>;
   }
 
-  /* The wireframe has no collapse button beside the brand; the sidebar shortcut still
-     collapses it, and the rail above keeps the button that brings it back. */
+  // 축소 버튼은 브랜드 옆에 두지 않고 아이콘 레일에 남겨 다시 펼칠 수 있게 한다.
   return (
     <div className="flex items-center justify-between gap-2 pb-3 pl-2 pt-1">
       <div className="flex min-w-0 items-center gap-2">
@@ -303,11 +298,6 @@ function BrandHeader({
   );
 }
 
-/**
- * The whole desktop sidebar: brand, new chat, one row per page or panel, the conversation
- * history heading with its search field, the active panel, and the account menu.
- * Collapsed, the rows form an icon rail.
- */
 function ExpandedPanel({
   links,
   expanded = true,
@@ -345,7 +335,7 @@ function ExpandedPanel({
     }
     return !isInsightsRoute && link.id === effectiveActive;
   };
-  /** Expanded, the history list gets a heading of its own under the rows instead of a row. */
+  /** 열린 sidebar에서는 대화 기록을 메뉴 항목 대신 목록 제목으로 표시한다. */
   const historyLink = expanded ? links.find((link) => link.id === DEFAULT_PANEL) : undefined;
   const conversationCount = useSidebarConversationCount();
   const historyHeading = useMemo(

@@ -14,7 +14,6 @@ const koStrings = ko as Record<string, string>;
 const localizeKo = (key: string, values: Record<string, string | number> = {}) =>
   koStrings[key].replace(/{{(\w+)}}/g, (_, name: string) => String(values[name]));
 
-/** Tool outputs copied from conversations on the demo stack (desk-relay via FastMCP). */
 const LIST_FOLDER_OUTPUT =
   '{\n  "name": "e2e-사업안내.hwp",\n  "path": "e2e-사업안내.hwp",\n  "kind": "file",\n  "bytes": 193536\n}\n\n{\n  "name": "메모.txt",\n  "path": "메모.txt",\n  "kind": "file",\n  "bytes": 31\n}';
 const RELAY_OFFLINE_OUTPUT =

@@ -2,7 +2,7 @@ import { QueryKeys, dataService } from 'librechat-data-provider';
 import { useQuery, UseQueryOptions, QueryObserverResult } from '@tanstack/react-query';
 import type * as t from 'librechat-data-provider';
 
-/** The signed-in user's desktop app as the desk relay sees it; refetched on focus so a newly started app shows up. */
+/** Relay가 인식한 데스크톱 앱 상태를 포커스 때 갱신해 새 앱도 반영한다. */
 export const useDeskStatusQuery = (
   config?: UseQueryOptions<t.DeskStatusResponse>,
 ): QueryObserverResult<t.DeskStatusResponse> => {
@@ -16,7 +16,7 @@ export const useDeskStatusQuery = (
   });
 };
 
-/** Reads outside the switched-on folders the user's app is waiting on; polled while a PC-folder tool runs. */
+/** PC 폴더 도구가 권한을 기다릴 때 변경된 폴더 권한을 반영한다. */
 export const useDeskPermissionsQuery = (
   config?: UseQueryOptions<t.DeskPermission[]>,
 ): QueryObserverResult<t.DeskPermission[]> => {
@@ -33,7 +33,7 @@ export const useDeskPermissionsQuery = (
   );
 };
 
-/** The installer the relay currently serves; public, so the download page works before sign-in. */
+/** 로그인 전에도 설치할 수 있도록 공개된 relay 설치 파일 정보를 가져온다. */
 export const useDeskAppReleaseQuery = (
   config?: UseQueryOptions<t.DeskAppReleaseResponse>,
 ): QueryObserverResult<t.DeskAppReleaseResponse> => {
@@ -49,7 +49,7 @@ export const useDeskAppReleaseQuery = (
   );
 };
 
-/** The signed-in user's recent connector tool calls, newest first. */
+/** 최근 connector 도구 호출을 최신순으로 가져온다. */
 export const useConnectorActivityQuery = (
   config?: UseQueryOptions<t.ConnectorActivityItem[]>,
 ): QueryObserverResult<t.ConnectorActivityItem[]> => {

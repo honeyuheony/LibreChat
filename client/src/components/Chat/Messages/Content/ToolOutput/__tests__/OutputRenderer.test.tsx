@@ -59,7 +59,6 @@ describe('OutputRenderer', () => {
     );
   });
 
-  /** Recorded on the demo stack when the relay answered 401 to list_folder. */
   const MCP_OAUTH_OUTPUT =
     'Error: [MCP][my-pc][list_folder] OAuth authentication required. Please check the server logs for the authentication URL.\n Please fix your mistakes.';
 

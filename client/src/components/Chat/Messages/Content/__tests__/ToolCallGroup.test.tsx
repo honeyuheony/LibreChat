@@ -822,7 +822,6 @@ describe('ToolCallGroup image hoisting', () => {
         },
       }) as unknown as TMessageContentParts;
 
-    /** Step durations recorded on the demo stack for "파일 목록 및 메모 읽기". */
     const myPcParts = [
       { part: makeTimedPart('p1', 'list_folder_mcp_my-pc', 404), idx: 0 },
       { part: makeTimedPart('p2', 'search_files_mcp_my-pc', 346), idx: 1 },
