@@ -1318,6 +1318,37 @@ export function deleteSkill(id: string): Promise<sk.TDeleteSkillResponse> {
   return request.delete(endpoints.getSkill(id));
 }
 
+export function createSkillDraft(payload: sk.TSkillDraftRequest): Promise<sk.TSkillDraft> {
+  return request.post(endpoints.skillDraft(), payload);
+}
+
+export function recordSkillTestResult(
+  id: string,
+  payload: sk.TSkillTestResultRequest,
+): Promise<sk.TSkill> {
+  return request.post(endpoints.skillTestResult(id), payload);
+}
+
+export function publishSkill(id: string, payload: sk.TSkillPublishRequest): Promise<sk.TSkill> {
+  return request.post(endpoints.skillPublish(id), payload);
+}
+
+export function listSkillPacks(): Promise<sk.TSkillPackSummary[]> {
+  return request.get(endpoints.skillPacks());
+}
+
+export function createSkillPack(payload: sk.TCreateSkillPackRequest): Promise<sk.TSkillPack> {
+  return request.post(endpoints.skillPacks(), payload);
+}
+
+export function getSkillPack(id: string): Promise<sk.TSkillPack> {
+  return request.get(endpoints.skillPack(id));
+}
+
+export function deleteSkillPack(id: string): Promise<sk.TDeleteSkillPackResponse> {
+  return request.delete(endpoints.skillPack(id));
+}
+
 export function forkSkill(
   id: string,
   payload: sk.TForkSkillRequest = {},

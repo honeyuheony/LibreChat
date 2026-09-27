@@ -464,6 +464,11 @@ export const skillCategories = () => `${skills()}/categories`;
 
 /** 응용하기: 원본을 복사한 비공개 새 스킬을 만든다. */
 export const forkSkill = (id: string) => `${getSkill(id)}/fork`;
+export const skillDraft = () => `${skills()}/draft`;
+export const skillTestResult = (id: string) => `${getSkill(id)}/test-result`;
+export const skillPublish = (id: string) => `${getSkill(id)}/publish`;
+export const skillPacks = () => `${BASE_URL}/api/skill-packs`;
+export const skillPack = (id: string) => `${skillPacks()}/${encodeURIComponent(id)}`;
 
 export const listSkillsWithFilters = (
   filter: Record<string, string | number | undefined | null>,

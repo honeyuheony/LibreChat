@@ -1,19 +1,21 @@
-import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, dataService } from 'librechat-data-provider';
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  TSkillFileContentResponse,
+  TSkillCategoriesResponse,
+  TListSkillFilesResponse,
+  TSkillStatesResponse,
+  TSkillListResponse,
+  TSkillPackSummary,
+  TSkillListRequest,
+  TSkillPack,
+  TSkill,
+} from 'librechat-data-provider';
 import type {
   QueryObserverResult,
   UseQueryOptions,
   UseInfiniteQueryOptions,
 } from '@tanstack/react-query';
-import type {
-  TSkill,
-  TSkillListRequest,
-  TSkillListResponse,
-  TSkillStatesResponse,
-  TListSkillFilesResponse,
-  TSkillFileContentResponse,
-  TSkillCategoriesResponse,
-} from 'librechat-data-provider';
 
 /**
  * Paginated skill list (single page) — use this for small lists or when you want to
@@ -92,6 +94,40 @@ export const useSkillCategoriesQuery = (
       refetchOnReconnect: false,
       refetchOnMount: false,
       ...config,
+    },
+  );
+};
+
+export const useListSkillPacksQuery = (
+  config?: UseQueryOptions<TSkillPackSummary[]>,
+): QueryObserverResult<TSkillPackSummary[]> => {
+  return useQuery<TSkillPackSummary[]>(
+    [QueryKeys.skills, 'packs'],
+    () => dataService.listSkillPacks(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
+export const useGetSkillPackQuery = (
+  id: string | null | undefined,
+  config?: UseQueryOptions<TSkillPack>,
+): QueryObserverResult<TSkillPack> => {
+  const enabled = !!id;
+  return useQuery<TSkillPack>(
+    [QueryKeys.skills, 'packs', id],
+    () => dataService.getSkillPack(id as string),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      retry: false,
+      ...config,
+      enabled: enabled && (config?.enabled ?? true),
     },
   );
 };
