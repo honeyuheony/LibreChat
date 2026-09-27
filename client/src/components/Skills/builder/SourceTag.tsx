@@ -21,7 +21,7 @@ export default function SourceTag({ source, label, children }: SourceTagProps) {
     <span
       className={cn(
         'ms-1.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-px align-middle text-[10.5px] font-bold',
-        source === SOURCE_AI && 'bg-surface-brand-subtle text-text-primary',
+        source === SOURCE_AI && 'bg-surface-brand-subtle text-accent-primary',
         source === SOURCE_ME && 'bg-status-success-subtle text-status-success',
         source !== SOURCE_AI && source !== SOURCE_ME && 'bg-surface-tertiary text-text-secondary',
       )}

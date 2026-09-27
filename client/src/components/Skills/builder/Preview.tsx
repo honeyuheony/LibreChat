@@ -11,6 +11,19 @@ import { cn } from '~/utils';
 
 type EditTarget = BuilderField;
 
+/** 미리보기 블록 이름. 입력칸에 초점이 가면 그 칸이 채우는 블록을 강조한다(와이어프레임 `PV_OF`). */
+export type PreviewBlock = 'head' | 'when' | 'how' | 'out' | 'data';
+
+const BLOCK_OF: Record<EditTarget, PreviewBlock> = {
+  title: 'head',
+  description: 'head',
+  icon: 'head',
+  triggers: 'when',
+  output: 'out',
+  extras: 'out',
+  fields: 'out',
+};
+
 type PreviewProps = {
   state: BuilderState;
   steps: BuilderStep[];
@@ -21,11 +34,49 @@ type PreviewProps = {
   onToggleConnector: (name: string) => void;
   /** 응용 편집에서 원본과 달라진 칸. 새로 만들 때는 비어 있다. */
   changed?: ReadonlySet<ChangedField>;
+  active?: PreviewBlock | null;
+  onActivate?: (block: PreviewBlock) => void;
+  /** 「내부 시스템도 봐야 하면」을 눌렀을 때 펼치는, 쓸 수 있는 MCP 서버 이름 전체. */
+  connectorChoices?: string[];
 };
 
-type HeadProps = Pick<PreviewProps, 'state' | 'author' | 'onEdit' | 'changed'>;
+type HeadProps = Pick<
+  PreviewProps,
+  'state' | 'author' | 'onEdit' | 'changed' | 'active' | 'onActivate'
+> & { department?: string };
 
 const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
+const NO_CHOICES: string[] = [];
+const ignoreActivate = () => undefined;
+
+const blockFrame = (active: boolean) =>
+  cn(
+    'rounded-xl border-[1.5px] bg-surface-primary transition-[border-color,box-shadow] motion-reduce:transition-none',
+    active ? 'border-ring-primary ring-[3px] ring-border-brand' : 'border-border-light',
+  );
+
+/** 강조된 블록이 보이도록 오른쪽 칸을 필요한 만큼만 굴린다. */
+function useRevealWhenActive(active: boolean) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (active) {
+      ref.current?.scrollIntoView?.({ block: 'nearest' });
+    }
+  }, [active]);
+  return ref;
+}
+
+/** 편집을 시작한 칸의 블록을 함께 강조한다. */
+function useEditing(onActivate: (block: PreviewBlock) => void) {
+  const [editing, setEditing] = useState<EditTarget | null>(null);
+  const startEdit = (target: EditTarget | null) => {
+    setEditing(target);
+    if (target) {
+      onActivate(BLOCK_OF[target]);
+    }
+  };
+  return [editing, startEdit] as const;
+}
 
 const splitList = (value: string) =>
   value
@@ -33,9 +84,18 @@ const splitList = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-export function Block({ title, children }: { title: ReactNode; children: ReactNode }) {
+export function Block({
+  title,
+  children,
+  active = false,
+}: {
+  title: ReactNode;
+  children: ReactNode;
+  active?: boolean;
+}) {
+  const ref = useRevealWhenActive(active);
   return (
-    <section className="rounded-xl border border-border-light bg-surface-primary px-4 py-3">
+    <section ref={ref} data-active={active} className={cn(blockFrame(active), 'px-4 py-3')}>
       <h5 className="mb-1.5 flex items-center gap-1 text-xs font-bold text-text-secondary">
         {title}
       </h5>
@@ -174,22 +234,36 @@ const EXTRA_LABEL: Record<TSkillDraftExtra, TranslationKeys> = {
   law: 'com_skills_builder_extra_law',
 };
 
-export function PreviewHead({ state, author, onEdit, changed = NO_CHANGES }: HeadProps) {
+export function PreviewHead({
+  state,
+  author,
+  department,
+  onEdit,
+  changed = NO_CHANGES,
+  active = null,
+  onActivate = ignoreActivate,
+}: HeadProps) {
   const localize = useLocalize();
-  const [editing, setEditing] = useState<EditTarget | null>(null);
+  const [editing, setEditing] = useEditing(onActivate);
   const { values, sources } = state;
   const clickLabel = localize('com_skills_builder_click_to_edit');
   const done = () => setEditing(null);
+  const highlighted = active === 'head';
+  const ref = useRevealWhenActive(highlighted);
 
   return (
-    <section className="flex items-center gap-3.5 rounded-xl border border-border-light bg-surface-primary px-4 py-3">
+    <section
+      ref={ref}
+      data-active={highlighted}
+      className={cn(blockFrame(highlighted), 'flex items-center gap-3.5 px-4 py-3')}
+    >
       <div className="flex flex-col items-start gap-2">
         <button
           type="button"
           title={localize('com_skills_builder_icon_change')}
           aria-label={localize('com_skills_builder_icon_change')}
           onClick={() => setEditing(editing === 'icon' ? null : 'icon')}
-          className="flex size-12 items-center justify-center rounded-xl bg-surface-tertiary text-2xl"
+          className="flex size-[68px] items-center justify-center rounded-full bg-status-success-subtle text-[34px]"
         >
           <span aria-hidden="true">{values.icon || '🤖'}</span>
         </button>
@@ -228,7 +302,7 @@ export function PreviewHead({ state, author, onEdit, changed = NO_CHANGES }: Hea
               onDone={done}
             />
           ) : (
-            <h3 className="text-lg font-semibold text-text-primary">
+            <h3 className="text-[19px] font-bold text-text-primary">
               <EditButton label={clickLabel} onClick={() => setEditing('title')}>
                 {values.title || <Ghost>{localize('com_skills_builder_name_ghost')}</Ghost>}
               </EditButton>
@@ -238,7 +312,9 @@ export function PreviewHead({ state, author, onEdit, changed = NO_CHANGES }: Hea
           <ChangedMark show={changed.has('title') || changed.has('icon')} />
         </div>
         <div className="text-xs text-text-secondary">
-          {localize('com_skills_builder_by', { name: author })}
+          {department
+            ? localize('com_skills_builder_by_dept', { name: author, dept: department })
+            : localize('com_skills_builder_by', { name: author })}
         </div>
         <div className="mt-1 flex items-center gap-1">
           {editing === 'description' ? (
@@ -287,6 +363,20 @@ function StepTag({ by, onRemove }: { by: string; onRemove: () => void }) {
   return <SourceTag source={by} />;
 }
 
+/** 출처 배지를 마지막 단어와 묶어 문장 끝과 같은 줄에 둔다. 배지만 다음 줄로 떨어지지 않는다. */
+function StepLine({ step, onRemove }: { step: BuilderStep; onRemove: (step: string) => void }) {
+  const cut = step.text.lastIndexOf(' ') + 1;
+  return (
+    <li>
+      {step.text.slice(0, cut)}
+      <span data-step-tail className="whitespace-nowrap">
+        {step.text.slice(cut)}
+        <StepTag by={step.by} onRemove={() => onRemove(step.text)} />
+      </span>
+    </li>
+  );
+}
+
 export default function Preview({
   state,
   steps,
@@ -295,15 +385,25 @@ export default function Preview({
   onStepsRestore,
   onToggleConnector,
   changed = NO_CHANGES,
+  active = null,
+  onActivate = ignoreActivate,
+  connectorChoices = NO_CHOICES,
 }: Omit<PreviewProps, 'author'>) {
   const localize = useLocalize();
-  const [editing, setEditing] = useState<EditTarget | null>(null);
+  const [editing, setEditing] = useEditing(onActivate);
+  const [allConnectors, setAllConnectors] = useState(false);
   const { values, sources } = state;
   const empty = state.text.trim().length === 0;
   const clickLabel = localize('com_skills_builder_click_to_edit');
   const done = () => setEditing(null);
-  const showFields = FIELD_OUTPUTS.has(values.output);
-  const connectors = [...new Set([...values.connectors, ...state.recommended])];
+  const showFields = FIELD_OUTPUTS.has(values.output) && !empty;
+  const connectors = [
+    ...new Set([
+      ...values.connectors,
+      ...state.recommended,
+      ...(allConnectors ? connectorChoices : NO_CHOICES),
+    ]),
+  ];
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -312,6 +412,7 @@ export default function Preview({
       </p>
 
       <Block
+        active={active === 'when'}
         title={
           <>
             {localize('com_skills_builder_when')}
@@ -359,6 +460,7 @@ export default function Preview({
       </Block>
 
       <Block
+        active={active === 'how'}
         title={
           <>
             {localize('com_skills_builder_how')}
@@ -369,9 +471,7 @@ export default function Preview({
         {steps.length > 0 ? (
           <ol className="ms-5 list-decimal text-sm leading-7 text-text-primary">
             {steps.map((step) => (
-              <li key={`${step.by}:${step.text}`}>
-                {step.text} <StepTag by={step.by} onRemove={() => onStepOff(step.text)} />
-              </li>
+              <StepLine key={`${step.by}:${step.text}`} step={step} onRemove={onStepOff} />
             ))}
           </ol>
         ) : (
@@ -388,10 +488,11 @@ export default function Preview({
       </Block>
 
       <Block
+        active={active === 'out'}
         title={
           <>
             {localize('com_skills_builder_output')}
-            <SourceTag source={sources.output} />
+            <SourceTag source={empty ? SOURCE_AI : sources.output} />
             <ChangedMark
               show={changed.has('output') || changed.has('extras') || changed.has('fields')}
             />
@@ -483,6 +584,7 @@ export default function Preview({
       </Block>
 
       <Block
+        active={active === 'data'}
         title={
           <>
             {localize('com_skills_builder_data')}
@@ -491,13 +593,7 @@ export default function Preview({
         }
       >
         <ul className="ms-5 list-disc text-sm text-text-primary">
-          <li>
-            {localize(
-              values.output === 'draft'
-                ? 'com_skills_builder_data_chat'
-                : 'com_skills_builder_data_files',
-            )}
-          </li>
+          <li>{localize('com_skills_builder_data_chat')}</li>
         </ul>
         {connectors.length > 0 && (
           <div className="mt-2 flex flex-col">
@@ -531,7 +627,22 @@ export default function Preview({
             values.connectors.length > 0
               ? 'com_skills_builder_connectors_on'
               : 'com_skills_builder_connectors_off',
-          )}
+          )}{' '}
+          <button
+            type="button"
+            aria-expanded={allConnectors}
+            onClick={() => {
+              setAllConnectors(!allConnectors);
+              onActivate('data');
+            }}
+            className="underline hover:text-text-primary"
+          >
+            {localize(
+              allConnectors
+                ? 'com_skills_builder_connectors_less'
+                : 'com_skills_builder_connectors_more',
+            )}
+          </button>
         </p>
       </Block>
     </div>
