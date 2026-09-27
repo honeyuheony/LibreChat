@@ -3,6 +3,7 @@ import { Spinner, useToastContext } from '@librechat/client';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { ForkOrigin } from './useSession';
+import type { BuilderState } from './state';
 import {
   useGetSkillQuery,
   useMCPServersQuery,
@@ -18,15 +19,26 @@ import {
 import SkillMarketplace from '~/components/Skills/Marketplace/SkillMarketplace';
 import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
 import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
+import { useTaskResultQuery } from '~/data-provider/Tasks';
 import { createTrialTransport } from './transport';
+import { chatConfirmed, chatState } from './chat';
 import { pickTrialSpec } from './trial';
 import useSession from './useSession';
 import celebrate from './celebrate';
 import { forkState } from './state';
 import Builder from './Builder';
 
-/** 대화에서 편집기를 열 때 넘기는 값(`navigate('/skills/new', { state })`). */
-export type BuilderEntryState = { text?: string; from?: 'chat'; conversationId?: string };
+/**
+ * 대화에서 편집기를 열 때 넘기는 값(`navigate('/skills/new', { state })`).
+ * `taskResultId` 는 끝난 작업의 결과, `connectors` 는 그 대화에서 쓴 MCP 서버다.
+ */
+export type BuilderEntryState = {
+  text?: string;
+  from?: 'chat';
+  conversationId?: string;
+  taskResultId?: string;
+  connectors?: string[];
+};
 
 const MARKET_PATH = '/skills-market';
 /** 상세 창 「응용하기」가 여는 주소의 쿼리 이름(`skills/new?forkOf=<id>`). */
@@ -41,12 +53,21 @@ function readEntry(state: unknown): BuilderEntryState {
     text: typeof entry.text === 'string' ? entry.text : undefined,
     from: entry.from === 'chat' ? 'chat' : undefined,
     conversationId: typeof entry.conversationId === 'string' ? entry.conversationId : undefined,
+    taskResultId: typeof entry.taskResultId === 'string' ? entry.taskResultId : undefined,
+    connectors: Array.isArray(entry.connectors)
+      ? entry.connectors.filter((name): name is string => typeof name === 'string')
+      : undefined,
   };
 }
 
-type EditorPageProps = { entry: BuilderEntryState; fork?: ForkOrigin; forkTitle?: string };
+type EditorPageProps = {
+  entry: BuilderEntryState;
+  fork?: ForkOrigin;
+  forkTitle?: string;
+  chat?: BuilderState;
+};
 
-function EditorPage({ entry, fork, forkTitle }: EditorPageProps) {
+function EditorPage({ entry, fork, forkTitle, chat }: EditorPageProps) {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { showToast } = useToastContext();
@@ -75,7 +96,7 @@ function EditorPage({ entry, fork, forkTitle }: EditorPageProps) {
       spec: pickTrialSpec(startupConfig?.modelSpecs?.list),
       conversationId: entry.conversationId,
     },
-    { text: entry.text, fork },
+    { text: entry.text, fork, chat },
   );
 
   const author = user?.name || user?.username || '';
@@ -156,6 +177,31 @@ function ForkEditorPage({ forkOf, entry }: { forkOf: string; entry: BuilderEntry
   );
 }
 
+/** 끝난 작업의 결과를 읽어 대화에서 정한 칸을 채운다. 결과를 못 읽으면 요청 문장만 넣고 연다. */
+function ChatEditorPage({
+  entry,
+  taskResultId,
+}: {
+  entry: BuilderEntryState;
+  taskResultId: string;
+}) {
+  const result = useTaskResultQuery(taskResultId);
+  const chat = useMemo(
+    () =>
+      result.data
+        ? chatState(entry.text ?? '', {
+            ...chatConfirmed(result.data),
+            connectors: entry.connectors ?? [],
+          })
+        : undefined,
+    [result.data, entry.text, entry.connectors],
+  );
+  if (result.isLoading) {
+    return <Loading />;
+  }
+  return <EditorPage entry={entry} chat={chat} />;
+}
+
 /** `skills/new` 경로: 만들기 권한을 확인한 뒤 편집기를 연다. */
 export default function Editor() {
   const location = useLocation();
@@ -183,6 +229,11 @@ export default function Editor() {
   }
   if (forkOf) {
     return <ForkEditorPage key={forkOf} forkOf={forkOf} entry={entry} />;
+  }
+  if (entry.from === 'chat' && entry.taskResultId) {
+    return (
+      <ChatEditorPage key={entry.taskResultId} entry={entry} taskResultId={entry.taskResultId} />
+    );
   }
   return <EditorPage entry={entry} />;
 }

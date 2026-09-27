@@ -66,14 +66,15 @@ function withSlug(state: BuilderState): BuilderState {
 
 /** 응용할 원본 id 와 원본으로 채운 첫 상태. 첫 상태는 「원본에서 변경」 비교 기준이 된다. */
 export type ForkOrigin = { id: string; state: BuilderState };
-export type SessionInit = { text?: string; fork?: ForkOrigin };
+/** `chat` 은 대화에서 정한 칸을 채운 첫 상태다(「이 작업을 agent로 저장」). */
+export type SessionInit = { text?: string; fork?: ForkOrigin; chat?: BuilderState };
 
 const NO_CHANGES: ReadonlySet<ChangedField> = new Set();
 
 export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
   const [fork] = useState(init.fork);
   const [state, setState] = useState<BuilderState>(
-    () => fork?.state ?? createBuilderState(init.text ?? ''),
+    () => fork?.state ?? init.chat ?? createBuilderState(init.text ?? ''),
   );
   const [skill, setSkill] = useState<TSkill | undefined>();
   const [savedSignature, setSavedSignature] = useState<string | null>(null);

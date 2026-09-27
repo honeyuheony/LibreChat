@@ -1,10 +1,13 @@
 import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { fireEvent, render, screen } from '@testing-library/react';
-import type { TSkill } from 'librechat-data-provider';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import type { TSkill, TSkillDraft, TaskTableResult } from 'librechat-data-provider';
 import Editor, { MarketEditor } from '../Editor';
+import { DRAFT_DEBOUNCE_MS } from '../useDraft';
 
 const mockUseGetSkillQuery = jest.fn();
+const mockUseTaskResultQuery = jest.fn();
+const mockRequestDraft = jest.fn();
 
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
@@ -41,7 +44,7 @@ jest.mock('~/data-provider', () => {
     useUpdateSkillMutation: mutation,
     usePublishSkillMutation: mutation,
     useForkSkillMutation: mutation,
-    useCreateSkillDraftMutation: mutation,
+    useCreateSkillDraftMutation: () => ({ mutateAsync: mockRequestDraft }),
     useRecordSkillTestResultMutation: mutation,
     useMCPServersQuery: () => ({ data: { confluence: {}, jira: {} } }),
     isSkillDraftRateLimited: () => false,
@@ -49,6 +52,10 @@ jest.mock('~/data-provider', () => {
     generationProtocolHeaders: () => ({}),
   };
 });
+
+jest.mock('~/data-provider/Tasks', () => ({
+  useTaskResultQuery: (id: string | null | undefined) => mockUseTaskResultQuery(id),
+}));
 
 const original = {
   _id: 'orig-1',
@@ -76,8 +83,62 @@ function renderAt(path: string) {
   );
 }
 
+const tableResult: TaskTableResult = {
+  kind: 'table',
+  resultId: 'result-1',
+  conversationId: 'convo-1',
+  title: '비교표 · 2건',
+  fields: ['정세 전망', '전월 대비'],
+  rows: [
+    { file_id: 'f1', filename: '미국 동향.hwp', parse: 'ok', cells: [] },
+    { file_id: 'f2', filename: '일본 동향.pdf', parse: 'ok', cells: [] },
+  ],
+  stats: { docs: 2, reflected: 2, none: 0, low: 0, textOnly: 0, cached: 0, seconds: 5 },
+  extractor: { promptVersion: 'v3', model: 'm' },
+  createdAt: '2026-09-27T00:00:00Z',
+};
+
+const modelDraft: TSkillDraft = {
+  slug: 'trend-table',
+  title: 'AI 가 지은 이름',
+  description: '동향 문서를 비교한다',
+  triggers: ['동향'],
+  output: 'report',
+  extras: [],
+  fields: ['AI 항목'],
+  icon: '📊',
+  steps: [],
+  connectors: [],
+  fileKinds: [],
+  origin: 'model',
+};
+
+const chatEntry = {
+  from: 'chat',
+  conversationId: 'convo-1',
+  text: '국가별 동향 문서에서 정세 전망을 뽑아 비교표로 만들어 줘',
+  taskResultId: 'result-1',
+  connectors: ['confluence'],
+};
+
+function renderFromChat(state: Record<string, unknown>) {
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/skills/new', state }]}>
+      <Routes>
+        <Route path="/skills/new" element={<Editor />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 describe('Editor', () => {
-  beforeEach(() => mockUseGetSkillQuery.mockReset());
+  beforeEach(() => {
+    mockUseGetSkillQuery.mockReset();
+    mockUseTaskResultQuery.mockReset();
+    mockUseTaskResultQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+    mockRequestDraft.mockReset();
+    mockRequestDraft.mockResolvedValue(modelDraft);
+  });
 
   it('opens the adapt editor filled with the original named in forkOf', () => {
     mockUseGetSkillQuery.mockReturnValue({ data: original, isLoading: false, isError: false });
@@ -129,5 +190,86 @@ describe('Editor', () => {
     expect(screen.getAllByRole('switch').map((item) => item.closest('label')?.textContent)).toEqual(
       ['confluence', 'jira'],
     );
+  });
+
+  describe('from a finished task', () => {
+    beforeEach(() => {
+      mockUseGetSkillQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+      jest.useFakeTimers();
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('waits for the task result before showing the editor', () => {
+      mockUseTaskResultQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+      renderFromChat(chatEntry);
+
+      expect(mockUseTaskResultQuery).toHaveBeenCalledWith('result-1');
+      expect(screen.queryByLabelText('com_skills_builder_text_heading')).not.toBeInTheDocument();
+    });
+
+    it('fills the request, output, fields, documents and connectors as settled in the chat', () => {
+      mockUseTaskResultQuery.mockReturnValue({
+        data: tableResult,
+        isLoading: false,
+        isError: false,
+      });
+      renderFromChat(chatEntry);
+
+      expect(screen.getByText('com_skills_chat_save_as_agent')).toBeInTheDocument();
+      expect(screen.getByLabelText('com_skills_builder_text_heading')).toHaveValue(chatEntry.text);
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(
+        '정세 전망·전월 대비 비교표',
+      );
+      expect(screen.getAllByText('com_skills_builder_source_chat')).toHaveLength(4);
+      expect(screen.getByRole('switch', { checked: true })).toHaveAccessibleName(/confluence/);
+      const files = screen.getByRole('list', { name: 'com_skills_builder_files_list' });
+      expect(
+        within(files)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual([
+        '미국 동향.hwpcom_skills_builder_file_kind_examples',
+        '일본 동향.pdfcom_skills_builder_file_kind_examples',
+      ]);
+    });
+
+    it('sends the conversation with the draft request and keeps the settled cells', async () => {
+      mockUseTaskResultQuery.mockReturnValue({
+        data: tableResult,
+        isLoading: false,
+        isError: false,
+      });
+      renderFromChat(chatEntry);
+      await act(async () => {
+        jest.advanceTimersByTime(DRAFT_DEBOUNCE_MS);
+      });
+
+      expect(mockRequestDraft).toHaveBeenCalledTimes(1);
+      expect(mockRequestDraft.mock.calls[0][0]).toEqual({
+        text: chatEntry.text,
+        direct: false,
+        context: { conversationId: 'convo-1' },
+      });
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(
+        '정세 전망·전월 대비 비교표',
+      );
+      expect(screen.getByText('동향 문서를 비교한다')).toBeInTheDocument();
+      expect(screen.getAllByText('com_skills_builder_source_chat')).toHaveLength(4);
+    });
+
+    it('opens with the request alone when the task result cannot be read', () => {
+      mockUseTaskResultQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+      renderFromChat(chatEntry);
+
+      expect(screen.getByLabelText('com_skills_builder_text_heading')).toHaveValue(chatEntry.text);
+      expect(screen.queryByText('com_skills_builder_source_chat')).not.toBeInTheDocument();
+    });
+
+    it('does not read a task result when the chat entry has none', () => {
+      renderFromChat({ from: 'chat', conversationId: 'convo-1', text: chatEntry.text });
+
+      expect(mockUseTaskResultQuery).not.toHaveBeenCalledWith(expect.any(String));
+      expect(screen.getByLabelText('com_skills_builder_text_heading')).toHaveValue(chatEntry.text);
+    });
   });
 });

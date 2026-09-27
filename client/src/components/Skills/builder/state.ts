@@ -5,6 +5,7 @@ import type {
   SkillFrontmatterValue,
   TCreateSkill,
   TSkillDraftExtra,
+  TSkillFileKind,
   TSkillDraftOutput,
   TSkillPublishScope,
   TUpdateSkillPayload,
@@ -32,6 +33,8 @@ export type BuilderValues = {
   connectors: string[];
 };
 
+export type BuilderFile = { name: string; kind: TSkillFileKind };
+
 export type BuilderState = {
   text: string;
   direct: boolean;
@@ -44,6 +47,8 @@ export type BuilderState = {
   aiSteps: string[];
   /** 초안이 추천한 커넥터. 켜는 것은 사람이 한다. */
   recommended: string[];
+  /** 양식·예시·참고로 나눈 문서 이름. 아직 저장하지 않는다. */
+  files: BuilderFile[];
   slug: string;
   values: BuilderValues;
   manualMinutes: number;
@@ -55,6 +60,7 @@ export type BuilderStep = { text: string; by: string };
 export const SOURCE_AI = 'ai';
 export const SOURCE_ME = 'me';
 export const SOURCE_ORIGIN = 'origin';
+export const SOURCE_CHAT = 'chat';
 
 export const OUTPUTS: readonly TSkillDraftOutput[] = [
   'report',
@@ -112,6 +118,7 @@ export function createBuilderState(text = ''): BuilderState {
     aiOff: [],
     aiSteps: [],
     recommended: [],
+    files: [],
     slug: '',
     values: { ...EMPTY_VALUES },
     manualMinutes: 0,
@@ -183,11 +190,15 @@ export function editField<K extends BuilderField>(
   };
 }
 
+/** 출처가 붙은 커넥터(「대화에서 확정」 등)를 사람이 바꾸면 「내가 고침」이 된다. */
 export function toggleConnector(state: BuilderState, name: string): BuilderState {
   const connectors = state.values.connectors.includes(name)
     ? state.values.connectors.filter((item) => item !== name)
     : [...state.values.connectors, name];
-  return { ...state, values: { ...state.values, connectors } };
+  const sources = state.sources.connectors
+    ? { ...state.sources, connectors: SOURCE_ME }
+    : state.sources;
+  return { ...state, sources, values: { ...state.values, connectors } };
 }
 
 const normalizeStep = (step: string) => step.replace(/[\s.]/g, '');
