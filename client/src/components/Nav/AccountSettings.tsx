@@ -238,7 +238,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           className="w-11/12 max-w-[450px] gap-0 overflow-hidden p-0"
         >
           <header className="relative border-b border-border-light px-4 py-3 pr-12 text-left">
-            <OGDialogTitle className="text-base font-semibold leading-5">
+            <OGDialogTitle className="text-base font-bold leading-5">
               {localize('com_ui_demo_reset_title')}
             </OGDialogTitle>
             <OGDialogClose asChild>
@@ -258,7 +258,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           </OGDialogDescription>
           <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-4 py-3">
             <OGDialogClose asChild>
-              <Button type="button" variant="ghost">
+              <Button type="button" variant="ghost" size="pill" className="text-text-tertiary">
                 {localize('com_ui_cancel')}
               </Button>
             </OGDialogClose>
@@ -267,6 +267,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
                 ref={resetDemoButtonRef}
                 type="button"
                 variant="destructive"
+                size="pill"
                 disabled={resetDemoMutation.isLoading}
                 onClick={() => resetDemoMutation.mutate()}
                 className="focus-visible:ring-ring-primary"

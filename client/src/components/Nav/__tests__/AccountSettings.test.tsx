@@ -258,6 +258,18 @@ describe('account menu', () => {
     expect(cancelButton).not.toHaveClass('border', 'border-border-light');
     expect(resetButton).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-ring-primary');
     expect(resetButton).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'com_ui_demo_reset_title' })).toHaveClass(
+      'font-bold',
+    );
+    [cancelButton, resetButton].forEach((button) =>
+      expect(button).toHaveClass(
+        'h-7',
+        'text-[13px]',
+        'font-normal',
+        'rounded-theme-control-round',
+      ),
+    );
+    expect(cancelButton).toHaveClass('text-text-tertiary');
   });
 
   it('does not request demo reset when the confirmation is cancelled', () => {
