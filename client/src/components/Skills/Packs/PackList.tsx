@@ -97,12 +97,14 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
         >
           <span
             aria-hidden="true"
-            className="inline-flex size-[68px] flex-none items-center justify-center rounded-full bg-surface-brand-subtle text-[34px] text-accent-primary"
+            className="inline-flex size-[68px] flex-none items-center justify-center rounded-full bg-surface-message-user text-[34px] text-accent-primary"
           >
             {'＋'}
           </span>
           <span className="min-w-0 flex-1">
-            <b className="block text-[15.5px] font-bold">{localize('com_skills_pack_create')}</b>
+            <b className="block text-[15.5px] font-bold text-text-primary">
+              {localize('com_skills_pack_create')}
+            </b>
             <span className="text-[13.5px] text-text-tertiary">
               {localize('com_skills_pack_create_hint' as TranslationKeys)}
             </span>
