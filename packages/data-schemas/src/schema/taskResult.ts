@@ -47,5 +47,6 @@ const taskResultSchema: Schema<ITaskResultDocument> = new Schema(
 
 taskResultSchema.index({ user: 1, tenantId: 1, conversationId: 1, resultId: 1 }, { unique: true });
 taskResultSchema.index({ user: 1, tenantId: 1, conversationId: 1, createdAt: -1 });
+taskResultSchema.index({ user: 1, tenantId: 1, createdAt: -1 });
 
 export default taskResultSchema;
