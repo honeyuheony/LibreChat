@@ -14,15 +14,19 @@ import type { TranslationKeys } from '~/hooks';
 import type { PreviewBlock } from './Preview';
 import type { BuilderFile } from './state';
 import type { PeerExample } from './peers';
-import { getSkillTitle } from '~/components/Skills/Marketplace/skillCategories';
-import { byLine } from '~/components/Skills/Marketplace/SkillMeta';
+import {
+  runsOf,
+  formatCount,
+  getSkillTitle,
+} from '~/components/Skills/Marketplace/skillCategories';
+import { SOURCE_ME, DRAFT_SLUG, pluginFiles, splitSentences } from './state';
 import SkillIcon from '~/components/Skills/Marketplace/SkillIcon';
-import { SOURCE_ME, pluginFiles, splitSentences } from './state';
+import Preview, { EMOJI_STYLE, PreviewHead } from './Preview';
 import SourceTag, { ChangedMark } from './SourceTag';
-import Preview, { PreviewHead } from './Preview';
 import TrialPanel from './TrialPanel';
 import { useLocalize } from '~/hooks';
 import Folder from './Folder';
+import { cn } from '~/utils';
 import Share from './Share';
 import Todo from './Todo';
 
@@ -44,10 +48,14 @@ type BuilderProps = {
 
 /**
  * 와이어프레임 v29 `.ov`(946·986행): 옅은 막 rgba(23,21,43,.42)과 blur(6px), 투명도 줄이기 설정이면 흐림 없이 .6.
- * 공용 배경막(bg-black/80)에 막 색 역할이 없어 여기서만 덮어쓴다.
+ * 공용 배경막(bg-black/80)에 막 색 역할이 없어 여기서만 덮어쓴다. 보랏빛 먹색 역할이 없어 검정으로 쓰고,
+ * 흰 바탕 위 밝기가 와이어프레임과 같도록 농도를 .38·.55 로 낮췄다.
  */
 const OVERLAY_CLASS =
-  'bg-black/40 backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/60 [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
+  'bg-black/[0.38] backdrop-blur-[6px] [@media(prefers-reduced-transparency:reduce)]:bg-black/[0.55] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none';
+
+/** 와이어프레임 `.md .na>div`(647행): 칸마다 70vh 까지만 늘고 넘치면 칸 안에서 굴린다. */
+const COLUMN_CLASS = 'min-h-0 overflow-auto px-5 py-4 md:max-h-[70vh]';
 
 function draftStatusKey(draft: BuilderSession['draft']): TranslationKeys | null {
   if (draft.pending) {
@@ -120,9 +128,16 @@ function AttachRow({ files }: { files: BuilderFile[] }) {
   const attached = picked || files.length > 0;
   return (
     <>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-border-medium bg-surface-primary px-2.5 py-2">
-        <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
-          <span aria-hidden="true">📎</span>
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-solid border-border-medium bg-surface-primary px-2.5 py-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-auto gap-1 rounded-full border-border-medium px-[11px] py-[3px] text-[13px]"
+          onClick={() => input.current?.click()}
+        >
+          <span aria-hidden="true" style={EMOJI_STYLE}>
+            📎
+          </span>
           {localize('com_skills_builder_files_attach')}
         </Button>
         {files.length > 0 ? (
@@ -157,6 +172,17 @@ type PeekRowProps = {
   onPeek?: (open: boolean) => void;
   onCopy: (peer: PeerExample) => void;
 };
+
+/** 와이어프레임 `pk1 .by`: 작성자 · 부서 · 실행 수. 「By」와 응용 수는 적지 않는다. */
+function peerByLine(skill: PeerExample['skill'], localize: ReturnType<typeof useLocalize>) {
+  return [
+    skill.authorName,
+    skill.authorDepartment,
+    localize('com_skills_meta_runs', { value: formatCount(runsOf(skill)) }),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
 
 /** 「다른 사람이 쓴 예 보기」: 남의 agent 세 개와 그 글을 펼치고, 「이 글 가져오기」로 글칸에 넣는다. */
 function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
@@ -198,7 +224,7 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                     <div className="min-w-0 flex-1">
                       <b className="text-text-primary">{getSkillTitle(peer.skill)}</b>
                       <div className="text-xs text-text-secondary">
-                        {byLine(peer.skill, localize, { withRuns: true })}
+                        {peerByLine(peer.skill, localize)}
                       </div>
                     </div>
                     <Button
@@ -212,9 +238,11 @@ function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                       {localize('com_skills_builder_peek_copy' as TranslationKeys)}
                     </Button>
                   </div>
-                  <pre className="mt-2 whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-text-secondary">
-                    {peer.text}
-                  </pre>
+                  <ol className="mt-2 list-decimal ps-5 font-sans text-[13px] leading-relaxed text-text-secondary">
+                    {peer.text.split('\n').map((line, index) => (
+                      <li key={index}>{line}</li>
+                    ))}
+                  </ol>
                 </li>
               ))}
             </ul>
@@ -244,6 +272,8 @@ export default function Builder({
   const [selectedFile, setSelectedFile] = useState('');
   const [raw, setRaw] = useState(false);
   const [activeBlock, setActiveBlock] = useState<PreviewBlock | null>(null);
+  const [askText, setAskText] = useState(false);
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const files = pluginFiles(state, author);
   const skillPath = files.find((file) => file.path.endsWith('SKILL.md'))?.path ?? files[0].path;
   const selected = files.some((file) => file.path === selectedFile) ? selectedFile : skillPath;
@@ -253,6 +283,21 @@ export default function Builder({
   const textChanged = session.changed.has('text');
   const draftStatus = draftStatusKey(session.draft);
   const textSource = state.direct && !textChanged ? state.textBy : SOURCE_ME;
+  const statusText =
+    askText && empty ? ('com_skills_builder_test_needs_text' as TranslationKeys) : draftStatus;
+  /** 와이어프레임처럼 처음부터 누를 수 있다. 글이 없으면 저장이 실패하므로 요청 대신 글칸으로 안내한다. */
+  const runTest = () => {
+    if (empty) {
+      setAskText(true);
+      textRef.current?.focus();
+      return;
+    }
+    void session.runTest();
+  };
+  const peek = (open: boolean) => {
+    setActiveBlock('how');
+    onPeek?.(open);
+  };
   const copyPeer = ({ skill, text }: PeerExample) => {
     const name = getSkillTitle(skill);
     session.copyText(
@@ -290,8 +335,8 @@ export default function Builder({
           </Button>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-          <div className="min-h-0 overflow-auto px-5 py-4">
+        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
+          <div className={COLUMN_CLASS}>
             <section className="flex flex-col gap-2 rounded-xl border border-border-brand bg-surface-primary px-4 py-3.5 ring-[3px] ring-surface-brand-subtle">
               <div className="flex items-center gap-2">
                 <label htmlFor="builder-text" className="text-[15.5px] font-bold text-text-primary">
@@ -322,22 +367,26 @@ export default function Builder({
               </p>
               <textarea
                 id="builder-text"
+                ref={textRef}
                 rows={11}
                 value={state.text}
-                onChange={(event) => session.setText(event.target.value)}
+                onChange={(event) => {
+                  setAskText(false);
+                  session.setText(event.target.value);
+                }}
                 onFocus={() => setActiveBlock('how')}
                 placeholder={localize('com_skills_builder_text_placeholder')}
                 className="w-full resize-y rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-[15px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:border-ring-primary focus:outline-none focus:ring-[3px] focus:ring-border-brand"
               />
               <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
-                {draftStatus ? localize(draftStatus) : ''}
+                {statusText ? localize(statusText) : ''}
               </p>
               <AttachRow files={state.files} />
-              <PeekRow peers={peers} onPeek={onPeek} onCopy={copyPeer} />
+              <PeekRow peers={peers} onPeek={peek} onCopy={copyPeer} />
             </section>
           </div>
 
-          <div className="min-h-0 overflow-auto border-border-light bg-surface-secondary px-5 py-4 md:border-s">
+          <div className={cn(COLUMN_CLASS, 'border-border-light bg-surface-secondary md:border-s')}>
             <PreviewHead
               state={state}
               author={author}
@@ -348,7 +397,7 @@ export default function Builder({
               onActivate={setActiveBlock}
             />
             <Folder
-              root={state.slug || 'new-agent'}
+              root={state.slug || DRAFT_SLUG}
               files={files}
               selected={selected}
               onSelect={setSelectedFile}
@@ -397,8 +446,8 @@ export default function Builder({
           <Button
             variant={session.tested ? 'outline' : 'submit'}
             size="sm"
-            disabled={running || empty}
-            onClick={() => void session.runTest()}
+            disabled={running}
+            onClick={runTest}
           >
             {localize(testButtonKey(running, session.tested))}
           </Button>

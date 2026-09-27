@@ -56,3 +56,17 @@ describe('peerExample', () => {
     expect(peerExample({ ...base, body: '' } as TSkill)).toBeNull();
   });
 });
+
+describe('peerExample text for reading', () => {
+  const base = { _id: 'x', name: 'x', frontmatter: {} } as unknown as TSkill;
+
+  it('drops backticks and markdown marks from the numbered lines', () => {
+    const skill = {
+      ...base,
+      body: '## 방법\n1. `write_report` 를 한 번 부른다.\n2. **표**로 쓰고 [양식](http://x)을 따른다.\n',
+    };
+    expect(peerExample(skill as TSkill)?.text).toBe(
+      'write_report 를 한 번 부른다.\n표로 쓰고 양식을 따른다.',
+    );
+  });
+});

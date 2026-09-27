@@ -61,6 +61,8 @@ export const SOURCE_AI = 'ai';
 export const SOURCE_ME = 'me';
 export const SOURCE_ORIGIN = 'origin';
 export const SOURCE_CHAT = 'chat';
+/** 이름을 정하기 전 초안의 폴더 표시 이름. 저장할 때는 `agent-<시각>` 이름을 따로 붙인다. */
+export const DRAFT_SLUG = 'agent-draft';
 
 export const OUTPUTS: readonly TSkillDraftOutput[] = [
   'report',
@@ -264,7 +266,7 @@ function composeInput(state: BuilderState) {
   const { values } = state;
   const starter = starterPrompt(values);
   return {
-    name: state.slug || 'new-agent',
+    name: state.slug || DRAFT_SLUG,
     displayTitle: values.title.trim(),
     description: describe(values),
     examples: starter ? [starter] : [],
@@ -342,7 +344,7 @@ export type PluginFile = { path: string; content: string };
 
 /** 「만들어지는 폴더」: Claude 플러그인과 같은 배치이며 서버 내보내기와 같은 파일 이름을 쓴다. */
 export function pluginFiles(state: BuilderState, author: string): PluginFile[] {
-  const slug = state.slug || 'new-agent';
+  const slug = state.slug || DRAFT_SLUG;
   const { values } = state;
   const files: PluginFile[] = [
     {

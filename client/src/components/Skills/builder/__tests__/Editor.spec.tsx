@@ -226,9 +226,9 @@ describe('Editor', () => {
     const loaded = new Set(mockUseGetSkillQuery.mock.calls.map(([id]) => id).filter(Boolean));
     expect(loaded).toEqual(new Set(['peer-c', 'peer-b', 'peer-a']));
     expect(
-      within(screen.getByRole('list', { name: 'com_skills_builder_peek' }))
-        .getAllByRole('listitem')
-        .map((item) => item.querySelector('b')?.textContent),
+      Array.from(screen.getByRole('list', { name: 'com_skills_builder_peek' }).children).map(
+        (item) => item.querySelector('b')?.textContent,
+      ),
     ).toEqual(['보도자료', '출장보고', '회의록 정리']);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'com_skills_builder_peek_copy' })[0]);
