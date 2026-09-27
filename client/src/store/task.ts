@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import type { Agents, TaskProgressEvent } from 'librechat-data-provider';
 
-export type TaskPanelState = {
+type TaskPanelState = {
   open: boolean;
   view: 'overview' | 'result';
   resultId: string | null;
@@ -18,8 +18,7 @@ export const taskProgressByToolCallId = atomFamily((_toolCallId: string) =>
   atom<TaskProgressEvent | null>(null),
 );
 
-/** The decision the server accepted for a task call's confirmation card. The call
- *  keeps its `approval` until it returns, so this is what says it no longer waits. */
+/** 서버가 승인한 결정을 도구 호출이 끝날 때까지 보관해 확인 카드의 대기 표시를 해제한다. */
 export const taskDecisionByToolCallId = atomFamily((_toolCallId: string) =>
   atom<Agents.ToolApprovalDecisionType | null>(null),
 );

@@ -590,7 +590,7 @@ describe('HoverButtons more actions', () => {
   it('keeps copy, regenerate and rating in view on a reply', () => {
     renderSettledReply();
 
-    /** jsdom applies no Tailwind, so "in view" means outside the collapsed `.hidden` group. */
+    /** jsdom은 Tailwind를 적용하지 않으므로, 표시 상태는 접힌 `.hidden` 그룹 밖인지로 판정한다. */
     expect(screen.getByTestId('copy-response-button').closest('.hidden')).toBeNull();
     expect(screen.getByTestId('regenerate-generation-button').closest('.hidden')).toBeNull();
     expect(screen.getByTitle('Love this').closest('.hidden')).toBeNull();

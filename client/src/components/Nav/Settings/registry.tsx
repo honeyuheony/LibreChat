@@ -179,7 +179,7 @@ export const registry: SettingEntry[] = [
     show: (ctx) => ctx.adminPanelURL !== '',
   },
 
-  // Personal · Sending
+  // 개인 · 전송
   {
     id: 'enterToSend',
     tab: PERSONALIZATION,
@@ -259,7 +259,7 @@ export const registry: SettingEntry[] = [
       hoverCardText: 'com_nav_info_save_badges_state',
     }),
   },
-  // Personal · Commands
+  // 개인 · 명령
   {
     id: 'atCommand',
     tab: PERSONALIZATION,
@@ -295,7 +295,7 @@ export const registry: SettingEntry[] = [
       switchId: 'slashCommand',
     }),
   },
-  // Personal · Messages
+  // 개인 · 메시지
   {
     id: 'enableUserMsgMarkdown',
     tab: PERSONALIZATION,
@@ -388,7 +388,7 @@ export const registry: SettingEntry[] = [
       switchId: 'autoExpandTools',
     }),
   },
-  // Personal · Conversations
+  // 개인 · 대화
   {
     id: 'newChatSwitchToHistory',
     tab: PERSONALIZATION,
@@ -431,7 +431,7 @@ export const registry: SettingEntry[] = [
     keywords: ['fork', 'branch', 'split'],
     Component: ForkSettings,
   },
-  // Personal · Prompts
+  // 개인 · 프롬프트
   {
     id: 'advancedPrompts',
     tab: PERSONALIZATION,
@@ -467,7 +467,7 @@ export const registry: SettingEntry[] = [
     }),
   },
 
-  // Personal · Speech-to-text
+  // 개인 · 음성 인식
   {
     id: 'speechToText',
     tab: PERSONALIZATION,
@@ -510,7 +510,7 @@ export const registry: SettingEntry[] = [
     labelKey: 'com_nav_auto_send_text',
     Component: AutoSendTextSelector,
   },
-  // Personal · Text-to-speech
+  // 개인 · 음성 합성
   {
     id: 'textToSpeech',
     tab: PERSONALIZATION,
@@ -653,7 +653,7 @@ export const registry: SettingEntry[] = [
     Component: ClearChats,
   },
 
-  // Personal · Profile
+  // 개인 · 프로필
   {
     id: 'avatar',
     tab: PERSONALIZATION,
@@ -661,7 +661,7 @@ export const registry: SettingEntry[] = [
     labelKey: 'com_ui_settings_label_avatar',
     Component: Avatar,
   },
-  // Personal · Security
+  // 개인 · 보안
   {
     id: 'twoFactor',
     tab: PERSONALIZATION,
@@ -678,7 +678,7 @@ export const registry: SettingEntry[] = [
     show: (ctx) => ctx.isLocalProvider && ctx.twoFactorEnabled,
     Component: BackupCodesItem,
   },
-  // Data controls · Danger zone (account)
+  // 데이터 관리 · 계정 삭제
   {
     id: 'deleteAccount',
     tab: DATA,
@@ -688,7 +688,7 @@ export const registry: SettingEntry[] = [
     Component: DeleteAccount,
   },
 
-  // General · About
+  // 일반 · 정보
   {
     id: 'about',
     tab: GENERAL,

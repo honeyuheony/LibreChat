@@ -105,7 +105,7 @@ describe('UserSettings', () => {
     mockMutate.mockClear();
   });
 
-  it('shows the wireframe labels, defaults, and connector link', () => {
+  it('shows the settings labels, defaults, and connector link', () => {
     renderSettings();
 
     expect(screen.getByRole('heading', { name: 'com_nav_settings' })).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe('UserSettings', () => {
     ).toBeInTheDocument();
   });
 
-  it('matches the wireframe layout for settings controls', () => {
+  it('uses the expected layout for settings controls', () => {
     renderSettings();
 
     const note = screen.getByRole('note');

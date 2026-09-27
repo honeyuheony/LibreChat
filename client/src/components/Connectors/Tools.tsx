@@ -39,7 +39,7 @@ function ToolRow({ serverName, tool }: { serverName: string; tool: MCPTool }) {
   );
 }
 
-/** Tool list of one connector; fetched only once the card is opened. */
+/** 커넥터 카드를 열 때만 도구 목록을 조회한다. */
 export default function ConnectorTools({ serverName, isConnected }: ConnectorToolsProps) {
   const localize = useLocalize();
   const { data, isLoading, isError } = useMCPToolsQuery();

@@ -4,12 +4,8 @@ import type { Agents } from 'librechat-data-provider';
 import { useApprovalContext, useResumeSubmit } from '../ApprovalContext';
 import { taskDecisionByToolCallId } from '~/store/task';
 
-/**
- * What 「실행」 sends under the server's `allowed_decisions`: an approve when the card
- * left the model's arguments as they were, otherwise an edit carrying the card's
- * arguments. Null when the policy allows neither, e.g. a changed pick with no `edit`.
- */
-export function runResolution(
+/** 변경이 없으면 approve, 수정했으면 edit로 보내고 정책이 허용하지 않으면 null을 반환한다. */
+function runResolution(
   toolCallId: string,
   allowed: Agents.ToolApprovalDecisionType[],
   editedArguments: Record<string, unknown>,
@@ -24,11 +20,7 @@ export function runResolution(
   return null;
 }
 
-/**
- * Submits a task card's choice through the same approval batch as `ToolApproval`.
- * The decision draft is written too, so the composer review panel (which renders the
- * generic `ToolApproval` for the same call) shows and keeps the same decision.
- */
+/** 같은 호출을 표시하는 composer의 ToolApproval에도 선택을 보여 주려고 초안과 승인 batch를 갱신한다. */
 export default function useTaskApproval(
   approval: NonNullable<Agents.ToolCall['approval']>,
   toolCallId: string,
@@ -56,14 +48,13 @@ export default function useTaskApproval(
   const decision = getDecision(actionId, toolCallId)?.decision;
   const setSentDecision = useSetAtom(taskDecisionByToolCallId(toolCallId));
 
-  /** The task panel reads this to stop saying the call waits for approval. */
+  /** task panel이 이 호출을 승인 대기로 다시 표시하지 않도록 전송한 결정을 기록한다. */
   useEffect(() => {
     if (status === 'submitted' && decision != null) {
       setSentDecision(decision);
     }
   }, [status, decision, setSentDecision]);
-  /** Other calls paused in the same batch that nobody has decided yet. The server takes
-   *  the batch whole, so this card's choice is only sent once they are decided too. */
+  /** 서버는 batch 전체를 제출하므로 다른 호출도 모두 결정해야 이 선택을 보낼 수 있다. */
   const decidedIds = new Set(getDecisions(actionId).map((item) => item.tool_call_id));
   const othersPending = Math.max(
     0,
@@ -101,7 +92,7 @@ export default function useTaskApproval(
   return {
     status,
     locked,
-    /** The decision this card holds, so a sent reject reads 「취소됨」 rather than 「실행됨」. */
+    /** 거절 기록을 남겨 전송 뒤 상태를 「실행됨」이 아닌 「취소됨」으로 표시한다. */
     decision,
     othersPending,
     canEdit: allowed.includes('edit'),

@@ -78,7 +78,7 @@ function ConvoOptions({
   setIsPopoverActive: (open: boolean) => void;
   isActiveConvo: boolean;
   isShiftHeld?: boolean;
-  /** Draws the trigger as this text with a chevron, for the conversation header's title. */
+  /** 대화 제목을 펼침 화살표가 있는 버튼에 표시한다. */
   triggerLabel?: string;
 }) {
   const localize = useLocalize();
@@ -494,8 +494,7 @@ function ConvoOptions({
                 : cn(
                     buttonClassName,
                     'gap-2',
-                    /** The hover fill persists while the menu is open, even once the
-                     *  pointer moves into the dropdown. */
+                    /** 포인터가 드롭다운으로 이동해도 열린 메뉴의 배경색을 유지한다. */
                     isPopoverActive && 'bg-surface-active text-text-primary',
                   )
             }

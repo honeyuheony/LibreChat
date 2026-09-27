@@ -6,10 +6,7 @@ import type { MenuItemProps } from '~/common';
 import { useLocalize, useHasAccess, useGetAgentsConfig, useAgentCapabilities } from '~/hooks';
 import { showSkillsPopoverFamily } from './skillsState';
 
-/**
- * The `+` menu's "attach a skill" entry. It opens the same skill picker the `/`
- * command opens, under the same access and capability checks.
- */
+/** `+` 메뉴에서도 `/` 명령과 같은 권한·기능 조건으로 스킬 선택기를 연다. */
 export default function useSkillAttachItems(
   index: number,
   endpoint?: string | null,
@@ -34,8 +31,7 @@ export default function useSkillAttachItems(
         id: 'composer-attach-skill',
         label: localize('com_ui_attach_skill'),
         icon: <ScrollText className="icon-md" aria-hidden="true" />,
-        /* Deferred past the menu's own close, which hands focus back to its
-           trigger; the picker takes focus when it mounts. */
+        /* 메뉴가 닫히며 메뉴 버튼에 돌아간 포커스를 스킬 선택기가 가져가도록 실행을 미룬다. */
         onClick: () => {
           setTimeout(() => setShowSkillsPopover(true), 0);
         },

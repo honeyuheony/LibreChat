@@ -43,8 +43,6 @@ describe('SidePanelGroup', () => {
     expect(getItem).not.toHaveBeenCalledWith(TASK_KEY);
   });
 
-  /** The task panel opens at the wireframe's 360px and keeps its own saved width,
-   *  so resizing one panel never moves the other. */
   it('opens the task panel at 360px under a layout of its own', () => {
     localStorage.setItem(
       ARTIFACTS_KEY,

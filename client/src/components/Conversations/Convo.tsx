@@ -41,8 +41,7 @@ interface ConversationProps {
   /** Shortcuts an owning list handles for this row, declared on its focusable
    *  element so they are announced rather than left to be discovered. */
   keyShortcuts?: string;
-  /** The sidebar history's wireframe row: title only, ✎ and ✕ on hover instead of the
-   *  overflow menu, and a 「생성 중」 dot while a reply is being written. */
+  /** 대화 기록에서 제목만 보이고, 포인터를 올리면 이름 변경·삭제 동작이 나타나며 응답 중에는 생성 상태를 표시한다. */
   editActions?: boolean;
 }
 
@@ -69,10 +68,9 @@ function Conversation({
      serving them, so the row must not advertise one that no longer resolves. */
   const { data: startupConfig } = useGetStartupConfig();
   const sharedLinksEnabled = startupConfig?.sharedLinksEnabled === true;
-  /* Read here rather than passed down: the row's memo compares `isGenerating` only,
-     and a paused run turning back into a running one keeps that flag true. */
+  /* 재개 후에도 isGenerating이 true라 props만으로 감지할 수 없어 행에서 상태를 직접 구독한다. */
   const activeJobStatus = useActiveJobStatus(conversation.conversationId);
-  /* A paused run needs the user, whatever mode the chat is in, so every row shows it. */
+  /* 승인을 기다리는 실행은 채팅 모드와 무관하게 모든 대화 행에 표시한다. */
   const awaitingApproval = isGenerating && activeJobStatus === 'requires_action';
   const isSharedBadgeVisible = conversation.isShared === true && sharedLinksEnabled;
   const isShiftHeld = useShiftKey();
@@ -336,8 +334,7 @@ function Conversation({
         </span>
       );
     } else if (!renaming && conversationId) {
-      /* Desktop shows the pair only under the pointer or focus, the open chat included;
-         touch has no hover, so the open chat keeps it. */
+      /* 이름 변경·삭제 동작은 데스크톱에서 포인터·키보드 포커스가 있을 때만, 터치 화면에서 활성 대화에 계속 보인다. */
       actionVisibilityClassName =
         'pointer-events-none w-0 scale-x-0 opacity-0 group-focus-within:pointer-events-auto group-focus-within:scale-x-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:scale-x-100 group-hover:opacity-100';
       actionWidthClassName = 'group-focus-within:w-12 group-hover:w-12';

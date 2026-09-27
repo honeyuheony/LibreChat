@@ -21,6 +21,5 @@ export const TOOL_ROW_CLASSES = 'relative my-1.5 flex h-5 shrink-0 items-center 
  */
 export const ROW_GLYPH_SLOT = 'flex h-5 min-w-6 shrink-0 items-center justify-center';
 
-/** True for rows rendered inside a `ToolCallGroup`, whose header already names the connector
- *  and the total time, so each row shows a status glyph and its result summary instead. */
+/** ToolCallGroup 헤더에 connector 이름과 시간이 있으므로 묶인 행에는 상태 아이콘과 결과만 표시한다. */
 export const GroupedRowContext = createContext(false);

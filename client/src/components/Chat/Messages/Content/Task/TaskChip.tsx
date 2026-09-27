@@ -39,7 +39,7 @@ export function TaskChip({
   );
 }
 
-export function TaskApprovalStatus({ status }: { status: string }) {
+function TaskApprovalStatus({ status }: { status: string }) {
   const localize = useLocalize();
   if (status !== 'expired' && status !== 'error') {
     return null;
@@ -52,12 +52,6 @@ export function TaskApprovalStatus({ status }: { status: string }) {
   );
 }
 
-/**
- * The row under a task approval card: 「실행」, 「취소」 when the policy allows a reject,
- * the card's own details (the estimate), why run is blocked, and how many other
- * approvals of the same batch are still open. Once the decision is sent it collapses
- * to 「실행됨」 or 「취소됨」.
- */
 export function TaskApprovalActions({
   status,
   locked,

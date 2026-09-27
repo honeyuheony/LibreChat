@@ -1004,7 +1004,6 @@ describe('useMCPSelect', () => {
     it('mirrors the selection into a non-owner instance so its actions build on it', async () => {
       const { Wrapper } = createWrapper();
 
-      /** A non-owner hook instance derives its actions from the shared `mcpValues`. */
       const TestComponent = () => {
         const actions = useMCPSelect({ servers: createMCPServers(['server1', 'server2']) });
         const setEphemeralAgent = useSetRecoilState(ephemeralAgentByConvoId(Constants.NEW_CONVO));

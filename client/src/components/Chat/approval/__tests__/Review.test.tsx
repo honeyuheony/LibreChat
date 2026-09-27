@@ -199,7 +199,7 @@ describe('PendingToolApproval', () => {
     expect(screen.getByText('0 of 2 decisions selected')).toBeInTheDocument();
   });
 
-  /** Stands in for the task card in the message, which records its own decision. */
+  /** 메시지의 task card가 직접 결정을 기록하는 동작을 대신한다. */
   function TaskCardDecision({ toolCallId }: { toolCallId: string }) {
     const { setDecision } = useApprovalContext();
     return (

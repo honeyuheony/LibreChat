@@ -139,7 +139,7 @@ describe('TaskPlanCard', () => {
     expect(screen.getAllByTestId('result-card').map((card) => card.textContent)).toEqual([
       'result-9',
     ]);
-    /** Opening the panel for a live result is the task panel's job, not the card's. */
+    /** 라이브 결과 패널은 task panel이 직접 열므로 결과 카드에서는 자동으로 열지 않는다. */
     expect(screen.getByTestId('result-card')).toHaveAttribute('data-auto-open', 'undefined');
   });
 

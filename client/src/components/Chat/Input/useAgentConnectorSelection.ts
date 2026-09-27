@@ -16,10 +16,9 @@ import { getTimestampedValue, setTimestampedValue } from '~/utils/timestamps';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import { isEphemeralAgent } from '~/common';
 
-export interface AgentConnectorSelection {
-  /** True when the conversation runs a saved agent, whose tools the server narrows. */
+interface AgentConnectorSelection {
+  /** 서버가 도구 접근을 제한하는 saved agent 대화인지 나타낸다. */
   isSavedAgent: boolean;
-  /** Connectors the saved agent carries; only these can be switched. */
   agentServerNames: ReadonlySet<string>;
   isEnabled: (serverName: string) => boolean;
   toggle: (serverName: string) => void;
@@ -36,12 +35,11 @@ function readStoredDisabled(storageKey: string): string[] | undefined {
       ? parsed.filter((name): name is string => typeof name === 'string')
       : undefined;
   } catch {
-    // A corrupt entry reads as "nothing chosen": every connector the agent carries stays on.
+    // 저장값을 읽지 못하면 호출부가 새 대화 기본값을 적용한다.
     return undefined;
   }
 }
 
-/** The connectors a saved agent carries, read from its MCP tool keys. */
 export function getAgentServerNames(
   tools: readonly string[] | undefined,
   catalogServerNames: readonly string[],
@@ -69,14 +67,7 @@ export function getAgentServerNames(
   return names;
 }
 
-/**
- * The chat's connector switches for a saved agent. A new chat starts with the connectors
- * the user keeps on for new chats (`newChatOff` lists the rest); switching one off records
- * it in `ephemeralAgent.disabled_mcp`, which the server uses to leave that connector's tools
- * out of the run. A switch changes only its own conversation. A conversation opened with no
- * stored choice (another browser, or one older than the storage keeps) starts from the same
- * new-chat defaults rather than with every connector on.
- */
+/** 저장된 선택이 없는 saved agent 대화는 새 대화의 connector 기본값으로 시작한다. */
 export default function useAgentConnectorSelection({
   conversationId,
   agentId,
@@ -86,7 +77,7 @@ export default function useAgentConnectorSelection({
   conversationId?: string | null;
   agentId?: string | null;
   catalogServerNames: readonly string[];
-  /** Connectors a new chat starts with off; undefined until the user and catalog load. */
+  /** 새 대화에서 기본으로 끌 connector이며, 사용자 설정과 목록을 불러오기 전에는 undefined다. */
   newChatOff?: readonly string[];
 }): AgentConnectorSelection {
   const convoKey = conversationId ?? Constants.NEW_CONVO;
@@ -105,8 +96,7 @@ export default function useAgentConnectorSelection({
 
   const [extraOn, setExtraOn] = useAtom(newChatExtraConnectorAtom);
 
-  /* Every new chat gets a fresh ephemeral agent, so the new-chat defaults are laid on each
-     time; the chat's own switches then take over and move with it to its real id. */
+  /* 새 대화마다 ephemeral agent가 새로 생기므로 connector 기본값을 매번 다시 적용한다. */
   useEffect(() => {
     if (!isSavedAgent || !isNewChat || disabledList !== undefined || newChatOff === undefined) {
       return;
@@ -128,8 +118,7 @@ export default function useAgentConnectorSelection({
     }
   }, [isNewChat, extraOn, setExtraOn]);
 
-  /* A conversation loaded again rebuilds its ephemeral agent from the model spec,
-     which knows nothing of these switches, so the stored choice is laid back on. */
+  /* 대화를 다시 열면 model spec으로 ephemeral agent를 만들기 때문에 저장한 선택을 다시 적용한다. */
   useEffect(() => {
     if (!isSavedAgent || isNewChat || disabledList !== undefined) {
       return;
@@ -140,9 +129,7 @@ export default function useAgentConnectorSelection({
     }
   }, [isSavedAgent, isNewChat, disabledList, storageKey, newChatOff, setEphemeralAgent]);
 
-  /* A new chat's choice moves to its real id with the ephemeral agent, and is stored from there.
-     The timestamp keeps app startup's cleanup, which drops `LAST_MCP_*` keys without one,
-     from deleting it on the next load. */
+  /* timestamp를 붙여 실제 대화 ID에 저장하면 앱 시작 시 정리 작업에서 값을 지우지 않는다. */
   useEffect(() => {
     if (isNewChat || !Array.isArray(disabledList)) {
       return;
@@ -150,7 +137,7 @@ export default function useAgentConnectorSelection({
     setTimestampedValue(storageKey, disabledList);
   }, [isNewChat, disabledList, storageKey]);
 
-  /* Until a choice is laid on, read the defaults directly so the chips never flash all on. */
+  /* 선택을 반영하기 전에는 기본값을 읽어 칩이 잠깐 모두 켜져 보이지 않게 한다. */
   const disabled = useMemo(
     () => new Set(disabledList ?? newChatOff ?? []),
     [disabledList, newChatOff],

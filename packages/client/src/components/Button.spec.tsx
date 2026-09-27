@@ -32,9 +32,6 @@ describe('Button', () => {
     );
   });
 
-  /** The wireframe's secondary action is a short pill in regular-weight 13px
-   *  type; the default recipe's 36-40px, 14px medium control reads as a primary
-   *  action next to it. */
   it('offers the small pill secondary action as a size', () => {
     render(
       <Button size="pill" variant="outline">

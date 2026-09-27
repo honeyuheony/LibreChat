@@ -6,11 +6,7 @@ import useTaskApproval from './useTaskApproval';
 import { stringList } from './stages';
 import { useLocalize } from '~/hooks';
 
-/**
- * Views offered when the model called the tool without any (agent-less summary).
- * The Korean value is what the server gets as `view` whatever the screen language,
- * so the summary prompt and the saved args stay the same; only the chip is translated.
- */
+/** 서버에는 고정된 `view` 값을 보내고, 칩에는 현재 언어의 번역을 표시한다. */
 const DEFAULT_VIEWS: { value: string; label: TranslationKeys }[] = [
   { value: '간부 보고용', label: 'com_ui_task_view_default_brief' },
   { value: '위험 요인 중심', label: 'com_ui_task_view_default_risk' },
@@ -19,23 +15,18 @@ const DEFAULT_VIEWS: { value: string; label: TranslationKeys }[] = [
 
 const DEFAULT_VIEW_VALUES = DEFAULT_VIEWS.map((view) => view.value);
 
-/** What to show for a `view` value: a default's translated name, anything else as is. */
 export function viewLabel(view: string, localize: ReturnType<typeof useLocalize>): string {
   const preset = DEFAULT_VIEWS.find((item) => item.value === view);
   return preset != null ? localize(preset.label) : view;
 }
 
-/**
- * The picker after the call ran, read-only, with the perspective it ran with on.
- * `args` come from the saved tool call, rewritten on completion with the arguments
- * the tool actually got, so `view` is the user's pick rather than the model's.
- */
+/** 완료된 tool call에는 승인 후 선택한 `view`가 저장되어 그대로 보여 준다. */
 export function TaskViewRan({
   args,
   cancelled = false,
 }: {
   args: Record<string, unknown>;
-  /** Cancelled at this card: nothing was picked to run with. */
+  /** 이 카드에서 취소했으므로 선택한 관점은 실행하지 않았다. */
   cancelled?: boolean;
 }) {
   const localize = useLocalize();
@@ -62,10 +53,7 @@ export function TaskViewRan({
   );
 }
 
-/**
- * Perspective picker for a paused `summarize_documents` call. Nothing is picked up
- * front, even when the model passed `view`, so the user always chooses before running.
- */
+/** 모델이 `view`를 보냈어도 사용자가 실행 전에 관점을 고르도록 선택을 비워 둔다. */
 export default function TaskViewApproval({
   approval,
   toolCallId,
@@ -96,7 +84,7 @@ export default function TaskViewApproval({
   const [adding, setAdding] = useState(false);
   const [draftView, setDraftView] = useState('');
   const views = [...offered, ...custom.filter((view) => !offered.includes(view))];
-  /** Picking the model's own `view` with nothing typed in leaves the call as proposed. */
+  /** 모델이 제안한 `view`를 그대로 골랐으면 변경 없이 승인으로 보낸다. */
   const changed = !(custom.length === 0 && typeof args.view === 'string' && picked === args.view);
   const resolution = picked == null ? null : resolveRun({ ...args, views, view: picked }, changed);
 
@@ -133,7 +121,7 @@ export default function TaskViewApproval({
           )}
           {adding && (
             <input
-              // The field only appears after the user presses the add chip, so focus follows that press.
+              // 추가 칩을 눌러 입력 칸이 생기면 바로 입력하도록 초점을 옮긴다.
               // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               value={draftView}

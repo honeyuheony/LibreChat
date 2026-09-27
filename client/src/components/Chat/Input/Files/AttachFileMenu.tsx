@@ -90,13 +90,12 @@ interface AttachFileMenuProps {
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
-  /** Non-upload actions the composer's `+` menu carries after the upload items, such as attaching a skill. */
+  /** 업로드 항목 뒤에 "+" 메뉴에 추가로 표시할 메뉴 항목이다. */
   extraItems?: MenuItemProps[];
-  /** Draws the upload entries inside a menu the caller owns instead of this `+` control. */
+  /** 호출부가 소유한 "+" 메뉴 안에 업로드 항목을 렌더링한다. */
   renderMenu?: (items: MenuItemProps[]) => React.ReactNode;
 }
 
-/** Bordered square shared by every face of the composer's `+` control. */
 const plusTriggerClassName =
   'flex size-theme-control items-center justify-center rounded-theme-control border border-border-light p-1 text-text-secondary transition-colors duration-theme-fast hover:bg-surface-composer-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-opacity-50';
 
@@ -517,7 +516,6 @@ const AttachFileMenu = ({
   );
 };
 
-/** The `+` control when uploads are unavailable here but other composer actions remain. */
 export function ComposerActionsMenu({ items }: { items: MenuItemProps[] }) {
   const localize = useLocalize();
   const [isOpen, setIsOpen] = useState(false);

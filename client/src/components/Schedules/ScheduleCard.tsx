@@ -1,16 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Switch, useToastContext } from '@librechat/client';
 import type { TSchedule, ScheduleDisabledReason, ScheduleRunStatus } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks/useLocalize';
 import {
   useDeleteScheduleMutation,
   useRunScheduleNowMutation,
   useUpdateScheduleMutation,
 } from '~/data-provider/Schedules';
 import { formatScheduleCadence } from './cadence';
-import { localizeScheduleText } from './localize';
 import { useLocalize } from '~/hooks';
 
-const RUN_STATUS_KEYS: Record<ScheduleRunStatus, string> = {
+const RUN_STATUS_KEYS: Record<ScheduleRunStatus, TranslationKeys> = {
   started: 'com_ui_schedule_run_started',
   requires_action: 'com_ui_schedules_status_approval',
   success: 'com_ui_schedules_status_success',
@@ -20,7 +20,7 @@ const RUN_STATUS_KEYS: Record<ScheduleRunStatus, string> = {
   skipped_balance: 'com_ui_schedule_run_skipped',
 };
 
-const DISABLED_REASON_KEYS: Record<ScheduleDisabledReason, string> = {
+const DISABLED_REASON_KEYS: Record<ScheduleDisabledReason, TranslationKeys> = {
   mcp_reauth_required: 'com_ui_schedule_disabled_mcp_reauth',
   mcp_configuration_missing: 'com_ui_schedule_disabled_mcp_configuration',
   mcp_permission_denied: 'com_ui_schedule_disabled_mcp_permission',
@@ -72,21 +72,21 @@ export default function ScheduleCard({
   const agentName = skillNames.get(agentKey) ?? agentKey;
   const conversationName = schedule.chatProjectId
     ? (projectName ?? schedule.chatProjectId)
-    : localizeScheduleText(localize, 'com_ui_schedules_new_chat');
+    : localize('com_ui_schedules_new_chat');
   const cadence = formatScheduleCadence(schedule.cadence, localize, i18n.language);
   const lastRunTime = formatLastRunTime(schedule, i18n.language);
   const lastRunStatus = schedule.lastRun
-    ? localizeScheduleText(localize, RUN_STATUS_KEYS[schedule.lastRun.status])
+    ? localize(RUN_STATUS_KEYS[schedule.lastRun.status])
     : undefined;
   const lastRun =
     lastRunTime != null && lastRunStatus != null
-      ? localizeScheduleText(localize, 'com_ui_schedules_last_run_line', {
+      ? localize('com_ui_schedules_last_run_line', {
           time: lastRunTime,
           status: lastRunStatus,
         })
-      : localizeScheduleText(localize, 'com_ui_schedules_last_run_none');
+      : localize('com_ui_schedules_last_run_none');
   const disabledReason = schedule.disabledReason
-    ? localizeScheduleText(localize, DISABLED_REASON_KEYS[schedule.disabledReason])
+    ? localize(DISABLED_REASON_KEYS[schedule.disabledReason])
     : undefined;
 
   const updateSchedule = useUpdateScheduleMutation({
@@ -133,7 +133,7 @@ export default function ScheduleCard({
         )}
       </div>
       <p className="mt-1 truncate text-sm text-text-secondary">
-        {localizeScheduleText(localize, 'com_ui_schedules_card_detail', {
+        {localize('com_ui_schedules_card_detail', {
           agent: `/${agentName}`,
           conversation: conversationName,
           cadence,

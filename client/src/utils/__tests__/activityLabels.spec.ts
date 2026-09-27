@@ -886,8 +886,6 @@ describe('splitTaskToolParts', () => {
       tool_call: { id, name, args: '{}', output: 'ok' },
     }) as unknown as TMessageContentParts;
 
-  /** A phase card folds shut once it settles; the task card inside it holds the
-   *  result, so it is lifted out and rendered under the card instead. */
   it('lifts task calls out of a phase span and keeps the rest in order', () => {
     const split = splitTaskToolParts(
       [call('skill', 'load_skill'), call('task', 'summarize_documents'), undefined],

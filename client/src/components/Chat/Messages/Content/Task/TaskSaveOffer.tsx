@@ -5,7 +5,6 @@ import { Constants, Permissions, PermissionTypes, splitMCPToolKey } from 'librec
 import type { TMessage } from 'librechat-data-provider';
 import type { ContextType } from 'react';
 import type { BuilderEntryState } from '~/components/Skills/builder';
-import type { TranslationKeys } from '~/hooks';
 import { BUILDER_PATH } from '~/components/Chat/Input/AgentSuggestChips';
 import { useTaskResultQuery } from '~/data-provider/Tasks/queries';
 import { useGetMessagesByConvoId } from '~/data-provider';
@@ -19,7 +18,7 @@ function toolCallName(part: unknown): string | undefined {
   return typeof name === 'string' ? name : undefined;
 }
 
-/** MCP servers the conversation's tool calls went through, each once, in first-use order. */
+/** 대화의 tool call에서 MCP 서버를 처음 사용한 순서대로 한 번씩 가져온다. */
 export function usedConnectors(messages: TMessage[]): string[] {
   const servers = new Set<string>();
   for (const message of messages) {
@@ -46,7 +45,7 @@ type TaskSaveOfferProps = {
 
 type LatestResult = { messageId: string; resultId: string };
 
-/** The newest task result in the conversation and the answer that carries it. */
+/** 대화에서 가장 최근 task 결과와 그 결과를 담은 답변을 찾는다. */
 function latestTaskResult(messages: TMessage[] | undefined): LatestResult | null {
   let latest: LatestResult | null = null;
   for (const message of messages ?? []) {
@@ -58,11 +57,6 @@ function latestTaskResult(messages: TMessage[] | undefined): LatestResult | null
   return latest;
 }
 
-/**
- * "Do you do this again?" card under a finished task. It opens the agent editor with the
- * request, the result the editor reads its settled cells from, and the MCP servers used.
- * The title and body keys are not in the translation files yet, so they are cast.
- */
 export default function TaskSaveOffer({
   conversationId,
   resultId,
@@ -87,8 +81,8 @@ export default function TaskSaveOffer({
       data-testid="task-save-offer"
     >
       <div className="min-w-0 flex-1 text-[0.875rem] leading-relaxed text-text-primary">
-        <b className="block">{localize('com_ui_task_save_agent_title' as TranslationKeys)}</b>
-        {localize('com_ui_task_save_agent_body' as TranslationKeys)}
+        <b className="block">{localize('com_ui_task_save_agent_title')}</b>
+        {localize('com_ui_task_save_agent_body')}
       </div>
       <Button size="pill" variant="submit" onClick={save}>
         {localize('com_skills_chat_save_as_agent')}
@@ -118,7 +112,7 @@ function ChatSaveOffer({
       ? latest.resultId
       : null;
   const { data: result } = useTaskResultQuery(resultId);
-  /** Offered for a request typed in the chat, not for one that already ran a saved agent. */
+  /** 직접 입력한 요청에만 제안을 표시하고, 이미 agent가 실행한 요청은 제외한다. */
   const request = useMemo(() => {
     if (resultId == null || result == null) {
       return undefined;
@@ -141,11 +135,7 @@ function ChatSaveOffer({
   );
 }
 
-/**
- * The save offer at the end of an answer, the way the wireframe appends it once the task
- * is done: only under the answer that carries the conversation's newest task result, so
- * a conversation shows it once. Without an open chat (search results) it renders nothing.
- */
+/** 채팅의 최신 task 결과를 담은 답변 아래에만 저장 제안을 한 번 표시한다. */
 export function MessageSaveOffer({ messageId }: { messageId: string }) {
   const chatContext = useContext(ChatContext);
   if (chatContext == null) {

@@ -163,7 +163,6 @@ const attach = (container: HTMLElement, file: File) =>
   userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, file);
 const image = () => new File(['image-bytes'], 'cat.png', { type: 'image/png' });
 
-/** The composer's `+`: uploads and tools in one menu (com_ui_composer_plus). */
 const PLUS_MENU = 'Files and data';
 
 describe('ChatForm attachments', () => {

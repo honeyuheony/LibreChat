@@ -1,7 +1,6 @@
 import { Check, X, Loader2 } from 'lucide-react';
 import type { ToolCallPhase } from '~/utils/toolCallPhase';
 
-/** Status glyph of one step inside a tool group: done, running or failed. */
 export default function StepIcon({ phase }: { phase: ToolCallPhase }) {
   if (phase === 'running') {
     return (

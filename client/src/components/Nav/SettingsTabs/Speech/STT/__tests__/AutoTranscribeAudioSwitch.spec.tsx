@@ -29,7 +29,7 @@ describe('AutoTranscribeAudioSwitch', () => {
   });
 
   it('calls onCheckedChange when the switch is toggled', () => {
-    /* Speech to text starts off, and this switch only works once it is on. */
+    /* 음성 인식을 켜야 이 스위치를 사용할 수 있다. */
     const { getByTestId } = render(
       <RecoilRoot
         initializeState={({ set }) => {

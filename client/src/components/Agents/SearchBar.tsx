@@ -13,7 +13,6 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   /** Additional CSS classes */
   className?: string;
-  /** Input placeholder override; defaults to the agent-search copy. */
   placeholder?: string;
 }
 

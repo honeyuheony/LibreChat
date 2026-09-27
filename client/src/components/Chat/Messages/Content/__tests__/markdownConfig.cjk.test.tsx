@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import type { Options as ReactMarkdownOptions } from 'react-markdown';
 import { getRemarkPlugins } from '../markdownConfig';
 
-/** Same cast as the production call site: unified@10 config types vs react-markdown's @11. */
+/** unified@10과 react-markdown@11의 설정 타입이 달라 실제 호출부처럼 단언한다. */
 const renderMarkdown = (content: string) =>
   render(
     createElement(
@@ -15,8 +15,7 @@ const renderMarkdown = (content: string) =>
   );
 
 describe('getRemarkPlugins with Korean emphasis', () => {
-  /** CommonMark will not close `**` after punctuation when a letter follows, which is
-   *  every Korean particle written right after a bracket or a quote. */
+  /** 괄호나 따옴표 뒤 한글 조사가 이어지면 CommonMark가 `**` 강조를 닫지 않는다. */
   test.each([
     ['사업기간은 **3년(2+1년)**이며 2년 차에', '3년(2+1년)'],
     ['핵심은 **「예산 확보」**입니다', '「예산 확보」'],

@@ -222,7 +222,6 @@ describe('ConversationsSection streaming re-renders', () => {
       // Sanity check: the section genuinely re-rendered each tick.
       expect(mockUseTitleGeneration.mock.calls.length).toBeGreaterThan(titleBaseline);
 
-      // The memoized list, fed referentially stable props, did not re-render.
       expect(mockConversationsRender.mock.calls.length).toBe(conversationsBaseline);
     },
     TEST_TIMEOUT,

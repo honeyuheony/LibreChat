@@ -21,15 +21,9 @@ export const mcpValuesAtomFamily = atomFamily((conversationId: string | null) =>
   return atomWithStorage<string[]>(storageKey, [], mcpTabIsolatedStorage, { getOnInit: true });
 });
 
-/**
- * A connector the data hub's "new chat with this data" asked to switch on in the next new
- * chat, on top of the user's new-chat defaults. Starting a new chat resets the chat state more
- * than once while the route mounts, so the request is kept briefly (`at`) instead of being
- * consumed by the first reset, and is dropped once the chat is sent.
- */
+/** 반복 초기화 중 요청을 잃지 않도록 새 채팅 기본값에 더할 connector를 전송 전까지 보관한다. */
 export const newChatExtraConnectorAtom = atom<{ serverName: string; at: number } | null>(null);
 
-/** How long a "new chat with this data" request stays valid while the new chat mounts. */
 export const NEW_CHAT_EXTRA_CONNECTOR_TTL_MS = 5000;
 
 /**

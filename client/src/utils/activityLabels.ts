@@ -179,8 +179,7 @@ const ACTIVITY_BLOCK_TYPES = new Set<string>([
 
 const TASK_TOOL_NAMES = new Set<string>(Object.values(TaskTools));
 
-/** True for an `extract_table`, `summarize_documents` or `write_report` call. Their
- *  card holds the plan, the confirmation and the result, so no fold may hide it. */
+/** task 카드는 계획·확인·결과를 담으므로 접힌 phase 영역에 넣지 않는다. */
 export function isTaskToolCallPart(part: TMessageContentParts | undefined): boolean {
   if (part?.type !== ContentTypes.TOOL_CALL) {
     return false;
@@ -428,12 +427,7 @@ type PartSlice = {
   contentIndices: number[];
 };
 
-/**
- * Splits a phase span into what its card folds and the task calls lifted out of it.
- * A phase card collapses once it settles, and a task card inside it would take the
- * result the reader asked for along with it; like the span's attachments, those
- * cards render under the header instead.
- */
+/** 결과가 보이도록 task 카드를 완료 후 접히는 phase 영역 밖에 렌더링한다. */
 export function splitTaskToolParts(
   content: Array<TMessageContentParts | undefined>,
   contentIndices: number[],

@@ -22,7 +22,6 @@ const ROW_HEIGHT = 44;
 const skillIcon = <ScrollText className="icon-md text-status-info" />;
 
 /**
- * Determines whether a skill should appear in the `/` command popover.
  * Reads the persisted `userInvocable` field (mirrors the `user-invocable`
  * frontmatter). Defaults to visible when the field is absent so older
  * skills authored before Phase 6 stay user-invocable without a migration;
@@ -33,7 +32,6 @@ export function isUserInvocable(skill: TSkillSummary): boolean {
 }
 
 /**
- * Filters the skills list down to what should appear in the `/` popover.
  * Composes three rules, short-circuiting on the cheapest check first:
  *
  * 1. Agent scope — mirrors backend `scopeSkillIds` semantics:

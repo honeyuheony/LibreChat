@@ -114,7 +114,7 @@ const useHandleKeyUp = ({
     }
   }, [textAreaRef, hasPromptsAccess, setShowPromptsPopover, slashCommandEnabled]);
 
-  /** `/` opens the agent list too, so the one "/" switch in settings covers it. */
+  /** 슬래시 키도 에이전트 목록을 열므로 같은 명령 설정을 따른다. */
   const handleSkillsCommand = useCallback(() => {
     if (
       !hasSkillsAccess ||

@@ -122,11 +122,7 @@ export const submitToolApproval = async (
   });
 };
 
-/**
- * Once the server takes an answer the paused run goes on, so its sidebar row turns
- * back from 「승인 대기」 now rather than at the next active jobs poll. A run the
- * list no longer holds is left out.
- */
+/** 목록에 남은 작업을 실행 중으로 바꿔, 다음 폴링 전에도 사이드바 상태를 맞춘다. */
 function useMarkResumedJob() {
   const queryClient = useQueryClient();
   return (conversationId: string) =>

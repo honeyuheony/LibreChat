@@ -190,17 +190,13 @@ function UnifiedSidebar() {
         <div
           id={MOBILE_DRAWER_ID}
           className={cn(
-            /** The close swipe reads horizontal touches here (the drawer holds no
-             * horizontal scrollers), while pinch-zoom stays with the browser —
-             * this full-viewport surface must not disable zooming entirely. */
+            /** 닫기 스와이프는 가로 이동을 처리하고 화면 확대는 브라우저가 맡도록 둔다. */
             'sidebar-ink fixed inset-y-0 left-0 flex touch-pan-y touch-pinch-zoom flex-col bg-surface-primary-alt',
             expanded ? 'translate-x-0' : '-translate-x-full',
           )}
           style={{
             width: MOBILE_DRAWER_WIDTH,
-            /** The strip setting changes the width without passing through the
-             *  snap path, so the preference has to reach the declarative style
-             *  too or that one change still animates. */
+            /** strip 변경은 snap 경로를 거치지 않으므로 reduced-motion 설정을 transition에도 반영한다. */
             transition: prefersReducedMotion ? undefined : MOBILE_DRAWER_TRANSITION,
             zIndex: DRAWER_Z_INDEX,
           }}

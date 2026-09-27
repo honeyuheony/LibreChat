@@ -186,7 +186,7 @@ export const useImportSkillMutation = (
   });
 };
 
-export type TForkSkillVariables = { id: string } & TForkSkillRequest;
+type TForkSkillVariables = { id: string } & TForkSkillRequest;
 
 /** 응용하기: 원본을 복사한 비공개 사본을 만들고 목록 캐시에 넣는다. 원본의 응용 수는 사본을 게시해야 오른다. */
 export const useForkSkillMutation = (

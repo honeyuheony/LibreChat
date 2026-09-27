@@ -1,6 +1,5 @@
 import { memo, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useRecoilValue } from 'recoil';
-import { Plus, Search } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { Skeleton, Sidebar, Button, TooltipAnchor } from '@librechat/client';
 import type { NavLink } from '~/common';
@@ -9,243 +8,16 @@ import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import { useSidebarConversationCount } from './ConversationsSection';
-import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { DEFAULT_APP_TITLE } from '~/utils/documentTitle';
+import { NavRow, NewChatRow, SearchRow } from './Rows';
 import SidePanelNav from '~/components/SidePanel/Nav';
 import { useGetStartupConfig } from '~/data-provider';
-import SearchBar from '~/components/Nav/SearchBar';
 import BrandMark from '~/components/ui/BrandMark';
-import useNewChat from '~/hooks/Chat/useNewChat';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 import store from '~/store';
 
 const AccountSettings = lazy(() => import('~/components/Nav/AccountSettings'));
-
-const SEARCH_INPUT_SELECTOR = 'input[data-testid="nav-search-input"]';
-
-const rowClassName =
-  'flex h-9 w-full items-center gap-2.5 rounded-theme-control px-2.5 text-[15px] transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
-const railButtonClassName =
-  'flex size-9 items-center justify-center rounded-theme-control transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
-
-/** A collapsed row keeps only its icon, so its label moves into a tooltip. */
-function RowTooltip({
-  expanded,
-  label,
-  children,
-}: {
-  expanded: boolean;
-  label: string;
-  children: JSX.Element;
-}) {
-  if (expanded) {
-    return children;
-  }
-  return <TooltipAnchor side="right" description={label} render={children} />;
-}
-
-const NewChatRow = memo(function NewChatRow({
-  expanded,
-  setActive,
-}: {
-  expanded: boolean;
-  setActive: (id: string) => void;
-}) {
-  const localize = useLocalize();
-  const switchToHistory = useRecoilValue(store.newChatSwitchToHistory);
-  const label = localize('com_ui_sidebar_new_chat');
-  const tooltipDescription = useShortcutHint('newChat', label);
-  const ariaKey = useShortcutAriaKey('newChat');
-
-  const handlePanelSwitch = useCallback(() => {
-    if (switchToHistory) {
-      setActive(DEFAULT_PANEL);
-    }
-  }, [switchToHistory, setActive]);
-
-  const { handleNewChatClick } = useNewChat({ onNewChat: handlePanelSwitch });
-  /** The wireframe lights this row up while the empty new-chat screen is showing. */
-  const isOnNewChat = useLocation().pathname === '/c/new';
-
-  return (
-    <RowTooltip expanded={expanded} label={tooltipDescription}>
-      <a
-        href="/c/new"
-        data-testid="new-chat-button"
-        aria-label={label}
-        aria-keyshortcuts={ariaKey}
-        aria-current={isOnNewChat ? 'page' : undefined}
-        className={cn(
-          expanded ? rowClassName : railButtonClassName,
-          'font-semibold',
-          isOnNewChat ? 'bg-surface-active text-text-primary' : 'text-accent-primary',
-        )}
-        onClick={handleNewChatClick}
-      >
-        <span
-          className={cn(
-            'flex size-5 flex-shrink-0 items-center justify-center rounded-full',
-            isOnNewChat ? 'bg-surface-submit text-white' : 'bg-accent-primary/20',
-          )}
-        >
-          <Plus className="size-3" strokeWidth={2.6} aria-hidden="true" />
-        </span>
-        {expanded && <span className="truncate">{label}</span>}
-      </a>
-    </RowTooltip>
-  );
-});
-
-/**
- * Expanded, the row is the search field itself. Collapsed, it opens the sidebar on the
- * conversation list and focuses that field once the slide has committed.
- */
-const SearchRow = memo(function SearchRow({
-  expanded,
-  isConversationsActive,
-  onShowConversations,
-}: {
-  expanded: boolean;
-  isConversationsActive: boolean;
-  onShowConversations: () => void;
-}) {
-  const localize = useLocalize();
-  const { setSidebarOpen } = useSidebarToggle();
-  const label = localize('com_ui_sidebar_search');
-
-  const handleFocus = useCallback(() => {
-    if (!isConversationsActive) {
-      onShowConversations();
-    }
-  }, [isConversationsActive, onShowConversations]);
-
-  const handleOpen = useCallback(() => {
-    onShowConversations();
-    setSidebarOpen(true, () => {
-      setTimeout(() => document.querySelector<HTMLInputElement>(SEARCH_INPUT_SELECTOR)?.focus());
-    });
-  }, [onShowConversations, setSidebarOpen]);
-
-  if (expanded) {
-    return (
-      <div className="flex" onFocusCapture={handleFocus}>
-        <SearchBar />
-      </div>
-    );
-  }
-
-  return (
-    <RowTooltip expanded={false} label={label}>
-      <button
-        type="button"
-        aria-label={label}
-        className={cn(railButtonClassName, 'text-text-secondary')}
-        onClick={handleOpen}
-      >
-        <Search className="size-[18px]" aria-hidden="true" />
-      </button>
-    </RowTooltip>
-  );
-});
-
-const NavRow = memo(function NavRow({
-  link,
-  isActive,
-  expanded,
-  section = false,
-  setActive,
-  onExpand,
-  onNavigate,
-  onLeaveInsights,
-}: {
-  link: NavLink;
-  isActive: boolean;
-  expanded: boolean;
-  /** Drawn as the heading of the list below it rather than as a row. */
-  section?: boolean;
-  setActive: (id: string) => void;
-  onExpand?: () => void;
-  onNavigate?: () => void;
-  onLeaveInsights?: () => void;
-}) {
-  const localize = useLocalize();
-  const label = localize(link.title);
-  const badge = link.badge != null && link.badge > 0 ? link.badge : null;
-
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (link.onClick) {
-        link.onClick(e);
-        onNavigate?.();
-        return;
-      }
-      if (!isActive) {
-        setActive(link.id);
-      }
-      if (!expanded) {
-        onExpand?.();
-        return;
-      }
-      onLeaveInsights?.();
-    },
-    [link, isActive, setActive, expanded, onExpand, onNavigate, onLeaveInsights],
-  );
-
-  return (
-    <RowTooltip expanded={expanded} label={label}>
-      <Button
-        variant="ghost"
-        aria-label={label}
-        aria-pressed={isActive}
-        disabled={link.disabled}
-        data-testid={`nav-panel-${link.id}`}
-        data-section={section || undefined}
-        className={cn(
-          expanded ? cn(rowClassName, 'justify-start') : cn(railButtonClassName, 'px-0'),
-          section && 'h-8 px-2.5 text-[12.5px] font-normal text-text-muted',
-          !section &&
-            (isActive
-              ? 'bg-surface-active font-normal text-text-primary'
-              : 'font-normal text-text-secondary'),
-        )}
-        onClick={handleClick}
-      >
-        {!section &&
-          (expanded && link.glyph ? (
-            <span
-              aria-hidden="true"
-              className="w-4 flex-shrink-0 text-center font-mono text-[13px] text-text-muted"
-            >
-              {link.glyph}
-            </span>
-          ) : (
-            <link.icon className="size-[18px] flex-shrink-0" aria-hidden="true" />
-          ))}
-        {expanded && <span className="truncate">{label}</span>}
-        {expanded && link.sub && (
-          <span className="whitespace-nowrap text-[11.5px] text-text-muted">{link.sub}</span>
-        )}
-        {expanded && link.trailing && (
-          <span className="ml-auto text-[13px] font-normal tabular-nums text-text-muted">
-            {link.trailing}
-          </span>
-        )}
-        {expanded && badge != null && (
-          <span
-            className={cn(
-              'rounded-full bg-amber-100 px-[7px] font-mono text-[11px] leading-[18px] text-amber-700',
-              !link.trailing && 'ml-auto',
-            )}
-            aria-label={link.badgeLabel ? `${localize(link.badgeLabel)} ${badge}` : String(badge)}
-          >
-            {badge}
-          </span>
-        )}
-      </Button>
-    </RowTooltip>
-  );
-});
 
 function BrandHeader({
   expanded,
@@ -288,8 +60,7 @@ function BrandHeader({
     return <div className="flex flex-col items-center gap-1 pb-2">{toggle}</div>;
   }
 
-  /* The wireframe has no collapse button beside the brand; the sidebar shortcut still
-     collapses it, and the rail above keeps the button that brings it back. */
+  // 축소 버튼은 브랜드 옆에 두지 않고 아이콘 레일에 남겨 다시 펼칠 수 있게 한다.
   return (
     <div className="flex items-center justify-between gap-2 pb-3 pl-2 pt-1">
       <div className="flex min-w-0 items-center gap-2">
@@ -303,11 +74,6 @@ function BrandHeader({
   );
 }
 
-/**
- * The whole desktop sidebar: brand, new chat, one row per page or panel, the conversation
- * history heading with its search field, the active panel, and the account menu.
- * Collapsed, the rows form an icon rail.
- */
 function ExpandedPanel({
   links,
   expanded = true,
@@ -345,7 +111,7 @@ function ExpandedPanel({
     }
     return !isInsightsRoute && link.id === effectiveActive;
   };
-  /** Expanded, the history list gets a heading of its own under the rows instead of a row. */
+  /** 열린 sidebar에서는 대화 기록을 메뉴 항목 대신 목록 제목으로 표시한다. */
   const historyLink = expanded ? links.find((link) => link.id === DEFAULT_PANEL) : undefined;
   const conversationCount = useSidebarConversationCount();
   const historyHeading = useMemo(

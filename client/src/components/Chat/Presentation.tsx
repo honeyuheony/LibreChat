@@ -49,7 +49,7 @@ export default function Presentation({ children }: { children: React.ReactNode }
   const taskResultId = useAtomValue(taskPanelState).resultId;
   const setArtifactsVisibility = useSetRecoilState(store.artifactsVisibility);
 
-  /** An open artifact takes the panel slot first, so opening a task result steps it aside. */
+  /** artifact가 열려 있으면 작업 결과를 열 때 artifact 패널을 닫는다. */
   useEffect(() => {
     if (taskResultId != null) setArtifactsVisibility(false);
   }, [taskResultId, setArtifactsVisibility]);
@@ -152,7 +152,7 @@ export default function Presentation({ children }: { children: React.ReactNode }
     );
   }, [conversationId, selectedSubagent]);
 
-  /** Offered only once this conversation has called a task tool. */
+  /** 대화에서 작업 도구를 호출한 뒤에만 작업 패널을 연다. */
   const taskPanelElement = useMemo(() => {
     if (!taskPanel.hasTaskCall || !taskPanel.open || conversationId == null) {
       return null;

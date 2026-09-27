@@ -11,15 +11,12 @@ import store, { ephemeralAgentByConvoId } from '~/store';
 import { useAgentsMapContext } from '~/Providers';
 import { cn } from '~/utils';
 
-/** How many skills the empty conversation suggests; the `$` popover lists the rest. */
+/** 빈 대화에는 스킬을 최대 네 개 추천하고, 나머지는 `$` popover에서 보여 준다. */
 const MAX_SUGGESTIONS = 4;
 
 type AgentSkillScope = Pick<Agent, 'skills' | 'skills_enabled' | 'skills_scope'>;
 
-/**
- * Skill ids the selected agent may run, with the same meaning as the `$` popover's scope:
- * `undefined` for no restriction, an empty list while the agent cannot run any.
- */
+/** undefined는 제한 없음, 빈 배열은 선택한 agent가 실행할 스킬이 없음을 뜻한다. */
 export function resolveSuggestableSkillIds(
   agentId: string | null | undefined,
   agentsMap: Record<string, AgentSkillScope | undefined> | undefined,
@@ -41,7 +38,6 @@ export function resolveSuggestableSkillIds(
   return agent.skills ?? [];
 }
 
-/** Suggested skills under the empty conversation's composer; a click queues the skill like `$`. */
 function LandingSkills({
   conversationId,
   agentId,

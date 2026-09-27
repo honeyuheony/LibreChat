@@ -1,13 +1,9 @@
 import { useId } from 'react';
 import { cn } from '~/utils';
 
-/**
- * The AgentHub mark: three white dots on a violet-to-pink rounded square, the same
- * drawing as `assets/logo.svg`. Drawn inline so it scales with `className` and keeps
- * its own colors on both the dark sidebar and the light page.
- */
+/** AgentHub 로고를 인라인 SVG로 렌더링해 className에 맞춰 크기만 조절하고 색상은 유지한다. */
 export default function BrandMark({ className }: { className?: string }) {
-  /** Two marks on one page (sidebar and greeting) must not share a gradient id. */
+  /** 같은 화면의 로고끼리 gradient id가 겹치지 않도록 한다. */
   const gradientId = `brand-mark-${useId().replace(/:/g, '')}`;
   return (
     <svg

@@ -11,7 +11,7 @@ export type ConnectorAction =
   | 'cancel'
   | 'details';
 
-export interface ConnectorState {
+interface ConnectorState {
   labelKey: TranslationKeys;
   tone: PillTone;
   action: ConnectorAction;
@@ -24,13 +24,11 @@ interface ConnectorStateInput {
   hasCustomUserVars: boolean;
 }
 
-/** The server name the desk relay MCP server is configured under (`librechat.yaml` `mcpServers.my-pc`). */
+/** librechat.yaml에서 desk relay MCP 서버를 등록할 때 쓰는 이름이다. */
 export const DESK_SERVER_NAME = 'my-pc';
 
-/** The sidebar's data hub page, which lists every connector (`routes/index.tsx`). */
 export const DATA_HUB_PATH = '/connectors';
 
-/** Public page every "get the desktop app" entry opens (`routes/index.tsx`). */
 export const DESK_DOWNLOAD_PATH = '/download';
 
 export function getConnectorState({
@@ -80,7 +78,7 @@ export function getConnectorState({
     : { labelKey: 'com_ui_connectors_status_not_connected', tone: 'neutral', action: 'connect' };
 }
 
-/** MCP tool discovery carries no read-only annotation, so write access is inferred from verbs in the tool name. */
+/** MCP 도구 정보에는 읽기 전용 표시가 없어 이름의 동사로 쓰기 권한을 추정한다. */
 const WRITE_VERBS = new Set([
   'add',
   'append',
@@ -115,7 +113,7 @@ export function summarizeToolAccess(tools: MCPTool[]): { count: number; hasWrite
   return { count: tools.length, hasWrite: tools.some((tool) => isWriteTool(tool.name)) };
 }
 
-/** What the data hub tells the user, limited to what the app can actually observe. */
+/** 데이터 허브는 앱에서 확인할 수 있는 상태만 사용자에게 보여 준다. */
 export type HubStatus = 'available' | 'needs_connection' | 'unavailable' | 'checking';
 
 export const hubStatusView: Record<HubStatus, { labelKey: TranslationKeys; tone: PillTone }> = {
@@ -125,13 +123,7 @@ export const hubStatusView: Record<HubStatus, { labelKey: TranslationKeys; tone:
   checking: { labelKey: 'com_ui_connectors_status_checking', tone: 'neutral' },
 };
 
-/**
- * A chat turn that reaches an OAuth connector the user has not signed in to opens a sign-in
- * flow on the server, and the status reads `connecting` for as long as that flow lives
- * (minutes). Nobody is signing in, so the data hub reads it as the disconnected state it is,
- * unless this browser started the sign-in itself (`startedHere`, the manager's own
- * `isInitializing`, which unlike the status icon's flag leaves out server-side flows).
- */
+/** 현재 브라우저에서 시작하지 않은 OAuth 흐름은 로그인 중으로 표시하지 않는다. */
 export function toHubStatusProps(
   props: MCPServerStatusIconProps,
   startedHere: boolean,
@@ -158,7 +150,7 @@ export function toHubStatusProps(
 interface HubStatusInput {
   serverStatus?: MCPServerStatus;
   isInitializing: boolean;
-  /** Only for the desk relay server, whose MCP connection stays up while the app is closed. */
+  /** 데스크톱 앱이 꺼져 있어도 MCP 연결이 유지되는 desk relay에만 적용한다. */
   desk?: { state?: DeskStatusResponse['state'] };
 }
 

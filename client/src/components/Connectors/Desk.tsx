@@ -9,7 +9,7 @@ const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-export function formatConnectedAt(connectedAt: string, now: number, localize: Localize): string {
+function formatConnectedAt(connectedAt: string, now: number, localize: Localize): string {
   const connectedMs = Date.parse(connectedAt);
   if (Number.isNaN(connectedMs)) {
     return '';
@@ -33,7 +33,7 @@ export function formatConnectedAt(connectedAt: string, now: number, localize: Lo
   });
 }
 
-export interface DeskView {
+interface DeskView {
   labelKey: TranslationKeys;
   tone: PillTone;
   summary: string;
@@ -79,8 +79,7 @@ export function describeDesk(
 
 const FOLDERS_SHOWN = 2;
 
-/** "Folders (3): 문서, 바탕 화면 and 1 more" — the first two names, then a count. */
-export function summarizeFolders(folders: string[], localize: Localize): string {
+function summarizeFolders(folders: string[], localize: Localize): string {
   if (folders.length === 0) {
     return localize('com_ui_connectors_desk_no_folders');
   }

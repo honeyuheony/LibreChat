@@ -320,8 +320,6 @@ describe('groupSequentialToolCalls with task tools', () => {
       group.type === 'single' ? group.part.idx : group.parts.map((part) => part.idx),
     );
 
-  /** A task call's card carries the result the reader asked for, and a completed
-   *  group collapses — so the card rides after the group it would have joined. */
   it('keeps a task call out of the labeled group its batch forms', () => {
     const grouped = groupSequentialToolCalls(
       withIndex([toolCall('skill'), taskCall('task'), label('Ran 2 actions')]),

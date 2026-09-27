@@ -17,22 +17,9 @@ import type { TranslationKeys } from '~/hooks';
 import { useTaskResultsInfiniteQuery } from '~/data-provider/Tasks';
 import { RESULT_QUERY_PARAM } from '~/components/Task/useTaskPanel';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import { shortResultTitle } from '~/utils/results';
 import { useLocalize } from '~/hooks';
-
-/** New keys that DA adds to the translation files; drop the cast in `useLibraryLocalize` then. */
-type LibraryKey =
-  | 'com_ui_library'
-  | 'com_ui_library_intro'
-  | 'com_ui_library_empty'
-  | 'com_ui_library_error'
-  | 'com_ui_library_col_type'
-  | 'com_ui_library_col_created'
-  | 'com_ui_library_col_action'
-  | 'com_ui_library_kind_table'
-  | 'com_ui_library_kind_hwp'
-  | 'com_ui_library_kind_doc'
-  | 'com_ui_library_date_older';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HWP_FILE = /\.hwpx?$/i;
@@ -40,8 +27,8 @@ const HWP_FILE = /\.hwpx?$/i;
 const resultPath = (item: TTaskResultListItem) =>
   `/c/${encodeURIComponent(item.conversationId)}?${RESULT_QUERY_PARAM}=${encodeURIComponent(item.resultId)}`;
 
-/** The wireframe's four day buckets, counted in local calendar days. */
-function dayLabelKey(createdAt: Date, now: Date): TranslationKeys | LibraryKey {
+/** 결과는 경과 시간이 아니라 현지 달력 날짜를 기준으로 분류한다. */
+function dayLabelKey(createdAt: Date, now: Date): TranslationKeys {
   const startOf = (date: Date) =>
     new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const days = Math.floor((startOf(now) - startOf(createdAt)) / DAY_MS);
@@ -57,14 +44,8 @@ function dayLabelKey(createdAt: Date, now: Date): TranslationKeys | LibraryKey {
 const clockTime = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-function useLibraryLocalize() {
-  const localize = useLocalize();
-  return (key: TranslationKeys | LibraryKey, options?: Record<string, string>) =>
-    localize(key as TranslationKeys, options);
-}
-
 export default function Library() {
-  const localize = useLibraryLocalize();
+  const localize = useLocalize();
   const navigate = useNavigate();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
@@ -83,7 +64,6 @@ export default function Library() {
   };
 
   const openRow = (event: MouseEvent<HTMLTableRowElement>, item: TTaskResultListItem) => {
-    /** The title link navigates on its own; the row covers clicks on the other cells. */
     if ((event.target as Element).closest('a')) {
       return;
     }
@@ -198,7 +178,7 @@ export default function Library() {
       className="relative flex h-full w-full grow flex-col overflow-y-auto bg-presentation"
       data-testid="library"
     >
-      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+      <header className={pageTopBarClassName}>
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_ui_library')}</span>
       </header>

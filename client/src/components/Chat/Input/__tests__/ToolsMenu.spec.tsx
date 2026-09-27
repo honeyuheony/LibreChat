@@ -297,7 +297,7 @@ describe('ToolsMenu', () => {
     const savedAgent = 'agent_saved';
 
     beforeEach(() => {
-      /* Both default on, so a conversation with no stored choice starts with everything on. */
+      /* 둘 다 기본으로 켜져 있어 저장된 선택이 없으면 모든 connector가 켜진다. */
       mockManager = {
         ...defaultManager,
         mcpValues: [],
@@ -379,7 +379,7 @@ describe('ToolsMenu', () => {
       expect(
         await screen.findByRole('menuitemcheckbox', { name: 'Shared files', checked: false }),
       ).toBeInTheDocument();
-      /* The defaults become the chat's own choice, which is what the next message sends. */
+      /* 기본값을 대화의 선택으로 저장해야 다음 메시지에 반영된다. */
       expect(JSON.parse(localStorage.getItem('LAST_MCP_DISABLED_test-conv') ?? 'null')).toEqual([
         'files',
         'calendar',

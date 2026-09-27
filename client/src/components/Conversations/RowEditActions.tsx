@@ -2,14 +2,13 @@ import { memo, useRef, useState } from 'react';
 import DeleteButton from './ConvoOptions/DeleteButton';
 import { useLocalize } from '~/hooks';
 
-/** The wireframe draws the controls as these two characters rather than icons. */
 const RENAME_GLYPH = '✎';
 const DELETE_GLYPH = '✕';
 
 const actionClassName =
   'flex size-[22px] items-center justify-center rounded-theme-control bg-surface-active text-[13px] text-text-muted transition-colors hover:bg-border-medium hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
 
-/** The wireframe's two hover controls on a history row: ✎ renames in place, ✕ asks before deleting. */
+/** 대화 행에서 이름은 바로 바꾸고, 삭제는 확인 대화상자를 거친다. */
 function RowEditActions({
   conversationId,
   title,
@@ -55,8 +54,7 @@ function RowEditActions({
         <span aria-hidden="true">{DELETE_GLYPH}</span>
       </button>
       {showDeleteDialog && (
-        /* The dialog portals out, but React still bubbles its clicks to the row, which
-           would open the conversation being deleted. */
+        /* 포털 안 클릭도 React 트리를 따라 행까지 전파되어 삭제할 대화를 열 수 있다. */
         <span className="contents" onClick={(e) => e.stopPropagation()}>
           <DeleteButton
             title={title}

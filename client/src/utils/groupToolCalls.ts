@@ -109,8 +109,7 @@ function coversTransferCall(labelPart: TMessageContentParts, allParts: PartWithI
   );
 }
 
-/** Task calls ride after the group their run forms: a completed group collapses,
- *  and a task card carries the plan, the confirmation and the result. */
+/** 완료된 그룹이 접혀도 결과를 보여 주는 task 카드는 그룹 뒤에 남긴다. */
 function splitTaskCalls(parts: PartWithIndex[]): {
   grouped: PartWithIndex[];
   lifted: PartWithIndex[];
@@ -214,9 +213,7 @@ export function groupSequentialToolCalls(parts: PartWithIndex[]): GroupedPart[] 
       flushWithoutLabel();
       const { grouped, lifted } = splitTaskCalls(claimed);
       if (lifted.length > 0) {
-        /** The label heads the other calls of its batch; a batch of nothing
-         *  but the task call leaves it nothing to head, and the card itself
-         *  already says what ran. */
+        /** label은 나머지 호출을 묶으므로 task 호출만 남으면 label도 렌더링하지 않는다. */
         if (countToolCalls(grouped) > 0) {
           result.push({ type: 'tool-group', parts: grouped, labelPart: item });
         } else {

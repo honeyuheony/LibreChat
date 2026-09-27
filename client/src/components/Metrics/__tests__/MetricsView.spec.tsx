@@ -144,7 +144,7 @@ describe('MetricsView', () => {
     expect(screen.getByText('com_metrics_staff_contributor_note')).toBeInTheDocument();
   });
 
-  it('matches the wireframe styling for metrics and rankings', async () => {
+  it('uses the compact layout for metrics and rankings', async () => {
     getMetrics.mockResolvedValue(metricsReport);
     renderMetrics();
 

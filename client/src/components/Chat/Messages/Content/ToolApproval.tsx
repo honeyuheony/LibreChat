@@ -48,7 +48,7 @@ const DECISION_LABEL: Record<DecisionType, TranslationKeys> = {
 const fieldClasses =
   'w-full resize-none rounded-md border border-border-xheavy bg-surface-primary p-2 text-text-primary placeholder:text-text-secondary';
 
-/** Reject first and the one-time allow last, so the primary action sits at the right edge. */
+/** 기본 동작을 오른쪽 끝에 두려고 거절을 먼저, 1회 허용을 마지막에 둔다. */
 const DECISION_ORDER: DecisionType[] = ['reject', 'edit', 'respond', 'approve'];
 
 /** Pretty-print tool args as JSON for the `edit` textarea seed. */
@@ -87,7 +87,7 @@ export default function ToolApproval({
   approval: NonNullable<Agents.ToolCall['approval']>;
   toolCallId: string;
   args: string | Record<string, unknown> | undefined;
-  /** Raw tool key (`read_file_mcp_my-pc`); names the connector in the card title. */
+  /** 원본 도구 키를 파싱해 카드 제목에 connector 이름을 표시한다. */
   toolName?: string;
   /** The composer owns one batch submit; timeline cards keep the historical lead button. */
   showSubmit?: boolean;

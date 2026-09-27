@@ -190,7 +190,6 @@ const HoverButtons = ({
     return findMessageById(messages, message.parentMessageId)?.isCreatedByUser === true;
   }, [getMessages, message.isCreatedByUser, message.parentMessageId]);
 
-  /** The request that produced this reply, which "save as agent" puts in the editor's text box. */
   const requestText = useMemo(() => {
     if (!canCreateSkills || message.isCreatedByUser === true) {
       return undefined;
@@ -264,8 +263,6 @@ const HoverButtons = ({
   const showEdit = !isSubagentThreadReadOnly && isEditableEndpoint && !hideEditButton;
   const showFork =
     !error && !isActiveStreamingMessage && forkingSupported && conversation.conversationId != null;
-  /** A model reply keeps copy, rerun and rating in view; editing, forking and reading
-   *  aloud move behind "more". A user turn keeps its edit button in view. */
   const editInMore = showEdit && isCreatedByUser !== true;
   const hasMoreActions = showReadAloud || showFork || editInMore;
   const moreActionsId = `more-actions-${message.messageId}`;
@@ -358,8 +355,7 @@ const HoverButtons = ({
         />
       )}
 
-      {/* Kept mounted while collapsed, so read-aloud playback and an open fork
-          popover survive closing the group. */}
+      {/* 접혀도 낭독 재생과 열린 fork popover가 유지되도록 계속 렌더링한다. */}
       <div id={moreActionsId} className={cn('flex gap-0.5', !showMoreActions && 'hidden')}>
         {showReadAloud && (
           <MessageAudio

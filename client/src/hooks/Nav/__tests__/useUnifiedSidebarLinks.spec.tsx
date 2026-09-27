@@ -63,7 +63,7 @@ beforeEach(() => {
 });
 
 describe('useUnifiedSidebarLinks', () => {
-  it('orders the rows as history, market, then data hub, leaving the old agent panel out', () => {
+  it('orders the history, market, data hub, and library links', () => {
     expect(renderLinks().map((link) => link.id)).toEqual([
       'conversations',
       'skills-market',
@@ -72,7 +72,7 @@ describe('useUnifiedSidebarLinks', () => {
     ]);
   });
 
-  it('marks the rows with the wireframe glyphs', () => {
+  it('uses the expected icons for the market and data hub', () => {
     const links = renderLinks();
     expect(links.find((link) => link.id === 'skills-market')?.glyph).toBe('/');
     expect(links.find((link) => link.id === 'connectors')?.glyph).toBe('⇄');
@@ -96,7 +96,7 @@ describe('useUnifiedSidebarLinks', () => {
     expect(mockNavigate.mock.calls).toEqual([['/skills-market'], ['/connectors'], ['/library']]);
   });
 
-  it('adds the library page and hides the replaced schedules panel', () => {
+  it('shows the library page and hides the schedules panel', () => {
     mockSideNavLinks.current = [skillsPanel, filesPanel, schedulesPanel];
 
     const links = renderLinks();

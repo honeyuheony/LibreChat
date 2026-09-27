@@ -20,7 +20,6 @@ const mockStatuses: { current: Record<string, object | undefined> } = { current:
 const mockDesk: { current: DeskStatusResponse | undefined } = { current: undefined };
 const mockActivity: { current: ConnectorActivityItem[] } = { current: [] };
 const mockRole = { current: 'USER' };
-/** Servers whose sign-in this browser started, as the manager's own `isInitializing` reports. */
 const mockStartedHere: { current: Set<string> } = { current: new Set() };
 
 jest.mock('~/hooks', () => {

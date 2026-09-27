@@ -186,8 +186,7 @@ export default function useTextarea({
         return placeholder;
       }
 
-      /* The wireframe asks the same question whatever answers it; the model shows
-         at the composer's right edge instead. */
+      /* 모델과 관계없이 같은 안내 문구를 보여 주고, 선택한 모델은 입력창 오른쪽에 표시한다. */
       return localize('com_ui_composer_placeholder');
     };
 

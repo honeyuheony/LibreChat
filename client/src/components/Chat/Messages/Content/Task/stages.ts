@@ -4,11 +4,7 @@ import type { TranslationKeys } from '~/hooks';
 
 export type TaskStage = { id: string; label: TranslationKeys };
 
-/**
- * Plan steps per task tool. Ids must match the `stage` values the server sends in
- * `on_task_progress` (`TASK_STAGES` in `packages/api/src/tasks/tools.ts`); the card
- * moves its current step by matching them.
- */
+/** ID는 서버가 `on_task_progress.stage`로 보내는 값과 같아야 현재 단계를 찾는다. */
 export const TASK_STAGES: Record<TaskToolName, readonly TaskStage[]> = {
   [TaskTools.extract_table]: [
     { id: 'prepare', label: 'com_ui_task_stage_prepare' },
@@ -37,7 +33,7 @@ export function isTaskToolName(name: unknown): name is TaskToolName {
   return typeof name === 'string' && Object.prototype.hasOwnProperty.call(TASK_STAGES, name);
 }
 
-/** Tool args arrive as a JSON string while streaming and as an object once saved. */
+/** 스트리밍 중에는 tool args가 JSON 문자열이고, 저장한 뒤에는 객체로 온다. */
 export function parseTaskArgs(args: unknown): Record<string, unknown> {
   if (args != null && typeof args === 'object' && !Array.isArray(args)) {
     return args as Record<string, unknown>;

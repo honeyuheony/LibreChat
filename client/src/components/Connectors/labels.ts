@@ -1,11 +1,11 @@
 import type { TranslationKeys } from '~/hooks';
 
-export interface ToolLabel {
+interface ToolLabel {
   title: TranslationKeys;
   description: TranslationKeys;
 }
 
-/** Tools with a user-facing name; the model still gets each server's own description. */
+/** 화면에는 사용자용 이름을 쓰고, 모델에는 서버별 도구 설명을 그대로 전달한다. */
 const TOOL_LABELS: Record<string, ToolLabel> = {
   calendar_create_event: {
     title: 'com_ui_connectors_tool_calendar_create_event',
@@ -141,7 +141,6 @@ const TOOL_LABELS: Record<string, ToolLabel> = {
   },
 };
 
-/** A tool name that means something else on one server, keyed `server/tool`. */
 const SERVER_TOOL_LABELS: Record<string, ToolLabel> = {
   'filesystem/read_file': {
     title: 'com_ui_connectors_tool_filesystem_read_file',

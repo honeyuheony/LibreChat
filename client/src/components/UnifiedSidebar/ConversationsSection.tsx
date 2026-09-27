@@ -16,11 +16,8 @@ import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { Conversations } from '~/components/Conversations';
 import store from '~/store';
 
-/**
- * The sidebar history's conversations request. The history heading reads the same
- * request for its count; identical parameters let react-query serve both from one fetch.
- */
-export function useSidebarConversationsQuery() {
+/** 대화 목록과 제목의 개수가 같은 query를 공유하도록 검색 조건을 맞춘다. */
+function useSidebarConversationsQuery() {
   const { isAuthenticated } = useAuthContext();
   const tags = useAtomValue(chatFilterTagsAtom);
   const sort = useAtomValue(chatSortAtom);
@@ -45,7 +42,7 @@ export function useSidebarConversationsQuery() {
   );
 }
 
-/** The count beside the history heading: what the list holds, with `+` while pages remain. */
+/** 불러올 페이지가 더 있으면 현재 항목 수에 `+`를 붙인다. */
 export function useSidebarConversationCount(): string | undefined {
   const { data } = useSidebarConversationsQuery();
   if (!data) {
@@ -56,10 +53,7 @@ export function useSidebarConversationCount(): string | undefined {
   return hasMore ? `${count}+` : String(count);
 }
 
-/**
- * The AgentHub wireframe's history: conversation names only. Projects, pins and the
- * filter menu are left out, and pinned chats sit in the list like any other.
- */
+/** 대화 기록에는 이름만 보이고, 프로젝트·필터 없이 고정 대화도 일반 대화처럼 나열한다. */
 const ConversationsSection = memo(() => {
   const localize = useLocalize();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
@@ -150,15 +144,11 @@ const ConversationsSection = memo(() => {
     }
   }, [search.query, search.isTyping, isLoading, isFetching]);
 
-  /** The chats list is virtualized against this viewport rather than scrolling inside a
-   *  pane of its own, so the sidebar scrolls as a single surface. */
+  /** 목록을 이 viewport 기준으로 가상화해 사이드바 전체가 하나의 영역처럼 스크롤되게 한다. */
   const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
   const [scrollContent, setScrollContent] = useState<HTMLDivElement | null>(null);
 
-  /** Searching replaces what the surface holds with results. A scroll position kept
-   *  from the previous contents would open those results partway down whenever they
-   *  are long enough for the browser not to clamp it, so the surface returns to the
-   *  top whenever it changes what it is showing. */
+  /** 검색 결과가 이전 스크롤 위치에서 시작하지 않도록 표시 내용이 바뀔 때 맨 위로 돌린다. */
   const isSearching = Boolean(search.query);
   useEffect(() => {
     if (scrollViewport) {
@@ -172,8 +162,7 @@ const ConversationsSection = memo(() => {
       role="region"
       aria-label={localize('com_ui_chat_history')}
     >
-      {/* The search field is not here: on desktop it is a row of the sidebar list above
-          this panel, and on mobile it lives in the drawer's bottom bar, within thumb reach. */}
+      {/* 검색 입력은 desktop에서는 위쪽 sidebar 행에, mobile에서는 drawer 하단에 둔다. */}
       <div
         ref={setScrollViewport}
         className="scrollbar-gutter-stable min-h-0 flex-1 overflow-y-auto overflow-x-hidden"

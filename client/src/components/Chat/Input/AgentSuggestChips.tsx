@@ -16,23 +16,18 @@ import store from '~/store';
 
 export const BUILDER_PATH = '/skills/new';
 
-/** 와이어프레임 v29(`agent-hub-prototype_v29.html`) 1643행의 식 그대로. */
 const AGENT_BUILD_REQUEST = /(agent|에이전트).{0,14}(만들|생성|저장)/i;
-/** 같은 파일 1644행: 요청 끝의 「agent 만들어줘」 꼬리. */
 const AGENT_BUILD_TAIL =
   /(하는|해주는|해 주는)?\s*(agent|에이전트)(를|을)?\s*(하나)?\s*(만들어|생성해|저장해)\s*(줘|주세요|줄래)?\.?$/i;
-/** 배포 스킬 `metadata.kind` 의 기본 agent 표시. 와이어프레임은 기본 agent 를 추천하지 않는다. */
+/** 배포 스킬의 기본 agent는 추천하지 않는다. */
 const BASE_KIND = '기본';
 const MAX_SUGGESTIONS = 3;
-/** 검증 안 됨: 입력이 멈췄다고 보는 시간. 와이어프레임·설계에 값이 없어 정했다. */
 const SUGGEST_DELAY_MS = 400;
 
-/** 편집기로 넘긴 값. 대화로 돌아왔을 때 안내와 「설정 화면 열기」를 다시 보여 주는 데 쓴다. */
 export const builderEntryByConvoId = atomFamily((_conversationId: string) =>
   atom<BuilderEntryState | null>(null),
 );
 
-/** 「…하는 agent 만들어줘」면 꼬리를 뗀 문장을, 아니면 `null` 을 돌려준다. */
 export function readAgentBuildRequest(text: string): string | null {
   const request = text.trim();
   if (!AGENT_BUILD_REQUEST.test(request)) {
@@ -41,7 +36,6 @@ export function readAgentBuildRequest(text: string): string | null {
   return request.replace(AGENT_BUILD_TAIL, '').trim() || request;
 }
 
-/** 「이럴 때 쓰세요」 키워드가 입력에 그대로 든 켜진 agent 를 실행 수 순으로 세 개까지 고른다. */
 export function matchSuggestedSkills<T extends TSkillSummary>(
   skills: T[],
   text: string,
@@ -56,7 +50,7 @@ export function matchSuggestedSkills<T extends TSkillSummary>(
       if (profile?.kind === BASE_KIND || !isUserInvocable(skill)) {
         return false;
       }
-      // 목록 응답에는 배포·사용자 스킬의 머리말 triggers가 marketProfile에 실린다.
+      // 목록 응답은 배포·사용자 스킬의 frontmatter triggers를 marketProfile에 담는다.
       const triggers = profile?.triggers ?? [];
       return (
         triggers.some((trigger) => trigger !== '' && text.includes(trigger)) && isActive(skill)
@@ -117,7 +111,7 @@ function SuggestedSkills({ conversationId, text }: { conversationId: string; tex
     { enabled: wantsSuggestions },
   );
 
-  /** `/` 창과 같은 목록 쿼리를 쓰므로 한쪽이 받아 둔 페이지를 다른 쪽이 그대로 쓴다. */
+  /** `/` 창과 같은 query를 써서 받아 둔 페이지를 공유한다. */
   useEffect(() => {
     if (wantsSuggestions && hasNextPage && !isFetchingNextPage && !isError) {
       fetchNextPage();
@@ -179,10 +173,7 @@ function SuggestedSkills({ conversationId, text }: { conversationId: string; tex
   );
 }
 
-/**
- * 입력창 위 agent 줄: 편집기를 연 뒤 남기는 안내와, 입력에 맞는 agent 추천 칩.
- * `suggestEnabled` 가 거짓이면(스킬 범위를 따로 정한 agent 대화 등) 추천을 띄우지 않는다.
- */
+/** 스킬 범위를 지정한 대화에서는 agent 추천 칩을 표시하지 않는다. */
 function AgentSuggestChips({
   conversationId,
   text,

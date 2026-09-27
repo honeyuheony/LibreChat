@@ -30,9 +30,9 @@ function AttachFileChat({
   files: Map<string, ExtendedFile>;
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  /** Composer actions offered beside the uploads in the `+` menu. */
+  /** "+" 메뉴에서 업로드 항목 뒤에 보여 줄 추가 항목 목록이다. */
   extraItems?: MenuItemProps[];
-  /** Hands the `+` entries to a menu the composer owns; it is drawn even with no uploads. */
+  /** 입력창이 "+" 메뉴를 소유하며 업로드가 없어도 표시한다. */
   renderMenu?: (items: MenuItemProps[]) => React.ReactNode;
 }) {
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;

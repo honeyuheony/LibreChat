@@ -29,11 +29,6 @@ export function taskResultsOf(attachments: TAttachment[] | undefined): TaskResul
   return results;
 }
 
-/**
- * Card for `extract_table`, `summarize_documents` and `write_report` calls: the plan
- * steps, the field or perspective picker while the call waits for approval (kept
- * read-only once it ran), and the result message once the tool returns.
- */
 export default function TaskPlanCard({
   toolName,
   toolCallId,
@@ -48,7 +43,7 @@ export default function TaskPlanCard({
   output?: string | null;
   approval?: Agents.ToolCall['approval'];
   attachments?: TAttachment[];
-  /** Unused since the task panel alone opens live results; `Part` still passes it. */
+  /** Part가 아직 전달하지만, 라이브 결과 패널은 task panel이 열므로 사용하지 않는다. */
   isSubmitting?: boolean;
 }) {
   const localize = useLocalize();
@@ -58,12 +53,9 @@ export default function TaskPlanCard({
   const stages = TASK_STAGES[toolName];
   const finished = (output?.length ?? 0) > 0;
   const awaitingApproval = approval != null && !finished;
-  /** A returned call with a saved result ran past its confirmation; a rejected or
-   *  failed one has no result, so no "ran" card claims otherwise. */
+  /** 저장된 결과가 있으면 확인 후 실행했고, 결과가 없으면 실행하지 않은 상태다. */
   const ran = finished && results.length > 0;
-  /** Returned without running: the user cancelled at the confirmation card. The
-   *  returned call no longer carries `approval`, so the sent decision says so live
-   *  and the SDK's blocked answer says so after a reload. */
+  /** 반환된 호출에는 `approval`이 남지 않아 결정 기록이나 차단 응답으로 취소를 판별한다. */
   const decision = useAtomValue(taskDecisionByToolCallId(toolCallId));
   const cancelled = finished && !ran && (decision === 'reject' || isBlockedTaskOutput(output));
 

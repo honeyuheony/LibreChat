@@ -64,8 +64,7 @@ interface ConversationsProps {
   /** Wrapper around everything inside that viewport, whose height changes when a
    *  section above the list expands or collapses. */
   scrollContent: HTMLElement | null;
-  /** Only the conversation rows, pins included: no collapsible header and no date or
-   *  letter groups, as the sidebar history in the AgentHub wireframe. */
+  /** 핀을 포함한 대화를 나열하고, 접히는 머리글과 날짜·첫 글자별 묶음은 두지 않는다. */
   flat?: boolean;
 }
 
@@ -309,8 +308,7 @@ const Conversations: FC<ConversationsProps> = ({
     }
   }, [isExpanded]);
 
-  /** The flat list keeps pins among its rows, so only the grouped one can end up empty
-   *  on a page that holds nothing but pins. */
+  /** 핀만 있는 페이지에서는 flat 목록은 비지 않지만 그룹 목록은 비므로 따로 센다. */
   const listedCount = flat ? filteredConversations.length : groupedConversations.length;
 
   useEffect(() => {

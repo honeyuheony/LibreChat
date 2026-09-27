@@ -20,7 +20,6 @@ import {
   SCHEDULE_TIMEZONE,
 } from '~/components/Schedules/cadence';
 import { useAuthContext, useHasAccess, useLocalize, useSubmitMessage } from '~/hooks';
-import { localizeScheduleText } from '~/components/Schedules/localize';
 import { useCreateScheduleMutation } from '~/data-provider/Schedules';
 import { taskDocToMarkdown } from '~/components/Task/TaskDocView';
 import { useListSkillsQuery } from '~/data-provider/Skills';
@@ -32,8 +31,7 @@ import store from '~/store';
 
 type Localize = ReturnType<typeof useLocalize>;
 
-/** Top three values per field, counted from the rows ("값 3건, 없음 2건"). */
-export function topValueCounts(result: TaskTableResult, localize: Localize): string[] {
+function topValueCounts(result: TaskTableResult, localize: Localize): string[] {
   return result.fields.map((field, column) => {
     const counts = new Map<string, number>();
     for (const row of result.rows) {
@@ -48,7 +46,7 @@ export function topValueCounts(result: TaskTableResult, localize: Localize): str
   });
 }
 
-/** The last user message sent at or before the result was saved: the request it answered. */
+/** 결과 저장 시각 이전의 마지막 사용자 메시지를 결과가 답한 요청으로 연결한다. */
 export function requestForResult(
   messages: TMessage[],
   resultCreatedAt: string,
@@ -119,7 +117,6 @@ function HwpDownloadButton({ file }: { file: { file_id: string; filename: string
   const localize = useLocalize();
   const { user } = useAuthContext();
   const { showToast } = useToastContext();
-  /** The same route and file handling as the task panel's HWP button. */
   const download = async () => {
     try {
       if (!user?.id) {
@@ -133,11 +130,7 @@ function HwpDownloadButton({ file }: { file: { file_id: string; filename: string
   return <ActionButton label={localize('com_ui_task_hwp_download')} onClick={download} />;
 }
 
-/**
- * Result message for a finished task tool: coverage line, code-counted notes and the
- * open/export buttons. The task panel opens for a live result on its own
- * (`useTaskPanel`); this card opens it only when pressed.
- */
+/** 라이브 결과는 task panel이 자동으로 열고, 이 카드는 눌렀을 때만 연다. */
 export default function TaskResultCard({ result }: { result: TaskResultAttachment }) {
   const localize = useLocalize();
   const queryClient = useQueryClient();
@@ -179,7 +172,6 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
   const copyResult = async () => {
     try {
       const doc = await queryClient.fetchQuery(taskResultQuery(resultId));
-      /** Same text as the task panel's copy button. */
       if (doc.kind === 'table' || !copy(taskDocToMarkdown(doc), { format: 'text/plain' })) {
         throw new Error('copy failed');
       }
@@ -234,7 +226,7 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
           setIsPreparingSchedule(false);
           showToast({
             status: 'success',
-            message: localizeScheduleText(localize, 'com_ui_schedules_weekly_created'),
+            message: localize('com_ui_schedules_weekly_created'),
           });
         },
         onError: () => {
@@ -270,8 +262,7 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
     message = localize('com_ui_task_result_report');
     note = localize('com_ui_task_result_report_note', { 0: stats.none }) + textOnly;
   } else {
-    /** The server says why the HWPX file is missing (unreachable or timed out, unknown
-     *  template, format mismatch, fill failure); the stock text covers older results. */
+    /** 서버가 파일 생성 실패 이유를 보내면 표시하고, 이전 결과에는 기본 안내를 쓴다. */
     message = result.notice?.trim() || localize('com_ui_task_result_report_no_file');
     note = localize('com_ui_task_result_report_note', { 0: stats.none }) + textOnly;
   }
@@ -321,7 +312,7 @@ export default function TaskResultCard({ result }: { result: TaskResultAttachmen
         )}
         {canSchedule && (
           <ActionButton
-            label={localizeScheduleText(localize, 'com_ui_task_schedule_weekly')}
+            label={localize('com_ui_task_schedule_weekly')}
             onClick={createWeeklySchedule}
             disabled={isPreparingSchedule || createSchedule.isLoading}
           />

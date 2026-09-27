@@ -7,38 +7,11 @@ import type {
   TSkillMetricsReport,
 } from 'librechat-data-provider';
 import { useAdminSkillMetricsQuery } from '~/data-provider/Admin';
+import { pageTopBarClassName } from '~/components/ui/topbar';
 import { useLocalize } from '~/hooks';
 
 type Localize = ReturnType<typeof useLocalize>;
-type MetricTranslationKey =
-  | 'com_metrics_title'
-  | 'com_metrics_formula'
-  | 'com_metrics_load_error'
-  | 'com_metrics_agent_ranking'
-  | 'com_metrics_staff_agent_ranking_note'
-  | 'com_metrics_agent_name'
-  | 'com_metrics_author'
-  | 'com_metrics_runs'
-  | 'com_metrics_forks'
-  | 'com_metrics_saved_hours'
-  | 'com_metrics_base_total'
-  | 'com_metrics_contributor_ranking'
-  | 'com_metrics_staff_contributor_note'
-  | 'com_metrics_registration_count'
-  | 'com_metrics_my_agent_runs'
-  | 'com_metrics_fork_count'
-  | 'com_metrics_empty_contributors'
-  | 'com_metrics_registered_agents'
-  | 'com_metrics_base_and_staff_agents'
-  | 'com_metrics_cumulative_runs'
-  | 'com_metrics_staff_agent_runs'
-  | 'com_metrics_forked_agents'
-  | 'com_metrics_estimated_saved_hours'
-  | 'com_metrics_staff_agent_saved_hours';
-type MetricsLocalize = (
-  key: Parameters<Localize>[0] | MetricTranslationKey,
-  options?: Parameters<Localize>[1],
-) => ReturnType<Localize>;
+const numericCellClassName = 'px-2 py-[7.5px] text-right align-middle tabular-nums';
 
 type MetricCardProps = {
   label: string;
@@ -71,7 +44,7 @@ function MetricCard({ label, value, detail }: MetricCardProps) {
   );
 }
 
-function PageHeader({ localize }: { localize: MetricsLocalize }) {
+function PageHeader({ localize }: { localize: Localize }) {
   return (
     <header className="mb-5">
       <h1 className="text-2xl font-bold text-text-primary">{localize('com_metrics_title')}</h1>
@@ -80,9 +53,9 @@ function PageHeader({ localize }: { localize: MetricsLocalize }) {
   );
 }
 
-function MetricsTopBar({ localize }: { localize: MetricsLocalize }) {
+function MetricsTopBar({ localize }: { localize: Localize }) {
   return (
-    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+    <header className={pageTopBarClassName}>
       <span className="font-semibold text-text-primary">{localize('com_metrics_title')}</span>
       <span className="text-text-tertiary">{localize('com_ui_admin')}</span>
     </header>
@@ -95,7 +68,7 @@ function StatusPanel({
   onRetry,
   isFetching = false,
 }: {
-  localize: MetricsLocalize;
+  localize: Localize;
   error: boolean;
   onRetry?: () => void;
   isFetching?: boolean;
@@ -136,7 +109,7 @@ function AgentRanking({
 }: {
   report: TSkillMetricsReport;
   locale: string;
-  localize: MetricsLocalize;
+  localize: Localize;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const maxRuns = report.ranking.reduce((maximum, agent) => Math.max(maximum, agent.runs), 1);
@@ -201,7 +174,7 @@ function AgentRanking({
                       ? `${agent.authorName} · ${agent.authorDepartment}`
                       : agent.authorName || '–'}
                   </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+                  <td className={numericCellClassName}>
                     <span
                       aria-hidden="true"
                       className="me-1.5 inline-block h-1.5 rounded-sm bg-gradient-to-br from-[#8b5cf6] to-[#db2777] align-middle"
@@ -209,12 +182,8 @@ function AgentRanking({
                     />
                     {formatNumber(agent.runs, locale)}
                   </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
-                    {formatNumber(agent.forks, locale)}
-                  </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
-                    {formatHours(agent.savedHours, locale)}
-                  </td>
+                  <td className={numericCellClassName}>{formatNumber(agent.forks, locale)}</td>
+                  <td className={numericCellClassName}>{formatHours(agent.savedHours, locale)}</td>
                 </tr>
               );
             })}
@@ -225,13 +194,13 @@ function AgentRanking({
                 })}
               </td>
               <td className="px-2 py-[7.5px]">{report.baseTotal.authorName || '–'}</td>
-              <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+              <td className={numericCellClassName}>
                 {formatNumber(report.baseTotal.runs, locale)}
               </td>
-              <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+              <td className={numericCellClassName}>
                 {formatNumber(report.baseTotal.forks, locale)}
               </td>
-              <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+              <td className={numericCellClassName}>
                 {formatHours(report.baseTotal.savedHours, locale)}
               </td>
             </tr>
@@ -249,7 +218,7 @@ function ContributorRanking({
 }: {
   contributors: TSkillMetricsContributor[];
   locale: string;
-  localize: MetricsLocalize;
+  localize: Localize;
 }) {
   return (
     <section aria-labelledby="metrics-contributor-ranking">
@@ -303,16 +272,14 @@ function ContributorRanking({
                       ? `${contributor.authorName} · ${contributor.department}`
                       : contributor.authorName || '–'}
                   </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+                  <td className={numericCellClassName}>
                     {formatNumber(contributor.agents, locale)}
                   </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
-                    {formatNumber(contributor.runs, locale)}
-                  </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+                  <td className={numericCellClassName}>{formatNumber(contributor.runs, locale)}</td>
+                  <td className={numericCellClassName}>
                     {formatNumber(contributor.forks, locale)}
                   </td>
-                  <td className="px-2 py-[7.5px] text-right align-middle tabular-nums">
+                  <td className={numericCellClassName}>
                     {formatHours(contributor.savedHours, locale)}
                   </td>
                 </tr>
@@ -326,7 +293,7 @@ function ContributorRanking({
 }
 
 export default function MetricsView() {
-  const localize = useLocalize() as MetricsLocalize;
+  const localize = useLocalize();
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;

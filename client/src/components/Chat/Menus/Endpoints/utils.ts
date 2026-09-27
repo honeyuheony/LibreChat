@@ -138,7 +138,7 @@ export const getDisplayValue = ({
       return localize('com_ui_select_model');
     }
 
-    /* 입력창의 이 자리는 모델을 보여 주는 곳이라 agent 이름 대신 그 agent 의 모델을 보인다. */
+    /* 입력창에는 모델을 표시하므로 agent 이름 대신 해당 agent의 model을 보여 준다. */
     if (isAgentsEndpoint(endpoint.value)) {
       return agentsMap?.[selectedValues.model]?.model || localize('com_ui_select_model');
     }

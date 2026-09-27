@@ -80,9 +80,6 @@ export const useSkillsInfiniteQuery = (
   );
 };
 
-/**
- * Category counts for the marketplace tabs (`GET /api/skills/categories`).
- */
 export const useSkillCategoriesQuery = (
   config?: UseQueryOptions<TSkillCategoriesResponse>,
 ): QueryObserverResult<TSkillCategoriesResponse> => {

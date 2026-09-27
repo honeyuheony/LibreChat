@@ -21,13 +21,12 @@ type MessageRowProps = {
   /** Full-width block without the author header or user bubble — for rows
    *  whose body carries its own header (e.g. wake-up task cards). */
   plain?: boolean;
-  /** Shows the assistant's name in small type above the reply; hidden (screen-reader only) otherwise. */
+  /** 작성자 이름을 표시하거나 스크린 리더에서만 읽도록 한다. */
   showAuthor?: boolean;
   className?: string;
 };
 
-/** A reply names its author only when someone other than the conversation's current
- *  agent (or model) wrote it; a single-agent conversation shows no names. */
+/** 대화의 현재 agent나 model이 아닌 다른 agent가 답한 경우에만 작성자 이름을 표시한다. */
 export function shouldShowAuthor(
   message: Pick<TMessage, 'isCreatedByUser' | 'model'> | undefined,
   conversation: Pick<TConversation, 'agent_id' | 'model'> | null | undefined,
@@ -48,7 +47,7 @@ export function getMessageRowWidthClass({
 } = {}) {
   if (fullWidth) return 'w-full max-w-full sm:px-2';
   if (hasParallelContent) return 'w-full sm:px-2 md:max-w-[58rem] xl:max-w-[70rem]';
-  /** 48.5rem minus the `sm:px-2` gutters leaves the 760px reading column of the design. */
+  /** 48.5rem에서 `sm:px-2` 좌우 여백을 빼면 본문 폭이 760px가 된다. */
   return 'w-full sm:px-2 md:max-w-[48.5rem]';
 }
 
@@ -70,8 +69,7 @@ export default function MessageRow({
   plain = false,
   showAuthor = false,
 }: MessageRowProps) {
-  // `sm:px-2` mirrors ChatForm, so the body lines up with the composer surface
-  // rather than the form's outer box once both use the same max-width.
+  // ChatForm과 같은 `sm:px-2` 여백을 둬 본문이 폼 바깥이 아닌 입력창과 맞춰진다.
   const widthClass = getMessageRowWidthClass({ fullWidth, hasParallelContent });
 
   return (

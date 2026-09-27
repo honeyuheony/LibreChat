@@ -3,7 +3,7 @@ import { normalizeServerName } from 'librechat-data-provider';
 import { useCatalogReady } from '~/hooks/useCatalogWarmup';
 import { useMCPServersQuery } from '~/data-provider';
 
-/** Normalized MCP server name → the `title` from its config ("내 PC 폴더"). */
+/** 정규화한 MCP 서버 이름을 설정의 `title`에 연결한다. */
 export function useConnectorTitles(): Map<string, string> {
   const mcpServersReady = useCatalogReady('mcpServers');
   const { data: servers } = useMCPServersQuery({ enabled: mcpServersReady });

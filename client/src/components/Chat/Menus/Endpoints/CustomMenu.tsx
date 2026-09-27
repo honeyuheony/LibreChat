@@ -12,7 +12,7 @@ export interface CustomMenuProps extends Ariakit.MenuButtonProps<'div'> {
   comboboxLabel?: string;
   trigger?: Ariakit.MenuButtonProps['render'];
   defaultOpen?: boolean;
-  /** Where a root menu opens from its trigger; nested menus always open to the right. */
+  /** 최상위 메뉴는 메뉴 버튼을 기준으로 열고, 하위 메뉴는 오른쪽에 연다. */
   placement?: Ariakit.MenuStoreProps['placement'];
 }
 

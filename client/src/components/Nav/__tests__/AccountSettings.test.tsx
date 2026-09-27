@@ -128,7 +128,7 @@ describe('account menu', () => {
     queryClient = undefined;
   });
 
-  it('shows the administrator demo entries in wireframe order with their glyphs', () => {
+  it('shows the administrator demo entries in menu order with their glyphs', () => {
     const items = renderAccountMenu();
 
     expect(items.map((item) => item.textContent?.trim())).toEqual([

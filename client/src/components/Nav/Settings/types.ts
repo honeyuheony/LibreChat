@@ -73,7 +73,7 @@ export interface TabMeta {
   labelKey: TranslationKeys;
   icon: ReactNode;
   sections: SectionMeta[];
-  /** Renders the whole tab instead of registry sections; such a tab has no searchable entries. */
+  /** 탭 전체를 직접 렌더링하므로 registry 항목이 없고 검색 대상에도 포함되지 않는다. */
   Panel?: ComponentType;
   show?: (ctx: SettingsContextValue) => boolean;
 }

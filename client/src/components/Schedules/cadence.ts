@@ -7,7 +7,7 @@ export type ScheduleCadenceOptionKey = 'daily' | 'weekly-monday' | 'weekly-frida
 
 export const SCHEDULE_CADENCE_OPTIONS: Array<{
   key: ScheduleCadenceOptionKey;
-  labelKey: string;
+  labelKey: TranslationKeys;
 }> = [
   { key: 'daily', labelKey: 'com_ui_schedules_cadence_daily' },
   { key: 'weekly-monday', labelKey: 'com_ui_schedules_cadence_weekly_monday' },
@@ -31,7 +31,7 @@ export function createScheduleCadence(key: ScheduleCadenceOptionKey): TScheduleC
   return { frequency: 'cron', expression: '0 9 1 * *' };
 }
 
-export function getScheduleCadenceLabelKey(cadence: TScheduleCadence): string | undefined {
+export function getScheduleCadenceLabelKey(cadence: TScheduleCadence): TranslationKeys | undefined {
   if (cadence.frequency === 'daily' && cadence.hour === 9 && cadence.minute === 0) {
     return 'com_ui_schedules_cadence_daily';
   }
@@ -65,7 +65,5 @@ export function formatScheduleCadence(
   locale?: string,
 ): string {
   const labelKey = getScheduleCadenceLabelKey(cadence);
-  return labelKey != null
-    ? localize(labelKey as TranslationKeys)
-    : describeCadence(cadence, localize, locale);
+  return labelKey != null ? localize(labelKey) : describeCadence(cadence, localize, locale);
 }

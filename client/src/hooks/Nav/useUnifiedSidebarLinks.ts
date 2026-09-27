@@ -76,7 +76,6 @@ export default function useUnifiedSidebarLinks() {
 
   const hasSkillsPanel = sideNavLinks.some((link) => link.id === 'skills');
   const { data: skillCategories } = useSkillCategoriesQuery({ enabled: hasSkillsPanel });
-  /** The marketplace's own "all" count: the sum of its category counts. */
   const marketCount = skillCategories?.categories.reduce((sum, entry) => sum + entry.count, 0);
   const pendingConnectorCount = usePendingConnectorCount();
 
