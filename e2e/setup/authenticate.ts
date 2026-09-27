@@ -68,6 +68,9 @@ async function authenticate(config: FullConfig, user: User) {
       localStorage.setItem('navVisible', 'true');
     });
     console.log('🤖: ✔️  localStorage: set Nav as Visible', storageState);
+    /** The client opens in Korean by default (client/src/locales/defaultLanguage.ts) while the
+     *  specs match English text; the cookie is saved into `storageState` for every spec. */
+    await page.context().addCookies([{ name: 'lang', value: 'en-US', url: baseURL }]);
 
     await page.goto(baseURL, { timeout });
     await register(page, user);
