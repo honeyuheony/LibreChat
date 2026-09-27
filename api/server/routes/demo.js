@@ -12,6 +12,7 @@ const { processDeleteRequest } = require('~/server/services/Files/process');
 const { getAppConfig } = require('~/server/services/Config');
 const { getLogStores } = require('~/cache');
 const { findUser } = require('~/models');
+const { File } = require('~/db/models');
 const { createDemoData, resolveProtectedEmails } = require(
   path.resolve(__dirname, '..', '..', '..', 'config', 'demo-data'),
 );
@@ -146,18 +147,43 @@ const getResetTargets = () => {
   };
 };
 
-/** Deletes originals the way `config/reset-demo.js` does, outside the caller's tenant scope. */
+/** File ids that another account's File document also carries. */
+const findSharedFileIds = async (user, files) => {
+  const owners = [user._id, String(user._id)];
+  const shared = await File.find(
+    { file_id: { $in: files.map((file) => file.file_id) }, user: { $nin: owners } },
+    'file_id',
+  ).lean();
+  return new Set(shared.map((file) => file.file_id));
+};
+
+/**
+ * Deletes originals the way `config/reset-demo.js` does, outside the caller's tenant scope.
+ * processDeleteRequest removes File documents and agent references by file_id alone, so a
+ * file_id another account also holds is skipped and reported back as failed.
+ */
 const createFileDeleter = (appConfig) => (user, files) =>
-  runAsSystem(() =>
-    processDeleteRequest({
-      req: {
-        user: { id: String(user._id), email: user.email, tenantId: user.tenantId },
-        config: appConfig,
-        body: {},
-      },
-      files,
-    }),
-  );
+  runAsSystem(async () => {
+    const sharedIds = await findSharedFileIds(user, files);
+    if (sharedIds.size > 0) {
+      logger.warn(
+        `[demo] ${user.email}: file ids also held by another account, kept: ${[...sharedIds].join(', ')}`,
+      );
+    }
+    const deletable = files.filter((file) => !sharedIds.has(file.file_id));
+    const result =
+      deletable.length > 0
+        ? await processDeleteRequest({
+            req: {
+              user: { id: String(user._id), email: user.email, tenantId: user.tenantId },
+              config: appConfig,
+              body: {},
+            },
+            files: deletable,
+          })
+        : {};
+    return { ...result, failedFileIds: [...(result.failedFileIds ?? []), ...sharedIds] };
+  });
 
 /** Reset rewrites profile fields on the user document, so cached `req.user` copies must go. */
 const invalidateResetUsers = async (rows) => {
@@ -198,7 +224,10 @@ router.post('/reset', requireSameOrigin, async (req, res) => {
       deleteFiles: createFileDeleter(appConfig),
       warn: (message) => logger.warn(`[demo] ${message}`),
     });
-    await invalidateResetUsers(rows);
+    /** The reset already happened; a stale cached `req.user` expires with its TTL. */
+    await invalidateResetUsers(rows).catch((error) =>
+      logger.warn('[demo] Reset done but clearing the auth user cache failed', error),
+    );
     logger.info(`[demo] reset by ${req.user.email}: ${emails.join(', ')}`);
     return res.status(200).json({ rows });
   } catch (error) {

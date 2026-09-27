@@ -566,6 +566,60 @@ describe('demo reset route', () => {
     expect(await getCachedAuthUserDoc(store, 'lee-cache-key')).toBeUndefined();
   });
 
+  test('keeps a file id another account also holds, with its agent references', async () => {
+    const { logger } = require('@librechat/data-schemas');
+    const warn = jest.spyOn(logger, 'warn');
+    await raw('files').insertMany([
+      makeTextFile(lee, 'shared-file-id'),
+      makeTextFile(hong, 'shared-file-id'),
+      makeTextFile(lee, 'lee-only-file'),
+    ]);
+    await raw('agents').updateOne(
+      { id: DEFAULT_AGENT_ID },
+      { $set: { tool_resources: { file_search: { file_ids: ['shared-file-id'] } } } },
+    );
+
+    const response = await resetAs(hong);
+
+    expect(response.status).toBe(200);
+    const hongFiles = await raw('files').find({ user: hong._id }).toArray();
+    expect(hongFiles.map((file) => file.file_id)).toEqual(['shared-file-id']);
+    const leeFiles = await raw('files').find({ user: lee._id }).toArray();
+    expect(leeFiles.map((file) => file.file_id)).toEqual(['shared-file-id']);
+    const agent = await raw('agents').findOne({ id: DEFAULT_AGENT_ID });
+    expect(agent.tool_resources.file_search.file_ids).toEqual(['shared-file-id']);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('shared-file-id'));
+    warn.mockRestore();
+  });
+
+  test('answers 200 with a warning when clearing the auth cache fails after the reset', async () => {
+    const { logger } = require('@librechat/data-schemas');
+    const warn = jest.spyOn(logger, 'warn');
+    const findOne = User.findOne;
+    const lookup = jest.spyOn(User, 'findOne').mockImplementation(function (filter, ...rest) {
+      if (JSON.stringify(filter ?? {}).includes('lee@example.com')) {
+        throw new Error('lookup failed');
+      }
+      return findOne.call(this, filter, ...rest);
+    });
+    await raw('conversations').insertOne(makeConvo(lee, 'lee-convo-2', '이협력 새 대화'));
+
+    try {
+      const response = await resetAs(hong);
+
+      expect(response.status).toBe(200);
+      expect(response.body.rows.length).toBeGreaterThan(0);
+      expect(await raw('conversations').countDocuments({ user: lee.id })).toBe(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('[demo]'),
+        expect.objectContaining({ message: 'lookup failed' }),
+      );
+    } finally {
+      lookup.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
   test('answers 409 when the list names only protected accounts', async () => {
     process.env.DEMO_SWITCH_USERS = 'admin@admin.com,demo@example.com';
 
