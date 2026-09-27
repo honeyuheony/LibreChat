@@ -65,7 +65,7 @@ function MetricCard({ label, value, detail }: MetricCardProps) {
   return (
     <section className="min-w-0 rounded-lg border border-border-light bg-surface-primary p-4 dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
       <h2 className="text-sm font-semibold text-text-secondary">{label}</h2>
-      <p className="mt-2 text-3xl font-semibold text-text-primary">{value}</p>
+      <p className="mt-2 text-3xl font-semibold text-accent-primary">{value}</p>
       <p className="mt-1 text-sm text-text-tertiary">{detail}</p>
     </section>
   );
@@ -76,6 +76,15 @@ function PageHeader({ localize }: { localize: MetricsLocalize }) {
     <header className="mb-5">
       <h1 className="text-2xl font-bold text-text-primary">{localize('com_metrics_title')}</h1>
       <p className="mt-2 text-sm text-text-tertiary">{localize('com_metrics_formula')}</p>
+    </header>
+  );
+}
+
+function MetricsTopBar({ localize }: { localize: MetricsLocalize }) {
+  return (
+    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border-light bg-presentation/70 px-4 text-[14.5px] text-text-secondary backdrop-blur-md">
+      <span className="font-semibold text-text-primary">{localize('com_metrics_title')}</span>
+      <span className="text-text-tertiary">{localize('com_ui_admin')}</span>
     </header>
   );
 }
@@ -143,23 +152,23 @@ function AgentRanking({
           {localize('com_metrics_staff_agent_ranking_note')}
         </p>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border-light bg-surface-primary dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light text-left text-text-secondary">
-              <th scope="col" className="px-4 py-3 font-semibold">
+            <tr className="border-b border-border-light text-left text-xs text-text-secondary">
+              <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_agent_name')}
               </th>
-              <th scope="col" className="px-4 py-3 font-semibold">
+              <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_author')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_runs')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_forks')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_saved_hours')}
               </th>
             </tr>
@@ -179,7 +188,7 @@ function AgentRanking({
                   }}
                   className="cursor-pointer border-b border-border-light text-text-primary hover:bg-surface-hover"
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-1.5">
                     <Link
                       to={path}
                       className="font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
@@ -187,42 +196,42 @@ function AgentRanking({
                       {title}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-text-tertiary">
+                  <td className="px-2 py-1.5 text-text-tertiary">
                     {agent.authorDepartment
                       ? `${agent.authorName} · ${agent.authorDepartment}`
                       : agent.authorName || '–'}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     <span
                       aria-hidden="true"
-                      className="me-2 inline-block h-2 rounded-r-sm bg-surface-submit align-middle"
+                      className="me-1.5 inline-block h-1.5 rounded-sm bg-gradient-to-r from-accent-primary to-accent-primary-hover align-middle"
                       style={{ width: `${Math.round((90 * agent.runs) / maxRuns)}px` }}
                     />
                     {formatNumber(agent.runs, locale)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     {formatNumber(agent.forks, locale)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     {formatHours(agent.savedHours, locale)}
                   </td>
                 </tr>
               );
             })}
-            <tr className="bg-surface-tertiary text-text-secondary">
-              <td className="px-4 py-3">
+            <tr className="text-text-secondary">
+              <td className="px-2 py-1.5">
                 {localize('com_metrics_base_total', {
                   value: formatNumber(report.baseTotal.count, locale),
                 })}
               </td>
-              <td className="px-4 py-3">{report.baseTotal.authorName || '–'}</td>
-              <td className="px-4 py-3 text-right tabular-nums">
+              <td className="px-2 py-1.5">{report.baseTotal.authorName || '–'}</td>
+              <td className="px-2 py-1.5 text-right tabular-nums">
                 {formatNumber(report.baseTotal.runs, locale)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums">
+              <td className="px-2 py-1.5 text-right tabular-nums">
                 {formatNumber(report.baseTotal.forks, locale)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums">
+              <td className="px-2 py-1.5 text-right tabular-nums">
                 {formatHours(report.baseTotal.savedHours, locale)}
               </td>
             </tr>
@@ -252,23 +261,23 @@ function ContributorRanking({
           {localize('com_metrics_staff_contributor_note')}
         </p>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border-light bg-surface-primary dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-border-light text-left text-text-secondary">
-              <th scope="col" className="px-4 py-3 font-semibold">
+            <tr className="border-b border-border-light text-left text-xs text-text-secondary">
+              <th scope="col" className="px-2 py-1.5 font-medium">
                 {localize('com_metrics_author')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_registration_count')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_my_agent_runs')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_fork_count')}
               </th>
-              <th scope="col" className="px-4 py-3 text-right font-semibold">
+              <th scope="col" className="px-2 py-1.5 text-right font-medium">
                 {localize('com_metrics_saved_hours')}
               </th>
             </tr>
@@ -284,23 +293,23 @@ function ContributorRanking({
               contributors.map((contributor) => (
                 <tr
                   key={`${contributor.authorName}-${contributor.department ?? ''}`}
-                  className="border-b border-border-light text-text-primary last:border-0"
+                  className="border-b border-border-light text-text-primary"
                 >
-                  <td className="px-4 py-3 text-text-tertiary">
+                  <td className="px-2 py-1.5 text-text-tertiary">
                     {contributor.department
                       ? `${contributor.authorName} · ${contributor.department}`
                       : contributor.authorName || '–'}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     {formatNumber(contributor.agents, locale)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     {formatNumber(contributor.runs, locale)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     {formatNumber(contributor.forks, locale)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-2 py-1.5 text-right tabular-nums">
                     {formatHours(contributor.savedHours, locale)}
                   </td>
                 </tr>
@@ -323,14 +332,17 @@ export default function MetricsView() {
 
   if (!data) {
     return (
-      <main className="mx-auto w-full max-w-[960px] px-4 py-8">
-        <PageHeader localize={localize} />
-        <StatusPanel
-          localize={localize}
-          error={isError || !isLoading}
-          onRetry={isError ? () => void refetch() : undefined}
-          isFetching={isFetching}
-        />
+      <main className="h-full w-full overflow-y-auto bg-presentation">
+        <MetricsTopBar localize={localize} />
+        <div className="mx-auto w-full max-w-[960px] px-4 py-8">
+          <PageHeader localize={localize} />
+          <StatusPanel
+            localize={localize}
+            error={isError || !isLoading}
+            onRetry={isError ? () => void refetch() : undefined}
+            isFetching={isFetching}
+          />
+        </div>
       </main>
     );
   }
@@ -365,25 +377,28 @@ export default function MetricsView() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-[960px] px-4 py-8">
-      <PageHeader localize={localize} />
-      {isError && (
-        <div className="mb-4">
-          <StatusPanel
-            localize={localize}
-            error
-            onRetry={() => void refetch()}
-            isFetching={isFetching}
-          />
+    <main className="h-full w-full overflow-y-auto bg-presentation">
+      <MetricsTopBar localize={localize} />
+      <div className="mx-auto w-full max-w-[960px] px-4 py-8">
+        <PageHeader localize={localize} />
+        {isError && (
+          <div className="mb-4">
+            <StatusPanel
+              localize={localize}
+              error
+              onRetry={() => void refetch()}
+              isFetching={isFetching}
+            />
+          </div>
+        )}
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map((card) => (
+            <MetricCard key={card.label} {...card} />
+          ))}
         </div>
-      )}
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => (
-          <MetricCard key={card.label} {...card} />
-        ))}
+        <AgentRanking report={data} locale={locale} localize={localize} navigate={navigate} />
+        <ContributorRanking contributors={data.contributors} locale={locale} localize={localize} />
       </div>
-      <AgentRanking report={data} locale={locale} localize={localize} navigate={navigate} />
-      <ContributorRanking contributors={data.contributors} locale={locale} localize={localize} />
     </main>
   );
 }
