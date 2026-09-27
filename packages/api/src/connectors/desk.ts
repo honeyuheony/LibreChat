@@ -7,16 +7,16 @@ import type {
 import type { Request, Response } from 'express';
 
 const DEFAULT_INTERNAL_URL = 'http://desk-relay:8766';
-/** Unmeasured: long enough for an in-cluster hop, short enough not to stall the settings dialog. */
+/** 클러스터 안 한 번 건너가기에는 넉넉하고, 설정 창을 붙잡아 두지는 않을 만큼 짧게 잡았다. */
 const RELAY_TIMEOUT_MS = 3000;
 const INSTALLER_FILE_PATTERN = /^[\w.-]+\.exe$/;
 
 export interface DeskRelayConfig {
-  /** Container-network relay base URL (`/internal/status`, `/internal/permissions`, `/app/latest.yml`). */
+  /** 컨테이너 네트워크 안의 relay 기본 URL(`/internal/status`, `/internal/permissions`, `/app/latest.yml`). */
   internalUrl: string;
-  /** `DESK_RELAY_SERVICE_KEY`; without it the relay is not asked at all. */
+  /** `DESK_RELAY_SERVICE_KEY`. 없으면 relay 에 아예 묻지 않는다. */
   serviceKey?: string;
-  /** Address users' browsers reach the relay at; without it no installer link is offered. */
+  /** 사용자 브라우저가 relay 에 닿는 주소. 없으면 설치 파일 링크를 주지 않는다. */
   publicUrl?: string;
   timeoutMs?: number;
 }
@@ -59,7 +59,7 @@ function parseRelayStatus(body: unknown): RelayStatusBody | null {
   if (typeof fields.online !== 'boolean') {
     return null;
   }
-  /** Relays before the multi-folder app send only `folder_name`. */
+  /** 여러 폴더를 지원하기 전의 relay 는 `folder_name` 만 보낸다. */
   const legacyFolder = optionalString(fields.folder_name);
   let folders: string[] = legacyFolder ? [legacyFolder] : [];
   if (Array.isArray(fields.folders)) {
@@ -97,7 +97,7 @@ function parseRelayPermission(entry: unknown): DeskPermission | null {
   };
 }
 
-/** Reads the installer file name from electron-builder's `latest.yml` (`path:` line). */
+/** electron-builder 가 만든 `latest.yml` 의 `path:` 줄에서 설치 파일 이름을 읽는다. */
 export function parseInstallerPath(latestYml: string): string | null {
   const match = latestYml.match(/^path:\s*['"]?([^'"\s]+)['"]?\s*$/m);
   const fileName = match?.[1];
@@ -115,8 +115,8 @@ const topLevelField = (latestYml: string, name: string): string | null =>
   latestYml.match(new RegExp(`^${name}:\\s*['"]?([^'"\\s]+)['"]?\\s*$`, 'm'))?.[1] ?? null;
 
 /**
- * Reads the release shown on the download page from electron-builder's `latest.yml`.
- * The size comes from the `files:` entry whose `url` is the top-level `path`.
+ * 다운로드 페이지에 보일 릴리스 정보를 electron-builder 의 `latest.yml` 에서 읽는다.
+ * 크기는 `files:` 항목 가운데 `url` 이 최상위 `path` 와 같은 항목에서 가져온다.
  */
 export function parseRelease(latestYml: string): Omit<DeskAppReleaseResponse, 'installerUrl'> {
   const fileName = parseInstallerPath(latestYml);
@@ -134,7 +134,7 @@ export function parseRelease(latestYml: string): Omit<DeskAppReleaseResponse, 'i
   };
 }
 
-/** Without a public relay address users could not download anything, so no release is offered. */
+/** 공개 relay 주소가 없으면 사용자가 아무것도 내려받을 수 없으므로 릴리스를 알려 주지 않는다. */
 async function fetchRelease(config: DeskRelayConfig): Promise<DeskAppReleaseResponse> {
   if (!config.publicUrl) {
     return noRelease;
@@ -194,7 +194,7 @@ async function fetchRelayStatus(
   }
 }
 
-/** Relay failures surface as `state: 'unknown'` so the connectors screen can say it could not check. */
+/** relay 가 실패하면 `state: 'unknown'` 으로 돌려, 커넥터 화면이 확인하지 못했다고 말할 수 있게 한다. */
 export async function getDeskStatus(
   config: DeskRelayConfig,
   userId: string,
@@ -219,8 +219,8 @@ export async function getDeskStatus(
 }
 
 /**
- * Reads outside the switched-on folders that the user's app is waiting on. Failures return none,
- * so the chat simply shows no permission card; the app's own window still asks.
+ * 켜 둔 폴더 밖을 읽으려고 사용자 앱이 허락을 기다리는 요청을 가져온다. 실패하면 빈 목록을 돌려
+ * 채팅에 권한 카드가 뜨지 않을 뿐이고, 앱 자체 창은 여전히 묻는다.
  */
 export async function getDeskPermissions(
   config: DeskRelayConfig,
@@ -271,7 +271,7 @@ export function createDeskStatusHandler(
   };
 }
 
-/** Only the signed-in user's own requests: the token in each lets that user's PC accept an answer. */
+/** 로그인한 사용자 본인의 요청만 돌려준다. 요청마다 든 토큰으로 그 사용자의 PC 가 답을 받아들이기 때문이다. */
 export function createDeskPermissionsHandler(
   config: DeskRelayConfig,
 ): (req: DeskStatusRequest, res: Response) => Promise<Response> {
@@ -284,7 +284,7 @@ export function createDeskPermissionsHandler(
   };
 }
 
-/** Public: the download page is also reachable from the sign-in screen, before any session exists. */
+/** 로그인 전 화면에서도 다운로드 페이지에 들어올 수 있으므로 인증 없이 연다. */
 export function createDeskAppReleaseHandler(
   config: DeskRelayConfig,
 ): (req: Request, res: Response) => Promise<Response> {

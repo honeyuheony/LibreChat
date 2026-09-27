@@ -3,7 +3,7 @@ import { Constants, ContentTypes } from 'librechat-data-provider';
 import type { ConnectorActivityItem } from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 
-/** Unmeasured: enough recent turns to fill a page of rows, since one turn often holds several calls. */
+/** 한 턴에 호출이 여러 번 들어 있는 경우가 많아, 이 정도 최근 턴이면 한 쪽 분량의 행을 채운다. */
 const MESSAGES_SCANNED = 40;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
@@ -15,7 +15,7 @@ export interface ToolCallMessage {
 }
 
 export interface ConnectorActivityDeps {
-  /** Newest first, and only the given user's messages: this is the one guard against mixing users. */
+  /** 최신순으로, 주어진 사용자의 메시지만 돌려준다. 다른 사용자의 기록이 섞이지 않게 막는 곳은 여기 하나뿐이다. */
   findToolCallMessages: (userId: string, limit: number) => Promise<ToolCallMessage[]>;
   findConversationTitles: (
     userId: string,
@@ -24,8 +24,8 @@ export interface ConnectorActivityDeps {
 }
 
 /**
- * One row per connector tool per message, newest first. Calls to the same tool in one turn
- * collapse into a count; non-MCP tools (skills, code, web search) are left out.
+ * 메시지마다 커넥터 도구 하나에 한 행을 최신순으로 만든다. 한 턴 안에서 같은 도구를 여러 번 부르면
+ * 횟수로 합치고, MCP 가 아닌 도구(스킬, 코드, 웹 검색)는 뺀다.
  */
 export function extractConnectorCalls(
   messages: ToolCallMessage[],
@@ -67,7 +67,7 @@ interface ActivityRequest extends Request {
   user?: { id?: string };
 }
 
-/** The signed-in user's recent connector tool calls, read from their own saved messages. */
+/** 로그인한 사용자 본인이 저장한 메시지에서 최근 커넥터 도구 호출을 읽는다. */
 export function createConnectorActivityHandler(
   deps: ConnectorActivityDeps,
 ): (req: ActivityRequest, res: Response) => Promise<Response> {

@@ -1,18 +1,18 @@
 import { createHash } from 'crypto';
 
-/** `parse: 'text_only'` = text exists but page structure was lost; still processed and counted. */
+/** `parse: 'text_only'` 는 text 는 있지만 쪽 구조를 잃은 문서다. 그래도 처리하고 건수에 넣는다. */
 export interface TaskDocument {
   file_id: string;
   filename: string;
   text: string;
-  /** Cache key part; see `documentTextHash`. */
+  /** cache 키에 들어간다(`documentTextHash` 참고). */
   textHash: string;
   parse: 'ok' | 'text_only';
-  /** Start offset of each page in `text`; only PDFs have it. */
+  /** `text` 안에서 각 쪽이 시작하는 위치다. PDF 에만 있다. */
   pageStarts?: number[];
   /**
-   * Re-reads the source with page structure (PDFs). Until called, `text` is the stored text,
-   * so a document whose results are all cached is never downloaded.
+   * 원본을 쪽 구조와 함께 다시 읽는다(PDF). 부르기 전까지 `text` 는 저장된 text 이므로,
+   * 결과가 모두 cache 에 있는 문서는 내려받지 않는다.
    */
   loadPages?: () => Promise<TaskDocument>;
 }
@@ -20,9 +20,9 @@ export interface TaskDocument {
 export interface PrepareDocumentInput {
   file_id: string;
   filename: string;
-  /** Stored File `text`; used when `pages` is absent. */
+  /** 저장된 File `text` 다. `pages` 가 없을 때 쓴다. */
   text?: string | null;
-  /** Per-page text, when the processor re-read a PDF itself. */
+  /** 처리기가 PDF 를 직접 다시 읽었을 때의 쪽별 text 다. */
   pages?: string[];
   parse?: TaskDocument['parse'];
 }
@@ -32,8 +32,8 @@ export function hashText(text: string): string {
 }
 
 /**
- * Always the stored File `text`, even when the pages were re-read: the estimate endpoint
- * only has the stored text, and its cache count must match the keys the tools write.
+ * 쪽을 다시 읽었더라도 늘 저장된 File `text` 로 만든다. 예상 시간 endpoint 는 저장된 text 만
+ * 갖고 있어서, 거기서 센 cache 건수가 tool 이 쓰는 키와 맞아야 한다.
  */
 export function documentTextHash(input: Pick<PrepareDocumentInput, 'text'>): string {
   return hashText(input.text ?? '');
@@ -70,7 +70,7 @@ export function hasText(doc: TaskDocument): boolean {
   return doc.text.trim().length > 0;
 }
 
-/** The stored text can be empty while the re-read pages are not, so both count as readable. */
+/** 저장된 text 가 비어 있어도 다시 읽은 쪽에는 text 가 있을 수 있어서, 둘 다 읽을 수 있는 것으로 본다. */
 export function mayHaveText(doc: TaskDocument): boolean {
   return hasText(doc) || doc.loadPages != null;
 }

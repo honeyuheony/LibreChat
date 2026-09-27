@@ -7,7 +7,7 @@ import type { ServerRequest } from '~/types';
 import { isVisibleToDepartment, readUserDepartment } from './market';
 import { getDeploymentSkillRegistry } from './deployment';
 
-/** `GET /api/skills` 이 접근 가능한 스킬 id를 구할 때 쓰는 것과 같은 두 building block. */
+/** `GET /api/skills` 이 접근 가능한 스킬 id를 구할 때 쓰는 두 조회 함수를 그대로 받는다. */
 export interface SkillCategoriesDeps {
   findAccessibleResources: (params: {
     userId: string;

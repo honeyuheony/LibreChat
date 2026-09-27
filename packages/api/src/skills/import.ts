@@ -640,7 +640,7 @@ export interface SkillFilePersistenceContext {
   readonly tenantId?: string;
 }
 
-/** Saves one bundled file's bytes to storage and records it on the skill; drops the blob if the record fails. */
+/** 묶음에 든 파일 하나를 저장소에 올리고 스킬에 기록한다. 기록이 실패하면 올린 blob 을 지운다. */
 export async function persistSkillFile(
   req: Request,
   deps: Pick<ImportSkillDeps, 'saveBuffer' | 'upsertSkillFile' | 'deleteFile'>,

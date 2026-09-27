@@ -14,13 +14,13 @@ export interface ReportSlot {
   id: string;
   kind: 'paragraph' | 'table_fixed_rows' | 'table_rows' | 'list';
   placeholder?: string;
-  /** Extraction fields a paragraph may draw on; all fields when absent. */
+  /** 문단이 근거로 쓸 수 있는 추출 항목이다. 없으면 모든 항목을 쓴다. */
   from?: string[];
   field?: string;
   source?: 'filenames';
   label?: string;
   rows?: string[];
-  /** Column name → extraction field, or `@filename` for the source file name. */
+  /** 열 이름마다 채울 추출 항목을 적는다. `@filename` 이면 원본 파일 이름이 들어간다. */
   columns?: Record<string, string>;
   rowField?: string;
   defaults?: Record<string, string>;
@@ -35,8 +35,8 @@ export interface ReportTemplate {
 
 const TEMPLATE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 /**
- * Templates beyond a skill's default one: id → skill folder and the `-<variant>` suffix of
- * `slots-<variant>.json`. Mirrors hwp-mcp `TEMPLATE_VARIANTS`, which renders the same ids.
+ * 스킬 기본 양식 말고 더 있는 양식을 id 로 찾아, 스킬 폴더와 `slots-<variant>.json` 의
+ * `-<variant>` 접미사를 얻는다. 같은 id 로 문서를 만드는 hwp-mcp `TEMPLATE_VARIANTS` 와 맞춰 둔다.
  */
 const TEMPLATE_VARIANTS: ReadonlyMap<string, { folder: string; variant: string }> = new Map([
   ['hwp-report-general', { folder: 'hwp-report', variant: 'general' }],
@@ -45,8 +45,8 @@ const FILENAME_COLUMN = '@filename';
 const TITLE_PLACEHOLDER = /\{\{([^}]+)\}\}/g;
 
 /**
- * Reads `<skillsDir>/<templateId>/assets/slots.json`, or the `slots-<variant>.json` a
- * `TEMPLATE_VARIANTS` id names; the same files hwp-mcp fills from.
+ * `<skillsDir>/<templateId>/assets/slots.json` 을 읽고, `TEMPLATE_VARIANTS` 에 있는 id 면
+ * 그 id 가 가리키는 `slots-<variant>.json` 을 읽는다. hwp-mcp 가 채우는 파일과 같다.
  */
 export function resolveReportTemplatePath(templateId: string, skillsDir: string): string {
   if (!TEMPLATE_ID_PATTERN.test(templateId)) {
@@ -81,7 +81,7 @@ export async function loadReportTemplate(
   };
 }
 
-/** Mirrors hwp-mcp: unfilled `{{name}}` is dropped together with the empty brackets it leaves. */
+/** hwp-mcp 와 똑같이, 채우지 않은 `{{name}}` 은 지우고 그 때문에 비는 괄호도 함께 지운다. */
 export function fillTitle(title: string, values: Record<string, string>): string {
   return title
     .replace(TITLE_PLACEHOLDER, (_match, name: string) => values[name.trim()]?.trim() ?? '')
@@ -94,12 +94,12 @@ export function titlePlaceholders(title: string): string[] {
   return Array.from(title.matchAll(TITLE_PLACEHOLDER), (match) => match[1].trim());
 }
 
-/** Footnote id of one extracted cell: document number and field number, both 1-based. */
+/** 추출 칸 하나의 각주 id 로, 문서 번호와 항목 번호를 모두 1부터 센다. */
 export function cellId(rowIndex: number, fieldIndex: number): string {
   return `c${rowIndex + 1}_${fieldIndex + 1}`;
 }
 
-/** Only verified (`ok`) cells can be cited; a `low` value has no trustworthy position. */
+/** 확인된(`ok`) 칸만 인용할 수 있다. `low` 값은 믿을 만한 위치가 없다. */
 export function collectCellSources(rows: readonly ExtractedRow[]): Map<string, FootnoteSource> {
   const sources = new Map<string, FootnoteSource>();
   rows.forEach((row, rowIndex) => {
@@ -132,7 +132,7 @@ function citedValue(rows: readonly ExtractedRow[], rowIndex: number, fieldIndex:
   return cell.status === 'ok' ? `${cell.value}[^${cellId(rowIndex, fieldIndex)}]` : cell.value;
 }
 
-/** Joins distinct values from several documents; `null` when none has a value. */
+/** 여러 문서의 값을 중복 없이 잇는다. 값이 있는 문서가 없으면 `null` 이다. */
 function joinDistinct(
   rows: readonly ExtractedRow[],
   rowIndexes: number[],
@@ -152,7 +152,7 @@ function joinDistinct(
   return parts.length > 0 ? parts.join(separator) : null;
 }
 
-/** Fills every code-owned slot (tables and lists) from the extraction; paragraphs stay empty. */
+/** 코드가 채우는 칸(표와 목록)을 추출 결과로 모두 채우고, 문단은 비워 둔다. */
 export function assembleCodeSlots(
   template: ReportTemplate,
   fields: readonly string[],
@@ -196,8 +196,8 @@ export function assembleCodeSlots(
       content.fixedTables[slot.id] = table;
     } else if (slot.kind === 'table_rows') {
       const columns = Object.entries(slot.columns ?? {});
-      /* A column fed by the field named like the slot (금주 실적) decides whether a row exists;
-       * shared columns such as 담당 alone must not add a row to every table. */
+      /* 칸 이름과 같은 항목(금주 실적)을 받는 열에 값이 있어야 행을 만든다. 담당처럼 여러 표가
+       * 함께 쓰는 열만으로 모든 표에 행이 생기면 안 되기 때문이다. */
       const keyColumns = columns.filter(
         ([, field]) => normalizeKey(field) === normalizeKey(slot.id),
       );
@@ -324,7 +324,7 @@ function renderBody(title: string, template: ReportTemplate, content: SlotConten
   return lines.join('\n');
 }
 
-/** Numbers every `[^cX_Y]` across all slots in template order, then rebuilds the slot content. */
+/** 모든 칸의 `[^cX_Y]` 에 양식 순서대로 번호를 매긴 뒤 칸 내용을 다시 만든다. */
 function numberSlotFootnotes(
   template: ReportTemplate,
   content: SlotContent,
@@ -367,7 +367,7 @@ export interface ReportOutcome {
   render: HwpRenderRequest;
 }
 
-/** Writes paragraphs with one model call, fills code slots, and numbers footnotes; no rendering. */
+/** 모델을 한 번 불러 문단을 쓰고, 코드가 채우는 칸을 채우고, 각주에 번호를 매긴다. HWPX 는 만들지 않는다. */
 export async function composeReport({
   resultId,
   conversationId,
@@ -446,7 +446,7 @@ const BODY_STILL_AVAILABLE = '본문은 오른쪽에서 확인하고 복사할 �
 
 export const RENDER_UNAVAILABLE_NOTICE: string = `한글 문서 변환 서버에 연결하지 못했거나 응답이 제시간에 오지 않아 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`;
 
-/** Keyed by hwp-mcp error code; other codes fall back to the generic render failure. */
+/** hwp-mcp 오류 코드별 안내 문구다. 여기 없는 코드는 일반 생성 실패 문구를 쓴다. */
 const RENDER_FAILURE_NOTICES: Record<string, string> = {
   unavailable: RENDER_UNAVAILABLE_NOTICE,
   unknown_template: `한글 문서 변환 서버에 이 보고서 양식이 등록되어 있지 않아 HWP 파일을 만들지 못했습니다. 관리자에게 양식 등록을 요청해 주세요. ${BODY_STILL_AVAILABLE}`,

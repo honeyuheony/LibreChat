@@ -7,7 +7,7 @@ export function makeDoc(file_id: string, text: string, filename = `${file_id}.tx
   return prepareDocument({ file_id, filename, text });
 }
 
-/** Answers each prompt with `reply(prompt)` and records every prompt it received. */
+/** 모든 prompt 에 `reply(prompt)` 로 답하고, 받은 prompt 를 전부 기록한다. */
 export function fakeLLM(reply: (prompt: string) => unknown, model = 'fake-model') {
   const prompts: string[] = [];
   const llm: TaskLLM = {
@@ -58,7 +58,7 @@ export function memoryCache(): TaskCache & {
   };
 }
 
-/** Pulls `Document name: …` out of a per-document prompt. */
+/** 문서별 prompt 에서 `Document name: …` 값을 뽑는다. */
 export function documentName(prompt: string): string {
   return /Document name: (.*)/.exec(prompt)?.[1] ?? '';
 }

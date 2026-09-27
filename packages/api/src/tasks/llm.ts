@@ -9,7 +9,7 @@ import { resolveConfigHeaders } from '~/utils/headers';
 import { omitTitleOptions } from '~/agents/client';
 import { createSafeUser } from '~/utils/env';
 
-/** The single call shape the task processors need: prompt in, text out. */
+/** 작업 처리기는 모델을 이 형태로만 부른다. prompt 를 넣으면 text 가 나온다. */
 export interface TaskLLM {
   model: string;
   invoke(prompt: string, signal?: AbortSignal): Promise<string>;
@@ -41,8 +41,8 @@ function contentToText(content: unknown): string {
 }
 
 /**
- * Builds a non-streaming model on the conversation agent's endpoint and model, resolved the
- * same way `titleConvo` resolves credentials, so per-document calls reach the same backend.
+ * 대화 agent 의 endpoint 와 모델로 스트리밍하지 않는 모델을 만든다. 인증 정보를 `titleConvo` 와
+ * 같은 방식으로 풀어서, 문서별 호출도 대화와 같은 backend 로 간다.
  */
 export async function createTaskLLM({
   req,
@@ -107,7 +107,7 @@ export async function createTaskLLM({
   };
 }
 
-/** Pulls the first JSON object out of a model reply, tolerating code fences and prose. */
+/** 모델 답에서 첫 JSON 객체를 뽑는다. code fence 나 설명 글이 섞여 있어도 읽는다. */
 export function parseJsonObject(reply: string): Record<string, unknown> | null {
   const start = reply.indexOf('{');
   const end = reply.lastIndexOf('}');
@@ -124,7 +124,7 @@ export function parseJsonObject(reply: string): Record<string, unknown> | null {
   }
 }
 
-/** One retry on unparseable JSON; a second failure is thrown to the per-document runner. */
+/** JSON 을 읽지 못하면 한 번만 다시 부르고, 또 실패하면 `runPerDocument` 쪽으로 오류를 던진다. */
 export async function invokeJson(
   llm: TaskLLM,
   prompt: string,

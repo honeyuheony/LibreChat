@@ -67,7 +67,7 @@ export function createDemoFileDeleter<TFile extends DemoFile>({
           `[demo] ${user.email}: file ids also held by another account, kept: ${[...sharedIds].join(', ')}`,
         );
       }
-      // processDeleteRequest deletes metadata by file_id, so shared ids must stay failed.
+      // processDeleteRequest 는 file_id 로 메타데이터를 지우므로, 다른 계정과 공유한 id 는 실패로 남겨야 한다.
       const deletable = files.filter((file) => !sharedIds.has(file.file_id));
       const result =
         deletable.length > 0

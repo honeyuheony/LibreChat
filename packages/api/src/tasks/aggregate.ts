@@ -25,7 +25,7 @@ export function toStats(input: StatsInput): TaskStats {
   };
 }
 
-/** Cells of unreflected documents are not counted as 「값 없음」; they were never read. */
+/** 반영하지 못한 문서의 칸은 읽지도 않았으므로 「값 없음」으로 세지 않는다. */
 export function countExtractionStats(
   rows: readonly ExtractedRow[],
   startedAt: number,
@@ -57,7 +57,7 @@ export function countExtractionStats(
   });
 }
 
-/** Most frequent values of one column, ties broken by first appearance. */
+/** 횟수가 같은 값은 먼저 나온 값을 앞에 둔다. */
 export function countTopValues(
   rows: readonly ExtractedRow[],
   fieldIndex: number,

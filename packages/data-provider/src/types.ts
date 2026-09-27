@@ -120,9 +120,8 @@ export type TEndpointOption = Pick<
 export type TEphemeralAgent = {
   mcp?: string[];
   /**
-   * MCP servers the user switched off for this conversation. Applies to a saved
-   * agent: its tools from these servers are left out of the run. It only ever
-   * removes tools, never attaches a server the agent does not already carry.
+   * 사용자가 이 대화에서 끈 MCP 서버. 저장 agent 에 적용되며, 실행할 때 이 서버들의 도구를 뺀다.
+   * 도구를 빼기만 하고, agent 에 원래 없던 서버를 붙이지는 않는다.
    */
   disabled_mcp?: string[];
   web_search?: boolean;
@@ -336,9 +335,9 @@ export type TUser = {
   personalization?: {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
-    /** Per-connector "use in new chats" switch. Key = MCP server name. */
+    /** 커넥터별 「새 대화에서 사용」 스위치. 키는 MCP 서버 이름이다. */
     connectorDefaults?: Record<string, boolean>;
-    /** The user's global instructions, added to every conversation's shared context. */
+    /** 사용자 전역 지침. 모든 대화의 공용 맥락에 들어간다. */
     instructions?: string;
     approvalMode?: UserApprovalMode;
   };
@@ -356,15 +355,15 @@ export type TUpdateUserPreferencesResponse = {
 };
 
 /**
- * How the user answers approvals for the tools that honor it (document import, re-fetch,
- * export, share): `manual` asks every time, `auto` runs them and only logs.
+ * 승인을 받는 도구(문서 가져오기·다시 가져오기·내보내기·공유)의 승인 방식.
+ * `manual` 은 매번 묻고, `auto` 는 묻지 않고 실행한 뒤 기록만 남긴다.
  */
 export const USER_APPROVAL_MODES = ['manual', 'auto'] as const;
 export type UserApprovalMode = (typeof USER_APPROVAL_MODES)[number];
 export const DEFAULT_USER_APPROVAL_MODE: UserApprovalMode = 'manual';
 export const MAX_USER_INSTRUCTIONS_LENGTH = 2000;
 
-/** Workspace preferences to change; fields left out keep their current value. */
+/** 바꿀 작업 공간 설정. 빠진 필드는 지금 값을 그대로 둔다. */
 export type TUpdateWorkspacePreferencesRequest = {
   instructions?: string;
   approvalMode?: UserApprovalMode;
@@ -377,14 +376,14 @@ export type TUpdateWorkspacePreferencesResponse = {
   preferences: TWorkspacePreferences;
 };
 
-/** Connectors to switch for new chats; names left out keep their current value. */
+/** 새 대화용 스위치를 바꿀 커넥터. 빠진 이름은 지금 값을 그대로 둔다. */
 export type TUpdateConnectorDefaultsRequest = {
   connectorDefaults: Record<string, boolean>;
 };
 
 export type TUpdateConnectorDefaultsResponse = {
   updated: boolean;
-  /** Every switch the user has set, after the update. */
+  /** 바꾼 뒤 사용자가 정해 둔 스위치 전부. */
   preferences: Required<TUpdateConnectorDefaultsRequest>;
 };
 

@@ -25,9 +25,9 @@ type HwpErrorResponse = {
 
 export async function hwpToText(file: Express.Multer.File): Promise<string> {
   const contents = await fs.promises.readFile(file.path);
-  /* HWPX is a ZIP (OWPML) that hwp-mcp inflates, so reject a zip bomb here as
-   * docx/xlsx do. HWP 5.0 is a Compound File Binary container (D0 CF 11 E0),
-   * not a ZIP; the magic-byte check skips it whatever the declared MIME type. */
+  /* HWPX 는 hwp-mcp 가 압축을 푸는 ZIP(OWPML)이라 docx/xlsx 처럼 여기서 zip bomb 을 막는다.
+   * HWP 5.0 은 ZIP 이 아닌 Compound File Binary 컨테이너(D0 CF 11 E0)라서, 선언된 MIME 형식과
+   * 상관없이 magic byte 검사에서 걸러진다. */
   if (contents.length >= 4 && contents[0] === 0x50 && contents[1] === 0x4b) {
     await assertSafeZipSize(contents, { name: file.originalname ?? 'hwpx' });
   }

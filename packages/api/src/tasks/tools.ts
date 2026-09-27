@@ -23,10 +23,10 @@ import { composeReport, renderFailureNotice } from './report';
 import { extractFields, normalizeFields } from './extract';
 import { normalizeKey } from './cache';
 
-/** Key of the structured tool artifact; `callbacks.js` turns it into a message attachment. */
+/** tool artifact 를 담는 키다. `callbacks.js` 가 이 값을 메시지 첨부로 바꾼다. */
 export const TASK_RESULT_ARTIFACT = 'task_result';
 
-/** Stage ids per tool, in plan-card order; `label` in progress events carries the Korean text. */
+/** tool 별 단계 id 를 계획 카드 순서대로 둔다. 진행 이벤트의 `label` 에 한국어 문구가 실린다. */
 export const TASK_STAGES: Record<TaskToolName, ReadonlyArray<{ id: string; label: string }>> = {
   [TaskTools.extract_table]: [
     { id: 'prepare', label: '문서 준비 상태 확인' },
@@ -61,7 +61,7 @@ export function isTaskToolName(name: unknown): name is TaskToolName {
   return typeof name === 'string' && (TASK_TOOL_NAMES as readonly string[]).includes(name);
 }
 
-/** Recommended `endpoints.agents.toolApproval`: only the two card tools pause. */
+/** 권장하는 `endpoints.agents.toolApproval` 설정이다. 카드를 띄우는 두 tool 만 멈춰 승인을 받는다. */
 export const TASK_TOOL_APPROVAL_POLICY: { enabled: boolean; allow: string[]; ask: string[] } = {
   enabled: true,
   allow: ['*'],
@@ -170,14 +170,14 @@ export interface TaskToolDeps {
   createId?: () => string;
 }
 
-/** Attachment payload: small on purpose; the rows and body are read from the result store. */
+/** 첨부에 싣는 내용은 일부러 작게 둔다. 행과 본문은 결과 저장소에서 읽는다. */
 export interface TaskResultArtifact {
   resultId: string;
   kind: TaskResult['kind'];
   title: string;
   stats: TaskStats;
   file?: { file_id: string; filename: string };
-  /** Present when the report body exists but the HWPX could not be made. */
+  /** 보고서 본문은 있지만 HWPX 를 만들지 못했을 때만 있다. */
   notice?: string;
 }
 
@@ -403,7 +403,7 @@ async function runWriteReport(
   ];
 }
 
-/** Creates the runtime tool for one task tool name; the definitions registry shares the schema. */
+/** task tool 이름 하나로 실행용 tool 을 만든다. schema 는 `TASK_TOOL_DEFINITIONS` 의 것을 그대로 쓴다. */
 export function createTaskTool(name: TaskToolName, deps: TaskToolDeps): StructuredToolInterface {
   const definition = TASK_TOOL_DEFINITIONS[name];
   return tool(

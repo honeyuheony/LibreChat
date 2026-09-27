@@ -795,8 +795,8 @@ export async function loadSkillFromDirectory(
     description,
     body: content,
     frontmatter,
-    /* Deployment skills carry category/title/examples in their frontmatter so the
-       skill marketplace can group and preview them; read them here. */
+    /* 마켓 화면이 배포 스킬을 분류별로 묶고 미리 보여 줄 수 있도록 머리말의
+       category·title·examples 를 여기서 읽는다. */
     category: typeof frontmatter.category === 'string' ? frontmatter.category : '',
     ...(typeof frontmatter.title === 'string' && { displayTitle: frontmatter.title }),
     ...(Array.isArray(frontmatter.examples) && {

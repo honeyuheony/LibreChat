@@ -5,9 +5,9 @@ import { extractInvokedSkillsFromPayload } from './run';
 type SkillId = Types.ObjectId | string;
 
 export interface RecordTurnSkillRunsParams {
-  /** Skills the user attached with `$` and the server primed into this turn. */
+  /** 사용자가 `$`로 붙여 서버가 이번 턴에 미리 넣은 스킬. */
   manualSkillPrimes?: ReadonlyArray<{ _id: SkillId; name: string }>;
-  /** Content parts of the finished response; model `skill` tool calls are read from here. */
+  /** 끝난 응답의 content part. 모델이 부른 `skill` 도구 호출을 여기서 읽는다. */
   contentParts?: unknown[];
   accessibleSkillIds?: Types.ObjectId[];
   durationMs: number;
@@ -48,7 +48,7 @@ export async function recordTurnSkillRuns(params: RecordTurnSkillRunsParams): Pr
   ].filter((name) => !manualNames.has(name));
   if (modelInvokedNames.length > 0 && params.getSkillByName && accessibleSkillIds.length > 0) {
     const lookup = params.getSkillByName;
-    // `handleSkillToolCall` resolves names the same way, so the counted doc is the one the model loaded.
+    // `handleSkillToolCall` 도 같은 방식으로 이름을 찾으므로, 세는 문서가 모델이 불러온 문서와 같다.
     const skills = await Promise.all(
       modelInvokedNames.map((name) =>
         lookup(name, accessibleSkillIds, { preferModelInvocable: true }),

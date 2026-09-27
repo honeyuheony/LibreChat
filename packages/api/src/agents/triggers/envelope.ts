@@ -48,7 +48,7 @@ export interface AgentFireRunContext {
    *  rest of this context — never sourced from the event payload. */
   chatProjectId?: string;
   files?: JsonValue[];
-  /** Skill names sent as the chat request's `manualSkills`, as if picked with `/`. */
+  /** `/`로 고른 것처럼 채팅 요청의 `manualSkills` 로 보내는 스킬 이름. */
   manualSkills?: string[];
   metadata?: JsonValue;
 }

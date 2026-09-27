@@ -66,7 +66,7 @@ export interface IUser extends Document {
   personalization?: {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
-    /** Per-connector "use in new chats" switch. Key = MCP server name. */
+    /** 커넥터별 「새 대화에서 사용」 스위치. 키는 MCP 서버 이름이다. */
     connectorDefaults?: Record<string, boolean>;
     instructions?: string;
     approvalMode?: UserApprovalMode;
@@ -121,7 +121,7 @@ export interface UpdateUserRequest {
   personalization?: {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
-    /** Per-connector "use in new chats" switch. Key = MCP server name. */
+    /** 커넥터별 「새 대화에서 사용」 스위치. 키는 MCP 서버 이름이다. */
     connectorDefaults?: Record<string, boolean>;
     instructions?: string;
     approvalMode?: UserApprovalMode;

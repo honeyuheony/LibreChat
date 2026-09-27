@@ -1,12 +1,12 @@
 import type { TaskCell } from 'librechat-data-provider';
 import type { Model } from 'mongoose';
 
-/** Bump when the extraction prompt or its output contract changes; old rows stop matching. */
+/** 추출 prompt 나 출력 형식이 바뀌면 올린다. 그러면 예전 행은 더 이상 맞지 않는다. */
 export const EXTRACT_PROMPT_VERSION = 'extract-v2';
-/** Bump when the per-document summary prompt or its output contract changes. */
+/** 문서별 요약 prompt 나 출력 형식이 바뀌면 올린다. */
 export const SUMMARY_PROMPT_VERSION = 'summary-v1';
 
-/** Trim and NFKC (full-width → half-width) only; 「전망」 and 「정세 전망」 stay distinct. */
+/** 앞뒤 공백 제거와 NFKC(전각 → 반각)만 한다. 「전망」과 「정세 전망」은 다른 이름으로 남는다. */
 export function normalizeKey(name: string): string {
   return name.normalize('NFKC').trim();
 }
@@ -30,7 +30,7 @@ interface DocumentKey {
   model: string;
 }
 
-/** Per-user cache of per-document work; the key includes the text hash so edited files miss. */
+/** 사용자별 문서 작업 cache 다. 키에 text hash 가 들어가서 내용이 바뀐 파일은 cache 에 걸리지 않는다. */
 export interface TaskCache {
   getCells(key: DocumentKey & { fields: string[] }): Promise<Map<string, TaskCell>>;
   saveCells(key: DocumentKey & { cells: Map<string, TaskCell> }): Promise<void>;

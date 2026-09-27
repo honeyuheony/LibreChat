@@ -61,16 +61,13 @@ export interface LoadAgentParams {
   agent_id: string;
   endpoint: string;
   model_parameters?: AgentModelParameters & { model?: string };
-  /** Set for the conversation's own agent, so the chat's connector switches
-   *  (`ephemeralAgent.disabled_mcp`) narrow its MCP tools. */
+  /** 대화 자신의 agent 에만 켜서, 채팅의 커넥터 스위치(`ephemeralAgent.disabled_mcp`)가 MCP 도구를 줄이게 한다. */
   applyChatMCPSelection?: boolean;
 }
 
 /**
- * Drops the MCP tools of the switched-off servers from a saved agent's tool list.
- * Non-MCP tools and servers not in `disabledServers` pass through unchanged.
- * `configuredServerNames` resolves tool keys whose server name itself contains
- * the MCP delimiter; without it the last delimiter decides.
+ * MCP 가 아닌 도구와 `disabledServers` 에 없는 서버의 도구는 그대로 둔다. 서버 이름 자체에 MCP
+ * 구분자가 든 도구 키는 `configuredServerNames` 로 가려내고, 없으면 마지막 구분자를 기준으로 삼는다.
  */
 export function removeDisabledMCPTools(
   tools: string[],

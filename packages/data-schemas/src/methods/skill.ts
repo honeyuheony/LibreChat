@@ -309,8 +309,8 @@ const ALLOWED_FRONTMATTER_KEYS = new Set<string>([
   'compatibility',
   'metadata',
   'references',
-  /* This deployment surfaces title/category/examples from frontmatter on the
-     skill marketplace card, so they are recognized keys rather than warned-on. */
+  /* 스킬 마켓 카드가 머리말의 title·category·examples 를 보여 주므로,
+     경고할 키가 아니라 인정하는 키로 둔다. */
   'title',
   'category',
   'examples',
@@ -843,8 +843,8 @@ export type ListSkillsByAccessParams = {
 
 export type ListSkillsByAccessResult = {
   /**
-   * Summary rows include only `frontmatter.examples` and
-   * `frontmatter.metadata.triggers`; the body and remaining frontmatter stay unloaded.
+   * 목록 행의 머리말에는 `frontmatter.examples` 와 `frontmatter.metadata.triggers` 만 싣는다.
+   * 본문과 나머지 머리말은 읽지 않는다.
    */
   skills: Array<ISkillSummary & { _id: Types.ObjectId; frontmatter?: Record<string, unknown> }>;
   has_more: boolean;
@@ -1501,13 +1501,13 @@ export function createSkillMethods(
     const rows = await Skill.find(filter)
       .sort({ updatedAt: -1, _id: 1 })
       .limit(limit + 1)
-      /* List responses need examples and trigger metadata, not the full body or frontmatter. */
+      /* 목록 응답에는 본문이나 머리말 전체가 아니라 예시와 트리거 메타데이터만 필요하다. */
       .select(
         'name displayTitle description category author authorName version source sourceMetadata fileCount alwaysApply tenantId disableModelInvocation userInvocable allowedTools useCount runTimeTotalSeconds runTimeSampleCount manualMinutes forkOf icon publishedAt lastTest frontmatter.examples frontmatter.metadata.triggers createdAt updatedAt',
       )
       .lean();
 
-    /* This projection omits invocation settings, so the fallback leaves those fields unchanged. */
+    /* 이 projection 은 머리말의 호출 설정을 읽지 않으므로, 아래 보정은 그 필드들을 바꾸지 않는다. */
     for (const row of rows) {
       backfillDerivedFromFrontmatter(row as unknown as ISkill);
     }

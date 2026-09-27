@@ -99,7 +99,7 @@ export const PROVIDER_DRAIN_TIMEOUT_MS = 30_000;
  */
 export type JobStatus = 'running' | 'complete' | 'error' | 'aborted' | 'requires_action';
 
-/** A job listed in an owner's index, with the status that put it there. */
+/** 소유자 색인에 오른 작업과, 그 작업을 색인에 올린 상태. */
 export interface UserJobSummary {
   id: string;
   status: JobStatus;
@@ -963,9 +963,9 @@ export interface IJobStore {
   destroy(): Promise<void>;
   getActiveJobIdsByUser(userId: string, tenantId?: string): Promise<string[]>;
 
-  /** Same jobs as `getActiveJobIdsByUser`, with the status that keeps each one
-   * active, so a caller can tell a run paused for approval from a running one.
-   * Managers fall back to per-job lookups for older third-party stores. */
+  /** `getActiveJobIdsByUser` 와 같은 작업을 각자 활성으로 남긴 상태와 함께 돌려줘, 승인을 기다리는
+   * 실행과 실행 중인 작업을 부르는 쪽이 가려낼 수 있게 한다. 예전 외부 저장소에는 이 메서드가 없어
+   * 매니저가 작업마다 따로 조회한다. */
   getActiveJobsByUser?(userId: string, tenantId?: string): Promise<UserJobSummary[]>;
 
   /** Complete owner cleanup query, including terminal host work and legacy-index recovery.

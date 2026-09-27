@@ -9,7 +9,7 @@ const docs = [
   makeDoc('f3', '   '),
 ];
 
-/** Answers per document: f1 has both values, f2 only 전망 with a paraphrased quote. */
+/** 문서별 답이다. f1 에는 두 값이 모두 있고, f2 에는 전망만 있으며 그 인용은 원문을 바꿔 쓴 것이다. */
 const answers: Record<string, unknown> = {
   'f1.txt': {
     '정세 전망': { value: '긴장 완화', quote: '긴장 완화가 예상된다' },

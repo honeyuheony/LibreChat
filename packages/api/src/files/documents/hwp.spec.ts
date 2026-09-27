@@ -103,7 +103,7 @@ describe('HWP document parser', () => {
   test('sends a binary HWP (not a zip) to hwp-mcp without the zip check', async () => {
     const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hwp-cfb-'));
     const hwpPath = path.join(dir, 'binary.hwp');
-    // HWP 5.0 is a Compound File Binary container, which starts with this signature
+    // HWP 5.0 은 Compound File Binary 컨테이너라 이 서명으로 시작한다.
     await fs.promises.writeFile(
       hwpPath,
       Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]),

@@ -28,7 +28,7 @@ const MAX_LIST_ITEM_LENGTH = 200;
 const CONTEXT_TURNS = 6;
 const CONTEXT_TURN_CHARS = 600;
 const SLUG_SUFFIX_LIMIT = 20;
-/** 검증 안 됨: 제목 생성 호출의 체감 시간을 보고 정한 값이며 이 환경에서 측정하지 않았다. */
+/** 제목 생성 호출에 걸리는 체감 시간을 보고 정한 값이다. */
 const DEFAULT_DRAFT_TIMEOUT_MS = 30000;
 
 /** 초안 모델 응답은 요청 본문과 대화에서 나오므로 스킬 파일로 저장되기 전까지 믿지 않는다. */

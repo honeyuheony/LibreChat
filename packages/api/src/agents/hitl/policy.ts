@@ -39,9 +39,8 @@ export interface ToolApprovalPolicyLayers {
    */
   skills?: TToolApprovalPolicy[];
   /**
-   * The signed-in user's saved approval mode (`personalization.approvalMode`). Under `auto` it
-   * lets the tools in {@link USER_APPROVAL_MODE_TOOLS} run without asking; it never touches
-   * other tools, `deny`, or `enabled`.
+   * 로그인한 사용자가 저장한 승인 방식(`personalization.approvalMode`). `auto` 이면
+   * {@link USER_APPROVAL_MODE_TOOLS} 의 도구를 묻지 않고 실행하며, 다른 도구와 `deny`·`enabled` 는 건드리지 않는다.
    */
   user?: { approvalMode?: UserApprovalMode };
   /**
@@ -61,7 +60,7 @@ export interface ToolApprovalPolicyLayers {
  *   - `endpoint` is the baseline and owns the `enabled` kill switch;
  *   - `agent` overrides `mode`/`allow`/`deny`/`ask`/`reason`;
  *   - `skills` may only tighten (add `ask`/`deny`), never loosen;
- *   - `user` applies last and only lifts the approval-mode tools under `auto`.
+ *   - `user` 는 맨 마지막에 적용하고, `auto` 일 때 승인 방식을 따르는 도구의 확인만 푼다.
  *
  * When no endpoint policy is active, BYOM adds `enabled: true, mode: 'bypass'` and
  * an agent-scoped hook supplies its coding decisions. An already-enabled endpoint
@@ -90,17 +89,16 @@ export function resolveToolApprovalPolicy(
 }
 
 /**
- * Tools whose approval follows the user's approval mode: internal document import, source
- * re-fetch, export and share. Empty until such a tool exists; the MCP document import tool
- * (`import_documents`) joins when it ships. Item-confirmation and perspective cards are not
- * tools here and keep asking under either mode.
+ * 사용자 승인 방식을 따르는 도구(사내 문서 가져오기, 출처 다시 읽기, 내보내기, 공유). 해당 도구가
+ * 아직 없어 비어 있고, MCP 문서 가져오기 도구(`import_documents`)가 나오면 여기에 들어간다.
+ * 항목 확인 카드와 관점 카드는 도구가 아니어서 어느 방식에서든 계속 묻는다.
  */
 export const USER_APPROVAL_MODE_TOOLS: readonly string[] = [];
 
 /**
- * Applies the user approval mode layer. Under `auto`, each target tool leaves `ask` and joins
- * `allow` so it runs without pausing; `deny` still wins and every other tool keeps its rule.
- * Only exact names are lifted from `ask` — an administrator glob that also matches keeps asking.
+ * `auto` 이면 대상 도구를 `ask` 에서 빼 `allow` 로 옮겨 멈추지 않고 실행하게 한다. `deny` 가 여전히
+ * 이기고 다른 도구는 규칙을 그대로 둔다. 이름이 정확히 같은 항목만 `ask` 에서 빼므로, 관리자가 적은
+ * glob 이 함께 맞으면 계속 묻는다.
  */
 export function applyUserApprovalMode(
   policy: TToolApprovalPolicy | undefined,

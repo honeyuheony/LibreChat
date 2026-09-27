@@ -3,7 +3,7 @@ import type { TaskCell, TaskResult, TaskTableResult } from 'librechat-data-provi
 import type { TaskDocument } from './documents';
 import { normalizeKey } from './cache';
 
-/** Estimate source: design-task-mode §1.1; not measured against a live workload. */
+/** 예상 시간을 내는 처리 속도로, 실제 작업량으로 측정하지 않고 어림한 값이다. */
 const DOCUMENTS_PER_MINUTE = { min: 25, max: 18 } as const;
 
 export interface TaskEstimate {

@@ -2256,8 +2256,8 @@ describe('createToolExecuteHandler', () => {
       });
 
       it('still injects the body when the name is only pinned by skillPrimedIdsByName', async () => {
-        /* Skills authored mid-turn are pinned in `skillPrimedIdsByName` for
-           read_file, but their body was never primed into the transcript. */
+        /* 턴 도중에 만든 스킬은 read_file 을 위해 `skillPrimedIdsByName` 에만 올라가고
+           본문은 대화 기록에 들어간 적이 없다. */
         const handler = createPrimedSkillHandler({
           skillPrimedIdsByName: { 'meeting-to-todo-notice': 'meeting-to-todo-notice-id' },
         });

@@ -38,8 +38,8 @@ export interface SchedulesHandlersDeps {
   canUseProject: (projectId: string, userId: string) => Promise<boolean>;
   /** Filters to file ids owned by the user. */
   filterOwnedFileIds: (fileIds: string[], userId: string) => Promise<string[]>;
-  /** Filters to skill names the requesting user can view. Optional so an older host
-   *  keeps booting; without it any schedule naming skills is refused (fail-closed). */
+  /** 요청한 사용자가 볼 수 있는 스킬 이름만 남긴다. 예전 호스트도 뜰 수 있게 선택 항목으로 두고,
+   *  없으면 스킬을 지정한 예약은 모두 거절한다(fail-closed). */
   filterViewableSkillNames?: (names: string[], req: ServerRequest) => Promise<string[]>;
   /** Extends a bounded renewable upload hold on attached files so they survive to the
    *  first fire, which consumes them permanently; a schedule that dies first lets the
@@ -61,8 +61,8 @@ export interface SchedulesHandlersDeps {
 }
 
 /**
- * Keeps the names a chat turn's `manualSkills` would resolve for this user: the same
- * ACL-scoped `getSkillByName` lookup and user-invocable rule `resolveManualSkills` applies.
+ * 채팅 턴의 `manualSkills` 가 이 사용자에게 찾아 줄 이름만 남긴다. `resolveManualSkills` 와 같은
+ * ACL 범위의 `getSkillByName` 조회와 user-invocable 규칙을 쓴다.
  */
 export async function filterViewableSkillNamesByAccess({
   names,
@@ -170,7 +170,7 @@ export function computeCreateDigest(payload: TCreateSchedule): string {
           daysOfWeek: payload.cadence.daysOfWeek ?? null,
         },
     file_ids: payload.file_ids ?? null,
-    // Only when non-empty, so a create naming no skills keeps its pre-skills digest.
+    // 비어 있지 않을 때만 넣어, 스킬을 지정하지 않은 생성 요청은 스킬 기능 이전과 같은 digest 를 유지한다.
     ...(payload.skills != null && payload.skills.length > 0 && { skills: payload.skills }),
     // `!== undefined`, NOT `!= null`: an OMITTED field still digests byte-identically
     // to a payload from before project scope existed, so an in-flight create retried

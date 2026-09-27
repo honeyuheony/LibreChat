@@ -12,7 +12,6 @@ import { MAX_DOCUMENT_CHARS } from './extract';
 import { toStats } from './aggregate';
 import { invokeJson } from './llm';
 
-/** 와이어프레임의 2단 합산 규칙(`groups = ceil(n/20)`)을 따른 값이다. */
 export const SUMMARY_GROUP_SIZE = 20;
 
 export const UNREAD_DOCUMENT_LINE = '본문을 읽지 못해 요약하지 못했습니다.';
@@ -85,7 +84,7 @@ export async function summarizeDocuments({
   const outcomes = await runPerDocument(
     docs,
     async (stored): Promise<DocumentSummary> => {
-      // Always the paged text: cached summaries keep only quotes, located again at merge time
+      // cache 된 요약에는 인용만 남아 합칠 때 위치를 다시 찾으므로, 늘 쪽 구조가 있는 text 를 쓴다
       const doc = await withPages(stored);
       if (!hasText(doc)) {
         return { doc, summary: null, fromCache: false };
@@ -122,7 +121,7 @@ export async function summarizeDocuments({
   });
 }
 
-/** Point ids are `d<doc number>p<k>` so they stay unique across the whole merge. */
+/** 요점 id 를 `d<문서 번호>p<k>` 로 지어 전체를 합칠 때도 겹치지 않게 한다. */
 export function pointId(docIndex: number, localId: string): string {
   return `d${docIndex + 1}${localId}`;
 }
@@ -145,7 +144,7 @@ function readMerged(reply: Record<string, unknown>): MergedText {
   };
 }
 
-/** One merge for up to 20 documents; above that, merge each group of 20 and then the groups. */
+/** `SUMMARY_GROUP_SIZE` 개까지는 한 번에 합치고, 넘으면 그만큼씩 묶어 합친 뒤 묶음끼리 다시 합친다. */
 export async function mergeSummaries({
   summaries,
   view,

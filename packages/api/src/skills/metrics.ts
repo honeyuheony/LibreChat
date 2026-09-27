@@ -96,7 +96,6 @@ type MetricsRow = SkillMetricsAgent & { isBase: boolean };
 
 type MetricsTotals = { runs: number; forks: number; savedHours: number };
 
-/** 와이어프레임과 같은 정수 반올림을 적용한다. */
 function wireframeSavedHours(counters: SkillUsageCounters): number | null {
   const samples = counters.runTimeSampleCount ?? 0;
   if (samples <= 0 || counters.manualMinutes == null) {
@@ -182,7 +181,7 @@ function countPublishedForkAgents(input: SkillMetricsInput): number {
   return deploymentForks + publishedUserForks;
 }
 
-/** 와이어프레임처럼 작성자 이름과 부서가 같으면 한 사람으로 묶는다. */
+/** 이름이 같아도 부서가 다르면 다른 사람으로 본다. */
 function groupContributors(rows: MetricsRow[]): SkillMetricsContributor[] {
   const byAuthor = new Map<string, SkillMetricsContributor>();
   for (const row of rows) {

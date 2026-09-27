@@ -667,8 +667,8 @@ export function createUserMethods(
   }
 
   /**
-   * Sets the given connectors' "use in new chats" switches and leaves the others as they
-   * were. Server names become path segments, so callers must reject `.` and a leading `$`.
+   * 넘겨받은 커넥터의 「새 대화에서 사용」 스위치만 바꾸고 나머지는 그대로 둔다.
+   * 서버 이름이 경로 조각이 되므로, 부르는 쪽에서 `.` 이 든 이름과 `$` 로 시작하는 이름을 거절해야 한다.
    */
   async function updateUserConnectorDefaults(
     userId: string,
@@ -693,8 +693,8 @@ export function createUserMethods(
   }
 
   /**
-   * Sets the given workspace preferences (global instructions, approval mode) and leaves the
-   * fields left out as they were. Unlike `updateUser`, it keeps an unverified account's expiry.
+   * 넘겨받은 작업 공간 설정(전역 지침·승인 방식)만 바꾸고 빠진 필드는 그대로 둔다.
+   * `updateUser` 와 달리 인증하지 않은 계정의 만료 시각을 건드리지 않는다.
    */
   async function updateUserWorkspacePreferences(
     userId: string,

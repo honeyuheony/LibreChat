@@ -203,7 +203,7 @@ describe('createTaskToolDeps loadTemplate', () => {
 
   it('reads templates from the directory the deployment skills were loaded from, not the cwd', async () => {
     await initializeDeploymentSkills({ projectRoot, env: {} });
-    // The container starts the server from <root>/api, while skills live in <root>/skill
+    // 컨테이너는 <root>/api 에서 서버를 띄우고, 스킬은 <root>/skill 에 있다
     jest.spyOn(process, 'cwd').mockReturnValue(path.join(projectRoot, 'api'));
     const deps = createTaskToolDeps({
       req: { user: { id: 'u1' }, body: {} },

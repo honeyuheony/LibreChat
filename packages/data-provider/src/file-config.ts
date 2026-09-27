@@ -296,7 +296,7 @@ export const defaultOCRMimeTypes = [
   /^application\/vnd\.oasis\.opendocument\.(text|spreadsheet|presentation|graphics)$/,
 ];
 
-/** MIME types handled by the built-in document parser, including HWP and HWPX through hwp-mcp. */
+/** 내장 문서 파서가 다루는 MIME 형식. HWP·HWPX 는 hwp-mcp 를 거쳐 읽는다. */
 export const documentParserMimeTypes = [
   excelMimeTypes,
   /^application\/(x-hwp|hwp\+zip)$/,
@@ -452,8 +452,8 @@ export const codeTypeMapping: { [key: string]: string } = {
   odg: 'application/vnd.oasis.opendocument.graphics', // .odg - OpenDocument Graphics
   doc: 'application/msword', // .doc - Word (legacy)
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx - Word
-  hwp: 'application/x-hwp', // .hwp - Hangul Word Processor
-  hwpx: 'application/hwp+zip', // .hwpx - Hangul Word Processor XML
+  hwp: 'application/x-hwp', // .hwp - 한글 문서
+  hwpx: 'application/hwp+zip', // .hwpx - 한글 XML 문서
   xls: 'application/vnd.ms-excel', // .xls - Excel (legacy)
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx - Excel
   ppt: 'application/vnd.ms-powerpoint', // .ppt - PowerPoint (legacy)
