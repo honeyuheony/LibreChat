@@ -22,6 +22,9 @@ jest.mock('librechat-data-provider', () => {
           ...(skillFileSizeLimit !== undefined
             ? { fileSizeLimit: skillFileSizeLimit * 1024 * 1024 }
             : {}),
+          ...(dynamic?.skills?.exportMaxFiles !== undefined
+            ? { exportMaxFiles: dynamic.skills.exportMaxFiles }
+            : {}),
         },
       };
     }),
@@ -1304,6 +1307,30 @@ describe('Skill routes', () => {
 
       expect(res.status).toBe(403);
       expect(res.headers['content-type']).not.toBe('application/zip');
+    });
+
+    it('returns 413 when the skill has more files than fileConfig.skills allows', async () => {
+      const skill = await createViewableSkillWithFile();
+      mockFileConfig = { skills: { exportMaxFiles: 1 } };
+
+      setTestUser(testUsers.editor);
+      const res = await request(app).get(`/api/skills/${skill._id}/export`);
+
+      expect(res.status).toBe(413);
+      expect(res.body).toMatchObject({ error: 'Export is too large', maxFiles: 1 });
+    });
+
+    it('limits how often one user can ask for exports', async () => {
+      const skill = await createViewableSkillWithFile();
+      setTestUser(testUsers.noAccess);
+
+      const statuses = [];
+      for (let attempt = 0; attempt < 60 && !statuses.includes(429); attempt++) {
+        statuses.push((await request(app).get(`/api/skills/${skill._id}/export`)).status);
+      }
+
+      expect(statuses).toContain(429);
+      expect(new Set(statuses.slice(0, -1))).toEqual(new Set([403]));
     });
   });
 

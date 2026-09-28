@@ -515,6 +515,9 @@ export const mbToBytes = (mb: number): number => mb * megabyte;
 
 const defaultSizeLimit = mbToBytes(512);
 const defaultSkillImportSizeLimit = mbToBytes(50);
+/** 스킬 가져오기가 받아들이는 zip 의 항목 수·풀었을 때 합계와 같은 값. */
+const defaultSkillExportMaxFiles = 500;
+const defaultSkillExportMaxBytes = mbToBytes(500);
 const defaultTokenLimit = 100000;
 const defaultContextSizeLimit = mbToBytes(128);
 const defaultContextCharLimit = 1_000_000;
@@ -548,6 +551,8 @@ export const fileConfig = {
   },
   skills: {
     fileSizeLimit: defaultSkillImportSizeLimit,
+    exportMaxFiles: defaultSkillExportMaxFiles,
+    exportMaxBytes: defaultSkillExportMaxBytes,
   },
   serverFileSizeLimit: defaultSizeLimit,
   avatarSizeLimit: mbToBytes(2),
@@ -600,6 +605,8 @@ export const endpointFileConfigSchema = z.object({
 
 const skillFileConfigSchema = z.object({
   fileSizeLimit: z.number().min(0).optional(),
+  exportMaxFiles: z.number().int().min(1).optional(),
+  exportMaxBytes: z.number().min(0).optional(),
 });
 
 export const fileConfigSchema = z.object({
@@ -1232,6 +1239,17 @@ export function mergeFileConfig(dynamic: z.infer<typeof fileConfigSchema> | unde
     mergedConfig.skills = {
       ...mergedConfig.skills,
       fileSizeLimit: mbToBytes(dynamic.skills.fileSizeLimit),
+    };
+  }
+
+  if (dynamic.skills?.exportMaxFiles !== undefined) {
+    mergedConfig.skills = { ...mergedConfig.skills, exportMaxFiles: dynamic.skills.exportMaxFiles };
+  }
+
+  if (dynamic.skills?.exportMaxBytes !== undefined) {
+    mergedConfig.skills = {
+      ...mergedConfig.skills,
+      exportMaxBytes: mbToBytes(dynamic.skills.exportMaxBytes),
     };
   }
 

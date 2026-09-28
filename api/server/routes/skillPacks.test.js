@@ -415,6 +415,18 @@ describe('skill pack routes', () => {
     });
   });
 
+  it('limits how often one user can ask for pack exports', async () => {
+    currentTestUser = testUsers.other;
+
+    const statuses = [];
+    for (let attempt = 0; attempt < 60 && !statuses.includes(429); attempt++) {
+      statuses.push((await request(app).get('/api/skill-packs/not-an-id/export')).status);
+    }
+
+    expect(statuses).toContain(429);
+    expect(new Set(statuses.slice(0, -1))).toEqual(new Set([404]));
+  });
+
   it('returns 404 when exporting a pack that does not exist', async () => {
     currentTestUser = testUsers.reader;
     const missing = await request(app).get(

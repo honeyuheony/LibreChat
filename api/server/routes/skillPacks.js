@@ -5,6 +5,7 @@ const {
   generateCheckAccess,
   dropHiddenDeploymentSkillIds,
   createSkillPackExportHandler,
+  skillExportLimits,
 } = require('@librechat/api');
 const {
   PermissionBits,
@@ -28,6 +29,7 @@ const {
   getSkillStrategyFunctions,
 } = require('~/server/services/Endpoints/agents/skillDeps');
 const { requireJwtAuth } = require('~/server/middleware');
+const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const configMiddleware = require('~/server/middleware/config/app');
 
 function serializeSkillPack(pack, skillIds) {
@@ -181,14 +183,19 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+const { fileUploadIpLimiter, fileUploadUserLimiter } = createFileLimiters();
+
 router.get(
   '/:id/export',
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
   createSkillPackExportHandler({
     getSkillPackById,
     findViewableSkillIds: findViewableSkillIdSet,
     getSkillById: (id) => getSkillDbMethods().getSkillById(id),
     listSkillFiles: (id) => getSkillDbMethods().listSkillFiles(id),
     getStrategyFunctions: getSkillStrategyFunctions,
+    getLimits: skillExportLimits,
   }),
 );
 

@@ -1,23 +1,28 @@
 import JSZip from 'jszip';
 import yaml from 'js-yaml';
+import { Readable } from 'stream';
 import { logger } from '@librechat/data-schemas';
-import { SKILL_NAME_PATTERN } from 'librechat-data-provider';
-import type { ISkill, ISkillPack } from '@librechat/data-schemas';
+import { SKILL_NAME_PATTERN, mergeFileConfig } from 'librechat-data-provider';
+import type { ISkill, ISkillFile, ISkillPack } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest } from '~/types';
 import type { ForkSkillDeps } from './fork';
+import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
-import { readStoredFile } from './fork';
+import { openStoredFile } from './fork';
 
 export type ExportSkill = Pick<
   ISkill,
   'name' | 'displayTitle' | 'description' | 'body' | 'frontmatter' | 'authorName' | 'version'
 > & { _id: Types.ObjectId };
 
-export type BundledFile = { relativePath: string; content: Buffer };
+export type BundledFile = { relativePath: string; content: Buffer | Readable };
 
-export type PluginFile = { path: string; content: string | Buffer };
+export type PluginFile = { path: string; content: string | Buffer | Readable };
+
+/** zip 하나에 담을 파일 수(스킬마다 SKILL.md 포함)와 원본 bytes 합계의 상한. */
+export type ExportLimits = { maxFiles: number; maxBytes: number };
 
 export type ExportManifest = {
   slug: string;
@@ -30,6 +35,7 @@ export type ExportManifest = {
 export interface SkillExportDeps
   extends Pick<ForkSkillDeps, 'listSkillFiles' | 'getStrategyFunctions'> {
   getSkillById: (id: string | Types.ObjectId) => Promise<ExportSkill | null>;
+  getLimits: (req: ServerRequest) => ExportLimits;
 }
 
 export interface SkillPackExportDeps extends SkillExportDeps {
@@ -45,10 +51,18 @@ export interface SkillPackExportDeps extends SkillExportDeps {
 
 type BundledSkill = { skill: ExportSkill; files: BundledFile[] };
 
+type PlannedSkill = { skill: ExportSkill; stored: ISkillFile[] };
+
+type ExportHandler = (req: ServerRequest, res: Response) => Promise<Response | void>;
+
 const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/i;
 
 const folderName = (candidate: string | undefined, fallback: string) =>
   candidate && SKILL_NAME_PATTERN.test(candidate) ? candidate : fallback;
+
+/** 대소문자만 다른 skill.md 도 본문 SKILL.md 를 덮어쓰므로 뺀다. */
+const isBundledPath = (relativePath: string) =>
+  isSafeSkillFilePath(relativePath) && relativePath.toLowerCase() !== 'skill.md';
 
 const tableCell = (text: string) => text.replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
 
@@ -123,7 +137,7 @@ export function pluginFiles(manifest: ExportManifest, bundles: BundledSkill[]): 
     const folder = `skills/${skill.name}`;
     files.push({ path: `${folder}/SKILL.md`, content: skillMarkdown(skill) });
     for (const file of bundled) {
-      if (isSafeSkillFilePath(file.relativePath) && file.relativePath !== 'SKILL.md') {
+      if (isBundledPath(file.relativePath)) {
         files.push({ path: `${folder}/${file.relativePath}`, content: file.content });
       }
     }
@@ -149,50 +163,125 @@ export function pluginFiles(manifest: ExportManifest, bundles: BundledSkill[]): 
   return files;
 }
 
-export function createPluginZip(files: PluginFile[]): Promise<Buffer> {
+export function createPluginZip(files: PluginFile[]): Readable {
   const zip = new JSZip();
   for (const file of files) {
     zip.file(file.path, file.content);
   }
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-}
-
-async function bundleSkill(
-  req: ServerRequest,
-  deps: SkillExportDeps,
-  skill: ExportSkill,
-): Promise<BundledSkill> {
-  const stored = await deps.listSkillFiles(skill._id);
-  const files = await Promise.all(
-    stored
-      .filter((file) => isSafeSkillFilePath(file.relativePath))
-      .map(async (file) => ({
-        relativePath: file.relativePath,
-        content: await readStoredFile(req, deps, file),
-      })),
+  return new Readable().wrap(
+    zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'DEFLATE' }),
   );
-  return { skill, files };
 }
 
-async function sendPluginZip(
+async function planSkill(deps: SkillExportDeps, skill: ExportSkill): Promise<PlannedSkill> {
+  const stored = await deps.listSkillFiles(skill._id);
+  return { skill, stored: stored.filter((file) => isBundledPath(file.relativePath)) };
+}
+
+function exceedsLimits(plans: PlannedSkill[], limits: ExportLimits): boolean {
+  let files = 0;
+  let bytes = 0;
+  for (const { skill, stored } of plans) {
+    files += stored.length + 1;
+    bytes += Buffer.byteLength(skill.body);
+    for (const file of stored) {
+      bytes += file.bytes ?? 0;
+    }
+  }
+  return files > limits.maxFiles || bytes > limits.maxBytes;
+}
+
+/** zip 이 이 항목을 쓸 차례가 되어서야 저장소 스트림을 연다. 파일을 한꺼번에 열거나 메모리에 모으지 않는다. */
+function lazyStoredFile(req: ServerRequest, deps: SkillExportDeps, file: ISkillFile): Readable {
+  let source: Readable | undefined;
+  let opening = false;
+  const lazy: Readable = new Readable({
+    read() {
+      if (source) {
+        source.resume();
+        return;
+      }
+      if (opening) {
+        return;
+      }
+      opening = true;
+      openStoredFile(req, deps, file).then(
+        (stored) => {
+          // 저장소마다 스트림 구현이 달라 readStoredFile 처럼 비동기 순회로만 읽는다.
+          const stream = Readable.from(stored);
+          source = stream;
+          stream.on('data', (chunk: Buffer) => {
+            if (!lazy.push(chunk)) {
+              stream.pause();
+            }
+          });
+          stream.on('end', () => lazy.push(null));
+          stream.on('error', (error) => lazy.destroy(error));
+        },
+        (error: Error) => lazy.destroy(error),
+      );
+    },
+    destroy(error, callback) {
+      source?.destroy();
+      callback(error);
+    },
+  });
+  return lazy;
+}
+
+function streamPluginZip(
+  req: ServerRequest,
   res: Response,
+  deps: SkillExportDeps,
   manifest: ExportManifest,
-  bundles: BundledSkill[],
-): Promise<Response> {
-  const zip = await createPluginZip(pluginFiles(manifest, bundles));
+  plans: PlannedSkill[],
+  logLabel: string,
+): void {
+  const lazyFiles: Readable[] = [];
+  const bundles = plans.map(({ skill, stored }) => ({
+    skill,
+    files: stored.map((file) => {
+      const content = lazyStoredFile(req, deps, file);
+      lazyFiles.push(content);
+      return { relativePath: file.relativePath, content };
+    }),
+  }));
+  const zip = createPluginZip(pluginFiles(manifest, bundles));
   const filename = `${manifest.slug}.zip`;
   res.setHeader('Content-Type', 'application/zip');
   res.setHeader(
     'Content-Disposition',
     `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
   );
-  return res.send(zip);
+  // 받는 쪽이 중간에 끊으면 열어 둔 저장소 스트림을 닫는다.
+  res.on('close', () => {
+    if (!res.writableFinished) {
+      lazyFiles.forEach((file) => file.destroy());
+    }
+  });
+  // 헤더를 보낸 뒤라 오류 응답을 쓸 수 없으므로 연결을 끊어 받는 쪽이 깨진 zip 을 쓰지 않게 한다.
+  zip.on('error', (error: Error) => {
+    logger.error(`${logLabel} Error while streaming the export`, error);
+    res.destroy(error);
+  });
+  zip.pipe(res);
+}
+
+/** `fileConfig.skills` 의 내보내기 상한. 적지 않았으면 스킬 가져오기 상한과 같은 기본값을 쓴다. */
+export function skillExportLimits(req: ServerRequest): ExportLimits {
+  const { skills } = mergeFileConfig(req.config?.fileConfig);
+  return {
+    maxFiles: skills?.exportMaxFiles ?? DEFAULT_SKILL_IMPORT_LIMITS.maxEntries,
+    maxBytes: skills?.exportMaxBytes ?? DEFAULT_SKILL_IMPORT_LIMITS.maxDecompressedBytes,
+  };
+}
+
+function tooLarge(res: Response, limits: ExportLimits): Response {
+  return res.status(413).json({ error: 'Export is too large', ...limits });
 }
 
 /** `GET /api/skills/:id/export`: 볼 수 있는 스킬 하나를 플러그인 zip 으로 내려준다. 권한은 라우트가 본다. */
-export function createSkillExportHandler(
-  deps: SkillExportDeps,
-): (req: ServerRequest, res: Response) => Promise<Response> {
+export function createSkillExportHandler(deps: SkillExportDeps): ExportHandler {
   return async function exportSkillHandler(req: ServerRequest, res: Response) {
     try {
       const { id } = req.params as { id: string };
@@ -209,7 +298,12 @@ export function createSkillExportHandler(
         author: skill.authorName,
         version: `0.${skill.version || 1}.0`,
       };
-      return await sendPluginZip(res, manifest, [await bundleSkill(req, deps, skill)]);
+      const plans = [await planSkill(deps, skill)];
+      const limits = deps.getLimits(req);
+      if (exceedsLimits(plans, limits)) {
+        return tooLarge(res, limits);
+      }
+      streamPluginZip(req, res, deps, manifest, plans, '[GET /skills/:id/export]');
     } catch (error) {
       logger.error('[GET /skills/:id/export] Error exporting skill', error);
       return res.status(500).json({ error: 'Error exporting skill' });
@@ -218,9 +312,7 @@ export function createSkillExportHandler(
 }
 
 /** `GET /api/skill-packs/:id/export`: 팩에서 요청한 사용자가 볼 수 있는 스킬만 담아 내려준다. */
-export function createSkillPackExportHandler(
-  deps: SkillPackExportDeps,
-): (req: ServerRequest, res: Response) => Promise<Response> {
+export function createSkillPackExportHandler(deps: SkillPackExportDeps): ExportHandler {
   return async function exportSkillPackHandler(req: ServerRequest, res: Response) {
     try {
       const { id } = req.params as { id: string };
@@ -239,11 +331,15 @@ export function createSkillPackExportHandler(
           .filter((skillId) => viewable.has(skillId.toString()))
           .map((skillId) => deps.getSkillById(skillId)),
       );
-      const bundles = await Promise.all(
+      const plans = await Promise.all(
         skills
           .filter((skill): skill is NonNullable<typeof skill> => skill != null)
-          .map((skill) => bundleSkill(req, deps, skill)),
+          .map((skill) => planSkill(deps, skill)),
       );
+      const limits = deps.getLimits(req);
+      if (exceedsLimits(plans, limits)) {
+        return tooLarge(res, limits);
+      }
       const manifest: ExportManifest = {
         slug: folderName(pack.slug, `pack-${id.toLowerCase()}`),
         name: pack.name,
@@ -251,7 +347,7 @@ export function createSkillPackExportHandler(
         author: pack.authorName,
         version: '0.1.0',
       };
-      return await sendPluginZip(res, manifest, bundles);
+      streamPluginZip(req, res, deps, manifest, plans, '[GET /skill-packs/:id/export]');
     } catch (error) {
       logger.error('[GET /skill-packs/:id/export] Error exporting pack', error);
       return res.status(500).json({ error: 'Error exporting pack' });
