@@ -63,6 +63,10 @@ export type FileConfig = {
   };
   skills?: {
     fileSizeLimit?: number;
+    /** 스킬·팩 내보내기 zip 에 담을 수 있는 파일 수. */
+    exportMaxFiles?: number;
+    /** 스킬·팩 내보내기 zip 에 담을 파일 bytes 합계. 설정 파일에서는 MB 로 적는다. */
+    exportMaxBytes?: number;
   };
   fileTokenLimit?: number;
   /** Maximum aggregate model-bound attachment bytes admitted into one agent turn. */
@@ -102,6 +106,10 @@ export type FileConfigInput = {
   };
   skills?: {
     fileSizeLimit?: number;
+    /** 스킬·팩 내보내기 zip 에 담을 수 있는 파일 수. */
+    exportMaxFiles?: number;
+    /** 스킬·팩 내보내기 zip 에 담을 파일 bytes 합계. 설정 파일에서는 MB 로 적는다. */
+    exportMaxBytes?: number;
   };
   serverFileSizeLimit?: number;
   avatarSizeLimit?: number;

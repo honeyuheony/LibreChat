@@ -51,6 +51,14 @@ jest.mock('~/data-provider', () => ({
   }),
 }));
 
+jest.mock(
+  '../../Marketplace/ExportButton',
+  () =>
+    ({ kind, id, fileName }: Record<string, string>) => (
+      <button type="button" data-testid="export">{`${kind}:${id}:${fileName}`}</button>
+    ),
+);
+
 function renderDetail(onSelectSkill = jest.fn(), onDeleted = jest.fn()) {
   render(
     <PackDetail
@@ -147,6 +155,13 @@ describe('PackDetail', () => {
       screen.getByRole('button', { name: new RegExp(riskCheck.displayTitle as string) }),
     );
     expect(onSelectSkill).toHaveBeenCalledWith(riskCheck);
+  });
+
+  it('offers the pack folder as a zip next to the add-all button', () => {
+    renderDetail();
+    const exportButton = screen.getByTestId('export');
+    expect(exportButton).toHaveTextContent('pack:pack-1:month-end.zip');
+    expect(exportButton.nextElementSibling).toBe(addAllButton());
   });
 
   it('lets only the author delete the pack', async () => {

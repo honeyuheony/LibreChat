@@ -974,6 +974,23 @@ describe('getEndpointFileConfig', () => {
       expect(merged.skills?.fileSizeLimit).toBe(50 * 1024 * 1024);
     });
 
+    it('should default skill export limits to the skill import limits', () => {
+      const merged = mergeFileConfig(undefined);
+
+      expect(merged.skills?.exportMaxFiles).toBe(500);
+      expect(merged.skills?.exportMaxBytes).toBe(500 * 1024 * 1024);
+    });
+
+    it('should take skill export limits from config, converting exportMaxBytes from MB', () => {
+      const merged = mergeFileConfig({
+        skills: { exportMaxFiles: 20, exportMaxBytes: 5 },
+      });
+
+      expect(merged.skills?.exportMaxFiles).toBe(20);
+      expect(merged.skills?.exportMaxBytes).toBe(5 * 1024 * 1024);
+      expect(merged.skills?.fileSizeLimit).toBe(50 * 1024 * 1024);
+    });
+
     it('should preserve disabled: false in merged config', () => {
       const dynamicConfig = {
         endpoints: {

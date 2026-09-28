@@ -474,8 +474,10 @@ export const forkSkill = (id: string) => `${getSkill(id)}/fork`;
 export const skillDraft = () => `${skills()}/draft`;
 export const skillTestResult = (id: string) => `${getSkill(id)}/test-result`;
 export const skillPublish = (id: string) => `${getSkill(id)}/publish`;
+export const skillExport = (id: string) => `${getSkill(id)}/export`;
 export const skillPacks = () => `${BASE_URL}/api/skill-packs`;
 export const skillPack = (id: string) => `${skillPacks()}/${encodeURIComponent(id)}`;
+export const skillPackExport = (id: string) => `${skillPack(id)}/export`;
 
 export const listSkillsWithFilters = (
   filter: Record<string, string | number | undefined | null>,

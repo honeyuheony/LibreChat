@@ -1,7 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const { logger, MAX_SKILL_PACK_SKILLS } = require('@librechat/data-schemas');
-const { generateCheckAccess, dropHiddenDeploymentSkillIds } = require('@librechat/api');
+const {
+  generateCheckAccess,
+  dropHiddenDeploymentSkillIds,
+  createSkillPackExportHandler,
+  skillExportLimits,
+} = require('@librechat/api');
 const {
   PermissionBits,
   PermissionTypes,
@@ -19,7 +24,12 @@ const {
   findAccessibleResources,
   findPubliclyAccessibleResources,
 } = require('~/server/services/PermissionService');
+const {
+  getSkillDbMethods,
+  getSkillStrategyFunctions,
+} = require('~/server/services/Endpoints/agents/skillDeps');
 const { requireJwtAuth } = require('~/server/middleware');
+const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const configMiddleware = require('~/server/middleware/config/app');
 
 function serializeSkillPack(pack, skillIds) {
@@ -172,6 +182,22 @@ router.get('/:id', async (req, res) => {
     return res.status(500).json({ error: 'Failed to read pack' });
   }
 });
+
+const { fileUploadIpLimiter, fileUploadUserLimiter } = createFileLimiters();
+
+router.get(
+  '/:id/export',
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  createSkillPackExportHandler({
+    getSkillPackById,
+    findViewableSkillIds: findViewableSkillIdSet,
+    getSkillById: (id) => getSkillDbMethods().getSkillById(id),
+    listSkillFiles: (id) => getSkillDbMethods().listSkillFiles(id),
+    getStrategyFunctions: getSkillStrategyFunctions,
+    getLimits: skillExportLimits,
+  }),
+);
 
 router.delete('/:id', async (req, res) => {
   try {

@@ -5,6 +5,8 @@ const express = require('express');
 const {
   createImportHandler,
   createForkSkillHandler,
+  createSkillExportHandler,
+  skillExportLimits,
   blockFilteredSkillFile,
   generateCheckAccess,
   getStorageMetadata,
@@ -447,6 +449,20 @@ router.get(
   '/:id/files',
   canAccessSkillResource({ requiredPermission: PermissionBits.VIEW }),
   handlers.listFiles,
+);
+
+// 내보내기는 파일을 모두 읽으므로 권한 확인보다 먼저 요청 횟수를 센다.
+router.get(
+  '/:id/export',
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  canAccessSkillResource({ requiredPermission: PermissionBits.VIEW }),
+  createSkillExportHandler({
+    getSkillById: skillDbMethods.getSkillById,
+    listSkillFiles: skillDbMethods.listSkillFiles,
+    getStrategyFunctions: getSkillStrategyFunctions,
+    getLimits: skillExportLimits,
+  }),
 );
 
 // Per-file upload (live — replaces 501 stub)
