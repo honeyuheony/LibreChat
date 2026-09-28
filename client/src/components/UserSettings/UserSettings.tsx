@@ -133,7 +133,7 @@ export default function UserSettings() {
                 }
               }}
               aria-describedby="global-instructions-hint"
-              className="w-full max-w-[520px] resize-y rounded-md border border-border-light bg-surface-primary px-3 py-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
+              className="w-full max-w-[520px] resize-y rounded-lg border border-border-medium bg-surface-primary px-2.5 py-[7px] text-[14.5px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-medium"
             />
             <p id="global-instructions-hint" className="text-[13px] text-text-muted">
               {localize('com_ui_user_settings_global_instructions_hint')}

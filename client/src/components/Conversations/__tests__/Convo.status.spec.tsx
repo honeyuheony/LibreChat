@@ -132,6 +132,12 @@ describe('Conversation row job status', () => {
     expect(screen.queryByText('com_ui_convo_awaiting_approval')).not.toBeInTheDocument();
   });
 
+  it('uses the compact desktop row height for history entries', () => {
+    renderRow({ editActions: true });
+
+    expect(screen.getByTestId('convo-item')).toHaveClass('md:h-[34.5px]');
+  });
+
   it('shows nothing for a status the owning list does not mark as generating', () => {
     mockActiveJobStatus = 'requires_action';
     renderRow({ isGenerating: false });

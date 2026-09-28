@@ -135,6 +135,11 @@ describe('Library', () => {
     expect(created).toHaveClass('w-[14%]');
     expect(action).toHaveClass('w-[8%]', 'whitespace-nowrap');
     expect(table.querySelector('thead')).toHaveClass('bg-surface-primary');
+    expect(table.querySelector('thead tr')).toHaveClass('h-[30px]');
+    [name, type, conversation, created].forEach((header) =>
+      expect(header).toHaveClass('h-[30px]', 'px-2', 'py-[6px]', 'leading-[17px]'),
+    );
+    expect(action).toHaveClass('h-7', 'px-2', 'py-1');
     [name, type, conversation, created, action].forEach((header) =>
       expect(header).toHaveClass('text-text-muted'),
     );

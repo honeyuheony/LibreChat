@@ -157,6 +157,25 @@ describe('account menu', () => {
     expect(items.map((item) => item.textContent).join(' ')).not.toContain('com_nav_archived_chats');
   });
 
+  it('uses the target account-menu surface dimensions and shadow', () => {
+    renderAccountMenu();
+    const menu = screen.getByRole('menu');
+
+    expect(menu).toHaveStyle({
+      borderRadius: 'var(--theme-surface-radius)',
+      padding: 'var(--theme-space-compact)',
+      boxShadow: '0 6px 16px rgba(35, 20, 80, 0.1)',
+    });
+  });
+
+  it('uses 13px supporting values in the account menu', () => {
+    const items = renderAccountMenu();
+
+    items.slice(0, 5).forEach((item) => {
+      expect(item.lastElementChild).toHaveClass('text-[13px]');
+    });
+  });
+
   it('shows schedule navigation when an object interface setting enables use', () => {
     mockStartupConfig.current.interface.schedules = { use: true, create: true };
     const items = renderAccountMenu();
@@ -251,8 +270,14 @@ describe('account menu', () => {
       'pt-[14px]',
       'pb-[14px]',
     );
-    expect(dialog.children[1]).toHaveClass('border-b', 'border-border-light');
-    expect(dialog.children[2]).toHaveClass('bg-surface-secondary', 'pt-5', 'pb-3');
+    expect(dialog.children[1]).toHaveClass(
+      'border-b',
+      'border-border-light',
+      'text-[14.5px]',
+      'px-[18px]',
+      'py-[14px]',
+    );
+    expect(dialog.children[2]).toHaveClass('bg-surface-secondary', 'px-[18px]', 'py-3');
     expect(screen.getByRole('heading', { name: 'com_ui_demo_reset_title' })).toHaveClass(
       'text-[16.5px]',
       'leading-[25px]',
@@ -295,6 +320,13 @@ describe('account menu', () => {
       'rounded-theme-control-round',
     );
     expect(cancelButton).toHaveClass('text-text-tertiary');
+  });
+
+  it('uses 52px of vertical spacing for the reset confirmation footer', () => {
+    renderAccountMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /com_ui_demo_reset/ }));
+
+    expect(screen.getByRole('dialog').children[2]).toHaveClass('px-[18px]', 'py-3');
   });
 
   it('does not request demo reset when the confirmation is cancelled', () => {

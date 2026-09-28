@@ -94,17 +94,17 @@ export default function Library() {
       <>
         <Table className="table-fixed text-[13px]">
           <TableHeader className="bg-surface-primary">
-            <TableRow className="h-7">
-              <TableHead className="h-7 w-[38%] px-2 py-1 text-[11.5px] text-text-muted">
+            <TableRow className="h-[30px]">
+              <TableHead className="h-[30px] w-[38%] px-2 py-[6px] text-[11.5px] leading-[17px] text-text-muted">
                 {localize('com_ui_name')}
               </TableHead>
-              <TableHead className="h-7 w-[13%] whitespace-nowrap px-2 py-1 text-[11.5px] text-text-muted">
+              <TableHead className="h-[30px] w-[13%] whitespace-nowrap px-2 py-[6px] text-[11.5px] leading-[17px] text-text-muted">
                 {localize('com_ui_library_col_type')}
               </TableHead>
-              <TableHead className="h-7 w-[27%] px-2 py-1 text-[11.5px] text-text-muted">
+              <TableHead className="h-[30px] w-[27%] px-2 py-[6px] text-[11.5px] leading-[17px] text-text-muted">
                 {localize('com_ui_conversation')}
               </TableHead>
-              <TableHead className="h-7 w-[14%] whitespace-nowrap px-2 py-1 text-[11.5px] text-text-muted">
+              <TableHead className="h-[30px] w-[14%] whitespace-nowrap px-2 py-[6px] text-[11.5px] leading-[17px] text-text-muted">
                 {localize('com_ui_library_col_created')}
               </TableHead>
               <TableHead className="h-7 w-[8%] whitespace-nowrap px-2 py-1 text-[11.5px] text-text-muted">

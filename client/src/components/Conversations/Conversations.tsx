@@ -244,7 +244,12 @@ const Conversations: FC<ConversationsProps> = ({
     collect: (monitor) => ({ isDropOver: monitor.isOver(), canDrop: monitor.canDrop() }),
   });
   dropRef(chatsRegionRef);
-  const convoHeight = isSmallScreen ? 44 : 34;
+  let convoHeight = 34;
+  if (isSmallScreen) {
+    convoHeight = 44;
+  } else if (flat) {
+    convoHeight = 34.5;
+  }
   const { ref: listContainerRef, width: listWidth } = useElementSize<HTMLDivElement>();
   /** The list does not scroll: the sidebar's one scroll container does, and the
    *  list virtualizes against the slice of it the rows currently occupy. */

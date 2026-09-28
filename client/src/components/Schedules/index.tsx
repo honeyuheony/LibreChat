@@ -105,6 +105,7 @@ export default function Schedules() {
             type="button"
             size="pill"
             variant="outline"
+            className="border-border-medium bg-surface-primary"
             disabled={atLimit || isLoading || isError}
             onClick={() => setCreateOpen(true)}
           >

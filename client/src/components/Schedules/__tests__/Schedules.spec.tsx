@@ -58,6 +58,7 @@ test('places the create action in the top bar and keeps the content narrow', () 
     'font-normal',
     'rounded-theme-control-round',
   );
+  expect(createButton).toHaveClass('bg-surface-primary', 'border-border-medium');
   expect(within(toolbar).getByText('com_ui_schedules_title')).toBeInTheDocument();
   const content = screen.getByRole('region', { name: 'com_ui_schedules_title' });
   expect(
@@ -78,6 +79,10 @@ test('shares the sticky page top bar and the 22px bold page title', () => {
   const content = screen.getByRole('region', { name: 'com_ui_schedules_title' });
   expect(content).toHaveClass(pageTitleTopClassName);
   expect(content).not.toHaveClass('py-4');
+  expect(screen.getByText('com_ui_schedules_description')).toHaveClass(
+    'text-sm',
+    'text-text-secondary',
+  );
 });
 
 test('does not show a schedule tile when the list is empty', () => {

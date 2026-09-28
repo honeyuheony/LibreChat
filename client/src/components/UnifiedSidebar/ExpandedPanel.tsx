@@ -170,7 +170,12 @@ function ExpandedPanel({
         </div>
       )}
       {expanded ? (
-        <nav className="-mx-2 mt-1 min-h-0 flex-1 overflow-hidden">
+        <nav
+          className={cn(
+            '-mx-2 min-h-0 flex-1 overflow-hidden',
+            expanded && effectiveActive === DEFAULT_PANEL ? '-mt-px' : 'mt-1',
+          )}
+        >
           <SidePanelNav links={links} />
         </nav>
       ) : (
