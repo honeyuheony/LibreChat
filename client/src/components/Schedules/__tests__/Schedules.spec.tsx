@@ -74,14 +74,15 @@ test('shares the sticky page top bar and the 22px bold page title', () => {
 
   expect(screen.getByRole('banner')).toHaveClass(...pageTopBarClassName.split(' '));
   const title = screen.getByRole('heading', { level: 1, name: 'com_ui_schedules_title' });
-  expect(title).toHaveClass('text-[22px]', 'font-bold');
+  expect(title).toHaveClass('text-[22px]', 'font-bold', 'leading-[1.25]');
   expect(title).not.toHaveClass('text-xl', 'font-semibold');
   const content = screen.getByRole('region', { name: 'com_ui_schedules_title' });
   expect(content).toHaveClass(pageTitleTopClassName);
   expect(content).not.toHaveClass('py-4');
   expect(screen.getByText('com_ui_schedules_description')).toHaveClass(
-    'text-sm',
-    'text-text-secondary',
+    'text-[13px]',
+    'leading-[1.5]',
+    'text-text-muted',
   );
 });
 

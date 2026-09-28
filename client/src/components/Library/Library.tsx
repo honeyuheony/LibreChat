@@ -138,16 +138,16 @@ export default function Library() {
                         )}
                       </Link>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-secondary">
+                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-muted">
                       {typeLabel(item)}
                     </TableCell>
-                    <TableCell className="px-2 py-2 text-text-secondary">
+                    <TableCell className="px-2 py-2 text-text-muted">
                       {item.conversationTitle}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-secondary">
+                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-muted">
                       {`${localize(dayLabelKey(createdAt, now))} ${clockTime(createdAt)}`}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-tertiary">
+                    <TableCell className="whitespace-nowrap px-2 py-2 text-text-muted">
                       {item.kind === 'table'
                         ? localize('com_ui_task_excel')
                         : localize('com_ui_task_copy')}

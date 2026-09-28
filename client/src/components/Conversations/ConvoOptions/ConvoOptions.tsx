@@ -415,8 +415,8 @@ function ConvoOptions({
   );
 
   const titleTriggerClassName = cn(
-    'flex min-w-0 max-w-full items-center gap-1.5 rounded-theme-control px-2 py-1.5',
-    'text-[15px] font-semibold text-text-primary hover:bg-surface-hover',
+    'flex min-w-0 max-w-full items-center gap-1.5 rounded-theme-control pl-0 pr-2 py-1.5',
+    'text-[14.5px] font-semibold text-text-primary hover:bg-surface-hover',
     isPopoverActive && 'bg-surface-hover',
   );
 

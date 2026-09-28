@@ -511,12 +511,14 @@ describe('TaskPanel', () => {
     expect(screen.getByRole('complementary', { name: 'com_ui_task_panel' })).toHaveClass(
       'bg-surface-secondary',
       'border-l',
-      'border-border-light',
+      'border-border-medium',
     );
-    expect(screen.getByRole('button', { name: /com_ui_task_outputs/ })).toHaveClass(
-      'text-sm',
-      'font-bold',
-      'text-text-primary',
+    const sectionHeading = screen.getByRole('button', { name: /com_ui_task_outputs/ });
+    expect(sectionHeading).toHaveClass('text-sm', 'font-bold', 'text-text-primary');
+    expect(sectionHeading.parentElement?.parentElement).toHaveClass('px-4', 'py-3');
+    expect(sectionHeading.parentElement?.parentElement?.parentElement).toHaveClass(
+      'px-4',
+      'py-3.5',
     );
   });
 
