@@ -132,6 +132,14 @@ describe('ChatView landing suggestions', () => {
     expect(screen.queryByTestId('landing-skills')).not.toBeInTheDocument();
     expect(screen.queryByTestId('conversation-starters')).not.toBeInTheDocument();
   });
+
+  test('sets the hint in 13px muted text right under the composer', () => {
+    render(<ChatView />);
+
+    const hint = screen.getByText(/com_ui_landing_hint|Drop documents here/).closest('p');
+    expect(hint).toHaveClass('text-[13px]', 'leading-normal', 'text-text-muted', 'pt-0', 'pb-4');
+    expect(hint).not.toHaveClass('text-sm', 'pt-4', 'text-text-tertiary');
+  });
 });
 
 describe('ChatView composer column', () => {

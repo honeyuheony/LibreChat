@@ -12,7 +12,7 @@ import store from '~/store';
  * row and silently drops keyboard focus mid-upload.
  */
 const ChatFileRowWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex flex-wrap gap-2">{children}</div>
+  <div className="contents">{children}</div>
 );
 
 function FileFormChat({
@@ -61,6 +61,7 @@ function FileFormChat({
         setFilesLoading={setFilesLoading}
         isRTL={isRTL}
         Wrapper={ChatFileRowWrapper}
+        variant="chip"
         isPastedTextFile={isPastedTextFile}
         isPasteActionPending={isPasteActionPending}
         onEditPastedText={onEditPastedText}

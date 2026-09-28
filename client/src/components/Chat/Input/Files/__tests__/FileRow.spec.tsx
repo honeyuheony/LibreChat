@@ -37,6 +37,11 @@ jest.mock('../Image', () => {
   };
 });
 
+jest.mock('../FileChip', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 jest.mock('../FileContainer', () => {
   return function MockFileContainer({ file, onClick, ariaLabel, subtitleAction }: any) {
     return (
