@@ -5,7 +5,6 @@ import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusI
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
 import type { ConnectionStatusMap } from '~/components/MCP/mcpServerUtils';
 import type { BuiltinTool } from './useComposerTools';
-import type { TranslationKeys } from '~/hooks';
 import type { MenuItemProps } from '~/common';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
 import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
@@ -225,7 +224,7 @@ export function UploadPickerRow({ upload }: { upload: ComposerUpload }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-text-primary">
-          {localize('com_ui_upload_file_or_folder' as TranslationKeys)}
+          {localize('com_ui_upload_file_or_folder')}
         </span>
         {upload.hint !== '' && (
           <span className="block text-xs text-text-secondary">{upload.hint}</span>
@@ -237,7 +236,7 @@ export function UploadPickerRow({ upload }: { upload: ComposerUpload }) {
         data-testid="tools-menu-upload-files"
         className={pickButtonClassName}
       >
-        {localize('com_ui_upload_pick_files' as TranslationKeys)}
+        {localize('com_ui_upload_pick_files')}
       </Ariakit.MenuItem>
       <Ariakit.MenuItem
         disabled={upload.disabled}
@@ -245,7 +244,7 @@ export function UploadPickerRow({ upload }: { upload: ComposerUpload }) {
         data-testid="tools-menu-upload-folder"
         className={pickButtonClassName}
       >
-        {localize('com_ui_upload_pick_folder' as TranslationKeys)}
+        {localize('com_ui_upload_pick_folder')}
       </Ariakit.MenuItem>
     </div>
   );
@@ -262,7 +261,7 @@ export function ConversationFilesRow({
   onToggle: () => void;
 }) {
   const localize = useLocalize();
-  const label = localize('com_ui_my_uploaded_files' as TranslationKeys);
+  const label = localize('com_ui_my_uploaded_files');
   return (
     <Ariakit.MenuItemCheckbox
       hideOnClick={false}
@@ -281,8 +280,8 @@ export function ConversationFilesRow({
         <span className="block truncate text-sm font-medium text-text-primary">{label}</span>
         <span className="block truncate text-xs text-text-secondary">
           {count > 0
-            ? localize('com_ui_my_uploaded_files_count' as TranslationKeys, { 0: count })
-            : localize('com_ui_my_uploaded_files_empty' as TranslationKeys)}
+            ? localize('com_ui_my_uploaded_files_count', { 0: count })
+            : localize('com_ui_my_uploaded_files_empty')}
         </span>
       </span>
       <SwitchIndicator checked={included} />

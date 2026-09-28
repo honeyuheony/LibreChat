@@ -34,7 +34,6 @@ import type {
 } from 'librechat-data-provider';
 import type { ComposerUpload } from '~/components/Chat/Input/ToolRows';
 import type { ExtendedFile, FileSetter } from '~/common';
-import type { TranslationKeys } from '~/hooks';
 import {
   useAgentToolPermissions,
   useAgentCapabilities,
@@ -222,9 +221,7 @@ const AttachFileMenu = ({
   const composerUpload = useMemo<ComposerUpload>(() => {
     const { formats, perFileLimit } = getUploadHint(endpointFileConfig);
     const limit =
-      perFileLimit != null
-        ? [localize('com_ui_upload_per_file_limit' as TranslationKeys, { 0: perFileLimit })]
-        : [];
+      perFileLimit != null ? [localize('com_ui_upload_per_file_limit', { 0: perFileLimit })] : [];
     return {
       onPickFiles: handleUnifiedUpload,
       onPickFolder,

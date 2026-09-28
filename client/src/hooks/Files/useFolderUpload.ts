@@ -1,7 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { useToastContext } from '@librechat/client';
 import type { RegexLike } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks/useLocalize';
 import { selectFolderUploads } from './folder';
 import useLocalize from '~/hooks/useLocalize';
 
@@ -38,7 +37,7 @@ export default function useFolderUpload({
       const { accepted, skipped } = selectFolderUploads(picked, supportedMimeTypes);
       if (skipped > 0) {
         showToast({
-          message: localize('com_ui_upload_folder_skipped' as TranslationKeys, { 0: skipped }),
+          message: localize('com_ui_upload_folder_skipped', { 0: skipped }),
           status: 'warning',
         });
       }
