@@ -36,9 +36,9 @@ function skillPath(skillId: string): string {
 
 function MetricCard({ label, value, detail }: MetricCardProps) {
   return (
-    <section className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3.5 py-3 dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
+    <section className="min-h-[111px] min-w-0 rounded-2xl border border-border-light bg-surface-primary px-3.5 py-3 shadow-[0_1px_2px_rgba(35,20,80,0.06)] dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
       <h2 className="text-[12.5px] font-normal text-text-muted">{label}</h2>
-      <p className="mt-0.5 text-2xl font-semibold text-accent-primary">{value}</p>
+      <p className="mt-0.5 text-[22px] font-semibold text-accent-primary">{value}</p>
       <p className="text-xs text-text-muted">{detail}</p>
     </section>
   );

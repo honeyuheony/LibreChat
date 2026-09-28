@@ -166,35 +166,43 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           </>
         )}
       </Menu.MenuButton>
+      {/* 공용 팝오버가 크기와 그림자를 다시 정하므로 메뉴 값을 인라인 스타일로 둔다. */}
       <Menu.Menu
         portal
         gutter={6}
-        className="account-settings-popover popover-ui z-[125] w-[240px] rounded-theme-surface p-1.5"
-        style={{ transformOrigin: collapsed ? 'left bottom' : 'bottom' }}
+        className="account-settings-popover popover-ui z-[125] w-[240px]"
+        style={{
+          transformOrigin: collapsed ? 'left bottom' : 'bottom',
+          borderRadius: 'var(--theme-surface-radius)',
+          padding: 'var(--theme-space-compact)',
+          boxShadow: '0 6px 16px rgba(35, 20, 80, 0.1)',
+        }}
       >
         <Menu.MenuItem onClick={() => setShowFiles(true)} className={itemClassName}>
           <MenuGlyph glyph={GLYPHS.files} />
           <span className="flex-1">{localize('com_nav_my_files')}</span>
-          <span className="text-xs text-text-muted">{formatUsedSize(usedBytes ?? 0)}</span>
+          <span className="text-[13px] text-text-muted">{formatUsedSize(usedBytes ?? 0)}</span>
         </Menu.MenuItem>
         {schedulesEnabled && (
           <Menu.MenuItem onClick={() => navigate('/schedules')} className={itemClassName}>
             <MenuGlyph glyph={GLYPHS.schedules} />
             <span className="flex-1">{localize('com_ui_schedules_title')}</span>
-            <span className="text-xs text-text-muted">{schedulesData?.schedules.length ?? 0}</span>
+            <span className="text-[13px] text-text-muted">
+              {schedulesData?.schedules.length ?? 0}
+            </span>
           </Menu.MenuItem>
         )}
         {user?.role === SystemRoles.ADMIN && (
           <Menu.MenuItem onClick={() => navigate('/operations')} className={itemClassName}>
             <MenuGlyph glyph={GLYPHS.metrics} />
             <span className="flex-1">{localize('com_metrics_title')}</span>
-            <span className="text-xs text-text-muted">{localize('com_ui_admin')}</span>
+            <span className="text-[13px] text-text-muted">{localize('com_ui_admin')}</span>
           </Menu.MenuItem>
         )}
         <Menu.MenuItem onClick={() => navigate('/settings')} className={itemClassName}>
           <MenuGlyph glyph={GLYPHS.settings} />
           <span className="flex-1">{localize('com_nav_settings')}</span>
-          <span className="text-xs text-text-muted">{localize('com_ui_settings_hint')}</span>
+          <span className="text-[13px] text-text-muted">{localize('com_ui_settings_hint')}</span>
         </Menu.MenuItem>
         {canSwitchDemoUser && (
           <Menu.MenuItem
@@ -204,7 +212,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           >
             <MenuGlyph glyph={GLYPHS.switchUser} />
             <span className="flex-1">{localize('com_ui_demo_switch_user')}</span>
-            <span className="text-xs text-text-muted">{switchTarget.name}</span>
+            <span className="text-[13px] text-text-muted">{switchTarget.name}</span>
           </Menu.MenuItem>
         )}
         <DropdownMenuSeparator />
@@ -253,10 +261,10 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
               </Button>
             </OGDialogClose>
           </header>
-          <OGDialogDescription className="border-b border-border-light px-4 py-3 text-left">
+          <OGDialogDescription className="border-b border-border-light px-[18px] py-[14px] text-left text-[14.5px]">
             {localize('com_ui_demo_reset_confirmation')}
           </OGDialogDescription>
-          <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-4 pb-3 pt-5">
+          <footer className="flex flex-row justify-end gap-2 bg-surface-secondary px-[18px] py-3">
             <OGDialogClose asChild>
               <Button type="button" variant="ghost" size="pill" className="text-text-tertiary">
                 {localize('com_ui_cancel')}

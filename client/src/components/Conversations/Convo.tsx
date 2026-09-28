@@ -370,7 +370,8 @@ function Conversation({
     <div
       ref={containerRef}
       className={cn(
-        'group relative flex h-12 w-full items-center rounded-lg outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text-primary md:h-9',
+        'group relative flex h-12 w-full items-center rounded-lg outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text-primary',
+        editActions ? 'md:h-[34.5px]' : 'md:h-9',
         editActions && 'rounded-theme-control text-[15px]',
         rowStateClassName,
       )}

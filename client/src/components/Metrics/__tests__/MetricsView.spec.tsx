@@ -163,9 +163,15 @@ describe('MetricsView', () => {
     ['com_metrics_agent_ranking', 'com_metrics_contributor_ranking'].forEach((name) =>
       expect(screen.getByRole('heading', { name })).toHaveClass('text-[15.5px]', 'font-bold'),
     );
-    expect(registeredAgentsHeading.closest('section')).toHaveClass('px-3.5', 'py-3');
+    expect(registeredAgentsHeading.closest('section')).toHaveClass(
+      'px-3.5',
+      'py-3',
+      'min-h-[111px]',
+      'rounded-2xl',
+      'shadow-[0_1px_2px_rgba(35,20,80,0.06)]',
+    );
     expect(registeredAgentsHeading.closest('section')?.parentElement).toHaveClass('mb-[18px]');
-    expect(registeredAgentsHeading.nextElementSibling).toHaveClass('mt-0.5', 'text-2xl');
+    expect(registeredAgentsHeading.nextElementSibling).toHaveClass('mt-0.5', 'text-[22px]');
     expect(registeredAgentsHeading.nextElementSibling?.nextElementSibling).toHaveClass('text-xs');
 
     const tables = screen.getAllByRole('table');

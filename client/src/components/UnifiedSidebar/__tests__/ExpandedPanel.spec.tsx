@@ -326,6 +326,21 @@ describe('ExpandedPanel', () => {
     });
   });
 
+  describe('conversation list spacing', () => {
+    it('tightens the gap above the active conversation list', () => {
+      renderPanel({ expanded: true });
+
+      expect(screen.getByRole('navigation')).toHaveClass('-mt-px');
+    });
+
+    it('keeps the standard gap above other panels', () => {
+      renderPanel({ expanded: true, initialPanel: 'prompts' });
+
+      expect(screen.getByRole('navigation')).toHaveClass('mt-1');
+      expect(screen.getByRole('navigation')).not.toHaveClass('-mt-px');
+    });
+  });
+
   describe('layout', () => {
     it('shows the app title and the active panel below the rows while expanded', () => {
       renderPanel({ expanded: true });

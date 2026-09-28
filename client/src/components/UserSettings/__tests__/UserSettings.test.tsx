@@ -149,7 +149,15 @@ describe('UserSettings', () => {
     const instructions = screen.getByRole('textbox', {
       name: 'com_ui_user_settings_global_instructions',
     });
-    expect(instructions).toHaveClass('w-full', 'max-w-[520px]');
+    expect(instructions).toHaveClass(
+      'w-full',
+      'max-w-[520px]',
+      'rounded-lg',
+      'border-border-medium',
+      'px-2.5',
+      'py-[7px]',
+      'text-[14.5px]',
+    );
     expect(instructions.closest('section')?.classList.contains('rounded-xl')).toBe(false);
     expect(instructions.closest('section')?.classList.contains('border')).toBe(false);
     expect(screen.getByText('com_ui_user_settings_global_instructions')).toHaveClass(
