@@ -69,7 +69,7 @@ export async function openStoredFile(
   return strategy.getDownloadStream(req, resolveDownloadPath(file));
 }
 
-export async function readStoredFile(
+async function readStoredFile(
   req: ServerRequest,
   deps: Pick<ForkSkillDeps, 'getStrategyFunctions'>,
   file: ISkillFile,
