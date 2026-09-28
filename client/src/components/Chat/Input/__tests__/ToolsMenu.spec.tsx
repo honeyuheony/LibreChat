@@ -288,6 +288,7 @@ describe('ToolsMenu', () => {
       expect(await within(row).findByText('com_ui_tools_desk_app_off')).toBeInTheDocument();
       expect(within(row).queryByText('Reads a folder')).not.toBeInTheDocument();
 
+      expect(within(row).queryByTestId('tools-menu-desk-folder-settings')).not.toBeInTheDocument();
       await user.click(within(row).getByTestId('tools-menu-desk-download'));
 
       expect(openWindow).toHaveBeenCalledTimes(1);
@@ -311,6 +312,53 @@ describe('ToolsMenu', () => {
       });
       expect(within(row).getByText('Reads a folder')).toBeInTheDocument();
       expect(within(row).queryByTestId('tools-menu-desk-download')).not.toBeInTheDocument();
+    });
+
+    describe('inside the desktop app', () => {
+      beforeEach(() => {
+        jest
+          .spyOn(window.navigator, 'userAgent', 'get')
+          .mockReturnValue('Mozilla/5.0 Chrome/146.0.0.0 Safari/537.36 AIPlaygroundDesk/0.1.7');
+      });
+
+      afterEach(() => {
+        delete window.aiPlaygroundDesk;
+      });
+
+      it('opens folder settings through the app instead of the download page', async () => {
+        jest.spyOn(dataService, 'getDeskStatus').mockResolvedValue(deskStatus('offline'));
+        const openWindow = jest.spyOn(window, 'open').mockReturnValue(null);
+        const openFolderSettings = jest.fn().mockResolvedValue(true);
+        window.aiPlaygroundDesk = { openFolderSettings };
+        const user = userEvent.setup();
+        render(<ToolsMenu showBuiltinTools={false} />);
+
+        await user.click(screen.getByTestId('tools-menu-button'));
+        const row = screen.getByRole('menuitemcheckbox', { name: 'My PC folder' });
+        const folderSettings = await within(row).findByTestId('tools-menu-desk-folder-settings');
+        expect(folderSettings).toHaveTextContent('com_ui_desk_folder_settings');
+        expect(within(row).queryByTestId('tools-menu-desk-download')).not.toBeInTheDocument();
+
+        await user.click(folderSettings);
+
+        expect(openFolderSettings).toHaveBeenCalledTimes(1);
+        expect(openWindow).not.toHaveBeenCalled();
+        expect(mockToggleServerSelection).not.toHaveBeenCalled();
+      });
+
+      it('shows neither button when the app offers no folder settings bridge', async () => {
+        jest.spyOn(dataService, 'getDeskStatus').mockResolvedValue(deskStatus('offline'));
+        const user = userEvent.setup();
+        render(<ToolsMenu showBuiltinTools={false} />);
+
+        await user.click(screen.getByTestId('tools-menu-button'));
+        const row = screen.getByRole('menuitemcheckbox', { name: 'My PC folder' });
+        expect(await within(row).findByText('com_ui_tools_desk_app_off')).toBeInTheDocument();
+        expect(within(row).queryByTestId('tools-menu-desk-download')).not.toBeInTheDocument();
+        expect(
+          within(row).queryByTestId('tools-menu-desk-folder-settings'),
+        ).not.toBeInTheDocument();
+      });
     });
   });
 
