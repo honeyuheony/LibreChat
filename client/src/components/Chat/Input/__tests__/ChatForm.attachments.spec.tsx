@@ -374,6 +374,22 @@ describe('ChatForm attachments', () => {
     expect(surface).not.toHaveClass('gap-1.5');
   }, 20000);
 
+  test.each([
+    ['landing', true, 'md:max-w-[48.5rem]', 'md:max-w-[45.5rem]'],
+    ['conversation', false, 'md:max-w-[45.5rem]', 'md:max-w-[48.5rem]'],
+  ])(
+    'caps the %s composer width',
+    async (_, landing, expected, other) => {
+      const { container } = renderComposer({ landing });
+      await screen.findByTestId('text-input');
+
+      const form = container.querySelector('form');
+      expect(form).toHaveClass(expected);
+      expect(form).not.toHaveClass(other);
+    },
+    20000,
+  );
+
   test('leaves a 64px band under the centred landing composer', async () => {
     const { container } = renderComposer({ landing: true });
     await screen.findByTestId('text-input');
