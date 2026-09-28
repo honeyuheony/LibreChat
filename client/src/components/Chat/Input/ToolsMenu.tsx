@@ -17,7 +17,7 @@ import { cn } from '~/utils';
 /** 접근성 랜드마크를 유지하려 메뉴를 main 안에 두고, 없으면 body에 렌더링한다. */
 const getMainLandmark = () => document.querySelector<HTMLElement>('main') ?? document.body;
 
-const sectionLabelClassName = 'px-2.5 pb-1 pt-2 text-xs font-semibold text-text-tertiary';
+const sectionLabelClassName = 'px-2.5 pb-1 pt-2 text-xs font-normal text-text-muted';
 
 function ToolsMenu({
   showBuiltinTools,

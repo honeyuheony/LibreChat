@@ -176,6 +176,18 @@ describe('ToolsMenu', () => {
     expect(within(group).getByRole('menuitemcheckbox', { name: 'Shared files' })).toBeVisible();
   });
 
+  it('sets the group headings in regular weight and the muted text color', async () => {
+    const user = userEvent.setup();
+    render(<ToolsMenu showBuiltinTools={true} />);
+
+    await user.click(screen.getByTestId('tools-menu-button'));
+
+    const heading = screen.getByText('com_ui_tools_data_sources');
+    expect(heading).toHaveClass('text-xs', 'font-normal', 'text-text-muted');
+    expect(heading).not.toHaveClass('font-semibold');
+    expect(heading).not.toHaveClass('text-text-tertiary');
+  });
+
   it('toggles a connector without closing the menu', async () => {
     const user = userEvent.setup();
     render(<ToolsMenu showBuiltinTools={true} />);
