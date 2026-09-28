@@ -58,7 +58,7 @@ export interface TaskToolDeps {
   cache: TaskCache;
   saveResult(result: TaskResult): Promise<void>;
   loadTemplate(templateId: string): Promise<ReportTemplate>;
-  hwp: HwpService;
+  hwp: Pick<HwpService, 'render'>;
   saveReportFile(file: { buffer: Buffer; filename: string }): Promise<{
     file_id: string;
     filename: string;

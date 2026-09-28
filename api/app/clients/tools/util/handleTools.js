@@ -33,7 +33,10 @@ const {
   createTaskTool,
   getStorageMetadata,
   createTaskToolDeps,
+  reportTemplatesFor,
   GenerationJobManager,
+  FILL_REPORT_TEMPLATE_TOOL,
+  createFillReportTemplateTool,
 } = require('@librechat/api');
 const {
   AuthType,
@@ -578,6 +581,18 @@ const loadTools = async ({
       continue;
     } else if (isTaskToolName(tool)) {
       requestedTools[tool] = async () => createTaskTool(tool, buildTaskToolDeps());
+      continue;
+    } else if (tool === FILL_REPORT_TEMPLATE_TOOL) {
+      requestedTools[tool] = async () => {
+        const deps = buildTaskToolDeps();
+        return createFillReportTemplateTool({
+          templates: reportTemplatesFor(options.req),
+          hwp: deps.hwp,
+          saveReportFile: deps.saveReportFile,
+          saveResult: deps.saveResult,
+          conversationId: deps.conversationId,
+        });
+      };
       continue;
     } else if (tool === SET_MEMORY_TOOL_NAME || tool === DELETE_MEMORY_TOOL_NAME) {
       requestedTools[tool] = () =>

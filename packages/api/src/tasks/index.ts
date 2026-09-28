@@ -14,3 +14,4 @@ export * from './template';
 export * from './tools';
 export * from './verify';
 export * from './export';
+export * from './fill';

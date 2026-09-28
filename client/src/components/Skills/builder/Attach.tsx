@@ -28,6 +28,20 @@ function FileChips({ files }: { files: BuilderFile[] }) {
   );
 }
 
+/** 양식이 HWPX 면 `{{항목}}` 자리가 채워지고, HWP 바이너리는 채울 수 없어 HWPX 로 저장하라고 알린다. */
+function templateHint(files: BuilderFile[]): TranslationKeys | null {
+  const template = files.find((file) => file.kind === 'assets' && file.upload != null);
+  if (!template) {
+    return null;
+  }
+  if (/\.hwpx$/i.test(template.name)) {
+    return 'com_skills_builder_template_fill_hint' as TranslationKeys;
+  }
+  return /\.hwp$/i.test(template.name)
+    ? ('com_skills_builder_template_hwp_hint' as TranslationKeys)
+    : null;
+}
+
 /** 양식·예시 문서 붙이기 줄. 고른 문서는 저장할 때 스킬 폴더에 올라가 시험과 실행에서 읽힌다. */
 export default function AttachRow({
   files,
@@ -40,46 +54,50 @@ export default function AttachRow({
 }) {
   const localize = useLocalize();
   const input = useRef<HTMLInputElement>(null);
+  const hint = templateHint(files);
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-solid border-border-medium bg-surface-primary px-2.5 py-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-auto gap-1 rounded-full border-border-medium px-[11px] py-[3px] text-[13px]"
-        onClick={() => input.current?.click()}
-      >
-        <span aria-hidden="true" style={EMOJI_STYLE}>
-          📎
-        </span>
-        {localize('com_skills_builder_files_attach')}
-      </Button>
-      {files.length > 0 ? (
-        <>
-          <FileChips files={files} />
-          <button
-            type="button"
-            onClick={onClear}
-            className="rounded-full border border-border-medium px-2.5 py-0.5 text-xs text-text-secondary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-          >
-            {localize('com_ui_clear_all')}
-          </button>
-        </>
-      ) : (
-        <span className="text-xs text-text-secondary">
-          {localize('com_skills_builder_files_hint')}
-        </span>
-      )}
-      <input
-        ref={input}
-        type="file"
-        multiple
-        hidden
-        data-testid="builder-files"
-        onChange={(event) => {
-          onPick(Array.from(event.target.files ?? []));
-          event.target.value = '';
-        }}
-      />
-    </div>
+    <>
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border-[1.5px] border-solid border-border-medium bg-surface-primary px-2.5 py-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-auto gap-1 rounded-full border-border-medium px-[11px] py-[3px] text-[13px]"
+          onClick={() => input.current?.click()}
+        >
+          <span aria-hidden="true" style={EMOJI_STYLE}>
+            📎
+          </span>
+          {localize('com_skills_builder_files_attach')}
+        </Button>
+        {files.length > 0 ? (
+          <>
+            <FileChips files={files} />
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-full border border-border-medium px-2.5 py-0.5 text-xs text-text-secondary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+            >
+              {localize('com_ui_clear_all')}
+            </button>
+          </>
+        ) : (
+          <span className="text-xs text-text-secondary">
+            {localize('com_skills_builder_files_hint')}
+          </span>
+        )}
+        <input
+          ref={input}
+          type="file"
+          multiple
+          hidden
+          data-testid="builder-files"
+          onChange={(event) => {
+            onPick(Array.from(event.target.files ?? []));
+            event.target.value = '';
+          }}
+        />
+      </div>
+      {hint ? <p className="text-xs text-text-secondary">{localize(hint)}</p> : null}
+    </>
   );
 }
