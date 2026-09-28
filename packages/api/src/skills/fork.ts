@@ -8,6 +8,7 @@ import {
 import type { TForkSkillRequest, TForkSkillResponse } from 'librechat-data-provider';
 import type { ISkill, ISkillFile, CreateSkillResult } from '@librechat/data-schemas';
 import type { Request, Response } from 'express';
+import type { Readable } from 'stream';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
 import type { ImportSkillDeps } from './import';
@@ -56,16 +57,24 @@ function isValidationError(error: unknown): error is Error & { issues: unknown[]
   return (error as { code?: string } | null)?.code === 'SKILL_VALIDATION_FAILED';
 }
 
+export async function openStoredFile(
+  req: ServerRequest,
+  deps: Pick<ForkSkillDeps, 'getStrategyFunctions'>,
+  file: ISkillFile,
+): Promise<Readable> {
+  const strategy = deps.getStrategyFunctions(file.source);
+  if (!strategy.getDownloadStream) {
+    throw new Error(`Storage backend "${file.source}" does not support reads`);
+  }
+  return strategy.getDownloadStream(req, resolveDownloadPath(file));
+}
+
 export async function readStoredFile(
   req: ServerRequest,
   deps: Pick<ForkSkillDeps, 'getStrategyFunctions'>,
   file: ISkillFile,
 ): Promise<Buffer> {
-  const strategy = deps.getStrategyFunctions(file.source);
-  if (!strategy.getDownloadStream) {
-    throw new Error(`Storage backend "${file.source}" does not support reads`);
-  }
-  const stream = await strategy.getDownloadStream(req, resolveDownloadPath(file));
+  const stream = await openStoredFile(req, deps, file);
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
