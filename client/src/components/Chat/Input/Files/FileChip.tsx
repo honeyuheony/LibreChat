@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Spinner } from '@librechat/client';
 import { FileText, CornerUpLeft } from 'lucide-react';
 import type { SubtitleAction } from './FileContainer';
@@ -37,6 +38,14 @@ export default function FileChip({
   const uploading = file.progress < 1;
   const showsPreview =
     !uploading && previewUrl != null && (file.type?.startsWith('image') ?? false);
+  const previewTriggerRef = useRef<HTMLSpanElement>(null);
+  const filenameAction = onClick ?? (showsPreview ? openPreview : undefined);
+
+  function openPreview() {
+    previewTriggerRef.current
+      ?.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')
+      ?.click();
+  }
 
   let lead = <FileText aria-hidden="true" />;
   if (uploading) {
@@ -58,15 +67,19 @@ export default function FileChip({
       title={name}
       className={composerChipClassName}
     >
-      <span aria-hidden={showsPreview ? undefined : 'true'} className={composerChipIconClassName}>
+      <span
+        ref={previewTriggerRef}
+        aria-hidden={showsPreview ? undefined : 'true'}
+        className={composerChipIconClassName}
+      >
         {lead}
       </span>
-      {onClick != null ? (
+      {filenameAction != null ? (
         <button
           type="button"
-          onClick={onClick}
+          onClick={filenameAction}
           aria-label={ariaLabel ?? name}
-          className={cn('truncate hover:underline', focusRing)}
+          className={cn('truncate', onClick != null && 'hover:underline', focusRing)}
         >
           {name}
         </button>

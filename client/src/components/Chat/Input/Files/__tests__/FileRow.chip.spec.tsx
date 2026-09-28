@@ -85,6 +85,22 @@ describe('FileRow chip variant', () => {
     expect(uploaded).not.toHaveAttribute('aria-busy');
   });
 
+  it('opens a full-size preview from the image filename', async () => {
+    renderChips([imageFile()]);
+
+    const filename = screen.queryByRole('button', { name: 'chart.png' });
+    expect(filename).not.toBeNull();
+    if (filename == null) {
+      return;
+    }
+    await userEvent.click(filename);
+
+    expect(await screen.findByRole('img', { name: 'Preview image' })).toHaveAttribute(
+      'src',
+      'blob:http://localhost:3080/chart',
+    );
+  });
+
   it('opens a full-size preview from an uploaded image pill', async () => {
     renderChips([imageFile()]);
 
