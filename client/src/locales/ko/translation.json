@@ -1451,6 +1451,7 @@
   "com_ui_desk_download_title": "AI playground 데스크톱 앱",
   "com_ui_desk_download_unavailable": "지금은 내려받을 수 있는 설치 파일이 없습니다. 관리자에게 문의해 주세요.",
   "com_ui_desk_download_version": "버전 {{0}}",
+  "com_ui_desk_folder_settings": "내 PC 폴더 설정",
   "com_ui_skills": "Agent",
   "com_ui_skills_add_row": "agent 추가",
   "com_ui_skills_allow_create": "agent 만들기 허용",

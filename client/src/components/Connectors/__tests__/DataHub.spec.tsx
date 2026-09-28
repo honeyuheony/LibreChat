@@ -3,7 +3,7 @@ import { RecoilRoot } from 'recoil';
 import '@testing-library/jest-dom/extend-expect';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ConnectorActivityItem, DeskStatusResponse } from 'librechat-data-provider';
 import type { MCPServerDefinition } from '~/hooks';
 import { pageTitleTopClassName } from '~/components/ui/topbar';
@@ -257,6 +257,10 @@ describe('DataHub', () => {
       installerUrl: 'https://relay.example/app/desk-app-setup-0.1.0.exe',
     };
 
+    afterEach(() => {
+      delete window.aiPlaygroundDesk;
+    });
+
     it('shows the switched-on folders and PC name while the app is on, without a download link', () => {
       mockDesk.current = { ...online, connectedAt: new Date().toISOString() };
       renderHub('/connectors/my-pc');
@@ -298,6 +302,58 @@ describe('DataHub', () => {
       renderHub('/connectors/my-pc');
       expect(screen.getByText('Status unavailable')).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
+    });
+
+    describe('inside the desktop app', () => {
+      beforeEach(() => {
+        jest
+          .spyOn(window.navigator, 'userAgent', 'get')
+          .mockReturnValue('Mozilla/5.0 Chrome/146.0.0.0 Safari/537.36 AIPlaygroundDesk/0.1.7');
+      });
+
+      afterEach(() => {
+        jest.restoreAllMocks();
+      });
+
+      it('offers folder settings through the app instead of the installer', () => {
+        const openFolderSettings = jest.fn().mockResolvedValue(true);
+        window.aiPlaygroundDesk = { openFolderSettings };
+        mockDesk.current = { ...online, state: 'offline', deviceName: null, folders: [] };
+        renderHub('/connectors/my-pc');
+
+        expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'My PC folder settings' }));
+        expect(openFolderSettings).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps folder settings while the app is connected', () => {
+        window.aiPlaygroundDesk = { openFolderSettings: jest.fn().mockResolvedValue(true) };
+        mockDesk.current = online;
+        renderHub('/connectors/my-pc');
+
+        expect(screen.getByRole('button', { name: 'My PC folder settings' })).toBeInTheDocument();
+      });
+
+      it('shows no installer or folder settings when the app offers no bridge', () => {
+        mockDesk.current = { ...online, state: 'offline', deviceName: null, folders: [] };
+        renderHub('/connectors/my-pc');
+
+        expect(screen.queryByRole('link', { name: 'Get the desktop app' })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: 'My PC folder settings' }),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows no folder settings in an ordinary browser', () => {
+      window.aiPlaygroundDesk = { openFolderSettings: jest.fn().mockResolvedValue(true) };
+      mockDesk.current = { ...online, state: 'offline', deviceName: null, folders: [] };
+      renderHub('/connectors/my-pc');
+
+      expect(screen.getByRole('link', { name: 'Get the desktop app' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'My PC folder settings' }),
+      ).not.toBeInTheDocument();
     });
   });
 

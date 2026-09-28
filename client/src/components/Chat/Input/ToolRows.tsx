@@ -6,11 +6,11 @@ import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
 import type { ConnectionStatusMap } from '~/components/MCP/mcpServerUtils';
 import type { BuiltinTool } from './useComposerTools';
 import type { MenuItemProps } from '~/common';
+import { cn, getDeskFolderSettingsOpener, isDeskApp } from '~/utils';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
 import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
 import CustomIcon from '~/components/ui/CustomIcon';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 const rowTitleClassName = 'text-[14.5px] font-normal leading-normal text-text-secondary';
 
@@ -93,6 +93,8 @@ export function ConnectorRow({
     connectionStatus?.[server.serverName],
     statusIconProps?.hasCustomUserVars,
   );
+  const inDeskApp = isDeskApp();
+  const openDeskFolderSettings = getDeskFolderSettingsOpener();
 
   return (
     <Ariakit.MenuItemCheckbox
@@ -121,7 +123,20 @@ export function ConnectorRow({
           )
         )}
       </span>
-      {deskAppOff && (
+      {deskAppOff && openDeskFolderSettings && (
+        <button
+          type="button"
+          data-testid="tools-menu-desk-folder-settings"
+          onClick={(e) => {
+            e.stopPropagation();
+            openDeskFolderSettings();
+          }}
+          className="flex-shrink-0 rounded-theme-control border border-border-light px-2 py-1 text-xs font-medium text-accent-primary hover:bg-surface-brand-subtle"
+        >
+          {localize('com_ui_desk_folder_settings')}
+        </button>
+      )}
+      {deskAppOff && !inDeskApp && (
         <button
           type="button"
           data-testid="tools-menu-desk-download"

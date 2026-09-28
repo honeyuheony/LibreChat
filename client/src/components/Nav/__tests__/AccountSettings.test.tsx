@@ -386,4 +386,56 @@ describe('account menu', () => {
     expect(labels).not.toContain('com_ui_demo_switch_user');
     expect(labels).not.toContain('com_nav_archived_chats');
   });
+
+  describe('inside the desktop app', () => {
+    const DESK_USER_AGENT = 'Mozilla/5.0 Chrome/146.0.0.0 Safari/537.36 AIPlaygroundDesk/0.1.7';
+
+    beforeEach(() => {
+      jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(DESK_USER_AGENT);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      delete window.aiPlaygroundDesk;
+    });
+
+    it('replaces the app download with folder settings that open through the app', () => {
+      const openFolderSettings = jest.fn().mockResolvedValue(true);
+      window.aiPlaygroundDesk = { openFolderSettings };
+      const openWindow = jest.spyOn(window, 'open').mockImplementation(() => null);
+      const items = renderAccountMenu();
+      const labels = items.map((item) => item.textContent ?? '');
+
+      expect(labels.join(' ')).not.toContain('com_nav_desk_app');
+      const folderSettings = items[items.length - 1];
+      expect(folderSettings).toHaveTextContent('com_ui_desk_folder_settings');
+      expect(folderSettings).toHaveTextContent('▭');
+
+      fireEvent.click(folderSettings);
+
+      expect(openFolderSettings).toHaveBeenCalledTimes(1);
+      expect(openWindow).not.toHaveBeenCalled();
+    });
+
+    it('shows neither entry when the app offers no folder settings bridge', () => {
+      const labels = renderAccountMenu()
+        .map((item) => item.textContent ?? '')
+        .join(' ');
+
+      expect(labels).not.toContain('com_nav_desk_app');
+      expect(labels).not.toContain('com_ui_desk_folder_settings');
+    });
+  });
+
+  it('opens the download page in a browser without the desktop app', () => {
+    const openWindow = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const items = renderAccountMenu();
+    const labels = items.map((item) => item.textContent ?? '').join(' ');
+
+    expect(labels).not.toContain('com_ui_desk_folder_settings');
+    fireEvent.click(items[items.length - 1]);
+
+    expect(openWindow).toHaveBeenCalledWith('/download', '_blank', 'noopener,noreferrer');
+    openWindow.mockRestore();
+  });
 });

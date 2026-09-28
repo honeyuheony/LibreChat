@@ -23,13 +23,13 @@ import {
   useDemoSwitchUserQuery,
 } from '~/data-provider/Demo';
 import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
+import { cn, getDeskFolderSettingsOpener, isDeskApp } from '~/utils';
 import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
 import { useGetFiles, useGetStartupConfig } from '~/data-provider';
 import { useSchedulesQuery } from '~/data-provider/Schedules';
 import { isSchedulesEnabled } from '~/hooks/Nav/schedules';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useHasAccess, useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 const GLYPHS = {
   files: '▤',
@@ -127,6 +127,8 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const canResetDemo = user?.role === SystemRoles.ADMIN && isSwitchUserQuerySuccess;
 
   const openDeskDownload = () => window.open(DESK_DOWNLOAD_PATH, '_blank', 'noopener,noreferrer');
+  const openDeskFolderSettings = getDeskFolderSettingsOpener();
+  const offerDeskDownload = !isDeskApp();
 
   return (
     <Menu.MenuProvider store={menu}>
@@ -236,10 +238,18 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           <MenuGlyph glyph={GLYPHS.logout} />
           {localize('com_nav_log_out')}
         </Menu.MenuItem>
-        <Menu.MenuItem onClick={openDeskDownload} className={itemClassName}>
-          <MenuGlyph glyph={GLYPHS.desk} />
-          {localize('com_nav_desk_app')}
-        </Menu.MenuItem>
+        {openDeskFolderSettings && (
+          <Menu.MenuItem onClick={openDeskFolderSettings} className={itemClassName}>
+            <MenuGlyph glyph={GLYPHS.desk} />
+            {localize('com_ui_desk_folder_settings')}
+          </Menu.MenuItem>
+        )}
+        {offerDeskDownload && (
+          <Menu.MenuItem onClick={openDeskDownload} className={itemClassName}>
+            <MenuGlyph glyph={GLYPHS.desk} />
+            {localize('com_nav_desk_app')}
+          </Menu.MenuItem>
+        )}
       </Menu.Menu>
       <OGDialog open={showResetConfirmation} onOpenChange={setShowResetConfirmation}>
         <OGDialogContent

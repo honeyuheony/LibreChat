@@ -9,6 +9,7 @@ import type { HubStatus } from '../status';
 import { actionLabelKeys, primaryActions, runConnectorAction } from '../actions';
 import { DESK_DOWNLOAD_PATH, getConnectorState, hubStatusView } from '../status';
 import { useUpdateConnectorDefaultsMutation } from '~/data-provider';
+import { getDeskFolderSettingsOpener, isDeskApp } from '~/utils';
 import { useAuthContext, useLocalize } from '~/hooks';
 import { newChatExtraConnectorAtom } from '~/store';
 import useNewChat from '~/hooks/Chat/useNewChat';
@@ -111,7 +112,9 @@ export default function ConnectorDetail({
   const isConnected =
     serverStatus?.connectionState === 'connected' || serverStatus?.requestScoped === true;
   const view = hubStatusView[status];
-  const offerDownload = isDesk && status !== 'available' && !!deskStatus?.installerUrl;
+  const offerDownload =
+    isDesk && !isDeskApp() && status !== 'available' && !!deskStatus?.installerUrl;
+  const openDeskFolderSettings = isDesk ? getDeskFolderSettingsOpener() : null;
   const showConnectorAction = !isDesk && state.action !== 'details';
   const overview = overviewRows.flatMap(([key, labelKey]) => {
     const value = server.config.overview?.[key]?.trim();
@@ -192,6 +195,16 @@ export default function ConnectorDetail({
             <a href={DESK_DOWNLOAD_PATH} target="_blank" rel="noopener noreferrer">
               {localize('com_ui_connectors_desk_download')}
             </a>
+          </Button>
+        )}
+        {openDeskFolderSettings && (
+          <Button
+            size="sm"
+            shape="theme"
+            variant={status === 'available' ? 'outline' : 'submit'}
+            onClick={openDeskFolderSettings}
+          >
+            {localize('com_ui_desk_folder_settings')}
           </Button>
         )}
       </div>

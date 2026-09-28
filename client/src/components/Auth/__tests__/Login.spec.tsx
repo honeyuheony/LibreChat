@@ -161,6 +161,22 @@ test('renders login form', () => {
   );
 });
 
+test('links to the desktop app download in a browser', () => {
+  const { getByRole } = setup();
+  expect(getByRole('link', { name: /desktop app/i })).toHaveAttribute('href', '/download');
+});
+
+test('hides the desktop app download inside the desktop app', () => {
+  const userAgent = jest
+    .spyOn(window.navigator, 'userAgent', 'get')
+    .mockReturnValue('Mozilla/5.0 Chrome/146.0.0.0 Safari/537.36 AIPlaygroundDesk/0.1.7');
+  const { getByRole, queryByRole } = setup();
+
+  expect(getByRole('link', { name: /Sign up/i })).toBeInTheDocument();
+  expect(queryByRole('link', { name: /desktop app/i })).not.toBeInTheDocument();
+  userAgent.mockRestore();
+});
+
 test('calls loginUser.mutate on login', async () => {
   const mutate = jest.fn();
   const { getByLabelText } = setup({
