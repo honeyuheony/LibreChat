@@ -212,3 +212,30 @@ describe('ConvoOptions archive action', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
+
+describe('ConvoOptions title trigger', () => {
+  it('shows the conversation title without a dropdown chevron in the top bar', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/c/conversation-1']}>
+          <ConvoOptions
+            conversationId="conversation-1"
+            title="A conversation"
+            retainView={mockRetainView}
+            renameHandler={jest.fn()}
+            isPopoverActive={false}
+            setIsPopoverActive={mockSetIsPopoverActive}
+            isActiveConvo={true}
+            triggerLabel="A conversation"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const trigger = screen.getByRole('button', {
+      name: 'A conversation, com_nav_convo_menu_options',
+    });
+    expect(trigger).toHaveTextContent('A conversation');
+    expect(trigger.querySelector('svg')).toBeNull();
+  });
+});

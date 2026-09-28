@@ -620,13 +620,11 @@ const ChatForm = memo(function ChatForm({
     () =>
       cn(
         /* inline-block 기본값이면 감싸는 줄의 글자 아래 여백이 입력 줄 높이에 더해진다. */
-        'm-0 block w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
-        /* 빈 대화 화면의 유일한 입력창을 더 크게 표시한다. */
-        isLandingPage ? 'text-[17px]' : 'text-base',
+        'm-0 block w-full resize-none bg-transparent py-1 text-[17.5px] leading-[26px] placeholder:text-text-tertiary',
         isCollapsed ? 'max-h-[52px]' : 'max-h-[45vh] md:max-h-[55vh]',
         isMoreThanThreeRows ? 'pl-1' : 'px-1',
       ),
-    [isCollapsed, isMoreThanThreeRows, isLandingPage],
+    [isCollapsed, isMoreThanThreeRows],
   );
 
   /* From `sm` up the band leaves room under itself for the disclaimer, which only
@@ -950,7 +948,14 @@ const ChatForm = memo(function ChatForm({
                       </div>
                     </div>
                   )}
-                  <div className={cn('shrink-0', isRTL ? 'mr-auto' : 'ml-auto')}>
+                  {/* 보내기·중지 단추가 같은 38px 원을 쓰도록 공용 크기 변수를 이 칸에서만 바꾼다. */}
+                  <div
+                    data-testid="composer-submit-slot"
+                    className={cn(
+                      'shrink-0 [--theme-control-height:2.375rem] [--theme-control-radius:9999px]',
+                      isRTL ? 'mr-auto' : 'ml-auto',
+                    )}
+                  >
                     {isSubmitting &&
                     (showStopButton || steering.duringRunActive) &&
                     !answerMode.composerAnswers

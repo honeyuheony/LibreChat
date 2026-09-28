@@ -7,6 +7,7 @@ import { logger, getCachedPreview } from '~/utils';
 import { useFileDeletion } from '~/hooks/Files';
 import FileContainer from './FileContainer';
 import { useLocalize } from '~/hooks';
+import FileChip from './FileChip';
 import Image from './Image';
 
 /**
@@ -30,6 +31,7 @@ export default function FileRow({
   fileFilter,
   isRTL = false,
   Wrapper,
+  variant = 'tile',
   isPastedTextFile,
   isPasteActionPending,
   onEditPastedText,
@@ -46,6 +48,8 @@ export default function FileRow({
   index?: number;
   isRTL?: boolean;
   Wrapper?: React.FC<{ children: React.ReactNode }>;
+  /** `chip` 은 입력창 아랫줄에 다른 칩과 나란히 흐르는 알약으로 그린다. */
+  variant?: 'tile' | 'chip';
   /** Marks chips the composer generated from a long paste. Provenance comes from the caller's
    * marker registry rather than the filename, which a deliberate upload can share. */
   isPastedTextFile?: (file: ExtendedFile) => boolean;
@@ -129,7 +133,10 @@ export default function FileRow({
         };
 
     return (
-      <div style={rowStyle as React.CSSProperties}>
+      <div
+        className={variant === 'chip' ? 'contents' : undefined}
+        style={variant === 'chip' ? undefined : (rowStyle as React.CSSProperties)}
+      >
         {files
           .reduce(
             (acc, current) => {
@@ -155,6 +162,7 @@ export default function FileRow({
               deleteFile({ file, setFiles });
             };
             const isImage = file.type?.startsWith('image') ?? false;
+            const previewUrl = getCachedPreview(file.file_id) ?? file.preview ?? file.filepath;
             /** An upload still in flight has no stored text to open yet, and without a paste
              * marker the chip is an ordinary attachment however it is named. An action already
              * in flight against the chip hides both affordances until it settles. */
@@ -164,6 +172,31 @@ export default function FileRow({
               file.progress >= 1 &&
               isPastedTextFile(file) &&
               !isPasteActionPending?.(file);
+
+            const pasteLabel = isEditablePaste
+              ? localize('com_ui_pasted_text_edit_chip', { 0: file.filename ?? '' })
+              : undefined;
+            const moveInline =
+              isEditablePaste && onMovePastedTextInline != null
+                ? {
+                    label: localize('com_ui_pasted_text_move_inline'),
+                    onClick: () => onMovePastedTextInline(file),
+                  }
+                : undefined;
+
+            if (variant === 'chip') {
+              return (
+                <FileChip
+                  key={fileIndex}
+                  file={file}
+                  previewUrl={previewUrl}
+                  onDelete={handleDelete}
+                  onClick={isEditablePaste ? () => onEditPastedText(file) : undefined}
+                  ariaLabel={pasteLabel}
+                  secondaryAction={moveInline}
+                />
+              );
+            }
 
             return (
               <div
@@ -176,7 +209,7 @@ export default function FileRow({
               >
                 {isImage ? (
                   <Image
-                    url={getCachedPreview(file.file_id) ?? file.preview ?? file.filepath}
+                    url={previewUrl}
                     onDelete={handleDelete}
                     progress={file.progress}
                     source={file.source}
@@ -186,19 +219,8 @@ export default function FileRow({
                     file={file}
                     onDelete={handleDelete}
                     onClick={isEditablePaste ? () => onEditPastedText(file) : undefined}
-                    ariaLabel={
-                      isEditablePaste
-                        ? localize('com_ui_pasted_text_edit_chip', { 0: file.filename ?? '' })
-                        : undefined
-                    }
-                    subtitleAction={
-                      isEditablePaste && onMovePastedTextInline != null
-                        ? {
-                            label: localize('com_ui_pasted_text_move_inline'),
-                            onClick: () => onMovePastedTextInline(file),
-                          }
-                        : undefined
-                    }
+                    ariaLabel={pasteLabel}
+                    subtitleAction={moveInline}
                   />
                 )}
               </div>
