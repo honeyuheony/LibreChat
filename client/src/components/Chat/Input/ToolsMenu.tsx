@@ -184,9 +184,17 @@ function ToolsMenu({
             {hasUploads && <Ariakit.MenuSeparator className="my-1 border-border-light" />}
             {hasSources && (
               <Ariakit.MenuGroup>
-                <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
-                  {localize('com_ui_tools_data_sources')}
-                </Ariakit.MenuGroupLabel>
+                <div className="flex items-center px-2.5 pb-1 pt-2">
+                  <Ariakit.MenuGroupLabel className="flex-1 text-xs font-normal text-text-muted">
+                    {localize('com_ui_tools_data_sources')}
+                  </Ariakit.MenuGroupLabel>
+                  <Ariakit.MenuItem
+                    onClick={() => navigate(DATA_HUB_PATH)}
+                    className="cursor-pointer rounded-sm text-xs font-normal text-accent-primary outline-none hover:text-accent-primary-hover data-[focus-visible]:ring-2 data-[focus-visible]:ring-text-primary"
+                  >
+                    {localize('com_ui_data_hub')}
+                  </Ariakit.MenuItem>
+                </div>
                 {hasUploads && (
                   <ConversationFilesRow
                     count={myFilesCount}
