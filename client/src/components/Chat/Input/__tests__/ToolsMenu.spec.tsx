@@ -1,8 +1,8 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import userEvent from '@testing-library/user-event';
-import { dataService } from 'librechat-data-provider';
 import { Provider as JotaiProvider, createStore } from 'jotai';
+import { QueryKeys, dataService } from 'librechat-data-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import { getAgentServerNames } from '../useAgentConnectorSelection';
@@ -16,11 +16,12 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-const render = (ui: React.ReactElement) =>
+const render = (
+  ui: React.ReactElement,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } }),
+) =>
   rtlRender(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } })}
-    >
+    <QueryClientProvider client={client}>
       <RecoilRoot>
         <JotaiProvider>{ui}</JotaiProvider>
       </RecoilRoot>
@@ -275,6 +276,85 @@ describe('ToolsMenu', () => {
       });
       expect(within(row).getByText('Reads a folder')).toBeInTheDocument();
       expect(within(row).queryByTestId('tools-menu-desk-download')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('with uploads available', () => {
+    const upload = () => ({
+      onPickFiles: jest.fn(),
+      onPickFolder: jest.fn(),
+      hint: 'hwp · pdf · 20 MB',
+    });
+
+    it('offers files and a folder from one row that shows the endpoint limits', async () => {
+      const user = userEvent.setup();
+      const actions = upload();
+      render(<ToolsMenu showBuiltinTools={false} upload={actions} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      const row = screen.getByTestId('tools-menu-upload');
+      expect(within(row).getByText('com_ui_upload_file_or_folder')).toBeVisible();
+      expect(within(row).getByText('hwp · pdf · 20 MB')).toBeVisible();
+      /* 형식 목록과 크기 제한은 한 줄에 다 들어가지 않으므로 잘라 내지 않고 접는다. */
+      expect(within(row).getByText('hwp · pdf · 20 MB')).not.toHaveClass('truncate');
+
+      await user.click(within(row).getByRole('menuitem', { name: 'com_ui_upload_pick_folder' }));
+      expect(actions.onPickFolder).toHaveBeenCalledTimes(1);
+      expect(actions.onPickFiles).not.toHaveBeenCalled();
+    });
+
+    it('opens the file picker from the files button', async () => {
+      const user = userEvent.setup();
+      const actions = upload();
+      render(<ToolsMenu showBuiltinTools={false} upload={actions} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      await user.click(screen.getByRole('menuitem', { name: 'com_ui_upload_pick_files' }));
+      expect(actions.onPickFiles).toHaveBeenCalledTimes(1);
+      expect(actions.onPickFolder).not.toHaveBeenCalled();
+    });
+
+    it('leads the data sources with the files uploaded to this chat', async () => {
+      const user = userEvent.setup();
+      const queryClient = new QueryClient();
+      queryClient.setQueryData(
+        [QueryKeys.messages, 'test-conv'],
+        [
+          { isCreatedByUser: true, files: [{ file_id: 'a' }, { file_id: 'b' }] },
+          { isCreatedByUser: false, files: [{ file_id: 'generated' }] },
+          { isCreatedByUser: true, files: [{ file_id: 'a' }] },
+        ],
+      );
+      render(
+        <ToolsMenu showBuiltinTools={false} upload={upload()} attachedFileCount={1} />,
+        queryClient,
+      );
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      const group = screen.getByRole('group', { name: 'com_ui_tools_data_sources' });
+      const [first] = within(group).getAllByRole('menuitemcheckbox');
+      expect(first).toHaveAccessibleName('com_ui_my_uploaded_files');
+      expect(first).toHaveAttribute('aria-checked', 'true');
+      expect(within(first).getByText('com_ui_my_uploaded_files_count:3')).toBeVisible();
+    });
+
+    it('says nothing is uploaded yet when the chat has no files', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} upload={upload()} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      expect(screen.getByText('com_ui_my_uploaded_files_empty')).toBeVisible();
+    });
+
+    it('switches the uploaded files off for this chat without closing the menu', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} upload={upload()} attachedFileCount={1} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      await user.click(screen.getByTestId('tools-menu-my-files'));
+
+      expect(screen.getByTestId('tools-menu-my-files')).toHaveAttribute('aria-checked', 'false');
+      expect(localStorage.getItem('EXCLUDE_FILES_test-conv')).toBe('true');
     });
   });
 

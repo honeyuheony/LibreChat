@@ -32,7 +32,9 @@ import type {
   EndpointFileConfig,
   MimeUploadCapability,
 } from 'librechat-data-provider';
+import type { ComposerUpload } from '~/components/Chat/Input/ToolRows';
 import type { ExtendedFile, FileSetter } from '~/common';
+import type { TranslationKeys } from '~/hooks';
 import {
   useAgentToolPermissions,
   useAgentCapabilities,
@@ -43,7 +45,9 @@ import {
 import { useSharePointFileHandlingNoChatContext } from '~/hooks/Files/useSharePointFileHandling';
 import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcuts';
 import { SharePointPickerDialog } from '~/components/SharePoint';
+import useFolderUpload from '~/hooks/Files/useFolderUpload';
 import { useGetStartupConfig } from '~/data-provider';
+import { getUploadHint } from '~/hooks/Files/folder';
 import { ephemeralAgentByConvoId } from '~/store';
 import { MenuItemProps } from '~/common';
 import { cn } from '~/utils';
@@ -92,8 +96,8 @@ interface AttachFileMenuProps {
   conversation: TConversation | null;
   /** 업로드 항목 뒤에 "+" 메뉴에 추가로 표시할 메뉴 항목이다. */
   extraItems?: MenuItemProps[];
-  /** 호출부가 소유한 "+" 메뉴 안에 업로드 항목을 렌더링한다. */
-  renderMenu?: (items: MenuItemProps[]) => React.ReactNode;
+  /** 호출부가 소유한 "+" 메뉴 안에 업로드 항목을 렌더링한다. `upload` 는 통합 업로드 모드에서만 온다. */
+  renderMenu?: (items: MenuItemProps[], upload?: ComposerUpload) => React.ReactNode;
 }
 
 const plusTriggerClassName =
@@ -137,7 +141,7 @@ const AttachFileMenu = ({
     ephemeralAgentByConvoId(conversationId),
   );
   const toolResourceRef = useRef<EToolResources | undefined>();
-  const { handleFileChange } = useFileHandlingNoChatContext(undefined, {
+  const { handleFileChange, handleFiles } = useFileHandlingNoChatContext(undefined, {
     files,
     setFiles,
     setFilesLoading,
@@ -209,29 +213,67 @@ const AttachFileMenu = ({
     handleUploadClick();
   }, [handleUploadClick]);
 
+  const { folderInputRef, onPickFolder, onFolderChange } = useFolderUpload({
+    supportedMimeTypes: endpointFileConfig?.supportedMimeTypes,
+    handleFiles,
+    setFilesLoading,
+  });
+
+  const composerUpload = useMemo<ComposerUpload>(() => {
+    const { formats, perFileLimit } = getUploadHint(endpointFileConfig);
+    const limit =
+      perFileLimit != null
+        ? [localize('com_ui_upload_per_file_limit' as TranslationKeys, { 0: perFileLimit })]
+        : [];
+    return {
+      onPickFiles: handleUnifiedUpload,
+      onPickFolder,
+      hint: [...formats, ...limit].join(' · '),
+      disabled: isUploadDisabled,
+    };
+  }, [endpointFileConfig, localize, handleUnifiedUpload, onPickFolder, isUploadDisabled]);
+
   /** Unified mode removed the destination chooser, not the source chooser. SharePoint has
    *  no trigger of its own, so without this the picker becomes unreachable whenever the
    *  composer is in unified mode. Destination stays implicit on both sources. */
-  const unifiedSourceItems = useMemo<MenuItemProps[]>(() => {
-    const items: MenuItemProps[] = [
-      {
-        label: localize('com_files_upload_local_machine'),
-        onClick: handleUnifiedUpload,
-        icon: <FileImageIcon className="icon-md" />,
-      },
-    ];
-    if (sharePointEnabled === true) {
-      items.push({
-        label: localize('com_files_upload_sharepoint'),
-        onClick: () => {
-          toolResourceRef.current = undefined;
-          setIsSharePointDialogOpen(true);
-        },
-        icon: <SharePointIcon className="icon-md" />,
-      });
-    }
-    return withExtraItems(items, extraItems);
-  }, [localize, handleUnifiedUpload, setIsSharePointDialogOpen, sharePointEnabled, extraItems]);
+  const sharePointItems = useMemo<MenuItemProps[]>(
+    () =>
+      sharePointEnabled === true
+        ? [
+            {
+              label: localize('com_files_upload_sharepoint'),
+              onClick: () => {
+                toolResourceRef.current = undefined;
+                setIsSharePointDialogOpen(true);
+              },
+              icon: <SharePointIcon className="icon-md" />,
+            },
+          ]
+        : [],
+    [localize, setIsSharePointDialogOpen, sharePointEnabled],
+  );
+
+  const unifiedSourceItems = useMemo<MenuItemProps[]>(
+    () =>
+      withExtraItems(
+        [
+          {
+            label: localize('com_files_upload_local_machine'),
+            onClick: handleUnifiedUpload,
+            icon: <FileImageIcon className="icon-md" />,
+          },
+          ...sharePointItems,
+        ],
+        extraItems,
+      ),
+    [localize, handleUnifiedUpload, sharePointItems, extraItems],
+  );
+
+  /* 입력창 "+" 메뉴는 내 컴퓨터 업로드를 파일·폴더 단추 줄로 따로 그리므로 나머지 항목만 넘긴다. */
+  const composerSourceItems = useMemo<MenuItemProps[]>(
+    () => withExtraItems(sharePointItems, extraItems),
+    [sharePointItems, extraItems],
+  );
 
   const dropdownItems = useMemo(() => {
     const setToolResource = (value: EToolResources | undefined) => {
@@ -408,11 +450,21 @@ const AttachFileMenu = ({
           }}
         >
           {renderMenu(
-            (isUnifiedMode ? unifiedSourceItems : dropdownItems).map((item) =>
+            (isUnifiedMode ? composerSourceItems : dropdownItems).map((item) =>
               isUploadDisabled && !extraItems.includes(item) ? { ...item, disabled: true } : item,
             ),
+            isUnifiedMode ? composerUpload : undefined,
           )}
         </FileUpload>
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          hidden
+          tabIndex={-1}
+          data-testid="composer-folder-input"
+          onChange={onFolderChange}
+        />
         <SharePointPickerDialog
           isOpen={isSharePointDialogOpen}
           onOpenChange={setIsSharePointDialogOpen}

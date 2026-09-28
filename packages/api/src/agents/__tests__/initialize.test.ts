@@ -5010,3 +5010,77 @@ describe('initializeAgent turn delivery routing', () => {
     expect(filesOrder).toBeLessThan(toolsOrder);
   });
 });
+
+describe('initializeAgent — conversation files switched off in chat', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const run = async (ephemeralAgent?: { exclude_files?: boolean }) => {
+    const { agent, req, res, loadTools, db } = createMocks();
+    agent.tools = [EToolResources.file_search, EToolResources.execute_code];
+    req.body = ephemeralAgent ? { ephemeralAgent } : {};
+    mockExtractLibreChatParams.mockReturnValueOnce({
+      resendFiles: true,
+      maxContextTokens: undefined,
+      modelOptions: { model: agent.model },
+    });
+    mockGetThreadData.mockReturnValue({ messageIds: ['msg-1'], fileIds: ['earlier-upload'] });
+    const lookups = {
+      getConvoFiles: jest.fn().mockResolvedValue(['earlier-upload']),
+      getMessages: jest.fn().mockResolvedValue([{ messageId: 'msg-1' }]),
+      getCodeGeneratedFiles: jest.fn().mockResolvedValue([]),
+      getUserCodeFiles: jest.fn().mockResolvedValue([]),
+      getDeferredProvisionFiles: jest.fn().mockResolvedValue([]),
+    };
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        conversationId: 'conversation-1',
+        parentMessageId: 'msg-1',
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+        codeEnvAvailable: true,
+      },
+      { ...db, ...lookups },
+    );
+    return { result, db, lookups };
+  };
+
+  it('reads earlier uploads as sources while the switch is on', async () => {
+    const { result, db, lookups } = await run();
+    expect(lookups.getConvoFiles).toHaveBeenCalledWith('conversation-1');
+    expect(db.getToolFilesByIds).toHaveBeenCalledTimes(1);
+    expect(lookups.getUserCodeFiles).toHaveBeenCalledTimes(1);
+    expect(lookups.getDeferredProvisionFiles).toHaveBeenCalledTimes(1);
+    expect(result.resendFiles).toBe(true);
+    expect(result.excludeConversationFiles).toBe(false);
+  });
+
+  it('neither resends nor provisions earlier uploads once the switch is off', async () => {
+    const { result, db, lookups } = await run({ exclude_files: true });
+    expect(db.getToolFilesByIds).not.toHaveBeenCalled();
+    expect(lookups.getUserCodeFiles).not.toHaveBeenCalled();
+    expect(lookups.getDeferredProvisionFiles).not.toHaveBeenCalled();
+    expect(result.resendFiles).toBe(false);
+    expect(result.excludeConversationFiles).toBe(true);
+  });
+
+  it('keeps earlier code execution output while the switch is off', async () => {
+    const { lookups } = await run({ exclude_files: true });
+    expect(lookups.getCodeGeneratedFiles).toHaveBeenCalledWith(
+      'conversation-1',
+      ['earlier-upload'],
+      expect.anything(),
+    );
+  });
+
+  it('keeps the configured resendFiles for the conversation to save', async () => {
+    const { result } = await run({ exclude_files: true });
+    expect(result.persistedResendFiles).toBe(true);
+  });
+});

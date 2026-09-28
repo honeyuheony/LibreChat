@@ -1,9 +1,11 @@
 import * as Ariakit from '@ariakit/react';
 import { MCPIcon } from '@librechat/client';
+import { Files, Upload } from 'lucide-react';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
 import type { ConnectionStatusMap } from '~/components/MCP/mcpServerUtils';
 import type { BuiltinTool } from './useComposerTools';
+import type { TranslationKeys } from '~/hooks';
 import type { MenuItemProps } from '~/common';
 import { serverNeedsAction } from '~/components/MCP/mcpServerUtils';
 import { DESK_DOWNLOAD_PATH } from '~/components/Connectors/status';
@@ -196,6 +198,94 @@ export function BuiltinRow({ tool }: { tool: BuiltinTool }) {
       </span>
       {tool.accessory}
       <SwitchIndicator checked={tool.enabled} />
+    </Ariakit.MenuItemCheckbox>
+  );
+}
+
+export type ComposerUpload = {
+  onPickFiles: () => void;
+  onPickFolder: () => void;
+  /** 허용 형식과 파일당 크기 제한처럼 현재 endpoint 파일 설정에서 만든 안내 */
+  hint: string;
+  disabled?: boolean;
+};
+
+const pickButtonClassName = cn(
+  'flex-shrink-0 rounded-theme-control border border-border-light px-2 py-1 text-xs font-medium text-text-primary',
+  'outline-none hover:bg-surface-hover data-[active-item]:bg-surface-hover',
+  'aria-disabled:cursor-default aria-disabled:opacity-50',
+);
+
+export function UploadPickerRow({ upload }: { upload: ComposerUpload }) {
+  const localize = useLocalize();
+  return (
+    <div className="flex w-full items-center gap-3 px-2.5 py-2" data-testid="tools-menu-upload">
+      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-hover text-text-secondary">
+        <Upload className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-text-primary">
+          {localize('com_ui_upload_file_or_folder' as TranslationKeys)}
+        </span>
+        {upload.hint !== '' && (
+          <span className="block text-xs text-text-secondary">{upload.hint}</span>
+        )}
+      </span>
+      <Ariakit.MenuItem
+        disabled={upload.disabled}
+        onClick={upload.onPickFiles}
+        data-testid="tools-menu-upload-files"
+        className={pickButtonClassName}
+      >
+        {localize('com_ui_upload_pick_files' as TranslationKeys)}
+      </Ariakit.MenuItem>
+      <Ariakit.MenuItem
+        disabled={upload.disabled}
+        onClick={upload.onPickFolder}
+        data-testid="tools-menu-upload-folder"
+        className={pickButtonClassName}
+      >
+        {localize('com_ui_upload_pick_folder' as TranslationKeys)}
+      </Ariakit.MenuItem>
+    </div>
+  );
+}
+
+/** 이 대화에 올린 파일을 답의 자료로 쓸지 정한다. 개수는 입력창에 붙은 파일과 앞서 올린 파일을 합친 값이다. */
+export function ConversationFilesRow({
+  count,
+  included,
+  onToggle,
+}: {
+  count: number;
+  included: boolean;
+  onToggle: () => void;
+}) {
+  const localize = useLocalize();
+  const label = localize('com_ui_my_uploaded_files' as TranslationKeys);
+  return (
+    <Ariakit.MenuItemCheckbox
+      hideOnClick={false}
+      name="tools-menu-sources"
+      value="my-files"
+      checked={included}
+      onChange={onToggle}
+      aria-label={label}
+      data-testid="tools-menu-my-files"
+      className={rowClassName}
+    >
+      <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-brand-subtle text-accent-primary">
+        <Files className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-text-primary">{label}</span>
+        <span className="block truncate text-xs text-text-secondary">
+          {count > 0
+            ? localize('com_ui_my_uploaded_files_count' as TranslationKeys, { 0: count })
+            : localize('com_ui_my_uploaded_files_empty' as TranslationKeys)}
+        </span>
+      </span>
+      <SwitchIndicator checked={included} />
     </Ariakit.MenuItemCheckbox>
   );
 }

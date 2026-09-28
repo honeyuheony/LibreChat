@@ -630,6 +630,10 @@ export type InitializedAgent = Agent & {
   baseContextTokens?: number;
   useLegacyContent: boolean;
   resendFiles: boolean;
+  /** 사용자가 채팅에서 「내가 업로드한 파일」을 꺼, 앞 턴에 올린 파일을 이번 요청의 자료로 쓰지 않는다. */
+  excludeConversationFiles?: boolean;
+  /** 대화에 저장할 resendFiles. 스위치는 그 요청에만 적용되므로 설정값을 그대로 남긴다. */
+  persistedResendFiles?: boolean;
   /** Detail level LibreChat encodes image content blocks with, from the agent's
    * model parameters. Absent when the agent does not configure one. */
   imageDetail?: ImageDetail;
@@ -1285,9 +1289,14 @@ export async function initializeAgent(
     ),
   );
 
-  const { resendFiles, maxContextTokens, imageDetail, modelOptions } = extractLibreChatParams(
-    _modelOptions as Record<string, unknown>,
-  );
+  const {
+    resendFiles: configuredResendFiles,
+    maxContextTokens,
+    imageDetail,
+    modelOptions,
+  } = extractLibreChatParams(_modelOptions as Record<string, unknown>);
+  const excludeConversationFiles = runtime.requestBody.ephemeralAgent?.exclude_files === true;
+  const resendFiles = configuredResendFiles && !excludeConversationFiles;
 
   const provider = agent.provider;
   agent.endpoint = provider;
@@ -1472,7 +1481,7 @@ export async function initializeAgent(
   if (
     authorizedRunFiles === undefined &&
     conversationId != null &&
-    (resendFiles || wantsProvisioning)
+    (configuredResendFiles || wantsProvisioning)
   ) {
     const getThreadMessages = db.getMessages;
     /** Falsy anchors cannot match a parent chain, so they get no walk. */
@@ -1542,7 +1551,8 @@ export async function initializeAgent(
             IMongoFile[]
           >)
         : ([] as IMongoFile[]),
-      resendFiles && wantsCodeFiles && db.getCodeGeneratedFiles && requestFileOwnerScope
+      /* 코드 실행 결과물은 사용자가 올린 파일이 아니므로 「내가 업로드한 파일」 스위치와 상관없이 설정을 따른다. */
+      configuredResendFiles && wantsCodeFiles && db.getCodeGeneratedFiles && requestFileOwnerScope
         ? (db.getCodeGeneratedFiles(
             conversationId,
             threadFileIds,
@@ -1558,6 +1568,7 @@ export async function initializeAgent(
         ? (db.getUserCodeFiles(threadFileIds, requestFileOwnerScope) as Promise<IMongoFile[]>)
         : ([] as IMongoFile[]),
       wantsProvisioning &&
+      !excludeConversationFiles &&
       db.getDeferredProvisionFiles &&
       requestFileOwnerScope &&
       provisionFileIds.length > 0
@@ -2478,6 +2489,8 @@ export async function initializeAgent(
     ...agent,
     azureOptions: options.azureOptions,
     resendFiles,
+    excludeConversationFiles,
+    persistedResendFiles: configuredResendFiles,
     imageDetail,
     deliveryRouting,
     toolRegistry,

@@ -1961,7 +1961,7 @@ class AgentClient extends BaseClient {
           endpoint: this.options.endpoint,
           agent_id: this.options.agent.id,
           modelLabel: this.options.modelLabel,
-          resendFiles: this.options.resendFiles,
+          resendFiles: this.options.agent?.persistedResendFiles ?? this.options.resendFiles,
           imageDetail: this.options.imageDetail,
           maxContextTokens: this.maxContextTokens,
           codeApprovalMode,
@@ -2393,7 +2393,7 @@ class AgentClient extends BaseClient {
     const modelBoundRequestAttachments =
       this.getModelBoundAttachmentsForEndpoint(requestAttachments);
     const retainedHistoricalFileContexts =
-      this.options.resendFiles === false
+      this.options.resendFiles === false && this.options.agent?.excludeConversationFiles !== true
         ? orderedMessages
             .filter((message) => typeof message?.fileContext === 'string' && message.fileContext)
             .map((message, index) => ({

@@ -124,6 +124,8 @@ export type TEphemeralAgent = {
    * 도구를 빼기만 하고, agent 에 원래 없던 서버를 붙이지는 않는다.
    */
   disabled_mcp?: string[];
+  /** 사용자가 이 대화에서 「내가 업로드한 파일」을 껐다. 앞 턴에 올린 파일을 다음 요청의 자료로 쓰지 않는다. */
+  exclude_files?: boolean;
   web_search?: boolean;
   file_search?: boolean;
   execute_code?: boolean;

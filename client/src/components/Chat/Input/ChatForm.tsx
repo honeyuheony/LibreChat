@@ -886,12 +886,14 @@ const ChatForm = memo(function ChatForm({
                       setFiles={setFiles}
                       setFilesLoading={setFilesLoading}
                       extraItems={skillAttachItems}
-                      renderMenu={(uploadItems) => (
+                      renderMenu={(uploadItems, upload) => (
                         <ToolsMenu
                           showBuiltinTools={showEphemeralBadges}
                           showConnectors={showToolsMenu}
                           agentId={toolsAgentId}
                           uploadItems={uploadItems}
+                          upload={upload}
+                          attachedFileCount={files.size}
                           anchorRef={surfaceRef}
                         />
                       )}

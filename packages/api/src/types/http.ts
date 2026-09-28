@@ -2,6 +2,7 @@ import type {
   CodeApprovalMode,
   CodeEnvironmentMode,
   CodeWorkspaceSelection,
+  TEphemeralAgent,
   TEndpointOption,
   Agents,
 } from 'librechat-data-provider';
@@ -28,6 +29,7 @@ export type RequestBody = {
   codeApprovalMode?: CodeApprovalMode;
   codeEnvironmentMode?: CodeEnvironmentMode;
   codeWorkspaces?: CodeWorkspaceSelection[];
+  ephemeralAgent?: TEphemeralAgent | null;
 };
 
 export type ServerRequest = Request<unknown, unknown, RequestBody> & {

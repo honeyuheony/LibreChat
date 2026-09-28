@@ -10,6 +10,7 @@ import {
 } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter, MenuItemProps } from '~/common';
+import type { ComposerUpload } from '~/components/Chat/Input/ToolRows';
 import useAgentUploadTarget from '~/hooks/Agents/useAgentUploadTarget';
 import AttachFileMenu, { ComposerActionsMenu } from './AttachFileMenu';
 import { useGetFileConfig } from '~/data-provider';
@@ -33,7 +34,7 @@ function AttachFileChat({
   /** "+" 메뉴에서 업로드 항목 뒤에 보여 줄 추가 항목 목록이다. */
   extraItems?: MenuItemProps[];
   /** 입력창이 "+" 메뉴를 소유하며 업로드가 없어도 표시한다. */
-  renderMenu?: (items: MenuItemProps[]) => React.ReactNode;
+  renderMenu?: (items: MenuItemProps[], upload?: ComposerUpload) => React.ReactNode;
 }) {
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;
   const { endpoint } = conversation ?? { endpoint: null };
