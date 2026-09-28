@@ -1212,6 +1212,7 @@ export type CodeWorkerEnrollmentPolicy = NonNullable<
 >;
 
 export const DEFAULT_MAX_PROVIDER_ERROR_CHARS = 2000;
+export const MAX_REPORT_TEMPLATES_PER_TURN: number = 5;
 
 export const agentsEndpointSchema = baseEndpointSchema
   .omit({ baseURL: true })
@@ -1255,6 +1256,14 @@ export const agentsEndpointSchema = baseEndpointSchema
         .min(0)
         .optional()
         .default(DEFAULT_MAX_RETAINED_TOOL_COUNT_CHARS),
+      /** turn마다 필드 조회를 수행할 보고서 양식 수의 보안 상한이다. */
+      maxReportTemplatesPerTurn: z
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_REPORT_TEMPLATES_PER_TURN)
+        .optional()
+        .default(MAX_REPORT_TEMPLATES_PER_TURN),
       maxCitations: z.number().min(1).max(50).optional().default(30),
       maxCitationsPerFile: z.number().min(1).max(10).optional().default(7),
       minRelevanceScore: z.number().min(0.0).max(1.0).optional().default(0.45),

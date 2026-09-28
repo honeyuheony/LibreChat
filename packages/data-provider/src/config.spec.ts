@@ -42,6 +42,24 @@ describe('repository instruction configuration', () => {
   });
 });
 
+describe('report template lookup limit', () => {
+  it('defaults to five and only allows a lower configured ceiling', () => {
+    expect(agentsEndpointSchema.parse({}).maxReportTemplatesPerTurn).toBe(5);
+    expect(
+      agentsEndpointSchema.parse({ maxReportTemplatesPerTurn: 3 }).maxReportTemplatesPerTurn,
+    ).toBe(3);
+    expect(
+      configSchema.parse({
+        version: '1.2.1',
+        endpoints: { agents: { maxReportTemplatesPerTurn: 3 } },
+      }).endpoints?.agents?.maxReportTemplatesPerTurn,
+    ).toBe(3);
+    for (const maxReportTemplatesPerTurn of [0, 6, 1.5]) {
+      expect(agentsEndpointSchema.safeParse({ maxReportTemplatesPerTurn }).success).toBe(false);
+    }
+  });
+});
+
 describe('ask user retained answers', () => {
   it('leaves the block unconfigured by default and accepts an operator budget', () => {
     expect(agentsEndpointSchema.parse({}).askUserQuestion).toBeUndefined();
