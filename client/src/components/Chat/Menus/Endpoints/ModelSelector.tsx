@@ -65,7 +65,7 @@ function ModelSelectorContent() {
           type="button"
           data-testid="model-selector-button"
           aria-keyshortcuts={modelSelectorAriaKey}
-          className="flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-theme-control px-2.5 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+          className="flex h-8 min-w-0 max-w-full items-center gap-1.5 rounded-theme-control px-2.5 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
           aria-label={`${localize('com_ui_select_model')}: ${selectedDisplayValue}`}
         >
           <span className="truncate text-left">{selectedDisplayValue}</span>
@@ -79,7 +79,7 @@ function ModelSelectorContent() {
     <div className="relative flex min-w-0 max-w-[40%] items-center sm:max-w-[240px]">
       <Menu
         placement="top-end"
-        className="h-9 w-auto border-0 bg-transparent px-0 py-0 hover:bg-transparent"
+        className="h-8 w-auto border-0 bg-transparent px-0 py-0 hover:bg-transparent"
         values={selectedValues}
         onValuesChange={(values: Record<string, any>) => {
           setSelectedValues({
