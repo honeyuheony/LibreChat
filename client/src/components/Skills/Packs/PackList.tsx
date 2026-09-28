@@ -90,7 +90,7 @@ export default function PackList({ onOpen, onCreate }: PackListProps) {
         <button
           type="button"
           onClick={onCreate}
-          className="flex items-center gap-3.5 rounded-3xl border-[1.5px] border-dashed border-border-medium px-4 py-3.5 text-left hover:bg-surface-hover"
+          className="flex items-center gap-3.5 rounded-3xl border-[1.5px] border-dashed border-border-medium px-5 py-[18px] text-left hover:bg-surface-hover"
         >
           <span
             aria-hidden="true"

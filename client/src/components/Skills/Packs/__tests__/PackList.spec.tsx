@@ -68,6 +68,15 @@ describe('PackList', () => {
     );
   });
 
+  it('pads the create-pack card like the other feature cards', () => {
+    render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: /com_skills_pack_create/ })).toHaveClass(
+      'px-5',
+      'py-[18px]',
+    );
+  });
+
   it('shows stats for the included skills available to the user', async () => {
     render(<PackList onOpen={jest.fn()} onCreate={jest.fn()} />);
 
