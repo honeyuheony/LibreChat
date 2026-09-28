@@ -212,6 +212,21 @@ describe('ChatForm attachments', () => {
     expect(textarea).toHaveValue('hi');
   }, 20000);
 
+  test('lists an attachment under the input row, ahead of the other chips', async () => {
+    const { container } = renderComposer();
+    const textarea = await screen.findByTestId('text-input');
+
+    await attach(container, image());
+    const remove = await screen.findByRole('button', { name: 'Remove file' });
+
+    expect(
+      textarea.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId('composer-chip-row')).getByRole('button', { name: 'Remove file' }),
+    ).toBe(remove);
+  }, 20000);
+
   test('does not steal focus when clicking the nested attachment icon', async () => {
     renderComposer();
     const textarea = await screen.findByTestId('text-input');
