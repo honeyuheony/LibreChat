@@ -77,14 +77,21 @@ export default function TaskSaveOffer({
   };
   return (
     <div
-      className="mt-2.5 flex flex-wrap items-center gap-3 rounded-xl border border-border-brand bg-surface-brand-subtle px-3.5 py-3"
+      className="mt-2.5 flex flex-wrap items-center gap-3 rounded-2xl border border-border-brand bg-transparent px-3.5 py-3"
       data-testid="task-save-offer"
     >
-      <div className="min-w-0 flex-1 text-[0.875rem] leading-relaxed text-text-primary">
-        <b className="block">{localize('com_ui_task_save_agent_title')}</b>
+      <div className="min-w-0 flex-1 text-[13px] leading-[1.5] text-text-secondary-alt">
+        <b className="block text-sm font-bold text-text-primary">
+          {localize('com_ui_task_save_agent_title')}
+        </b>
         {localize('com_ui_task_save_agent_body')}
       </div>
-      <Button size="pill" variant="submit" onClick={save}>
+      <Button
+        size="pill"
+        variant="submit"
+        onClick={save}
+        className="h-[27px] min-w-[153px] px-[11px] py-[3px] leading-normal"
+      >
         {localize('com_skills_chat_save_as_agent')}
       </Button>
     </div>

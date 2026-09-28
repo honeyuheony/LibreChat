@@ -1171,7 +1171,7 @@ pre {
   vertical-align: top;
 }
 .prose {
-  --tw-prose-body: #424242;
+  --tw-prose-body: rgb(var(--text-primary));
   --tw-prose-headings: #111827;
   --tw-prose-lead: #4b5563;
   --tw-prose-links: #0066cc;

@@ -161,13 +161,25 @@ describe('save-as-agent offer at the end of the answer', () => {
     expect(await offerButton()).toBeInTheDocument();
     expect(await offerButton()).toHaveClass(
       'bg-surface-submit',
-      'h-7',
+      'h-[27px]',
+      'min-w-[153px]',
+      'px-[11px]',
+      'py-[3px]',
       'text-[13px]',
       'font-normal',
       'rounded-theme-control-round',
     );
-    expect(screen.getByText('com_ui_task_save_agent_title')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_task_save_agent_body')).toBeInTheDocument();
+    expect(screen.getByTestId('task-save-offer')).toHaveClass('bg-transparent', 'rounded-2xl');
+    expect(screen.getByText('com_ui_task_save_agent_title')).toHaveClass(
+      'text-sm',
+      'font-bold',
+      'text-text-primary',
+    );
+    expect(screen.getByText('com_ui_task_save_agent_body')).toHaveClass(
+      'text-[13px]',
+      'leading-[1.5]',
+      'text-text-secondary-alt',
+    );
   });
 
   test('is no longer part of the task result card', async () => {

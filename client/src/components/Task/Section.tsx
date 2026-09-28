@@ -25,7 +25,7 @@ export function Section({
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left text-[12.5px] font-bold tracking-[.06em] text-text-secondary"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-bold text-text-primary"
         >
           <span aria-hidden="true" className="w-3 text-[11px] text-text-muted">
             {open ? '▾' : '▸'}

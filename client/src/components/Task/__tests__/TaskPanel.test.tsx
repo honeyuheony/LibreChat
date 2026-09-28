@@ -506,6 +506,20 @@ describe('TaskPanel', () => {
     expect(jotaiStore?.get(taskPanelState).open).toBe(false);
   });
 
+  it('uses the secondary surface and primary section-heading styles', () => {
+    renderPanel();
+    expect(screen.getByRole('complementary', { name: 'com_ui_task_panel' })).toHaveClass(
+      'bg-surface-secondary',
+      'border-l',
+      'border-border-light',
+    );
+    expect(screen.getByRole('button', { name: /com_ui_task_outputs/ })).toHaveClass(
+      'text-sm',
+      'font-bold',
+      'text-text-primary',
+    );
+  });
+
   it('collapses a section from its heading', () => {
     mockMessages = [toolCall('t1', 'extract_table')];
     renderPanel();
