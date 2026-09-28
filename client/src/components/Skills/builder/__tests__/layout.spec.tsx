@@ -112,16 +112,22 @@ describe('Builder layout', () => {
     );
   });
 
-  it('offers to attach sample documents, says they are optional, and only explains an attachment', () => {
+  it('offers to attach sample documents, says they are optional, and lists each one with its kind', () => {
     render(<Harness />);
     expect(screen.getByRole('button', { name: /com_skills_builder_files_attach/ })).toBeVisible();
     expect(screen.getByText('com_skills_builder_files_hint')).toBeVisible();
 
     fireEvent.change(screen.getByTestId('builder-files'), {
-      target: { files: [new File(['x'], '출장보고 양식.hwp')] },
+      target: { files: [new File(['x'], '출장보고 양식.hwp'), new File(['y'], '지난 출장.txt')] },
     });
-    expect(screen.getByRole('status')).toHaveTextContent('com_skills_builder_files_later');
-    expect(screen.queryByText('출장보고 양식.hwp')).not.toBeInTheDocument();
+    const chips = screen.getByRole('list', { name: 'com_skills_builder_files_list' });
+    const items = within(chips).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent)).toEqual([
+      '출장보고 양식.hwpcom_skills_builder_file_kind_assets',
+      '지난 출장.txtcom_skills_builder_file_kind_examples',
+    ]);
+    expect(screen.queryByText('com_skills_builder_files_hint')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('takes every attached document off at once with 모두 지우기 next to the chips', () => {
@@ -134,7 +140,6 @@ describe('Builder layout', () => {
     render(<Harness chat={chat} />);
     const chips = screen.getByRole('list', { name: 'com_skills_builder_files_list' });
     expect(within(chips).getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByRole('status')).toHaveTextContent('com_skills_builder_files_later');
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_clear_all' }));
 
@@ -142,7 +147,6 @@ describe('Builder layout', () => {
     expect(screen.queryByText('출장 메모.hwp')).toBeNull();
     expect(screen.getByText('com_skills_builder_files_hint')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();
-    expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
   it('shows no 모두 지우기 while no document is attached', () => {

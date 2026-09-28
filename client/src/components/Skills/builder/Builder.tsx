@@ -217,7 +217,7 @@ export default function Builder({
               <p className="min-h-4 text-xs text-text-secondary" aria-live="polite">
                 {statusText ? localize(statusText) : ''}
               </p>
-              <AttachRow files={state.files} onClear={session.clearFiles} />
+              <AttachRow files={state.files} onPick={session.attach} onClear={session.clearFiles} />
               <PeekRow peers={peers} onPeek={peek} onCopy={copyPeer} />
             </section>
           </div>

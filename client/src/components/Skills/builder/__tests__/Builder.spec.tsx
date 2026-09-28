@@ -82,6 +82,11 @@ function fakeServer(publishedScope?: TSkill['scope']) {
       publishedAt: '2026-09-27',
       scope: publishedScope ?? payload.scope,
     })),
+    files: {
+      upload: jest.fn(async () => bump({})),
+      remove: jest.fn(async () => bump({})),
+      fetchSkill: jest.fn(async () => current as TSkill),
+    },
     transport,
     spec,
     wait: async () => undefined,
@@ -206,6 +211,46 @@ describe('Builder', () => {
     });
     expect(screen.getByText('com_skills_builder_test_passed')).toBeInTheDocument();
     expect(screen.getByText('결과')).toBeInTheDocument();
+  });
+
+  it('stores an attached sample in the skill folder and runs the test on the version that holds it', async () => {
+    const { deps } = fakeServer();
+    render(<Harness deps={deps} />);
+    await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
+    const sample = new File(['3월 파리 출장, 목적은 박람회 참관'], '지난 출장.txt');
+    fireEvent.change(screen.getByTestId('builder-files'), { target: { files: [sample] } });
+    expect(screen.getByText('지난 출장.txt')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_minutes_30' }));
+    await passTest();
+
+    const created = (deps.createSkill as jest.Mock).mock.calls[0][0];
+    expect(created.body).toContain(
+      '- 예시 문서: skills/trip-report/examples/doc.txt (지난 출장.txt)',
+    );
+    expect(deps.files?.upload).toHaveBeenCalledTimes(1);
+    expect(deps.files?.upload).toHaveBeenCalledWith({
+      skillId: 'skill-1',
+      relativePath: 'examples/doc.txt',
+      file: sample,
+    });
+    expect(deps.transport.start).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ manualSkills: ['trip-report'] }),
+    );
+    expect(deps.recordTest).toHaveBeenCalledWith({
+      id: 'skill-1',
+      payload: { conversationId: 'convo-1', version: 3 },
+    });
+    expect(publishButton()).toBeEnabled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_test_again' }));
+      await jest.runAllTimersAsync();
+    });
+    expect(deps.transport.start).toHaveBeenCalledTimes(2);
+    expect(deps.files?.upload).toHaveBeenCalledTimes(1);
   });
 
   it('drops the passed test when the content changes after testing', async () => {
