@@ -777,6 +777,7 @@ const initializeClientWithProvider = async ({
     config: primaryConfig,
     hwp: reportTemplateHwp,
     fieldCache: reportTemplateFieldCache,
+    maxTemplatesPerTurn: appConfig?.endpoints?.[EModelEndpoint.agents]?.maxReportTemplatesPerTurn,
     ...createSkillTemplateSource({
       listSkillFiles: skillDbMethods.listSkillFiles,
       getSkillFileByPath: skillDbMethods.getSkillFileByPath,

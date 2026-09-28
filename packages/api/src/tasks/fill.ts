@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { logger } from '@librechat/data-schemas';
-import { TaskTools } from 'librechat-data-provider';
 import { tool } from '@librechat/agents/langchain/tools';
+import { MAX_REPORT_TEMPLATES_PER_TURN, TaskTools } from 'librechat-data-provider';
 import type { StructuredToolInterface } from '@librechat/agents/langchain/tools';
 import type { TaskDocResult, TaskResult } from 'librechat-data-provider';
 import type { LCTool } from '@librechat/agents';
@@ -11,6 +11,7 @@ import type { TaskResultArtifact } from './tools';
 import type { HwpService } from './hwpService';
 import { resolveDownloadPath } from '~/storage/path';
 import { TASK_RESULT_ARTIFACT } from './tools';
+import { HWP_BUSY_NOTICE } from './report';
 
 export const FILL_REPORT_TEMPLATE_TOOL: TaskTools.fill_report_template =
   TaskTools.fill_report_template;
@@ -19,8 +20,10 @@ const TEMPLATE_PATH = /^assets\/[^/]+\.hwpx$/i;
 const MAX_TEMPLATE_BYTES = 5_000_000;
 const MAX_TEMPLATE_FIELDS = 100;
 const MAX_FIELD_NAME_CHARS = 200;
+const INVALID_FIELD_NAME_CHARACTERS = /[\p{Cf}\u{E0000}-\u{E007F},:{}"']/u;
 const FIELD_LOOKUP_TIMEOUT_MS = 5_000;
-const FIELD_LOOKUP_FAILURE_TTL_MS = 60_000;
+const TRANSIENT_FIELD_LOOKUP_FAILURE_TTL_MS = 10_000;
+const INVALID_FIELD_LOOKUP_FAILURE_TTL_MS = 60_000;
 
 /** 캐시 크기의 근거는 없다. 스킬 버전마다 한 줄이라 작게 둔다. */
 const MAX_CACHED_FIELD_LISTS = 200;
@@ -66,10 +69,16 @@ export function createSkillTemplateSource(deps: {
       }
       const stream = await deps.getDownloadStream(file.source, resolveDownloadPath(file));
       const chunks: Buffer[] = [];
+      let bytesRead = 0;
       for await (const chunk of stream as AsyncIterable<Buffer | string>) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        bytesRead += buffer.byteLength;
+        if (bytesRead > MAX_TEMPLATE_BYTES) {
+          return null;
+        }
+        chunks.push(buffer);
       }
-      return Buffer.concat(chunks);
+      return Buffer.concat(chunks, bytesRead);
     },
   };
 }
@@ -82,6 +91,7 @@ interface TemplateSkill {
 
 export interface FindReportTemplatesDeps extends SkillTemplateSource {
   hwp: Pick<HwpService, 'fields'>;
+  maxTemplatesPerTurn?: number;
   /** `<스킬 id>:<버전>:<경로>` 마다 필드 목록. 스킬 파일이 바뀌면 버전이 올라 새로 묻는다. */
   fieldCache?: Map<string, string[]>;
 }
@@ -124,7 +134,8 @@ function validFieldName(field: string): boolean {
       codePoint <= 0x1f ||
       (codePoint >= 0x7f && codePoint <= 0x9f) ||
       codePoint === 0x2028 ||
-      codePoint === 0x2029
+      codePoint === 0x2029 ||
+      INVALID_FIELD_NAME_CHARACTERS.test(character)
     ) {
       return false;
     }
@@ -137,19 +148,13 @@ function validFieldName(field: string): boolean {
 }
 
 function templateFieldNames(fields: string[]): string[] {
-  return fields.slice(0, MAX_TEMPLATE_FIELDS).filter(validFieldName);
-}
-
-function createFieldProperties(
-  templates: ReportTemplateFile[],
-): Record<string, { type: 'string' }> {
-  const fields = new Set<string>();
-  for (const template of templates) {
-    for (const field of templateFieldNames(template.fields)) {
-      fields.add(field);
-    }
+  const validFields = fields.filter(validFieldName);
+  const selectedFields = validFields.slice(0, MAX_TEMPLATE_FIELDS);
+  const discardedCount = fields.length - selectedFields.length;
+  if (discardedCount > 0) {
+    logger.warn(`[fill_report_template] Skipped ${discardedCount} invalid or excess fields`);
   }
-  return Object.fromEntries([...fields].map((field) => [field, { type: 'string' }] as const));
+  return selectedFields;
 }
 
 async function templateFields(
@@ -168,7 +173,11 @@ async function templateFields(
   }
   const outcome = await deps.hwp.fields(buffer, AbortSignal.timeout(FIELD_LOOKUP_TIMEOUT_MS));
   if (!outcome.ok) {
-    remember(failedFieldCache, key, Date.now() + FIELD_LOOKUP_FAILURE_TTL_MS);
+    const failureTtl =
+      outcome.status === 422
+        ? INVALID_FIELD_LOOKUP_FAILURE_TTL_MS
+        : TRANSIENT_FIELD_LOOKUP_FAILURE_TTL_MS;
+    remember(failedFieldCache, key, Date.now() + failureTtl);
     logger.warn(
       `[fill_report_template] Could not read the fields of ${skill.name}/${relativePath}: ${outcome.code}`,
     );
@@ -189,38 +198,71 @@ export async function findReportTemplates(
       const files = (await deps.listSkillFiles(skill._id)).filter((file) =>
         TEMPLATE_PATH.test(file.relativePath),
       );
-      const found = await Promise.all(
-        files.map(async (file) => {
-          const buffer = await deps.readSkillFile(skill._id, file.relativePath);
-          if (!buffer) {
-            return null;
-          }
-          const fields = await templateFields(skill, file.relativePath, buffer, deps);
-          if (fields.length === 0) {
-            return null;
-          }
-          return {
-            name: file.filename || file.relativePath.slice('assets/'.length),
-            skillName: skill.name,
-            relativePath: file.relativePath,
-            fields,
-            buffer,
-          };
-        }),
-      );
-      return found.filter((template): template is ReportTemplateFile => template != null);
+      return files.map((file) => ({
+        skill,
+        relativePath: file.relativePath,
+        name: file.filename || file.relativePath.slice('assets/'.length),
+      }));
     }),
   );
-  const templates = perSkill.flat();
+  const candidates = perSkill.flat().filter((candidate) => {
+    if (validFieldName(candidate.name)) {
+      return true;
+    }
+    logger.warn('[fill_report_template] Skipping a report template with an unsafe filename');
+    return false;
+  });
+  const maxTemplatesPerTurn = Math.max(
+    1,
+    Math.min(
+      Math.floor(deps.maxTemplatesPerTurn ?? MAX_REPORT_TEMPLATES_PER_TURN),
+      MAX_REPORT_TEMPLATES_PER_TURN,
+    ),
+  );
+  const selectedCandidates = candidates.slice(0, maxTemplatesPerTurn);
+  const skippedTemplates = candidates.length - selectedCandidates.length;
+  if (skippedTemplates > 0) {
+    logger.warn(
+      `[fill_report_template] Skipping ${skippedTemplates} templates beyond the turn limit`,
+    );
+  }
+  const found = await Promise.all(
+    selectedCandidates.map(async ({ skill, relativePath, name }) => {
+      const buffer = await deps.readSkillFile(skill._id, relativePath);
+      if (!buffer) {
+        return null;
+      }
+      const fields = await templateFields(skill, relativePath, buffer, deps);
+      if (fields.length === 0) {
+        return null;
+      }
+      return {
+        name,
+        skillName: skill.name,
+        relativePath,
+        fields,
+        buffer,
+      };
+    }),
+  );
+  const templates = found.filter((template): template is ReportTemplateFile => template != null);
   const counts = new Map<string, number>();
   for (const template of templates) {
     counts.set(template.name, (counts.get(template.name) ?? 0) + 1);
   }
-  return templates.map((template) =>
-    (counts.get(template.name) ?? 0) > 1
-      ? { ...template, name: `${template.skillName}/${template.name}` }
-      : template,
-  );
+  return templates
+    .map((template) =>
+      (counts.get(template.name) ?? 0) > 1
+        ? { ...template, name: `${template.skillName}/${template.name}` }
+        : template,
+    )
+    .filter((template) => {
+      if (validFieldName(template.name)) {
+        return true;
+      }
+      logger.warn('[fill_report_template] Skipping a report template with an unsafe name');
+      return false;
+    });
 }
 
 export function buildReportTemplateDefinition(templates: ReportTemplateFile[]): LCTool {
@@ -245,8 +287,7 @@ export function buildReportTemplateDefinition(templates: ReportTemplateFile[]): 
         },
         values: {
           type: 'object',
-          properties: createFieldProperties(templates),
-          additionalProperties: false,
+          additionalProperties: { type: 'string' },
           description: '항목 이름마다 채울 글',
         },
       },
@@ -366,7 +407,9 @@ async function fillTemplate(
   const filled = await deps.hwp.fill(template.buffer, values, context.signal);
   if (!filled.ok) {
     return [
-      `한글 문서 변환 서버가 양식을 채우지 못했습니다(${filled.code}). HWPX 파일을 만들었다고 말하지 말고, 잠시 뒤 다시 시도하라고 안내하세요.`,
+      filled.code === 'busy'
+        ? `${HWP_BUSY_NOTICE} HWPX 파일은 생성되지 않았으므로 생성됐다고 안내하지 마세요.`
+        : `한글 문서 변환 서버가 양식을 채우지 못했습니다(${filled.code}). HWPX 파일을 만들었다고 말하지 말고, 잠시 뒤 다시 시도하라고 안내하세요.`,
       undefined,
     ];
   }

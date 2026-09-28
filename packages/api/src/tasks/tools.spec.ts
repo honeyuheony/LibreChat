@@ -156,6 +156,16 @@ describe('write_report tool', () => {
     expect(new Set([...notices, RENDER_UNAVAILABLE_NOTICE]).size).toBe(4);
   });
 
+  it('asks the user to retry later when report rendering is busy', async () => {
+    const env = setup(() => ({ ok: false, code: 'busy', message: 'no worker slots' }));
+    const message = await call(TaskTools.write_report, { template_id: 'weekly-report' }, env.deps);
+    const notice = message.artifact?.[TASK_RESULT_ARTIFACT].notice ?? '';
+
+    expect(notice).toContain('잠시 후 다시 시도해 주세요.');
+    expect(message.content).toContain(notice);
+    expect(env.saved[0]).not.toHaveProperty('file');
+  });
+
   it('reuses cells a previous table extracted, making only the writer call', async () => {
     const env = setup(() => ({ ok: true, buffer: Buffer.from('x'), filename: 'a.hwpx' }));
     await call(TaskTools.extract_table, { fields: ['담당', '금주 실적'] }, env.deps);

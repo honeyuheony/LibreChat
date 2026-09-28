@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { Readable } from 'stream';
+import { logger } from '@librechat/data-schemas';
 import type { TaskResult } from 'librechat-data-provider';
 import type { LCTool } from '@librechat/agents';
 import type { ReportTemplateFile, SkillTemplateSource } from './fill';
@@ -23,19 +24,22 @@ const FILLED = Buffer.from('PK\u0003\u0004채운 보고서');
 type Call = { url: string; body: Record<string, unknown> };
 
 /** hwp-mcp 대역: fields 는 정해 둔 항목을, fill 은 채운 바이트를 돌려준다. */
-function fakeHwp(fields: string[] = ['출장 목적', '출장 기간']) {
+function fakeHwp(fields: string[] = ['출장 목적', '출장 기간'], fillResponse?: Response) {
   const calls: Call[] = [];
   const fetchImpl = (async (url: string, init?: RequestInit) => {
     calls.push({ url, body: JSON.parse(String(init?.body)) });
     if (url.endsWith('/template/fields')) {
       return new Response(JSON.stringify({ fields }), { status: 200 });
     }
-    return new Response(FILLED, {
-      status: 200,
-      headers: {
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent('출장보고 양식.hwpx')}`,
-      },
-    });
+    return (
+      fillResponse ??
+      new Response(FILLED, {
+        status: 200,
+        headers: {
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent('출장보고 양식.hwpx')}`,
+        },
+      })
+    );
   }) as unknown as typeof fetch;
   return { hwp: createHwpService({ baseUrl: 'http://hwp', fetchImpl }), calls };
 }
@@ -76,36 +80,119 @@ describe('findReportTemplates', () => {
     ]);
   });
 
-  it('limits field names to safe names and the first 100 entries', async () => {
+  it('describes field names without using them as schema property keys', () => {
+    const definition = buildReportTemplateDefinition([
+      {
+        name: '출장보고 양식.hwpx',
+        skillName: 'trip-report',
+        relativePath: 'assets/doc.hwpx',
+        fields: ['출장 목적'],
+        buffer: TEMPLATE,
+      },
+    ]);
+
+    expect(definition.description).toContain('출장 목적');
+    expect(definition.parameters).toMatchObject({
+      properties: {
+        values: {
+          type: 'object',
+          additionalProperties: { type: 'string' },
+        },
+      },
+    });
+    expect(definition.parameters).not.toMatchObject({
+      properties: { values: { properties: expect.anything() } },
+    });
+  });
+
+  it('rejects formatting controls, tag characters, and schema punctuation in fields', async () => {
+    const unsafeFields = [
+      '방향‮제어',
+      '제로​폭',
+      'BOM﻿',
+      `태그${String.fromCodePoint(0xe0001)}`,
+      '쉼표,항목',
+      '콜론:항목',
+      '중괄호{항목}',
+      '큰"따옴표',
+      "작은'따옴표",
+    ];
+    const { hwp } = fakeHwp([...unsafeFields, '허용 항목']);
+    const [template] = await findReportTemplates([skill], { ...skillFiles(), hwp });
+
+    expect(template.fields).toEqual(['허용 항목']);
+  });
+
+  it('omits filenames with schema punctuation and warns', async () => {
+    const source = skillFiles();
+    source.listSkillFiles = async () => [
+      { relativePath: 'assets/doc.hwpx', filename: 'unsafe,name.hwpx' },
+    ];
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
+
+    try {
+      const { hwp } = fakeHwp();
+      expect(await findReportTemplates([skill], { ...source, hwp })).toEqual([]);
+      expect(warn).toHaveBeenCalledWith(
+        '[fill_report_template] Skipping a report template with an unsafe filename',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('also rejects an unsafe skill prefix in a disambiguated filename', async () => {
+    const skills = [
+      { ...skill, _id: 'safe-skill', name: 'safe-skill' },
+      { ...skill, _id: 'unsafe-skill', name: 'unsafe:skill' },
+    ];
+    const source = {
+      listSkillFiles: async () => [{ relativePath: 'assets/shared.hwpx', filename: 'shared.hwpx' }],
+      readSkillFile: async () => TEMPLATE,
+    };
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
+
+    try {
+      const { hwp } = fakeHwp();
+      const templates = await findReportTemplates(skills, { ...source, hwp });
+
+      expect(templates.map((template) => template.name)).toEqual(['safe-skill/shared.hwpx']);
+      expect(warn).toHaveBeenCalledWith(
+        '[fill_report_template] Skipping a report template with an unsafe name',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('filters invalid fields before keeping the first 100 and reports every discarded field', async () => {
     const overlong = '가'.repeat(201);
     const newline = '줄\n바꿈';
     const control = '제어\u0001문자';
     const boundary = '가'.repeat(200);
     const remaining = Array.from({ length: 100 }, (_, index) => `항목${index + 1}`);
-    const { hwp } = fakeHwp([overlong, newline, control, boundary, ...remaining]);
-    const [template] = await findReportTemplates([skill], { ...skillFiles(), hwp });
-    const definition = buildReportTemplateDefinition([template]);
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
 
-    expect(template.fields).toEqual([boundary, ...remaining.slice(0, 96)]);
-    expect(definition.description).not.toContain(overlong);
-    expect(definition.description).not.toContain(newline);
-    expect(definition.description).not.toContain(control);
-    expect(definition.parameters).toMatchObject({
-      properties: {
-        values: {
-          properties: expect.objectContaining({
-            [boundary]: { type: 'string' },
-            항목1: { type: 'string' },
-          }),
-          additionalProperties: false,
-        },
-      },
-    });
-    expect(JSON.stringify(definition.parameters)).not.toContain(overlong);
-    expect(JSON.stringify(definition.parameters)).not.toContain(newline);
-    expect(JSON.stringify(definition.parameters)).not.toContain(control);
-    expect(definition.description).not.toContain('항목97');
-    expect(JSON.stringify(definition.parameters)).not.toContain('항목97');
+    try {
+      const { hwp } = fakeHwp([overlong, newline, control, boundary, ...remaining]);
+      const [template] = await findReportTemplates([skill], { ...skillFiles(), hwp });
+      const definition = buildReportTemplateDefinition([template]);
+
+      expect(template.fields).toEqual([boundary, ...remaining.slice(0, 99)]);
+      expect(definition.description).not.toContain(overlong);
+      expect(definition.description).not.toContain(newline);
+      expect(definition.description).not.toContain(control);
+      expect(definition.description).toContain('항목99');
+      expect(definition.description).not.toContain('항목100');
+      expect(JSON.stringify(definition.parameters)).not.toContain(overlong);
+      expect(JSON.stringify(definition.parameters)).not.toContain(newline);
+      expect(JSON.stringify(definition.parameters)).not.toContain(control);
+      expect(warn).toHaveBeenCalledWith(
+        '[fill_report_template] Skipped 4 invalid or excess fields',
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('limits field lookup to five seconds', async () => {
@@ -141,32 +228,99 @@ describe('findReportTemplates', () => {
     expect(calls).toHaveLength(2);
   });
 
-  it('caches a failed field lookup for 60 seconds', async () => {
-    const failingSkill = { ...skill, _id: 'field-failure-expiry' };
-    const outcomes = [
-      { ok: false as const, code: 'unavailable', message: 'timeout' },
-      { ok: true as const, fields: ['출장 목적'] },
-    ];
-    const fields = jest.fn(
-      async () =>
-        outcomes.shift() ?? { ok: false as const, code: 'unavailable', message: 'unexpected' },
-    );
-    const time = jest.spyOn(Date, 'now').mockReturnValue(1_000);
-    const deps = { ...skillFiles(), hwp: { fields } };
+  it('caches connection, 5xx, and busy failures for ten seconds', async () => {
+    const time = jest.spyOn(Date, 'now');
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
 
     try {
+      for (const failure of ['connection', 'server', 'busy']) {
+        let requests = 0;
+        const fetchImpl = (async () => {
+          requests += 1;
+          if (requests > 1) {
+            return new Response(JSON.stringify({ fields: ['출장 목적'] }), { status: 200 });
+          }
+          if (failure === 'connection') {
+            throw new Error('ECONNREFUSED');
+          }
+          return new Response(
+            JSON.stringify({
+              error: failure === 'busy' ? 'busy' : 'render_failed',
+              message: 'temporary failure',
+            }),
+            { status: failure === 'busy' ? 429 : 503 },
+          );
+        }) as unknown as typeof fetch;
+        const failingSkill = { ...skill, _id: `field-transient-${failure}` };
+        const deps = {
+          ...skillFiles(),
+          hwp: createHwpService({ baseUrl: 'http://hwp', fetchImpl }),
+        };
+
+        time.mockReturnValue(1_000);
+        expect(await findReportTemplates([failingSkill], deps)).toEqual([]);
+        time.mockReturnValue(10_999);
+        expect(await findReportTemplates([failingSkill], deps)).toEqual([]);
+        expect(requests).toBe(1);
+
+        time.mockReturnValue(11_000);
+        expect(await findReportTemplates([failingSkill], deps)).toHaveLength(1);
+        expect(requests).toBe(2);
+      }
+    } finally {
+      time.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
+  it('caches an invalid template response for sixty seconds', async () => {
+    let requests = 0;
+    const fetchImpl = (async () => {
+      requests += 1;
+      if (requests === 1) {
+        return new Response(JSON.stringify({ error: 'invalid_request', message: 'not hwpx' }), {
+          status: 422,
+        });
+      }
+      return new Response(JSON.stringify({ fields: ['출장 목적'] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const failingSkill = { ...skill, _id: 'field-failure-invalid-template' };
+    const deps = { ...skillFiles(), hwp: createHwpService({ baseUrl: 'http://hwp', fetchImpl }) };
+    const time = jest.spyOn(Date, 'now');
+
+    try {
+      time.mockReturnValue(1_000);
       expect(await findReportTemplates([failingSkill], deps)).toEqual([]);
       time.mockReturnValue(60_999);
       expect(await findReportTemplates([failingSkill], deps)).toEqual([]);
-      expect(fields).toHaveBeenCalledTimes(1);
+      expect(requests).toBe(1);
 
       time.mockReturnValue(61_000);
-      const [template] = await findReportTemplates([failingSkill], deps);
-      expect(template.fields).toEqual(['출장 목적']);
-      expect(fields).toHaveBeenCalledTimes(2);
+      expect(await findReportTemplates([failingSkill], deps)).toHaveLength(1);
+      expect(requests).toBe(2);
     } finally {
       time.mockRestore();
     }
+  });
+
+  it('queries at most five templates during one turn', async () => {
+    const files = Array.from({ length: 6 }, (_, index) => ({
+      relativePath: `assets/template-${index + 1}.hwpx`,
+      filename: `template-${index + 1}.hwpx`,
+    }));
+    const listSkillFiles = jest.fn(async () => files);
+    const readSkillFile = jest.fn(async () => TEMPLATE);
+    const fields = jest.fn(async () => ({ ok: true as const, fields: ['항목'] }));
+    const templates = await findReportTemplates([skill], {
+      listSkillFiles,
+      readSkillFile,
+      hwp: { fields },
+      maxTemplatesPerTurn: 100,
+    });
+
+    expect(templates).toHaveLength(5);
+    expect(readSkillFile).toHaveBeenCalledTimes(5);
+    expect(fields).toHaveBeenCalledTimes(5);
   });
 
   it('keeps the failed field cache within the successful cache limit', async () => {
@@ -271,8 +425,8 @@ describe('fill_report_template tool', () => {
     buffer: TEMPLATE,
   };
 
-  function setup() {
-    const { hwp, calls } = fakeHwp();
+  function setup(hwpFixture = fakeHwp()) {
+    const { hwp, calls } = hwpFixture;
     const files: Array<{ buffer: Buffer; filename: string }> = [];
     const saved: TaskResult[] = [];
     const fillTool = createFillReportTemplateTool({
@@ -333,6 +487,20 @@ describe('fill_report_template tool', () => {
     expect(message.content).not.toContain('화면에 열었습니다');
   });
 
+  it('asks the model to retry when template filling is busy', async () => {
+    const busyResponse = new Response(
+      JSON.stringify({ error: 'busy', message: 'no worker slots' }),
+      { status: 429 },
+    );
+    const env = setup(fakeHwp(undefined, busyResponse));
+    const message = await env.invoke({ template: '출장보고 양식.hwpx', values: {} });
+
+    expect(message.content).toContain('잠시 후 다시 시도해 주세요.');
+    expect(message.content).toContain('HWPX 파일은 생성되지 않았으므로');
+    expect(env.saved).toEqual([]);
+    expect(env.files).toEqual([]);
+  });
+
   it('refuses a template that is not offered this turn without calling hwp-mcp', async () => {
     const env = setup();
     const message = await env.invoke({ template: '다른 양식.hwpx', values: {} });
@@ -385,5 +553,16 @@ describe('createSkillTemplateSource', () => {
 
     expect(await source.readSkillFile(SKILL_ID, 'assets/doc.hwpx')).toBeNull();
     expect(getDownloadStream).not.toHaveBeenCalled();
+  });
+
+  it('stops reading when the actual template stream exceeds the upload limit', async () => {
+    const oversizedStream = Readable.from([Buffer.alloc(3_000_000), Buffer.alloc(3_000_000)]);
+    const source = createSkillTemplateSource({
+      listSkillFiles: async () => [stored],
+      getSkillFileByPath: async () => ({ ...stored, bytes: TEMPLATE.length }),
+      getDownloadStream: async () => oversizedStream,
+    });
+
+    expect(await source.readSkillFile(SKILL_ID, 'assets/doc.hwpx')).toBeNull();
   });
 });
