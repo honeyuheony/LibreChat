@@ -217,13 +217,15 @@ describe('ChatForm attachments', () => {
     const textarea = await screen.findByTestId('text-input');
 
     await attach(container, image());
-    const remove = await screen.findByRole('button', { name: 'Remove file' });
+    const remove = await screen.findByRole('button', { name: 'Remove file cat.png' });
 
     expect(
       textarea.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      within(screen.getByTestId('composer-chip-row')).getByRole('button', { name: 'Remove file' }),
+      within(screen.getByTestId('composer-chip-row')).getByRole('button', {
+        name: 'Remove file cat.png',
+      }),
     ).toBe(remove);
   }, 20000);
 
