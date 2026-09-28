@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { BuilderState, ChangedField } from './state';
-import type { TranslationKeys } from '~/hooks';
 import type { PreviewBlock } from './Blocks';
 import SourceTag, { ChangedMark } from './SourceTag';
 import { Block, NO_CHOICES } from './Blocks';
@@ -49,7 +48,7 @@ export default function ConnectorsBlock({
           {localize(
             values.output === 'draft'
               ? 'com_skills_builder_data_chat'
-              : ('com_skills_builder_data_files' as TranslationKeys),
+              : 'com_skills_builder_data_files',
           )}
         </li>
       </ul>
