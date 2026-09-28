@@ -20,7 +20,7 @@ export default function Todo({ items }: { items: TodoItem[] }) {
           key={item.key}
           data-done={item.done}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12.5px]',
+            'inline-flex items-center gap-1.5 rounded-full border bg-surface-primary px-2.5 py-[3px] text-[12.5px] leading-normal',
             item.done
               ? 'border-status-success-border text-status-success'
               : 'border-border-light text-text-tertiary',

@@ -167,6 +167,19 @@ describe('Builder layout', () => {
     expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();
   });
 
+  it('writes the attach hint in 13px muted text and fills each publish step pill', () => {
+    render(<Harness />);
+    expect(screen.getByText('com_skills_builder_files_hint')).toHaveClass(
+      'text-[13px]',
+      'text-text-muted',
+    );
+    expect(screen.getByText('com_skills_builder_todo_text').closest('li')).toHaveClass(
+      'bg-surface-primary',
+      'py-[3px]',
+      'leading-normal',
+    );
+  });
+
   it('shows no 모두 지우기 while no document is attached', () => {
     render(<Harness />);
     expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();

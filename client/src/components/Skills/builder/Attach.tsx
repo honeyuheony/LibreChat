@@ -79,7 +79,7 @@ export default function AttachRow({
             </button>
           </>
         ) : (
-          <span className="text-xs text-text-secondary">
+          <span className="text-[13px] text-text-muted">
             {localize('com_skills_builder_files_hint')}
           </span>
         )}
