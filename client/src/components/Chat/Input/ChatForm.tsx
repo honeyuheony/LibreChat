@@ -725,8 +725,9 @@ const ChatForm = memo(function ChatForm({
            asked for less motion gets the new position outright — this one is a
            slide across the page rather than decoration. */
         'mx-auto flex w-full flex-row gap-3 transition-[max-width,margin-bottom] duration-300 motion-reduce:transition-none sm:px-2',
-        /* MessageRow와 같은 760px 폭에 맞추려고 여백을 뺀 48.5rem을 쓴다. */
-        maximizeChatSpace ? 'max-w-full' : 'md:max-w-[48.5rem]',
+        /* 홈은 MessageRow와 같은 760px, 대화 화면은 본문보다 좁은 712px로 둔다. 둘 다 `sm:px-2` 여백을 더한 값이다. */
+        maximizeChatSpace && 'max-w-full',
+        !maximizeChatSpace && (isLandingPage ? 'md:max-w-[48.5rem]' : 'md:max-w-[45.5rem]'),
         bottomClearance,
       )}
     >
@@ -808,7 +809,7 @@ const ChatForm = memo(function ChatForm({
                 'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
                 'shadow-raised',
-                'gap-1.5 px-3.5 pb-2.5 pt-3.5',
+                'gap-0.5 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
                    same categorical slot the purple tool badge uses, so the accent

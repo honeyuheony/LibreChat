@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen, within } from '@testing-library/react';
 import type { ConnectorActivityItem, DeskStatusResponse } from 'librechat-data-provider';
 import type { MCPServerDefinition } from '~/hooks';
+import { pageTitleTopClassName } from '~/components/ui/topbar';
 import DataHub from '../Hub/DataHub';
 
 const mockStartNewChat = jest.fn();
@@ -205,6 +206,8 @@ describe('DataHub', () => {
     const title = screen.getByRole('heading', { level: 1 });
     expect(title).toHaveClass('text-[22px]', 'font-bold');
     expect(title).not.toHaveClass('text-2xl');
+    expect(title.parentElement).toHaveClass(pageTitleTopClassName);
+    expect(title.parentElement).not.toHaveClass('pt-6', 'md:pt-8');
   });
 
   it('counts each observable status, reading the desktop app rather than its relay', () => {
