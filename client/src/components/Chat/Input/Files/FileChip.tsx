@@ -110,7 +110,9 @@ export default function FileChip({
       <button
         type="button"
         onClick={onDelete}
-        aria-label={localize('com_ui_attach_remove')}
+        aria-label={
+          name ? `${localize('com_ui_attach_remove')} ${name}` : localize('com_ui_attach_remove')
+        }
         className={composerChipCloseClassName}
       >
         <span aria-hidden="true">{CLOSE_GLYPH}</span>

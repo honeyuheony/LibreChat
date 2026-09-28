@@ -71,7 +71,9 @@ describe('FileRow chip variant', () => {
     const file = textFile();
     renderChips([file]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'com_ui_attach_remove' }));
+    const removeButton = screen.getByRole('button', { name: /com_ui_attach_remove/ });
+    expect(removeButton).toHaveAccessibleName('com_ui_attach_remove 2026-09_월간동향보고서.md');
+    await userEvent.click(removeButton);
 
     expect(mockDeleteFile).toHaveBeenCalledTimes(1);
     expect(mockDeleteFile).toHaveBeenCalledWith(expect.objectContaining({ file }));
