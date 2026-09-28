@@ -56,9 +56,9 @@ function isValidationError(error: unknown): error is Error & { issues: unknown[]
   return (error as { code?: string } | null)?.code === 'SKILL_VALIDATION_FAILED';
 }
 
-async function readStoredFile(
+export async function readStoredFile(
   req: ServerRequest,
-  deps: ForkSkillDeps,
+  deps: Pick<ForkSkillDeps, 'getStrategyFunctions'>,
   file: ISkillFile,
 ): Promise<Buffer> {
   const strategy = deps.getStrategyFunctions(file.source);
