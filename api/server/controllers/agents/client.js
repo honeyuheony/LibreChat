@@ -2393,7 +2393,7 @@ class AgentClient extends BaseClient {
     const modelBoundRequestAttachments =
       this.getModelBoundAttachmentsForEndpoint(requestAttachments);
     const retainedHistoricalFileContexts =
-      this.options.resendFiles === false
+      this.options.resendFiles === false && this.options.agent?.excludeConversationFiles !== true
         ? orderedMessages
             .filter((message) => typeof message?.fileContext === 'string' && message.fileContext)
             .map((message, index) => ({

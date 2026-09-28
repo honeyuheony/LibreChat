@@ -1,10 +1,22 @@
-import React, { memo, useRef, useEffect } from 'react';
+import React, { memo, useRef, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import * as Ariakit from '@ariakit/react';
 import { useNavigate } from 'react-router-dom';
 import { TooltipAnchor } from '@librechat/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { Constants, QueryKeys } from 'librechat-data-provider';
+import type { TMessage } from 'librechat-data-provider';
+import type { ComposerUpload } from './ToolRows';
 import type { MenuItemProps } from '~/common';
-import { BuiltinRow, ConnectorRow, UnavailableConnectorRow, UploadRows } from './ToolRows';
+import {
+  BuiltinRow,
+  UploadRows,
+  ConnectorRow,
+  UploadPickerRow,
+  ConversationFilesRow,
+  UnavailableConnectorRow,
+} from './ToolRows';
+import useConversationFilesSwitch, { countUploadedFiles } from './useConversationFilesSwitch';
 import { DATA_HUB_PATH, DESK_SERVER_NAME } from '~/components/Connectors/status';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
@@ -24,6 +36,8 @@ function ToolsMenu({
   showConnectors = true,
   agentId,
   uploadItems = [],
+  upload,
+  attachedFileCount = 0,
   disabled = false,
   anchorRef,
 }: {
@@ -31,6 +45,10 @@ function ToolsMenu({
   showConnectors?: boolean;
   agentId?: string | null;
   uploadItems?: MenuItemProps[];
+  /** 파일·폴더를 고르는 단추 한 줄. 없으면 `uploadItems` 만 보인다. */
+  upload?: ComposerUpload;
+  /** 아직 보내지 않고 입력창에 붙어 있는 파일 수 */
+  attachedFileCount?: number;
   disabled?: boolean;
   /** 메뉴를 붙일 입력창 표면. 없으면 ＋ 단추에 붙는다. */
   anchorRef?: React.RefObject<HTMLElement>;
@@ -48,9 +66,22 @@ function ToolsMenu({
     enabledCount,
   } = useComposerTools({ showBuiltinTools, showConnectors, agentId });
 
+  const myFiles = useConversationFilesSwitch(context?.conversationId);
+
   const navigate = useNavigate();
   const menuStore = Ariakit.useMenuStore({ focusLoop: true, placement: 'top-start' });
   const isOpen = menuStore.useState('open');
+  const queryClient = useQueryClient();
+  const convoKey = context?.conversationId ?? Constants.NEW_CONVO;
+  /* 메뉴를 열 때만 메시지 캐시를 읽어, 입력창이 다시 그려질 때마다 메시지를 훑지 않는다. */
+  const myFilesCount = useMemo(
+    () =>
+      isOpen
+        ? countUploadedFiles(queryClient.getQueryData<TMessage[]>([QueryKeys.messages, convoKey])) +
+          attachedFileCount
+        : 0,
+    [isOpen, queryClient, convoKey, attachedFileCount],
+  );
   const openDataHub = (serverName: string) => {
     menuStore.hide();
     navigate(`${DATA_HUB_PATH}/${encodeURIComponent(serverName)}`);
@@ -70,7 +101,9 @@ function ToolsMenu({
     configDialogWasOpen.current = configDialogOpen;
   }, [configDialogOpen, menuStore]);
 
-  const hasUploads = uploadItems.some((item) => item.separate !== true && item.show !== false);
+  const hasUploads =
+    upload != null || uploadItems.some((item) => item.separate !== true && item.show !== false);
+  const hasSources = hasUploads || (servers.length > 0 && manager != null);
   if (builtinTools.length === 0 && servers.length === 0 && !hasUploads) {
     return null;
   }
@@ -135,41 +168,54 @@ function ToolsMenu({
         >
           <div className="flex min-h-0 flex-col overflow-y-auto">
             {hasUploads && (
-              <Ariakit.MenuGroup>
-                <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
-                  {localize('com_sidepanel_attach_files')}
-                </Ariakit.MenuGroupLabel>
+              <Ariakit.MenuGroup
+                aria-label={upload ? localize('com_sidepanel_attach_files') : undefined}
+              >
+                {upload ? (
+                  <UploadPickerRow upload={upload} />
+                ) : (
+                  <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
+                    {localize('com_sidepanel_attach_files')}
+                  </Ariakit.MenuGroupLabel>
+                )}
                 <UploadRows items={uploadItems} />
               </Ariakit.MenuGroup>
             )}
-            {hasUploads && (servers.length > 0 || builtinTools.length > 0) && (
-              <Ariakit.MenuSeparator className="my-1 border-border-light" />
-            )}
-            {servers.length > 0 && manager && (
+            {hasUploads && <Ariakit.MenuSeparator className="my-1 border-border-light" />}
+            {hasSources && (
               <Ariakit.MenuGroup>
                 <Ariakit.MenuGroupLabel className={sectionLabelClassName}>
                   {localize('com_ui_tools_data_sources')}
                 </Ariakit.MenuGroupLabel>
-                {switchableServers.map((server) => (
-                  <ConnectorRow
-                    key={server.serverName}
-                    server={server}
-                    isSelected={isConnectorOn(server.serverName)}
-                    connectionStatus={manager.connectionStatus}
-                    statusIconProps={manager.getServerStatusIconProps(server.serverName)}
-                    onToggle={toggleConnector}
-                    onOpenDataHub={openDataHub}
-                    deskAppOff={
-                      server.serverName === DESK_SERVER_NAME && deskStatus?.state === 'offline'
-                    }
+                {hasUploads && (
+                  <ConversationFilesRow
+                    count={myFilesCount}
+                    included={myFiles.included}
+                    onToggle={myFiles.toggle}
                   />
-                ))}
-                {unavailableServers.map((server) => (
-                  <UnavailableConnectorRow key={server.serverName} server={server} />
-                ))}
+                )}
+                {manager &&
+                  switchableServers.map((server) => (
+                    <ConnectorRow
+                      key={server.serverName}
+                      server={server}
+                      isSelected={isConnectorOn(server.serverName)}
+                      connectionStatus={manager.connectionStatus}
+                      statusIconProps={manager.getServerStatusIconProps(server.serverName)}
+                      onToggle={toggleConnector}
+                      onOpenDataHub={openDataHub}
+                      deskAppOff={
+                        server.serverName === DESK_SERVER_NAME && deskStatus?.state === 'offline'
+                      }
+                    />
+                  ))}
+                {manager &&
+                  unavailableServers.map((server) => (
+                    <UnavailableConnectorRow key={server.serverName} server={server} />
+                  ))}
               </Ariakit.MenuGroup>
             )}
-            {servers.length > 0 && builtinTools.length > 0 && (
+            {hasSources && builtinTools.length > 0 && (
               <Ariakit.MenuSeparator className="my-1 border-border-light" />
             )}
             {builtinTools.length > 0 && (

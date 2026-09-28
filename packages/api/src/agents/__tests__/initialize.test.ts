@@ -5010,3 +5010,50 @@ describe('initializeAgent turn delivery routing', () => {
     expect(filesOrder).toBeLessThan(toolsOrder);
   });
 });
+
+describe('initializeAgent — conversation files switched off in chat', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const run = async (ephemeralAgent?: { exclude_files?: boolean }) => {
+    const { agent, req, res, loadTools, db } = createMocks();
+    agent.tools = [EToolResources.file_search];
+    req.body = ephemeralAgent ? { ephemeralAgent } : {};
+    mockExtractLibreChatParams.mockReturnValueOnce({
+      resendFiles: true,
+      maxContextTokens: undefined,
+      modelOptions: { model: agent.model },
+    });
+    (db.getConvoFiles as jest.Mock).mockResolvedValue(['earlier-upload']);
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        conversationId: 'conversation-1',
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+    return { result, db };
+  };
+
+  it('reads earlier uploads as sources while the switch is on', async () => {
+    const { result, db } = await run();
+    expect(db.getConvoFiles).toHaveBeenCalledWith('conversation-1');
+    expect(result.resendFiles).toBe(true);
+    expect(result.excludeConversationFiles).toBe(false);
+  });
+
+  it('neither reads nor resends earlier uploads once the switch is off', async () => {
+    const { result, db } = await run({ exclude_files: true });
+    expect(db.getConvoFiles).not.toHaveBeenCalled();
+    expect(db.getToolFilesByIds).not.toHaveBeenCalled();
+    expect(result.resendFiles).toBe(false);
+    expect(result.excludeConversationFiles).toBe(true);
+  });
+});

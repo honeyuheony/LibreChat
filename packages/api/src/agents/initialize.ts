@@ -630,6 +630,8 @@ export type InitializedAgent = Agent & {
   baseContextTokens?: number;
   useLegacyContent: boolean;
   resendFiles: boolean;
+  /** 사용자가 채팅에서 「내가 업로드한 파일」을 꺼, 앞 턴에 올린 파일을 이번 요청의 자료로 쓰지 않는다. */
+  excludeConversationFiles?: boolean;
   /** Detail level LibreChat encodes image content blocks with, from the agent's
    * model parameters. Absent when the agent does not configure one. */
   imageDetail?: ImageDetail;
@@ -1285,9 +1287,14 @@ export async function initializeAgent(
     ),
   );
 
-  const { resendFiles, maxContextTokens, imageDetail, modelOptions } = extractLibreChatParams(
-    _modelOptions as Record<string, unknown>,
-  );
+  const {
+    resendFiles: configuredResendFiles,
+    maxContextTokens,
+    imageDetail,
+    modelOptions,
+  } = extractLibreChatParams(_modelOptions as Record<string, unknown>);
+  const excludeConversationFiles = runtime.requestBody.ephemeralAgent?.exclude_files === true;
+  const resendFiles = configuredResendFiles && !excludeConversationFiles;
 
   const provider = agent.provider;
   agent.endpoint = provider;
@@ -1472,6 +1479,7 @@ export async function initializeAgent(
   if (
     authorizedRunFiles === undefined &&
     conversationId != null &&
+    !excludeConversationFiles &&
     (resendFiles || wantsProvisioning)
   ) {
     const getThreadMessages = db.getMessages;
@@ -2478,6 +2486,7 @@ export async function initializeAgent(
     ...agent,
     azureOptions: options.azureOptions,
     resendFiles,
+    excludeConversationFiles,
     imageDetail,
     deliveryRouting,
     toolRegistry,

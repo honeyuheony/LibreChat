@@ -4277,6 +4277,8 @@ export enum LocalStorageKeys {
   LAST_MCP_ = 'LAST_MCP_',
   /** 대화별로 저장 agent 에서 마지막으로 끈 MCP 서버 */
   LAST_MCP_DISABLED_ = 'LAST_MCP_DISABLED_',
+  /** 대화별 「내가 업로드한 파일」 끔 여부. `LAST_MCP_` 로 시작해 오래된 값 정리에 함께 든다. */
+  LAST_MCP_EXCLUDE_FILES_ = 'LAST_MCP_EXCLUDE_FILES_',
   /** Last checked toggle for Code Interpreter API per conversation ID */
   LAST_CODE_TOGGLE_ = 'LAST_CODE_TOGGLE_',
   /** Last checked toggle for Web Search per conversation ID */
