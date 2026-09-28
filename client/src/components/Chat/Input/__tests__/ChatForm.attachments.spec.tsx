@@ -7,16 +7,18 @@ import userEvent from '@testing-library/user-event';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { QueryKeys, FileSources, EModelEndpoint } from 'librechat-data-provider';
+import { QueryKeys, FileSources, EModelEndpoint, Tools } from 'librechat-data-provider';
 import { act, render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import type { TFile, TFileUpload, TConversation } from 'librechat-data-provider';
 import type { ChatFormValues } from '~/common';
+import useKeyboardShortcuts from '~/hooks/useKeyboardShortcuts';
 import ChatForm, { toRestoredComposerFile } from '../ChatForm';
 import { ChatContext, ChatFormProvider } from '~/Providers';
 import { AuthContextProvider } from '~/hooks/AuthContext';
 import store from '~/store';
 
 const mockUpload = jest.fn();
+const mockAsk = jest.fn();
 
 jest.mock('librechat-data-provider', () => {
   const actual = jest.requireActual('librechat-data-provider');
@@ -66,7 +68,12 @@ class StubImage {
 
 let commits = 0;
 
-function Harness({ landing }: { landing: boolean }) {
+function GlobalShortcutListener() {
+  useKeyboardShortcuts();
+  return null;
+}
+
+function Harness({ landing, globalShortcuts }: { landing: boolean; globalShortcuts: boolean }) {
   const [files, setFiles] = useRecoilState(store.filesByIndex(0));
   const [isSubmitting] = useRecoilState(store.isSubmittingFamily(0));
   const [, setFilesLoading] = useState(false);
@@ -89,7 +96,7 @@ function Harness({ landing }: { landing: boolean }) {
         stopGenerating: () => undefined,
         getMessages: () => undefined,
         setMessages: () => undefined,
-        ask: () => undefined,
+        ask: mockAsk,
         regenerate: () => undefined,
         setSiblingIdx: () => undefined,
         showPopover: false,
@@ -109,6 +116,7 @@ function Harness({ landing }: { landing: boolean }) {
   return (
     <ChatFormProvider {...methods}>
       <ChatContext.Provider value={chatHelpers}>
+        {globalShortcuts && <GlobalShortcutListener />}
         <Profiler id="composer" onRender={() => (commits += 1)}>
           <ChatForm
             index={0}
@@ -126,7 +134,13 @@ function renderComposer({
   submitting = false,
   quotes = [],
   landing = false,
-}: { submitting?: boolean; quotes?: string[]; landing?: boolean } = {}) {
+  globalShortcuts = false,
+}: {
+  submitting?: boolean;
+  quotes?: string[];
+  landing?: boolean;
+  globalShortcuts?: boolean;
+} = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -138,6 +152,9 @@ function renderComposer({
   });
   queryClient.setQueryData<TFile[]>([QueryKeys.files], []);
   queryClient.setQueryData([QueryKeys.endpoints], { [EModelEndpoint.openAI]: { order: 0 } });
+  queryClient.setQueryData([QueryKeys.name, EModelEndpoint.openAI], { expiresAt: '' });
+  queryClient.setQueryData([QueryKeys.tokenConfig], {});
+  queryClient.setQueryData([QueryKeys.toolAuth, Tools.web_search], { authenticated: true });
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -150,7 +167,7 @@ function renderComposer({
         <Router>
           <AuthContextProvider authConfig={{ loginRedirect: '', test: true }}>
             <DndProvider backend={HTML5Backend}>
-              <Harness landing={landing} />
+              <Harness landing={landing} globalShortcuts={globalShortcuts} />
             </DndProvider>
           </AuthContextProvider>
         </Router>
@@ -175,11 +192,43 @@ describe('ChatForm attachments', () => {
     global.URL.revokeObjectURL = jest.fn();
     (global as unknown as { Image: unknown }).Image = StubImage;
     mockUpload.mockReset();
+    mockAsk.mockReset();
     /** The server echoes the id the client sent back as `temp_file_id`. */
     mockUpload.mockImplementation((body: FormData) =>
       Promise.resolve({ ...uploadResponse, temp_file_id: body.get('file_id') as string }),
     );
   });
+
+  test('does not submit an empty draft when Enter is pressed in the textarea', async () => {
+    renderComposer();
+    const textarea = await screen.findByTestId('text-input');
+
+    await userEvent.click(textarea);
+    await userEvent.keyboard('{Enter}');
+
+    expect(mockAsk).not.toHaveBeenCalled();
+  }, 20000);
+
+  test('the global submit shortcut submits only when the textarea has content', async () => {
+    renderComposer({ globalShortcuts: true });
+    const textarea = await screen.findByTestId('text-input');
+
+    await userEvent.type(textarea, 'hello');
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+
+    await waitFor(() =>
+      expect(mockAsk).toHaveBeenCalledWith(
+        expect.objectContaining({ text: 'hello' }),
+        expect.any(Object),
+      ),
+    );
+    mockAsk.mockClear();
+    await userEvent.clear(textarea);
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+
+    expect(mockAsk).not.toHaveBeenCalled();
+    expect(sendButton()).toHaveAttribute('aria-disabled', 'true');
+  }, 20000);
 
   test('preserves extracted-text delivery when restoring a queued attachment', () => {
     expect(
