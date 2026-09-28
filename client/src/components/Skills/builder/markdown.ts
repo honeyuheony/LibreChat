@@ -1,6 +1,7 @@
 import { composeSkillMarkdown } from 'librechat-data-provider';
 import type {
   TCreateSkill,
+  TSkillFileKind,
   TSkillDraftExtra,
   TSkillDraftOutput,
   TUpdateSkillPayload,
@@ -8,6 +9,7 @@ import type {
 } from 'librechat-data-provider';
 import type { BuilderState, BuilderValues } from './state';
 import { DRAFT_SLUG, FIELD_OUTPUTS, composeSteps, firstSentence, FRONTMATTER_BLOCK } from './state';
+import { storedFiles } from './files';
 
 /** SKILL.md 본문에 적는 결과물 이름. 화면 문구가 아니라 내보내는 문서의 내용이다. */
 const OUTPUT_DOC_LABEL: Record<TSkillDraftOutput, string> = {
@@ -36,20 +38,48 @@ export function starterPrompt(values: BuilderValues): string {
   return head ? `${head} 시작해줘` : '';
 }
 
-function resultLines(values: BuilderValues): string {
+const FILE_DOC_LABEL: Record<TSkillFileKind, string> = {
+  assets: '양식',
+  examples: '예시 문서',
+  references: '참고 문서',
+};
+
+/** 모델은 `read_file` 로 `skills/<이름>/<경로>` 를 읽는다. 괄호 안은 사람이 붙인 원래 이름이다. */
+function fileLines(state: BuilderState, kinds: TSkillFileKind[]): string[] {
+  const slug = state.slug || DRAFT_SLUG;
+  return storedFiles(state.files)
+    .filter((file) => kinds.includes(file.kind))
+    .map((file) => `- ${FILE_DOC_LABEL[file.kind]}: skills/${slug}/${file.path} (${file.name})`);
+}
+
+function resultLines(state: BuilderState): string {
+  const { values } = state;
   const extras = values.extras.map((extra) => EXTRA_DOC_LABEL[extra]);
   const fields = FIELD_OUTPUTS.has(values.output) ? values.fields.filter(Boolean) : [];
+  const template = fileLines(state, ['assets']);
   return [
     `- 형태: ${OUTPUT_DOC_LABEL[values.output]}${extras.length > 0 ? ` + ${extras.join(', ')}` : ''}`,
     ...(fields.length > 0 ? [`- 문서에서 뽑을 항목: ${fields.join(', ')}`] : []),
+    ...template,
+    ...(template.length > 0 ? ['- 양식을 read_file 로 읽고 그 틀과 항목 순서에 맞춰 쓴다.'] : []),
   ].join('\n');
 }
 
-function accessLines(values: BuilderValues): string {
-  if (values.connectors.length === 0) {
-    return '- 내부 시스템에 접근하지 않는다. 올린 문서만 사용한다.';
+function accessLines(state: BuilderState): string {
+  const { values } = state;
+  const scope =
+    values.connectors.length === 0
+      ? '- 내부 시스템에 접근하지 않는다. 올린 문서만 사용한다.'
+      : `- MCP 서버: ${values.connectors.join(', ')}. 작성자가 선언한 MCP 서버에만 접근한다.`;
+  const attached = fileLines(state, ['examples', 'references']);
+  if (attached.length === 0) {
+    return scope;
   }
-  return `- MCP 서버: ${values.connectors.join(', ')}. 작성자가 선언한 MCP 서버에만 접근한다.`;
+  return [
+    scope,
+    ...attached,
+    '- 붙인 문서는 read_file 로 읽는다. 사용자가 문서를 올리지 않았으면 예시 문서로 결과물을 만든다.',
+  ].join('\n');
 }
 
 function metadataOf(values: BuilderValues) {
@@ -73,8 +103,8 @@ function composeInput(state: BuilderState) {
     examples: starter ? [starter] : [],
     metadata: metadataOf(values),
     instructions: composeSteps(state).map((step) => step.text),
-    result: resultLines(values),
-    access: accessLines(values),
+    result: resultLines(state),
+    access: accessLines(state),
   };
 }
 

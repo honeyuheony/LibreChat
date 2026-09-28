@@ -47,6 +47,8 @@ jest.mock('~/data-provider', () => {
     useUpdateSkillMutation: mutation,
     usePublishSkillMutation: mutation,
     useForkSkillMutation: mutation,
+    useUploadSkillFileMutation: mutation,
+    useDeleteSkillFileMutation: mutation,
     useCreateSkillDraftMutation: () => ({ mutateAsync: mockRequestDraft }),
     useRecordSkillTestResultMutation: mutation,
     useMCPServersQuery: () => ({ data: { confluence: {}, jira: {} } }),

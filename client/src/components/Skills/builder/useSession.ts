@@ -13,6 +13,7 @@ import type {
 import type { BuilderField, BuilderState, BuilderValues, ChangedField } from './state';
 import type { TrialFailure, TrialView } from './TrialPanel';
 import type { TrialTransport } from './trial';
+import type { SkillFileDeps } from './files';
 import {
   isTested,
   editField,
@@ -28,6 +29,7 @@ import {
   createBuilderState,
 } from './state';
 import { contentSignature, starterPrompt, toSavePayload } from './markdown';
+import { attachFiles, syncSkillFiles, hasUnsyncedFiles } from './files';
 import { getResponseStatus } from '~/utils/errors';
 import { runTrial } from './trial';
 import useDraft from './useDraft';
@@ -44,6 +46,10 @@ export type SessionDeps = {
   updateSkill: (variables: TUpdateSkillVariables) => Promise<TSkill>;
   recordTest: (variables: TSkillTestResultVariables) => Promise<TSkill>;
   publish: (variables: TSkillPublishVariables) => Promise<TSkill>;
+  /** 붙인 문서를 스킬 폴더에 올리고 지운다. 파일이 바뀌면 버전이 오르므로 스킬을 다시 읽는다. */
+  files?: Pick<SkillFileDeps, 'upload' | 'remove'> & {
+    fetchSkill: (id: string) => Promise<TSkill>;
+  };
   transport: TrialTransport;
   spec: TModelSpec | null;
   conversationId?: string;
@@ -80,6 +86,7 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
   const [publishing, setPublishing] = useState(false);
   const depsRef = useRef(deps);
   depsRef.current = deps;
+  const storedFiles = useRef(new Map<string, File>());
 
   const requestDraft = useCallback(
     (payload: TSkillDraftRequest) =>
@@ -136,7 +143,7 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
       setState((prev) => editField(prev, field, value)),
     [],
   );
-  /** 붙인 문서를 한꺼번에 뗀다. 문서는 저장하지 않으므로 테스트 결과는 그대로 둔다. */
+  const attach = useCallback((picked: File[]) => setState((prev) => attachFiles(prev, picked)), []);
   const clearFiles = useCallback(() => setState((prev) => ({ ...prev, files: [] })), []);
   const stepOff = useCallback(
     (step: string) => setState((prev) => ({ ...prev, aiOff: [...prev.aiOff, step] })),
@@ -172,7 +179,11 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
 
   /** 저장한 스킬과, 저장에 맞춰 이름(slug)이 바뀌었을 수 있는 편집기 상태를 돌려준다. */
   const save = async (current: BuilderState): Promise<{ saved: TSkill; state: BuilderState }> => {
-    if (skill && savedSignature === contentSignature(current)) {
+    if (
+      skill &&
+      savedSignature === contentSignature(current) &&
+      !(depsRef.current.files && hasUnsyncedFiles(current.files, storedFiles.current))
+    ) {
       return { saved: skill, state: current };
     }
     const target = !skill && fork ? await forkOnce(fork) : skill;
@@ -200,11 +211,37 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
         });
       }
       setSkill(saved);
+      saved = await storeFiles(saved, next);
       setSavedSignature(contentSignature(next));
       return { saved, state: next };
     } catch (error) {
       throw new SaveError(getResponseStatus(error) === 409 ? 'conflict' : 'save');
     }
+  };
+
+  /** 올리다 실패해도 이미 오른 버전을 붙잡아 두어야 다음 저장이 충돌하지 않는다. */
+  const storeFiles = async (saved: TSkill, current: BuilderState): Promise<TSkill> => {
+    const files = depsRef.current.files;
+    if (!files) {
+      return saved;
+    }
+    let changed = false;
+    try {
+      changed = await syncSkillFiles(current.files, storedFiles.current, {
+        skillId: saved._id,
+        upload: files.upload,
+        remove: files.remove,
+      });
+    } catch (error) {
+      setSkill(await files.fetchSkill(saved._id));
+      throw error;
+    }
+    if (!changed) {
+      return saved;
+    }
+    const fresh = await files.fetchSkill(saved._id);
+    setSkill(fresh);
+    return fresh;
   };
 
   const recordWithRetry = async (saved: TSkill, conversationId: string): Promise<TSkill> => {
@@ -294,6 +331,7 @@ export default function useSession(deps: SessionDeps, init: SessionInit = {}) {
     setText,
     copyText,
     edit,
+    attach,
     clearFiles,
     stepOff,
     stepsRestore,

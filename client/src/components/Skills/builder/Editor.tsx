@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Spinner, useToastContext } from '@librechat/client';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { PermissionTypes, Permissions } from 'librechat-data-provider';
+import { PermissionTypes, Permissions, dataService } from 'librechat-data-provider';
 import type { ForkOrigin } from './useSession';
 import type { BuilderState } from './state';
 import {
@@ -13,6 +13,8 @@ import {
   useCreateSkillMutation,
   useUpdateSkillMutation,
   usePublishSkillMutation,
+  useDeleteSkillFileMutation,
+  useUploadSkillFileMutation,
   isSkillDraftRateLimited,
   useCreateSkillDraftMutation,
   useRecordSkillTestResultMutation,
@@ -97,6 +99,8 @@ function EditorPage({ entry, fork, forkTitle, chat }: EditorPageProps) {
   const recordMutation = useRecordSkillTestResultMutation();
   const publishMutation = usePublishSkillMutation();
   const forkMutation = useForkSkillMutation();
+  const uploadFileMutation = useUploadSkillFileMutation();
+  const deleteFileMutation = useDeleteSkillFileMutation();
   const { data: mcpServers } = useMCPServersQuery();
   const connectorChoices = useMemo(() => Object.keys(mcpServers ?? {}), [mcpServers]);
   const transport = useMemo(() => createTrialTransport(token), [token]);
@@ -110,6 +114,16 @@ function EditorPage({ entry, fork, forkTitle, chat }: EditorPageProps) {
       updateSkill: updateMutation.mutateAsync,
       recordTest: recordMutation.mutateAsync,
       publish: publishMutation.mutateAsync,
+      files: {
+        upload: ({ skillId, relativePath, file }) => {
+          const formData = new FormData();
+          formData.append('relativePath', relativePath);
+          formData.append('file', file, file.name);
+          return uploadFileMutation.mutateAsync({ skillId, formData });
+        },
+        remove: deleteFileMutation.mutateAsync,
+        fetchSkill: dataService.getSkill,
+      },
       transport,
       spec: pickTrialSpec(startupConfig?.modelSpecs?.list),
       conversationId: entry.conversationId,

@@ -29,7 +29,8 @@ export type BuilderValues = {
   connectors: string[];
 };
 
-export type BuilderFile = { name: string; kind: TSkillFileKind };
+/** `upload`·`path` 는 편집기에서 고른 문서에만 있다. 대화에서 가져온 문서는 이름뿐이라 저장하지 않는다. */
+export type BuilderFile = { name: string; kind: TSkillFileKind; upload?: File; path?: string };
 
 export type BuilderState = {
   text: string;
@@ -43,7 +44,7 @@ export type BuilderState = {
   aiSteps: string[];
   /** 초안이 추천한 커넥터. 켜는 것은 사람이 한다. */
   recommended: string[];
-  /** 양식·예시·참고로 나눈 문서 이름. 아직 저장하지 않는다. */
+  /** 양식·예시·참고로 나눈 문서. 저장할 때 스킬 폴더에 올린다. */
   files: BuilderFile[];
   slug: string;
   values: BuilderValues;
