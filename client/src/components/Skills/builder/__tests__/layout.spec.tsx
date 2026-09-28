@@ -677,6 +677,16 @@ describe('Others’ examples', () => {
     ]);
   });
 
+  it('shows about four lines of each example and scrolls the rest inside the card', () => {
+    render(<Harness peers={[peer]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    expect(peerItem().querySelector('ol')).toHaveClass(
+      'max-h-[calc(4*1.6em)]',
+      'overflow-y-auto',
+      'leading-[1.6]',
+    );
+  });
+
   it('writes the author line as owner · department · runs, without By or adaptations', () => {
     render(<Harness peers={[{ ...peer, skill: { ...peer.skill, forkCount: 41 } as TSkill }]} />);
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));

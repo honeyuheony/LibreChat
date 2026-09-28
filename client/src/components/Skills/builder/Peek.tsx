@@ -88,7 +88,8 @@ export default function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                       {localize('com_skills_builder_peek_copy')}
                     </Button>
                   </div>
-                  <ol className="mt-2 list-decimal ps-5 font-sans text-[13px] leading-relaxed text-text-secondary">
+                  {/* 글 전체는 길어서 네 줄만 보이고 나머지는 카드 안에서 스크롤한다. 가져오기는 전체 글을 넣는다. */}
+                  <ol className="mt-2 max-h-[calc(4*1.6em)] list-decimal overflow-y-auto ps-5 font-sans text-[13px] leading-[1.6] text-text-secondary">
                     {peer.text.split('\n').map((line, index) => (
                       <li key={index}>{line}</li>
                     ))}
