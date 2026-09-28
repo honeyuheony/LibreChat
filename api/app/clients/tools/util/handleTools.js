@@ -33,7 +33,10 @@ const {
   createTaskTool,
   getStorageMetadata,
   createTaskToolDeps,
+  reportTemplatesFor,
   GenerationJobManager,
+  FILL_REPORT_TEMPLATE_TOOL,
+  createFillReportTemplateTool,
 } = require('@librechat/api');
 const {
   AuthType,
@@ -433,6 +436,18 @@ const loadTools = async ({
   const serverNameAliases = buildServerNameAliases(collisionAudit.names);
   const shadowedServers = findShadowedServerNames(collisionAudit.names);
 
+  const buildTaskToolDeps = () =>
+    createTaskToolDeps({
+      req: options.req,
+      agent: agent ?? { endpoint, model },
+      db: { getFiles, getMessages, getUserKey, getUserKeyValues },
+      models: { TaskExtraction, TaskSummary, TaskResult },
+      getDownloadStream: (file) =>
+        getStrategyFunctions(file.source).getDownloadStream(options.req, file.filepath),
+      saveFile: (file) => saveTaskFile(options.req, file),
+      emitProgress: createTaskProgressEmitter(options),
+    });
+
   for (const tool of tools) {
     /** `loadTools` is the shared boundary for every runtime that equips these
      *  tools — agents, and the Assistants required-action flow via
@@ -565,20 +580,19 @@ const loadTools = async ({
       requestedTools[tool] = async () => createAskUserQuestionTool();
       continue;
     } else if (isTaskToolName(tool)) {
-      requestedTools[tool] = async () =>
-        createTaskTool(
-          tool,
-          createTaskToolDeps({
-            req: options.req,
-            agent: agent ?? { endpoint, model },
-            db: { getFiles, getMessages, getUserKey, getUserKeyValues },
-            models: { TaskExtraction, TaskSummary, TaskResult },
-            getDownloadStream: (file) =>
-              getStrategyFunctions(file.source).getDownloadStream(options.req, file.filepath),
-            saveFile: (file) => saveTaskFile(options.req, file),
-            emitProgress: createTaskProgressEmitter(options),
-          }),
-        );
+      requestedTools[tool] = async () => createTaskTool(tool, buildTaskToolDeps());
+      continue;
+    } else if (tool === FILL_REPORT_TEMPLATE_TOOL) {
+      requestedTools[tool] = async () => {
+        const deps = buildTaskToolDeps();
+        return createFillReportTemplateTool({
+          templates: reportTemplatesFor(options.req),
+          hwp: deps.hwp,
+          saveReportFile: deps.saveReportFile,
+          saveResult: deps.saveResult,
+          conversationId: deps.conversationId,
+        });
+      };
       continue;
     } else if (tool === SET_MEMORY_TOOL_NAME || tool === DELETE_MEMORY_TOOL_NAME) {
       requestedTools[tool] = () =>

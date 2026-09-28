@@ -24,8 +24,21 @@ export type HwpRenderOutcome =
       message: string;
     };
 
+type HwpFailure = Extract<HwpRenderOutcome, { ok: false }>;
+
+export type HwpFieldsOutcome = { ok: true; fields: string[] } | HwpFailure;
+export type HwpFillOutcome = { ok: true; buffer: Buffer; filename?: string } | HwpFailure;
+
 export interface HwpService {
   render(request: HwpRenderRequest, signal?: AbortSignal): Promise<HwpRenderOutcome>;
+  /** 양식 안 `{{항목}}` 표시의 이름을 문서에 나온 순서대로 돌려준다. */
+  fields(template: Buffer, signal?: AbortSignal): Promise<HwpFieldsOutcome>;
+  /** 표시 자리에 값을 채운 HWPX 를 돌려준다. 값이 없는 항목은 빈 글자로 채운다. */
+  fill(
+    template: Buffer,
+    values: Record<string, string>,
+    signal?: AbortSignal,
+  ): Promise<HwpFillOutcome>;
 }
 
 /** `filename*=UTF-8''…` 를 먼저 읽고, 없으면 일반 `filename="…"` 를 읽는다. */
@@ -54,6 +67,43 @@ function decodeHeader(value: string | null): string | undefined {
   } catch {
     return value;
   }
+}
+
+const failureMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+/** JSON 을 보내고 응답을 받는다. 연결·시간 초과·오류 응답은 `/render` 와 같은 실패 모양으로 바꾼다. */
+async function postJson(
+  fetchImpl: typeof fetch,
+  url: string,
+  body: object,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<{ ok: true; response: Response } | HwpFailure> {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+  } catch (error) {
+    return { ok: false, code: 'unavailable', message: failureMessage(error) };
+  }
+  if (!response.ok) {
+    const failure = (await response.json().catch(() => null)) as {
+      error?: string;
+      message?: string;
+    } | null;
+    return {
+      ok: false,
+      code: failure?.error ?? 'unavailable',
+      message: failure?.message ?? `HTTP ${response.status}`,
+    };
+  }
+  return { ok: true, response };
 }
 
 export function createHwpService({
@@ -110,6 +160,48 @@ export function createHwpService({
         parseContentDispositionFilename(response.headers.get('Content-Disposition')) ??
         `${title ?? request.template_id} 초안.hwpx`;
       return { ok: true, buffer, filename, ...(title != null && { title }) };
+    },
+    async fields(template, signal) {
+      const posted = await postJson(
+        fetchImpl,
+        `${baseUrl.replace(/\/+$/, '')}/template/fields`,
+        { template_b64: template.toString('base64') },
+        timeoutMs,
+        signal,
+      );
+      if (!posted.ok) {
+        return posted;
+      }
+      try {
+        const body = (await posted.response.json()) as { fields?: unknown };
+        const fields = Array.isArray(body.fields)
+          ? body.fields.filter((field): field is string => typeof field === 'string')
+          : [];
+        return { ok: true, fields };
+      } catch (error) {
+        return { ok: false, code: 'unavailable', message: failureMessage(error) };
+      }
+    },
+    async fill(template, values, signal) {
+      const posted = await postJson(
+        fetchImpl,
+        `${baseUrl.replace(/\/+$/, '')}/template/fill`,
+        { template_b64: template.toString('base64'), values },
+        timeoutMs,
+        signal,
+      );
+      if (!posted.ok) {
+        return posted;
+      }
+      try {
+        const buffer = Buffer.from(await posted.response.arrayBuffer());
+        const filename = parseContentDispositionFilename(
+          posted.response.headers.get('Content-Disposition'),
+        );
+        return { ok: true, buffer, ...(filename != null && { filename }) };
+      } catch (error) {
+        return { ok: false, code: 'unavailable', message: failureMessage(error) };
+      }
     },
   };
 }

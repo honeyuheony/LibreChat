@@ -130,6 +130,24 @@ describe('Builder layout', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
+  it('tells how an attached HWPX template gets filled and that an HWP one cannot be', () => {
+    render(<Harness />);
+    expect(screen.queryByText('com_skills_builder_template_fill_hint')).toBeNull();
+
+    fireEvent.change(screen.getByTestId('builder-files'), {
+      target: { files: [new File(['x'], '출장보고 양식.hwpx')] },
+    });
+    expect(screen.getByText('com_skills_builder_template_fill_hint')).toBeVisible();
+    expect(screen.queryByText('com_skills_builder_template_hwp_hint')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_clear_all' }));
+    fireEvent.change(screen.getByTestId('builder-files'), {
+      target: { files: [new File(['x'], '출장보고 양식.hwp')] },
+    });
+    expect(screen.getByText('com_skills_builder_template_hwp_hint')).toBeVisible();
+    expect(screen.queryByText('com_skills_builder_template_fill_hint')).toBeNull();
+  });
+
   it('takes every attached document off at once with 모두 지우기 next to the chips', () => {
     const chat = chatState('출장 메모를 보고서로 만든다.', {
       output: 'report',
