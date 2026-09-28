@@ -16,6 +16,7 @@ import useTaskRunState, {
 import { useGetMessagesByConvoId, useGetStartupConfig } from '~/data-provider';
 import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
 import ConversationTitleMenu from './Menus/ConversationTitleMenu';
+import { topBarSurfaceClassName } from '~/components/ui/topbar';
 import { OpenSidebar, NewChat, HeaderMenu } from './Menus';
 import { TemporaryChatIndicator } from './TemporaryChat';
 import ExportAndShareMenu from './ExportAndShareMenu';
@@ -88,7 +89,12 @@ function Header({
   const hiddenBehindNav = navVisible === true && 'max-md:hidden';
 
   return (
-    <div className="absolute top-0 z-10 flex h-12 w-full items-center gap-2 border-b border-border-light bg-presentation/70 p-2 text-[14.5px] text-text-secondary backdrop-blur-md md:px-4">
+    <div
+      className={cn(
+        'absolute top-0 z-10 flex h-12 w-full items-center gap-2 p-2 text-[14.5px] text-text-secondary md:pl-3 md:pr-6',
+        topBarSurfaceClassName,
+      )}
+    >
       <div className="flex flex-shrink-0 items-center md:hidden">
         <OpenSidebar testId="header-open-sidebar-button" />
       </div>

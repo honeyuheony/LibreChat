@@ -189,6 +189,23 @@ describe('ToolsMenu', () => {
     expect(heading).not.toHaveClass('text-text-tertiary');
   });
 
+  it('opens the data hub from the link beside the data sources heading and closes the menu', async () => {
+    const user = userEvent.setup();
+    render(<ToolsMenu showBuiltinTools={true} />);
+
+    await user.click(screen.getByTestId('tools-menu-button'));
+    const heading = screen.getByText('com_ui_tools_data_sources');
+    const link = screen.getByRole('menuitem', { name: 'com_ui_data_hub' });
+    expect(heading.parentElement).toContainElement(link);
+    expect(link).toHaveClass('text-xs', 'font-normal', 'text-accent-primary');
+
+    await user.click(link);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/connectors');
+    expect(screen.getByTestId('tools-menu-button')).toHaveAttribute('aria-expanded', 'false');
+    expect(mockToggleServerSelection).not.toHaveBeenCalled();
+  });
+
   it('toggles a connector without closing the menu', async () => {
     const user = userEvent.setup();
     render(<ToolsMenu showBuiltinTools={true} />);

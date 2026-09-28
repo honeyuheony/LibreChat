@@ -57,3 +57,31 @@ describe('Header status', () => {
     expect(screen.getByText('com_ui_convo_done')).toBeInTheDocument();
   });
 });
+
+describe('Header surface', () => {
+  it('blurs the content behind it and marks its lower edge with a shadow instead of a border', () => {
+    mockTaskState = { call: null, status: 'ok' };
+    const { container } = renderHeader();
+    const bar = container.firstElementChild;
+
+    expect(bar).toHaveClass(
+      'bg-presentation/70',
+      'backdrop-blur-[20px]',
+      'backdrop-saturate-[1.8]',
+      'shadow-[0_1px_0]',
+      'shadow-border-light/60',
+    );
+    expect(bar).not.toHaveClass('border-b', 'backdrop-blur-md');
+  });
+
+  it('keeps its content 24px from both sides from the md breakpoint', () => {
+    mockTaskState = { call: null, status: 'ok' };
+    const { container } = renderHeader();
+    const bar = container.firstElementChild;
+    const title = bar?.children[1];
+
+    expect(bar).toHaveClass('md:pl-3', 'md:pr-6');
+    expect(bar).not.toHaveClass('md:px-4');
+    expect(title).toHaveClass('md:pl-3');
+  });
+});

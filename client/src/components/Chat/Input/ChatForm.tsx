@@ -854,17 +854,6 @@ const ChatForm = memo(function ChatForm({
                 handleSaveBadges={handleSaveBadges}
                 setBadges={setBadges}
               />
-              <FileFormChat
-                index={index}
-                conversation={conversation}
-                files={files}
-                setFiles={setFiles}
-                setFilesLoading={setFilesLoading}
-                isPastedTextFile={isPastedTextFile}
-                isPasteActionPending={isPasteActionPending}
-                onEditPastedText={pastedTextEdit.openEditor}
-                onMovePastedTextInline={pastedTextEdit.moveInline}
-              />
               <PastedTextDialog
                 edit={pastedTextEdit.editing}
                 onClose={pastedTextEdit.closeEditor}
@@ -991,11 +980,23 @@ const ChatForm = memo(function ChatForm({
                 >
                   {/* 칩은 자체 영역에서 줄바꿈해 모델 선택기를 오른쪽 끝에 둔다. */}
                   <div
+                    data-testid="composer-chip-row"
                     className={cn(
                       'flex min-w-0 flex-1 flex-wrap items-center gap-2',
                       isRTL ? 'flex-row-reverse' : 'flex-row',
                     )}
                   >
+                    <FileFormChat
+                      index={index}
+                      conversation={conversation}
+                      files={files}
+                      setFiles={setFiles}
+                      setFilesLoading={setFilesLoading}
+                      isPastedTextFile={isPastedTextFile}
+                      isPasteActionPending={isPasteActionPending}
+                      onEditPastedText={pastedTextEdit.openEditor}
+                      onMovePastedTextInline={pastedTextEdit.moveInline}
+                    />
                     {(showToolsMenu || showEphemeralBadges) && (
                       <ActiveToolChips
                         showBuiltinTools={showEphemeralBadges}
