@@ -3408,6 +3408,8 @@
   "com_ui_task_stage_extract": "항목 추출",
   "com_ui_task_stage_compose": "양식에 채우기(각주 포함)",
   "com_ui_task_stage_render": "HWP 생성",
+  "com_ui_task_stage_prepare_template": "양식 확인",
+  "com_ui_task_stage_fill_template": "양식 채우기",
   "com_ui_task_schema_intro": "정리 요청으로 판단했습니다. 문서 {{0}}개 전체를 같은 항목으로 확인합니다. 항목을 확정해 주세요.",
   "com_ui_task_schema_intro_nocount": "정리 요청으로 판단했습니다. 문서 전체를 같은 항목으로 확인합니다. 항목을 확정해 주세요.",
   "com_ui_task_schema_title": "추출 항목",
