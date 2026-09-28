@@ -1961,7 +1961,7 @@ class AgentClient extends BaseClient {
           endpoint: this.options.endpoint,
           agent_id: this.options.agent.id,
           modelLabel: this.options.modelLabel,
-          resendFiles: this.options.resendFiles,
+          resendFiles: this.options.agent?.persistedResendFiles ?? this.options.resendFiles,
           imageDetail: this.options.imageDetail,
           maxContextTokens: this.maxContextTokens,
           codeApprovalMode,

@@ -228,7 +228,7 @@ export function UploadPickerRow({ upload }: { upload: ComposerUpload }) {
           {localize('com_ui_upload_file_or_folder' as TranslationKeys)}
         </span>
         {upload.hint !== '' && (
-          <span className="block truncate text-xs text-text-secondary">{upload.hint}</span>
+          <span className="block text-xs text-text-secondary">{upload.hint}</span>
         )}
       </span>
       <Ariakit.MenuItem

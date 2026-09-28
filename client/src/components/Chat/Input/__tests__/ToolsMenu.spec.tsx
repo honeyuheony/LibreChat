@@ -295,6 +295,8 @@ describe('ToolsMenu', () => {
       const row = screen.getByTestId('tools-menu-upload');
       expect(within(row).getByText('com_ui_upload_file_or_folder')).toBeVisible();
       expect(within(row).getByText('hwp · pdf · 20 MB')).toBeVisible();
+      /* 형식 목록과 크기 제한은 한 줄에 다 들어가지 않으므로 잘라 내지 않고 접는다. */
+      expect(within(row).getByText('hwp · pdf · 20 MB')).not.toHaveClass('truncate');
 
       await user.click(within(row).getByRole('menuitem', { name: 'com_ui_upload_pick_folder' }));
       expect(actions.onPickFolder).toHaveBeenCalledTimes(1);
@@ -352,7 +354,7 @@ describe('ToolsMenu', () => {
       await user.click(screen.getByTestId('tools-menu-my-files'));
 
       expect(screen.getByTestId('tools-menu-my-files')).toHaveAttribute('aria-checked', 'false');
-      expect(localStorage.getItem('LAST_MCP_EXCLUDE_FILES_test-conv')).toBe('true');
+      expect(localStorage.getItem('EXCLUDE_FILES_test-conv')).toBe('true');
     });
   });
 
