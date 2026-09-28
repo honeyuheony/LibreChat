@@ -220,7 +220,7 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                           /* 안내 문구를 입력창 아래 확보한 여백 안에 배치한다. */
                           <p
                             className={cn(
-                              'px-4 pb-4 pt-0 text-center text-[13px] leading-normal text-text-muted',
+                              'px-4 pb-4 pt-4 text-center text-[13px] leading-normal text-text-muted sm:pt-0',
                               centerFormOnLanding ? 'sm:-mt-12' : 'sm:-mt-6',
                             )}
                           >

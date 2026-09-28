@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Spinner } from '@librechat/client';
 import { FileText, CornerUpLeft } from 'lucide-react';
 import type { SubtitleAction } from './FileContainer';
@@ -33,10 +34,21 @@ export default function FileChip({
   secondaryAction?: SubtitleAction;
 }) {
   const localize = useLocalize();
-  const name = file.filename ?? '';
+  const name = file.filename || file.file?.name || '';
   const uploading = file.progress < 1;
   const showsPreview =
     !uploading && previewUrl != null && (file.type?.startsWith('image') ?? false);
+  const previewTriggerRef = useRef<HTMLSpanElement>(null);
+  const uploadStatus = uploading ? localize('com_ui_loading') : undefined;
+  const filenameLabel =
+    uploadStatus != null ? `${ariaLabel ?? name} ${uploadStatus}` : (ariaLabel ?? name);
+  const filenameAction = onClick ?? (showsPreview ? openPreview : undefined);
+
+  function openPreview() {
+    previewTriggerRef.current
+      ?.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')
+      ?.click();
+  }
 
   let lead = <FileText aria-hidden="true" />;
   if (uploading) {
@@ -58,20 +70,31 @@ export default function FileChip({
       title={name}
       className={composerChipClassName}
     >
-      <span aria-hidden={showsPreview ? undefined : 'true'} className={composerChipIconClassName}>
+      <span
+        ref={previewTriggerRef}
+        aria-hidden={showsPreview ? undefined : 'true'}
+        className={composerChipIconClassName}
+      >
         {lead}
       </span>
-      {onClick != null ? (
+      {filenameAction != null ? (
         <button
           type="button"
-          onClick={onClick}
-          aria-label={ariaLabel ?? name}
-          className={cn('truncate hover:underline', focusRing)}
+          onClick={filenameAction}
+          aria-label={filenameLabel}
+          className={cn('truncate', onClick != null && 'hover:underline', focusRing)}
         >
           {name}
         </button>
       ) : (
-        <span className="truncate">{name}</span>
+        <span className="truncate">
+          {name}
+          {uploadStatus != null && (
+            <span role="status" className="sr-only">
+              {uploadStatus}
+            </span>
+          )}
+        </span>
       )}
       {secondaryAction != null && (
         <button
@@ -87,7 +110,9 @@ export default function FileChip({
       <button
         type="button"
         onClick={onDelete}
-        aria-label={localize('com_ui_attach_remove')}
+        aria-label={
+          name ? `${localize('com_ui_attach_remove')} ${name}` : localize('com_ui_attach_remove')
+        }
         className={composerChipCloseClassName}
       >
         <span aria-hidden="true">{CLOSE_GLYPH}</span>

@@ -71,7 +71,9 @@ describe('FileRow chip variant', () => {
     const file = textFile();
     renderChips([file]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'com_ui_attach_remove' }));
+    const removeButton = screen.getByRole('button', { name: /com_ui_attach_remove/ });
+    expect(removeButton).toHaveAccessibleName('com_ui_attach_remove 2026-09_월간동향보고서.md');
+    await userEvent.click(removeButton);
 
     expect(mockDeleteFile).toHaveBeenCalledTimes(1);
     expect(mockDeleteFile).toHaveBeenCalledWith(expect.objectContaining({ file }));
@@ -83,6 +85,45 @@ describe('FileRow chip variant', () => {
     const [uploading, uploaded] = screen.getAllByTestId('composer-file-chip');
     expect(uploading).toHaveAttribute('aria-busy', 'true');
     expect(uploaded).not.toHaveAttribute('aria-busy');
+  });
+
+  it('announces that an attachment is loading while it uploads', () => {
+    renderChips([textFile({ progress: 0.4 })]);
+
+    const status = screen.queryByRole('status');
+    expect(status).not.toBeNull();
+    if (status == null) {
+      return;
+    }
+    expect(status).toHaveTextContent('com_ui_loading');
+  });
+
+  it('shows the local filename while its upload is pending', () => {
+    renderChips([
+      textFile({
+        filename: undefined,
+        file: new File(['report'], 'pending-report.md'),
+        progress: 0.4,
+      }),
+    ]);
+
+    expect(screen.getByTestId('composer-file-chip')).toHaveTextContent('pending-report.md');
+  });
+
+  it('opens a full-size preview from the image filename', async () => {
+    renderChips([imageFile()]);
+
+    const filename = screen.queryByRole('button', { name: 'chart.png' });
+    expect(filename).not.toBeNull();
+    if (filename == null) {
+      return;
+    }
+    await userEvent.click(filename);
+
+    expect(await screen.findByRole('img', { name: 'Preview image' })).toHaveAttribute(
+      'src',
+      'blob:http://localhost:3080/chart',
+    );
   });
 
   it('opens a full-size preview from an uploaded image pill', async () => {

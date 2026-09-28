@@ -169,6 +169,7 @@ describe('MetricsView', () => {
       'min-h-[111px]',
       'rounded-2xl',
       'shadow-[0_1px_2px_rgba(35,20,80,0.06)]',
+      'dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)]',
     );
     expect(registeredAgentsHeading.closest('section')?.parentElement).toHaveClass('mb-[18px]');
     expect(registeredAgentsHeading.nextElementSibling).toHaveClass('mt-0.5', 'text-[22px]');

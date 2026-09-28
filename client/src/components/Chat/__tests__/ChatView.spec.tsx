@@ -133,12 +133,19 @@ describe('ChatView landing suggestions', () => {
     expect(screen.queryByTestId('conversation-starters')).not.toBeInTheDocument();
   });
 
-  test('sets the hint in 13px muted text right under the composer', () => {
+  test('adds mobile breathing room but keeps desktop hint spacing unchanged', () => {
     render(<ChatView />);
 
     const hint = screen.getByText(/com_ui_landing_hint|Drop documents here/).closest('p');
-    expect(hint).toHaveClass('text-[13px]', 'leading-normal', 'text-text-muted', 'pt-0', 'pb-4');
-    expect(hint).not.toHaveClass('text-sm', 'pt-4', 'text-text-tertiary');
+    expect(hint).toHaveClass(
+      'text-[13px]',
+      'leading-normal',
+      'text-text-muted',
+      'pt-4',
+      'sm:pt-0',
+      'pb-4',
+    );
+    expect(hint).not.toHaveClass('text-sm', 'pt-0', 'text-text-tertiary');
   });
 });
 
