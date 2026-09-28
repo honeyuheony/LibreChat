@@ -24,7 +24,7 @@ export type HwpRenderOutcome =
       message: string;
     };
 
-type HwpFailure = Extract<HwpRenderOutcome, { ok: false }>;
+type HwpFailure = Extract<HwpRenderOutcome, { ok: false }> & { status?: number };
 
 export type HwpFieldsOutcome = { ok: true; fields: string[] } | HwpFailure;
 export type HwpFillOutcome = { ok: true; buffer: Buffer; filename?: string } | HwpFailure;
@@ -101,6 +101,7 @@ async function postJson(
       ok: false,
       code: failure?.error ?? 'unavailable',
       message: failure?.message ?? `HTTP ${response.status}`,
+      status: response.status,
     };
   }
   return { ok: true, response };

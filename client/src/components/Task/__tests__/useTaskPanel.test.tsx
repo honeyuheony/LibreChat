@@ -20,6 +20,40 @@ const taskCall = (id: string) =>
     content: [{ type: ContentTypes.TOOL_CALL, tool_call: { id, name: 'extract_table' } }],
   }) as unknown as TMessage;
 
+const savedFillMessage = () =>
+  ({
+    messageId: 'message-fill',
+    isCreatedByUser: false,
+    content: [
+      {
+        type: ContentTypes.TOOL_CALL,
+        tool_call: {
+          id: 'call-fill',
+          name: 'fill_report_template',
+          args: '{"template":"report-form.hwpx","values":{"제목":"분기 보고서"}}',
+          output: '결과 카드에 표시했습니다.',
+        },
+      },
+    ],
+    attachments: [
+      {
+        type: 'task_result',
+        toolCallId: 'call-fill',
+        messageId: 'message-fill',
+        conversationId: 'conversation-1',
+        stepId: 'step-fill',
+        agentId: 'agent-1',
+        task_result: {
+          resultId: 'result-fill',
+          kind: 'report',
+          title: 'trip-report',
+          stats: {},
+          file: { file_id: 'file-fill', filename: 'filled-report.hwpx' },
+        },
+      },
+    ],
+  }) as unknown as TMessage;
+
 const resultMessage = (resultId: string) =>
   ({
     messageId: `m-${resultId}`,
@@ -57,6 +91,12 @@ describe('useTaskPanel', () => {
 
   it('opens once a task tool call is in the conversation', () => {
     mockMessagesByConvo.a = [taskCall('t1')];
+    const { result } = setup({ conversationId: 'a', autoOpen: true, isSubmitting: false });
+    expect(result.current).toEqual({ hasTaskCall: true, open: true });
+  });
+
+  it('opens for a saved fill_report_template result', () => {
+    mockMessagesByConvo.a = [savedFillMessage()];
     const { result } = setup({ conversationId: 'a', autoOpen: true, isSubmitting: false });
     expect(result.current).toEqual({ hasTaskCall: true, open: true });
   });

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ContentTypes, TaskTools } from 'librechat-data-provider';
-import type { TMessage } from 'librechat-data-provider';
+import type { TMessage, TaskToolName } from 'librechat-data-provider';
 import {
   collectConversationFiles,
   collectTaskOutputs,
@@ -132,9 +132,15 @@ describe('resolveTaskSteps', () => {
 
   it('uses the stage ids the server sends for every task tool', () => {
     const source = serverToolsSource();
+    const expectedStageCounts: Record<TaskToolName, number> = {
+      [TaskTools.extract_table]: 5,
+      [TaskTools.summarize_documents]: 5,
+      [TaskTools.write_report]: 5,
+      [TaskTools.fill_report_template]: 3,
+    };
     for (const tool of Object.values(TaskTools)) {
       const ids = serverStageIds(source, tool);
-      expect(ids).toHaveLength(5);
+      expect(ids).toHaveLength(expectedStageCounts[tool]);
       expect(TASK_STAGES[tool].map((stage) => stage.id)).toEqual(ids);
     }
   });

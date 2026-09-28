@@ -7,6 +7,7 @@ it('exports each task tool argument contract', () => {
     extract_table: { fields: ['정세 전망'], suggested_fields: ['출처 매체'], file_ids: ['file-1'] },
     summarize_documents: { views: ['경제 영향'], view: '경제 영향', file_ids: ['file-1'] },
     write_report: { template_id: 'hwp-report', fields: ['정세 전망'], file_ids: ['file-1'] },
+    fill_report_template: { template: 'report-form.hwpx', values: { 제목: '분기 보고서' } },
   };
 
   expect(Object.keys(argumentsByTool)).toEqual(Object.values(TaskTools));
@@ -17,6 +18,7 @@ it('exports the task tool names and progress event contract', () => {
     'extract_table',
     'summarize_documents',
     'write_report',
+    'fill_report_template',
   ]);
   expect(TASK_PROGRESS_EVENT).toBe('on_task_progress');
 });

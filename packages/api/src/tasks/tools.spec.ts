@@ -6,6 +6,7 @@ import type { ReportTemplate } from './template';
 import { documentName, fakeLLM, makeDoc, memoryCache } from './__tests__/fakes.helper';
 import { createTaskTool, TASK_RESULT_ARTIFACT } from './tools';
 import { RENDER_UNAVAILABLE_NOTICE } from './report';
+import { isTaskToolName } from './definitions';
 
 const docs = [
   makeDoc('f1', '담당 김 사무관. 금주 실적: 보고서 작성.', 'kim.hwp'),
@@ -77,7 +78,11 @@ function setup(render: (request: HwpRenderRequest) => HwpRenderOutcome, document
   return { deps, saved, progress, renders, files, prompts: model.prompts };
 }
 
-async function call(name: TaskTools, args: Record<string, unknown>, deps: TaskToolDeps) {
+async function call(
+  name: Exclude<TaskTools, TaskTools.fill_report_template>,
+  args: Record<string, unknown>,
+  deps: TaskToolDeps,
+) {
   const message = await createTaskTool(name, deps).invoke(
     { id: 'call_1', name, args, type: 'tool_call' },
     { configurable: { thread_id: 'convo-1' } },
@@ -87,6 +92,12 @@ async function call(name: TaskTools, args: Record<string, unknown>, deps: TaskTo
     artifact?: Record<string, TaskResultArtifact>;
   };
 }
+
+describe('static task tool names', () => {
+  it('keeps the per-turn template tool outside the static task factory', () => {
+    expect(isTaskToolName(TaskTools.fill_report_template)).toBe(false);
+  });
+});
 
 describe('write_report tool', () => {
   it('saves the HWPX and attaches its file to the result when rendering succeeds', async () => {
@@ -143,6 +154,16 @@ describe('write_report tool', () => {
       notices.push(notice);
     }
     expect(new Set([...notices, RENDER_UNAVAILABLE_NOTICE]).size).toBe(4);
+  });
+
+  it('asks the user to retry later when report rendering is busy', async () => {
+    const env = setup(() => ({ ok: false, code: 'busy', message: 'no worker slots' }));
+    const message = await call(TaskTools.write_report, { template_id: 'weekly-report' }, env.deps);
+    const notice = message.artifact?.[TASK_RESULT_ARTIFACT].notice ?? '';
+
+    expect(notice).toContain('잠시 후 다시 시도해 주세요.');
+    expect(message.content).toContain(notice);
+    expect(env.saved[0]).not.toHaveProperty('file');
   });
 
   it('reuses cells a previous table extracted, making only the writer call', async () => {

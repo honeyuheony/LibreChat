@@ -21,6 +21,7 @@ export enum TaskTools {
   extract_table = 'extract_table',
   summarize_documents = 'summarize_documents',
   write_report = 'write_report',
+  fill_report_template = 'fill_report_template',
 }
 
 export enum EToolResources {
