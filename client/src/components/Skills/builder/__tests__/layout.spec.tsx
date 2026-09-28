@@ -322,7 +322,7 @@ describe('Builder layout', () => {
     const aiTag = within(block('com_skills_builder_when') as HTMLElement).getByText(
       'com_skills_builder_source_ai',
     );
-    expect(aiTag).toHaveClass('text-accent-primary-hover');
+    expect(aiTag).toHaveClass('bg-surface-message-user', 'text-accent-primary-hover');
   });
 
   /**
