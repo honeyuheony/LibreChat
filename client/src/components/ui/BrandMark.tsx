@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { cn } from '~/utils';
 
-/** AgentHub 로고를 인라인 SVG로 렌더링해 className에 맞춰 크기만 조절하고 색상은 유지한다. */
+/** AI playground 로고를 인라인 SVG로 렌더링해 className에 맞춰 크기만 조절하고 색상은 유지한다. */
 export default function BrandMark({ className }: { className?: string }) {
   /** 같은 화면의 로고끼리 gradient id가 겹치지 않도록 한다. */
   const gradientId = `brand-mark-${useId().replace(/:/g, '')}`;

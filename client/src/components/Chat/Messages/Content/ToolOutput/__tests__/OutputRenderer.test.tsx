@@ -28,18 +28,16 @@ describe('OutputRenderer', () => {
 
   it('treats an MCP server "Error executing tool" reply as a tool error', () => {
     expect(
-      isError(
-        'Error executing tool read_file: PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.',
-      ),
+      isError('Error executing tool read_file: PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.'),
     ).toBe(true);
   });
 
   it('strips the "Error executing tool <name>:" prefix from the shown message', () => {
     expect(
       cleanToolError(
-        'Error executing tool read_file: PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.',
+        'Error executing tool read_file: PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.',
       ),
-    ).toBe('PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.');
+    ).toBe('PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.');
   });
 
   it('strips the LibreChat tool-call prefix and the retry hint', () => {
@@ -52,9 +50,9 @@ describe('OutputRenderer', () => {
 
   it('renders the relay error without its prefix', () => {
     render(
-      <OutputRenderer text="Error executing tool list_folder: PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다." />,
+      <OutputRenderer text="Error executing tool list_folder: PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다." />,
     );
-    expect(screen.getByText('PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.')).toHaveClass(
+    expect(screen.getByText('PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.')).toHaveClass(
       'text-status-error',
     );
   });

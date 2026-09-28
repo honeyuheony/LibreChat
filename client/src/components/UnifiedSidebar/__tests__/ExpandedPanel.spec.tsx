@@ -100,7 +100,7 @@ jest.mock('~/components/Nav/SearchBar', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
-  useGetStartupConfig: () => ({ data: { appTitle: 'Work Agent' } }),
+  useGetStartupConfig: () => ({ data: { appTitle: 'AI playground' } }),
 }));
 
 jest.mock('../ConversationsSection', () => ({
@@ -344,14 +344,14 @@ describe('ExpandedPanel', () => {
   describe('layout', () => {
     it('shows the app title and the active panel below the rows while expanded', () => {
       renderPanel({ expanded: true });
-      expect(screen.getByText('Work Agent')).toBeInTheDocument();
+      expect(screen.getByText('AI playground')).toBeInTheDocument();
       expect(screen.getByTestId('history-panel')).toBeInTheDocument();
       expect(screen.getByTestId('account-settings')).toHaveAttribute('data-collapsed', 'false');
     });
 
     it('drops the title and the panel while collapsed', () => {
       renderPanel({ expanded: false });
-      expect(screen.queryByText('Work Agent')).not.toBeInTheDocument();
+      expect(screen.queryByText('AI playground')).not.toBeInTheDocument();
       expect(screen.queryByTestId('history-panel')).not.toBeInTheDocument();
       expect(screen.getByTestId('account-settings')).toHaveAttribute('data-collapsed', 'true');
     });

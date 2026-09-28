@@ -256,7 +256,7 @@ html {
   --surface-fixed: var(--white);
   --surface-fixed-hover: 243 243 248; /* #f3f3f8 wireframe gray-100, same in light + dark */
   --text-fixed: 21 21 28; /* #15151c wireframe gray-900, same in light + dark */
-  /* AgentHub wireframe radii: 10px rows and fields (so rounded-md 8px, rounded-sm 6px), pill .btn
+  /* AI playground design radii: 10px rows and fields (so rounded-md 8px, rounded-sm 6px), pill .btn
      buttons, 14px cards, 24px composer. Dialogs take the wireframe 22px further down. */
   --radius: 0.625rem;
   --theme-control-radius: 0.625rem;
@@ -427,7 +427,7 @@ html {
   --border-xheavy: 217 217 227;
 }
 
-/* Sidebar ink. The AgentHub wireframe keeps the sidebar dark (#17152b "ink") in every mode, so the
+/* Sidebar ink. The AI playground design keeps the sidebar dark (#17152b "ink") in every mode, so the
  * sidebar restates the semantic tokens its contents read instead of each row picking new classes.
  * Values are the wireframe's #side overrides; ratios are against the ink canvas (script-computed):
  * text-secondary 12.12:1, text-tertiary 8.48:1 (6.30:1 on the ink-3 selection), text-muted 5.52:1.
@@ -689,7 +689,7 @@ html.high-contrast.dark .btn-neutral:hover {
 }
 
 /* SUIT 2.0.5 (github sun-typeface/SUIT, fonts/variable/woff2), SIL OFL 1.1:
-   client/public/fonts/SUIT-OFL.txt. The AgentHub wireframe's first UI font. */
+   client/public/fonts/SUIT-OFL.txt. The AI playground design's first UI font. */
 @font-face {
   font-display: swap;
   font-family: 'SUIT Variable';
@@ -2764,7 +2764,7 @@ html[data-input-modality='keyboard']
   z-index: 2;
 }
 
-/* AgentHub wireframe v24 motion and accessibility preferences.
+/* AI playground design motion and accessibility preferences.
  * Press feedback and entrances use the individual `scale` / `translate` properties rather than
  * `transform`, so they compose with the Tailwind transforms (dialog centering, translate
  * utilities) already on these elements instead of replacing them. Press scaling carries no
