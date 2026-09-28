@@ -281,12 +281,13 @@ describe('Builder layout', () => {
     ).toBeVisible();
   });
 
-  it('reads the chat text by default and reveals every internal system on request', async () => {
+  it('reads the documents uploaded at run time for a report and reveals every internal system on request', async () => {
     render(<Harness />);
     await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
 
     const data = block('com_skills_builder_data') as HTMLElement;
-    expect(within(data).getByText('com_skills_builder_data_chat')).toBeVisible();
+    expect(within(data).getByText('com_skills_builder_data_files')).toBeVisible();
+    expect(within(data).queryByText('com_skills_builder_data_chat')).toBeNull();
     expect(within(data).getAllByRole('switch')).toHaveLength(1);
 
     fireEvent.click(
@@ -677,6 +678,19 @@ describe('Share step', () => {
     within(group)
       .getAllByRole('button')
       .forEach((choice) => expect(choice).toHaveClass('text-text-primary'));
+  });
+
+  it('reads the chat text when the agent writes a draft', () => {
+    const chat = chatState('정책 설명자료 초안을 쓴다.', {
+      output: 'draft',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+    const data = block('com_skills_builder_data') as HTMLElement;
+    expect(within(data).getByText('com_skills_builder_data_chat')).toBeVisible();
+    expect(within(data).queryByText('com_skills_builder_data_files')).toBeNull();
   });
 
   it('lays the field preview table on the secondary surface under a white heading row', () => {
