@@ -212,26 +212,38 @@ const AttachFileMenu = ({
   /** Unified mode removed the destination chooser, not the source chooser. SharePoint has
    *  no trigger of its own, so without this the picker becomes unreachable whenever the
    *  composer is in unified mode. Destination stays implicit on both sources. */
-  const unifiedSourceItems = useMemo<MenuItemProps[]>(() => {
-    const items: MenuItemProps[] = [
-      {
-        label: localize('com_files_upload_local_machine'),
-        onClick: handleUnifiedUpload,
-        icon: <FileImageIcon className="icon-md" />,
-      },
-    ];
-    if (sharePointEnabled === true) {
-      items.push({
-        label: localize('com_files_upload_sharepoint'),
-        onClick: () => {
-          toolResourceRef.current = undefined;
-          setIsSharePointDialogOpen(true);
-        },
-        icon: <SharePointIcon className="icon-md" />,
-      });
-    }
-    return withExtraItems(items, extraItems);
-  }, [localize, handleUnifiedUpload, setIsSharePointDialogOpen, sharePointEnabled, extraItems]);
+  const sharePointItems = useMemo<MenuItemProps[]>(
+    () =>
+      sharePointEnabled === true
+        ? [
+            {
+              label: localize('com_files_upload_sharepoint'),
+              onClick: () => {
+                toolResourceRef.current = undefined;
+                setIsSharePointDialogOpen(true);
+              },
+              icon: <SharePointIcon className="icon-md" />,
+            },
+          ]
+        : [],
+    [localize, setIsSharePointDialogOpen, sharePointEnabled],
+  );
+
+  const unifiedSourceItems = useMemo<MenuItemProps[]>(
+    () =>
+      withExtraItems(
+        [
+          {
+            label: localize('com_files_upload_local_machine'),
+            onClick: handleUnifiedUpload,
+            icon: <FileImageIcon className="icon-md" />,
+          },
+          ...sharePointItems,
+        ],
+        extraItems,
+      ),
+    [localize, handleUnifiedUpload, sharePointItems, extraItems],
+  );
 
   const dropdownItems = useMemo(() => {
     const setToolResource = (value: EToolResources | undefined) => {
