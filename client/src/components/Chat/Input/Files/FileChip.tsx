@@ -34,7 +34,7 @@ export default function FileChip({
   secondaryAction?: SubtitleAction;
 }) {
   const localize = useLocalize();
-  const name = file.filename ?? '';
+  const name = file.filename || file.file?.name || '';
   const uploading = file.progress < 1;
   const showsPreview =
     !uploading && previewUrl != null && (file.type?.startsWith('image') ?? false);

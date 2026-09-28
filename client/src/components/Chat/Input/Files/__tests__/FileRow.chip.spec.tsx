@@ -98,6 +98,18 @@ describe('FileRow chip variant', () => {
     expect(status).toHaveTextContent('com_ui_loading');
   });
 
+  it('shows the local filename while its upload is pending', () => {
+    renderChips([
+      textFile({
+        filename: undefined,
+        file: new File(['report'], 'pending-report.md'),
+        progress: 0.4,
+      }),
+    ]);
+
+    expect(screen.getByTestId('composer-file-chip')).toHaveTextContent('pending-report.md');
+  });
+
   it('opens a full-size preview from the image filename', async () => {
     renderChips([imageFile()]);
 
