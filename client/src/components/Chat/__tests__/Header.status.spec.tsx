@@ -6,6 +6,7 @@ import type { TaskRunStatus } from '~/components/Task/useTaskRunState';
 import Header from '../Header';
 
 let mockTaskState: { call: object | null; status: TaskRunStatus };
+let mockDocumentCount = 0;
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
@@ -14,7 +15,7 @@ jest.mock('~/hooks', () => ({
 }));
 jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({ data: undefined }),
-  useGetMessagesByConvoId: () => ({ data: 0 }),
+  useGetMessagesByConvoId: () => ({ data: mockDocumentCount }),
 }));
 jest.mock('~/components/Task/useTaskRunState', () => ({
   ...jest.requireActual('~/components/Task/useTaskRunState'),
@@ -55,6 +56,27 @@ describe('Header status', () => {
     mockTaskState = { call: null, status: 'ok' };
     renderHeader();
     expect(screen.getByText('com_ui_convo_done')).toBeInTheDocument();
+  });
+
+  it('sets the status in 13px muted text', () => {
+    mockTaskState = { call: null, status: 'ok' };
+    renderHeader();
+    expect(screen.getByText('com_ui_convo_done')).toHaveClass('text-[13px]', 'text-text-muted');
+  });
+});
+
+describe('Header documents', () => {
+  afterEach(() => {
+    mockDocumentCount = 0;
+  });
+
+  it('follows the attached document count with a pointer', () => {
+    mockTaskState = { call: null, status: 'ok' };
+    mockDocumentCount = 3;
+    renderHeader();
+    expect(screen.getByText('com_ui_header_documents').parentElement).toHaveTextContent(
+      /com_ui_header_documents\s*▸$/,
+    );
   });
 });
 

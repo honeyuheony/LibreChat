@@ -227,6 +227,44 @@ describe('ChatForm attachments', () => {
     ).toBe(remove);
   }, 20000);
 
+  test('draws an attachment as a pill beside the tool chips', async () => {
+    const { container } = renderComposer();
+    await screen.findByTestId('text-input');
+
+    await attach(container, image());
+
+    const chip = await within(screen.getByTestId('composer-chip-row')).findByTestId(
+      'composer-file-chip',
+    );
+    expect(chip).toHaveClass('rounded-full');
+  }, 20000);
+
+  test('sizes the submit slot to a 38px circle', async () => {
+    renderComposer();
+    await screen.findByTestId('text-input');
+
+    expect(screen.getByTestId('composer-submit-slot')).toHaveClass(
+      '[--theme-control-height:2.375rem]',
+      '[--theme-control-radius:9999px]',
+    );
+    expect(screen.getByTestId('composer-submit-slot')).toContainElement(sendButton());
+  }, 20000);
+
+  test.each([
+    ['the landing page', true],
+    ['a conversation', false],
+  ])(
+    'sets the input in 17.5px type on a 26px line on %s',
+    async (_label, landing) => {
+      renderComposer({ landing });
+
+      const textarea = await screen.findByTestId('text-input');
+      expect(textarea).toHaveClass('text-[17.5px]', 'leading-[26px]');
+      expect(textarea).not.toHaveClass('text-[17px]', 'text-base', 'leading-relaxed');
+    },
+    20000,
+  );
+
   test('does not steal focus when clicking the nested attachment icon', async () => {
     renderComposer();
     const textarea = await screen.findByTestId('text-input');
@@ -429,12 +467,13 @@ describe('ChatForm attachments', () => {
   test('enables send for an attachment with no composer text', async () => {
     const { container } = renderComposer();
     await screen.findByTestId('text-input');
-    expect(sendButton()).toBeDisabled();
+    expect(sendButton()).toHaveAttribute('aria-disabled', 'true');
 
     await attach(container, image());
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
 
-    await waitFor(() => expect(sendButton()).toBeEnabled());
+    await waitFor(() => expect(sendButton()).not.toHaveAttribute('aria-disabled'));
+    expect(sendButton()).toBeEnabled();
   }, 20000);
 
   /**

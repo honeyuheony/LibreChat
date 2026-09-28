@@ -2,13 +2,15 @@ import { TaskTools } from 'librechat-data-provider';
 import type { TaskToolName } from 'librechat-data-provider';
 import type { ExtendedJsonSchema } from '~/tools/registry/schema';
 
-export const TASK_TOOL_NAMES: readonly TaskToolName[] = [
+type StaticTaskToolName = Exclude<TaskToolName, TaskTools.fill_report_template>;
+
+export const TASK_TOOL_NAMES: readonly StaticTaskToolName[] = [
   TaskTools.extract_table,
   TaskTools.summarize_documents,
   TaskTools.write_report,
 ];
 
-export function isTaskToolName(name: unknown): name is TaskToolName {
+export function isTaskToolName(name: unknown): name is StaticTaskToolName {
   return typeof name === 'string' && (TASK_TOOL_NAMES as readonly string[]).includes(name);
 }
 
@@ -80,8 +82,8 @@ export const writeReportSchema: ExtendedJsonSchema = {
 };
 
 export const TASK_TOOL_DEFINITIONS: Record<
-  TaskToolName,
-  { name: TaskToolName; description: string; schema: ExtendedJsonSchema }
+  StaticTaskToolName,
+  { name: StaticTaskToolName; description: string; schema: ExtendedJsonSchema }
 > = {
   [TaskTools.extract_table]: {
     name: TaskTools.extract_table,

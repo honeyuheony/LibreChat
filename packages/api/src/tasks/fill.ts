@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { logger } from '@librechat/data-schemas';
 import { tool } from '@librechat/agents/langchain/tools';
+import { MAX_REPORT_TEMPLATES_PER_TURN, TaskTools } from 'librechat-data-provider';
 import type { StructuredToolInterface } from '@librechat/agents/langchain/tools';
 import type { TaskDocResult, TaskResult } from 'librechat-data-provider';
 import type { LCTool } from '@librechat/agents';
@@ -10,14 +11,23 @@ import type { TaskResultArtifact } from './tools';
 import type { HwpService } from './hwpService';
 import { resolveDownloadPath } from '~/storage/path';
 import { TASK_RESULT_ARTIFACT } from './tools';
+import { HWP_BUSY_NOTICE } from './report';
 
-export const FILL_REPORT_TEMPLATE_TOOL = 'fill_report_template';
+export const FILL_REPORT_TEMPLATE_TOOL: TaskTools.fill_report_template =
+  TaskTools.fill_report_template;
 
 const TEMPLATE_PATH = /^assets\/[^/]+\.hwpx$/i;
-/** 스킬 파일 업로드 상한(10MB)과 같다. 그보다 큰 기록은 올라올 수 없으므로 읽지 않는다. */
-const MAX_TEMPLATE_BYTES = 10 * 1024 * 1024;
+const MAX_TEMPLATE_BYTES = 5_000_000;
+const MAX_TEMPLATE_FIELDS = 100;
+const MAX_FIELD_NAME_CHARS = 200;
+const INVALID_FIELD_NAME_CHARACTERS = /[\p{Cf}\u{E0000}-\u{E007F},:{}"']/u;
+const FIELD_LOOKUP_TIMEOUT_MS = 5_000;
+const TRANSIENT_FIELD_LOOKUP_FAILURE_TTL_MS = 10_000;
+const INVALID_FIELD_LOOKUP_FAILURE_TTL_MS = 60_000;
+
 /** 캐시 크기의 근거는 없다. 스킬 버전마다 한 줄이라 작게 둔다. */
 const MAX_CACHED_FIELD_LISTS = 200;
+const failedFieldCache = new Map<string, number>();
 
 /** 이번 turn 에 채울 수 있는 양식. 바이트는 turn 을 시작할 때 읽어 둔 것을 그대로 쓴다. */
 export interface ReportTemplateFile {
@@ -59,10 +69,16 @@ export function createSkillTemplateSource(deps: {
       }
       const stream = await deps.getDownloadStream(file.source, resolveDownloadPath(file));
       const chunks: Buffer[] = [];
+      let bytesRead = 0;
       for await (const chunk of stream as AsyncIterable<Buffer | string>) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        bytesRead += buffer.byteLength;
+        if (bytesRead > MAX_TEMPLATE_BYTES) {
+          return null;
+        }
+        chunks.push(buffer);
       }
-      return Buffer.concat(chunks);
+      return Buffer.concat(chunks, bytesRead);
     },
   };
 }
@@ -75,6 +91,7 @@ interface TemplateSkill {
 
 export interface FindReportTemplatesDeps extends SkillTemplateSource {
   hwp: Pick<HwpService, 'fields'>;
+  maxTemplatesPerTurn?: number;
   /** `<스킬 id>:<버전>:<경로>` 마다 필드 목록. 스킬 파일이 바뀌면 버전이 올라 새로 묻는다. */
   fieldCache?: Map<string, string[]>;
 }
@@ -83,14 +100,61 @@ export function createFieldCache(): Map<string, string[]> {
   return new Map();
 }
 
-function remember(cache: Map<string, string[]> | undefined, key: string, fields: string[]) {
+function remember<T>(cache: Map<string, T> | undefined, key: string, value: T): void {
   if (!cache) {
     return;
   }
-  if (cache.size >= MAX_CACHED_FIELD_LISTS) {
-    cache.delete(cache.keys().next().value as string);
+  if (!cache.has(key) && cache.size >= MAX_CACHED_FIELD_LISTS) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) {
+      cache.delete(oldest);
+    }
   }
-  cache.set(key, fields);
+  cache.set(key, value);
+}
+
+function hasRecentFieldFailure(key: string): boolean {
+  const expiresAt = failedFieldCache.get(key);
+  if (expiresAt === undefined) {
+    return false;
+  }
+  if (expiresAt > Date.now()) {
+    return true;
+  }
+  failedFieldCache.delete(key);
+  return false;
+}
+
+function validFieldName(field: string): boolean {
+  let characters = 0;
+  for (const character of field) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint === undefined ||
+      codePoint <= 0x1f ||
+      (codePoint >= 0x7f && codePoint <= 0x9f) ||
+      codePoint === 0x2028 ||
+      codePoint === 0x2029 ||
+      INVALID_FIELD_NAME_CHARACTERS.test(character)
+    ) {
+      return false;
+    }
+    characters += 1;
+    if (characters > MAX_FIELD_NAME_CHARS) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function templateFieldNames(fields: string[]): string[] {
+  const validFields = fields.filter(validFieldName);
+  const selectedFields = validFields.slice(0, MAX_TEMPLATE_FIELDS);
+  const discardedCount = fields.length - selectedFields.length;
+  if (discardedCount > 0) {
+    logger.warn(`[fill_report_template] Skipped ${discardedCount} invalid or excess fields`);
+  }
+  return selectedFields;
 }
 
 async function templateFields(
@@ -102,17 +166,26 @@ async function templateFields(
   const key = `${skill._id.toString()}:${skill.version ?? 0}:${relativePath}`;
   const cached = deps.fieldCache?.get(key);
   if (cached) {
-    return cached;
+    return templateFieldNames(cached);
   }
-  const outcome = await deps.hwp.fields(buffer);
+  if (hasRecentFieldFailure(key)) {
+    return [];
+  }
+  const outcome = await deps.hwp.fields(buffer, AbortSignal.timeout(FIELD_LOOKUP_TIMEOUT_MS));
   if (!outcome.ok) {
+    const failureTtl =
+      outcome.status === 422
+        ? INVALID_FIELD_LOOKUP_FAILURE_TTL_MS
+        : TRANSIENT_FIELD_LOOKUP_FAILURE_TTL_MS;
+    remember(failedFieldCache, key, Date.now() + failureTtl);
     logger.warn(
       `[fill_report_template] Could not read the fields of ${skill.name}/${relativePath}: ${outcome.code}`,
     );
     return [];
   }
-  remember(deps.fieldCache, key, outcome.fields);
-  return outcome.fields;
+  const fields = templateFieldNames(outcome.fields);
+  remember(deps.fieldCache, key, fields);
+  return fields;
 }
 
 /** 스킬의 assets 에 있는 .hwpx 가운데 `{{항목}}` 표시가 있는 양식만 돌려준다. HWP 바이너리는 채울 수 없어 뺀다. */
@@ -125,43 +198,76 @@ export async function findReportTemplates(
       const files = (await deps.listSkillFiles(skill._id)).filter((file) =>
         TEMPLATE_PATH.test(file.relativePath),
       );
-      const found = await Promise.all(
-        files.map(async (file) => {
-          const buffer = await deps.readSkillFile(skill._id, file.relativePath);
-          if (!buffer) {
-            return null;
-          }
-          const fields = await templateFields(skill, file.relativePath, buffer, deps);
-          if (fields.length === 0) {
-            return null;
-          }
-          return {
-            name: file.filename || file.relativePath.slice('assets/'.length),
-            skillName: skill.name,
-            relativePath: file.relativePath,
-            fields,
-            buffer,
-          };
-        }),
-      );
-      return found.filter((template): template is ReportTemplateFile => template != null);
+      return files.map((file) => ({
+        skill,
+        relativePath: file.relativePath,
+        name: file.filename || file.relativePath.slice('assets/'.length),
+      }));
     }),
   );
-  const templates = perSkill.flat();
+  const candidates = perSkill.flat().filter((candidate) => {
+    if (validFieldName(candidate.name)) {
+      return true;
+    }
+    logger.warn('[fill_report_template] Skipping a report template with an unsafe filename');
+    return false;
+  });
+  const maxTemplatesPerTurn = Math.max(
+    1,
+    Math.min(
+      Math.floor(deps.maxTemplatesPerTurn ?? MAX_REPORT_TEMPLATES_PER_TURN),
+      MAX_REPORT_TEMPLATES_PER_TURN,
+    ),
+  );
+  const selectedCandidates = candidates.slice(0, maxTemplatesPerTurn);
+  const skippedTemplates = candidates.length - selectedCandidates.length;
+  if (skippedTemplates > 0) {
+    logger.warn(
+      `[fill_report_template] Skipping ${skippedTemplates} templates beyond the turn limit`,
+    );
+  }
+  const found = await Promise.all(
+    selectedCandidates.map(async ({ skill, relativePath, name }) => {
+      const buffer = await deps.readSkillFile(skill._id, relativePath);
+      if (!buffer) {
+        return null;
+      }
+      const fields = await templateFields(skill, relativePath, buffer, deps);
+      if (fields.length === 0) {
+        return null;
+      }
+      return {
+        name,
+        skillName: skill.name,
+        relativePath,
+        fields,
+        buffer,
+      };
+    }),
+  );
+  const templates = found.filter((template): template is ReportTemplateFile => template != null);
   const counts = new Map<string, number>();
   for (const template of templates) {
     counts.set(template.name, (counts.get(template.name) ?? 0) + 1);
   }
-  return templates.map((template) =>
-    (counts.get(template.name) ?? 0) > 1
-      ? { ...template, name: `${template.skillName}/${template.name}` }
-      : template,
-  );
+  return templates
+    .map((template) =>
+      (counts.get(template.name) ?? 0) > 1
+        ? { ...template, name: `${template.skillName}/${template.name}` }
+        : template,
+    )
+    .filter((template) => {
+      if (validFieldName(template.name)) {
+        return true;
+      }
+      logger.warn('[fill_report_template] Skipping a report template with an unsafe name');
+      return false;
+    });
 }
 
 export function buildReportTemplateDefinition(templates: ReportTemplateFile[]): LCTool {
   const list = templates
-    .map((template) => `- ${template.name}: ${template.fields.join(', ')}`)
+    .map((template) => `- ${template.name}: ${templateFieldNames(template.fields).join(', ')}`)
     .join('\n');
   return {
     name: FILL_REPORT_TEMPLATE_TOOL,
@@ -296,11 +402,14 @@ async function fillTemplate(
   }
   const now = deps.now ?? Date.now;
   const startedAt = now();
-  const values = pickValues(template.fields, args.values);
+  const fields = templateFieldNames(template.fields);
+  const values = pickValues(fields, args.values);
   const filled = await deps.hwp.fill(template.buffer, values, context.signal);
   if (!filled.ok) {
     return [
-      `한글 문서 변환 서버가 양식을 채우지 못했습니다(${filled.code}). HWPX 파일을 만들었다고 말하지 말고, 잠시 뒤 다시 시도하라고 안내하세요.`,
+      filled.code === 'busy'
+        ? `${HWP_BUSY_NOTICE} HWPX 파일은 생성되지 않았으므로 생성됐다고 안내하지 마세요.`
+        : `한글 문서 변환 서버가 양식을 채우지 못했습니다(${filled.code}). HWPX 파일을 만들었다고 말하지 말고, 잠시 뒤 다시 시도하라고 안내하세요.`,
       undefined,
     ];
   }
@@ -312,8 +421,8 @@ async function fillTemplate(
     kind: 'report',
     resultId: (deps.createId ?? randomUUID)(),
     conversationId: context.conversationId,
-    title: template.name.replace(/\.hwpx$/i, ''),
-    body: template.fields.map((field) => `${field}: ${values[field] ?? ''}`).join('\n'),
+    title: template.skillName,
+    body: fields.map((field) => `${field}: ${values[field] ?? ''}`).join('\n'),
     footnotes: [],
     file,
     stats: { ...EMPTY_STATS, seconds: Math.round((now() - startedAt) / 1000) },
@@ -321,7 +430,7 @@ async function fillTemplate(
   };
   await deps.saveResult(result);
   return [
-    `양식 ${template.name} 을 채운 파일(${file.filename})을 만들어 화면에 열었습니다. 채운 내용을 다시 쓰지 말고 짧게 답하세요.`,
+    `양식 ${template.name}을 채운 파일(${file.filename})을 결과 카드에 표시했습니다. 파일은 카드에서 내려받을 수 있습니다. 채운 내용을 다시 쓰지 말고 짧게 답하세요.`,
     {
       [TASK_RESULT_ARTIFACT]: {
         resultId: result.resultId,

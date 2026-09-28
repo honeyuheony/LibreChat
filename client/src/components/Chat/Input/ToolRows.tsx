@@ -12,6 +12,8 @@ import CustomIcon from '~/components/ui/CustomIcon';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
+const rowTitleClassName = 'text-[14.5px] font-normal leading-normal text-text-secondary';
+
 const rowClassName = cn(
   'group flex w-full cursor-pointer items-center gap-3 rounded-theme-control px-2.5 py-2',
   'outline-none transition-colors duration-150',
@@ -106,7 +108,7 @@ export function ConnectorRow({
     >
       <ConnectorTile server={server} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
+        <span className={cn('block truncate', rowTitleClassName)}>{displayName}</span>
         {deskAppOff ? (
           <span className="block truncate text-xs text-text-secondary">
             {localize('com_ui_tools_desk_app_off')}
@@ -170,7 +172,7 @@ export function UnavailableConnectorRow({ server }: { server: MCPServerDefinitio
     >
       <ConnectorTile server={server} muted />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-text-primary">{displayName}</span>
+        <span className={cn('block truncate', rowTitleClassName)}>{displayName}</span>
         <span className="block truncate text-xs text-text-secondary">{reason}</span>
       </span>
     </Ariakit.MenuItem>
@@ -192,9 +194,7 @@ export function BuiltinRow({ tool }: { tool: BuiltinTool }) {
       <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-hover text-text-secondary">
         {tool.icon}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
-        {tool.label}
-      </span>
+      <span className={cn('min-w-0 flex-1 truncate', rowTitleClassName)}>{tool.label}</span>
       {tool.accessory}
       <SwitchIndicator checked={tool.enabled} />
     </Ariakit.MenuItemCheckbox>
@@ -210,7 +210,7 @@ export type ComposerUpload = {
 };
 
 const pickButtonClassName = cn(
-  'flex-shrink-0 rounded-theme-control border border-border-light px-2 py-1 text-xs font-medium text-text-primary',
+  'flex-shrink-0 rounded-full border border-border-medium bg-surface-primary px-[11px] py-[3px] text-[13px] font-normal leading-[19px] text-text-secondary',
   'outline-none hover:bg-surface-hover data-[active-item]:bg-surface-hover',
   'aria-disabled:cursor-default aria-disabled:opacity-50',
 );
@@ -223,7 +223,7 @@ export function UploadPickerRow({ upload }: { upload: ComposerUpload }) {
         <Upload className="size-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-text-primary">
+        <span className={cn('block truncate', rowTitleClassName)}>
           {localize('com_ui_upload_file_or_folder')}
         </span>
         {upload.hint !== '' && (
@@ -277,7 +277,7 @@ export function ConversationFilesRow({
         <Files className="size-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-text-primary">{label}</span>
+        <span className={cn('block truncate', rowTitleClassName)}>{label}</span>
         <span className="block truncate text-xs text-text-secondary">
           {count > 0
             ? localize('com_ui_my_uploaded_files_count', { 0: count })
@@ -300,9 +300,7 @@ function UploadRow({ item }: { item: MenuItemProps }) {
       <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-theme-control bg-surface-hover text-text-secondary [&_svg]:size-4">
         {item.icon}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
-        {item.label}
-      </span>
+      <span className={cn('min-w-0 flex-1 truncate', rowTitleClassName)}>{item.label}</span>
     </Ariakit.MenuItem>
   );
 }

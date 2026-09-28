@@ -12,8 +12,11 @@ type SendButtonProps = {
   fileCount?: number;
 };
 
+type SubmitButtonProps = { disabled: boolean; empty: boolean };
+
+/** 빈 입력은 `disabled` 대신 `aria-disabled`로 막아 그라데이션을 유지하고, 전송 중처럼 정말 쓸 수 없을 때만 흐리게 한다. */
 const SubmitButton = React.memo(
-  forwardRef((props: { disabled: boolean }, ref: React.ForwardedRef<HTMLButtonElement>) => {
+  forwardRef((props: SubmitButtonProps, ref: React.ForwardedRef<HTMLButtonElement>) => {
     const localize = useLocalize();
     return (
       <TooltipAnchor
@@ -24,7 +27,9 @@ const SubmitButton = React.memo(
             aria-label={localize('com_nav_send_message')}
             id="send-button"
             disabled={props.disabled}
-            className={cn(composerSubmitClasses(), 'size-[38px] rounded-full')}
+            aria-disabled={props.empty || undefined}
+            onClick={props.empty ? (e) => e.preventDefault() : undefined}
+            className={cn(composerSubmitClasses(), props.empty && 'cursor-not-allowed')}
             data-testid="send-button"
             type="submit"
           >
@@ -42,7 +47,9 @@ const SendButton = React.memo(
   forwardRef((props: SendButtonProps, ref: React.ForwardedRef<HTMLButtonElement>) => {
     const data = useWatch({ control: props.control });
     const canSubmit = isSubmittableMessage(data?.text, props.fileCount);
-    return <SubmitButton ref={ref} disabled={props.disabled || !canSubmit} />;
+    return (
+      <SubmitButton ref={ref} disabled={props.disabled} empty={!props.disabled && !canSubmit} />
+    );
   }),
 );
 

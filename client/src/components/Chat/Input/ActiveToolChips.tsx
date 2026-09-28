@@ -1,11 +1,15 @@
 import { memo } from 'react';
+import { MCPIcon } from '@librechat/client';
+import {
+  composerChipClassName,
+  composerChipIconClassName,
+  composerChipCloseClassName,
+} from './chip';
+import CustomIcon from '~/components/ui/CustomIcon';
 import useComposerTools from './useComposerTools';
 import { useLocalize } from '~/hooks';
 
 const CLOSE_GLYPH = '×';
-
-const chipClassName =
-  'inline-flex max-w-[220px] items-center gap-1 rounded-full border border-accent-primary/25 bg-surface-brand-subtle py-0.5 pl-2.5 pr-1.5 text-[13px] text-accent-primary';
 
 /** 활성 connector·tool을 칩으로 표시하고, ×는 해당 항목을 끈다. */
 function ActiveToolChips({
@@ -30,11 +34,21 @@ function ActiveToolChips({
       .map((server) => ({
         key: `mcp-${server.serverName}`,
         label: server.config?.title || server.serverName,
+        icon: server.config?.iconPath ? (
+          <CustomIcon src={server.config.iconPath} className="size-3 object-contain" alt="" />
+        ) : (
+          <MCPIcon />
+        ),
         turnOff: () => toggleConnector(server.serverName),
       })),
     ...builtinTools
       .filter((tool) => tool.enabled)
-      .map((tool) => ({ key: `tool-${tool.id}`, label: tool.label, turnOff: tool.onToggle })),
+      .map((tool) => ({
+        key: `tool-${tool.id}`,
+        label: tool.label,
+        icon: tool.icon,
+        turnOff: tool.onToggle,
+      })),
   ];
 
   if (chips.length === 0) {
@@ -44,13 +58,20 @@ function ActiveToolChips({
   return (
     <ul className="flex flex-wrap items-center gap-1.5" aria-label={localize('com_ui_tools')}>
       {chips.map((chip) => (
-        <li key={chip.key} className={chipClassName} data-testid="active-tool-chip">
+        <li key={chip.key} className={composerChipClassName} data-testid="active-tool-chip">
+          <span
+            aria-hidden="true"
+            data-testid="active-tool-chip-icon"
+            className={composerChipIconClassName}
+          >
+            {chip.icon}
+          </span>
           <span className="truncate">{chip.label}</span>
           <button
             type="button"
             onClick={chip.turnOff}
             aria-label={localize('com_ui_turn_off_tool', { 0: chip.label })}
-            className="flex size-4 flex-shrink-0 items-center justify-center rounded-full text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+            className={composerChipCloseClassName}
           >
             <span aria-hidden="true">{CLOSE_GLYPH}</span>
           </button>

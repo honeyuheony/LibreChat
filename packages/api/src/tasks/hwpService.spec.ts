@@ -58,6 +58,17 @@ describe('createHwpService', () => {
     });
   });
 
+  it('passes the busy code through from a 429 render response', async () => {
+    const { fetchImpl } = respond(
+      new Response(JSON.stringify({ error: 'busy', message: 'no worker slots' }), { status: 429 }),
+    );
+    await expect(createHwpService({ fetchImpl }).render(request)).resolves.toEqual({
+      ok: false,
+      code: 'busy',
+      message: 'no worker slots',
+    });
+  });
+
   it('reports unavailable instead of throwing when the body cannot be read', async () => {
     const body = new ReadableStream({
       start(controller) {
@@ -105,7 +116,26 @@ describe('createHwpService template fields and fill', () => {
       }),
     );
     const outcome = await createHwpService({ fetchImpl }).fields(template);
-    expect(outcome).toEqual({ ok: false, code: 'invalid_request', message: 'not hwpx' });
+    expect(outcome).toEqual({
+      ok: false,
+      code: 'invalid_request',
+      message: 'not hwpx',
+      status: 422,
+    });
+  });
+
+  it('preserves a busy response status for template field lookups', async () => {
+    const { fetchImpl } = respond(
+      new Response(JSON.stringify({ error: 'busy', message: 'no worker slots' }), { status: 429 }),
+    );
+    const outcome = await createHwpService({ fetchImpl }).fields(template);
+
+    expect(outcome).toEqual({
+      ok: false,
+      code: 'busy',
+      message: 'no worker slots',
+      status: 429,
+    });
   });
 
   it('posts the template and values to /template/fill and returns the filled bytes', async () => {
@@ -129,5 +159,19 @@ describe('createHwpService template fields and fill', () => {
       },
     ]);
     expect(outcome).toEqual({ ok: true, buffer: filled, filename: '출장보고 양식.hwpx' });
+  });
+
+  it('preserves a busy response status for template fills', async () => {
+    const { fetchImpl } = respond(
+      new Response(JSON.stringify({ error: 'busy', message: 'no worker slots' }), { status: 429 }),
+    );
+    const outcome = await createHwpService({ fetchImpl }).fill(template, {});
+
+    expect(outcome).toEqual({
+      ok: false,
+      code: 'busy',
+      message: 'no worker slots',
+      status: 429,
+    });
   });
 });

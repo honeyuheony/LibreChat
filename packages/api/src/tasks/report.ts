@@ -388,11 +388,14 @@ export async function composeReport({
 
 const BODY_STILL_AVAILABLE = '본문은 오른쪽에서 확인하고 복사할 수 있습니다.';
 
+export const HWP_BUSY_NOTICE: string =
+  '한글 문서 변환 서버가 사용 중입니다. 잠시 후 다시 시도해 주세요.';
 export const RENDER_UNAVAILABLE_NOTICE: string = `한글 문서 변환 서버에 연결하지 못했거나 응답이 제시간에 오지 않아 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`;
 
 /** hwp-mcp 오류 코드별 안내 문구다. 여기 없는 코드는 일반 생성 실패 문구를 쓴다. */
 const RENDER_FAILURE_NOTICES: Record<string, string> = {
   unavailable: RENDER_UNAVAILABLE_NOTICE,
+  busy: `${HWP_BUSY_NOTICE} ${BODY_STILL_AVAILABLE}`,
   unknown_template: `한글 문서 변환 서버에 이 보고서 양식이 등록되어 있지 않아 HWP 파일을 만들지 못했습니다. 관리자에게 양식 등록을 요청해 주세요. ${BODY_STILL_AVAILABLE}`,
   invalid_request: `보고서 내용이 양식이 받는 형식과 맞지 않아 HWP 파일을 만들지 못했습니다. 계속되면 관리자에게 알려 주세요. ${BODY_STILL_AVAILABLE}`,
   render_failed: `한글 문서 변환 서버가 양식을 채우다 실패해 HWP 파일을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요. ${BODY_STILL_AVAILABLE}`,

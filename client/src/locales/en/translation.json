@@ -3404,6 +3404,8 @@
   "com_ui_task_stage_extract": "Extract fields",
   "com_ui_task_stage_compose": "Fill in the template (with footnotes)",
   "com_ui_task_stage_render": "Create HWP",
+  "com_ui_task_stage_prepare_template": "Check the template",
+  "com_ui_task_stage_fill_template": "Fill the template",
   "com_ui_task_schema_intro": "This looks like a request to organize documents. All {{0}} documents will be checked for the same fields. Confirm the fields.",
   "com_ui_task_schema_intro_nocount": "This looks like a request to organize documents. Every document will be checked for the same fields. Confirm the fields.",
   "com_ui_task_schema_title": "Fields to extract",

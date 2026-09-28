@@ -18,10 +18,16 @@ export type WriteReportArguments = {
   file_ids?: string[];
 };
 
+export type FillReportTemplateArguments = {
+  template: string;
+  values: Record<string, string | number>;
+};
+
 export type TaskToolArguments = {
   [TaskTools.extract_table]: ExtractTableArguments;
   [TaskTools.summarize_documents]: SummarizeDocumentsArguments;
   [TaskTools.write_report]: WriteReportArguments;
+  [TaskTools.fill_report_template]: FillReportTemplateArguments;
 };
 
 export type TaskToolName = keyof TaskToolArguments;

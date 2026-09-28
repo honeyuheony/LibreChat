@@ -49,6 +49,11 @@ export const TASK_STAGES: Record<TaskToolName, ReadonlyArray<{ id: string; label
     { id: 'render', label: 'HWP 생성' },
     { id: 'save', label: '결과 저장·검수 안내' },
   ],
+  [TaskTools.fill_report_template]: [
+    { id: 'prepare', label: '양식 확인' },
+    { id: 'fill', label: '양식 채우기' },
+    { id: 'save', label: '결과 저장·검수 안내' },
+  ],
 };
 
 export interface TaskToolDeps {
@@ -303,7 +308,10 @@ async function runWriteReport(
 }
 
 /** task tool 이름 하나로 실행용 tool 을 만든다. schema 는 `TASK_TOOL_DEFINITIONS` 의 것을 그대로 쓴다. */
-export function createTaskTool(name: TaskToolName, deps: TaskToolDeps): StructuredToolInterface {
+export function createTaskTool(
+  name: keyof typeof TASK_TOOL_DEFINITIONS,
+  deps: TaskToolDeps,
+): StructuredToolInterface {
   const definition = TASK_TOOL_DEFINITIONS[name];
   return tool(
     async (rawArgs: unknown, config?: TaskToolConfig): Promise<ToolReturn> => {
