@@ -9,6 +9,7 @@ import {
 import { resolveSkillDefaultActive } from '~/hooks/Skills/useSkillActiveState';
 import { formatCount, getSkillTitle } from '../Marketplace/skillCategories';
 import { useLocalize, useSkillActiveState } from '~/hooks';
+import ExportButton from '../Marketplace/ExportButton';
 import { byLine } from '../Marketplace/SkillMeta';
 import SkillIcon from '../Marketplace/SkillIcon';
 import PackTree, { packPaths } from './PackTree';
@@ -210,6 +211,12 @@ export default function PackDetail({
           </button>
         )}
         <span className="flex-1" />
+        <ExportButton
+          kind="pack"
+          id={pack._id}
+          fileName={`${pack.slug}.zip`}
+          className="border-border-medium bg-surface-primary px-3.5 py-1.5 text-[14.5px] text-text-secondary"
+        />
         <button
           type="button"
           disabled={isLoading || updateStates.isLoading || packSkills.length === 0}

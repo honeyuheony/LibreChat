@@ -27,6 +27,7 @@ import { parseFrontmatter } from '../utils/frontmatter';
 import { useGetSkillQuery } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 import SkillFolderTree from './SkillFolderTree';
+import ExportButton from './ExportButton';
 import SkillIcon from './SkillIcon';
 import store from '~/store';
 
@@ -377,6 +378,7 @@ export default function SkillDetailContent({
           </Label>
         </span>
         <span className="flex-1" />
+        <ExportButton kind="skill" id={skill._id} fileName={`${skill.name}.zip`} />
         <button
           type="button"
           title={localize('com_skills_fork_hint')}

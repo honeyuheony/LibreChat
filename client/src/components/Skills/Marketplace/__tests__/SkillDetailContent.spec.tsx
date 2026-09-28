@@ -79,6 +79,9 @@ jest.mock('~/data-provider', () => ({
   }),
 }));
 jest.mock('../SkillFolderTree', () => () => <div data-testid="folder-tree" />);
+jest.mock('../ExportButton', () => ({ kind, id, fileName }: Record<string, string>) => (
+  <button type="button" data-testid="export">{`${kind}:${id}:${fileName}`}</button>
+));
 
 function renderDetail(skill = weekly, onSelectSkill = jest.fn()) {
   render(<SkillDetailContent skill={skill} allSkills={ALL_SKILLS} onSelectSkill={onSelectSkill} />);
@@ -303,6 +306,15 @@ describe('SkillDetailContent', () => {
     );
     const addSkill = mockSetPendingSkills.mock.calls[0][0] as (prev: string[]) => string[];
     expect(addSkill([])).toEqual([weekly.name]);
+  });
+
+  it('offers the skill folder as a zip next to the adapt button', () => {
+    renderDetail();
+    const exportButton = screen.getByTestId('export');
+    expect(exportButton).toHaveTextContent(`skill:${weekly._id}:${weekly.name}.zip`);
+    expect(exportButton.nextElementSibling).toBe(
+      screen.getByRole('button', { name: 'com_skills_fork' }),
+    );
   });
 
   it('toggles whether the skill appears in the / list', () => {
