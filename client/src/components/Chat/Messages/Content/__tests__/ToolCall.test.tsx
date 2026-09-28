@@ -705,13 +705,13 @@ describe('ToolCall', () => {
           {...mockProps}
           name={mcpName}
           args='{"path":"memo.txt"}'
-          output="Error executing tool read_file: PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다."
+          output="Error executing tool read_file: PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다."
           runStepStatus="completed"
         />,
       );
-      expect(
-        screen.getByText('PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.'),
-      ).toHaveClass('text-status-error');
+      expect(screen.getByText('PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.')).toHaveClass(
+        'text-status-error',
+      );
       expect(screen.queryByText(/Error executing tool/)).not.toBeInTheDocument();
     });
 

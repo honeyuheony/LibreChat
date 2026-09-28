@@ -46,6 +46,10 @@ describe('document title', () => {
     expect(hasRealTitle('New Chat')).toBe(false);
   });
 
+  it('names the service AI playground when the server sends no app title', () => {
+    expect(DEFAULT_APP_TITLE).toBe('AI playground');
+  });
+
   it('uses the default app title when no app title is stored', () => {
     localStorage.removeItem(LocalStorageKeys.APP_TITLE);
 

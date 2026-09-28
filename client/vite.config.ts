@@ -151,8 +151,8 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'AgentHub',
-        short_name: 'AgentHub',
+        name: 'AI playground',
+        short_name: 'AI playground',
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',

@@ -17,7 +17,7 @@ const localizeKo = (key: string, values: Record<string, string | number> = {}) =
 const LIST_FOLDER_OUTPUT =
   '{\n  "name": "e2e-사업안내.hwp",\n  "path": "e2e-사업안내.hwp",\n  "kind": "file",\n  "bytes": 193536\n}\n\n{\n  "name": "메모.txt",\n  "path": "메모.txt",\n  "kind": "file",\n  "bytes": 31\n}';
 const RELAY_OFFLINE_OUTPUT =
-  'Error executing tool read_file: PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.';
+  'Error executing tool read_file: PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.';
 
 describe('Korean particles', () => {
   it('picks 을/를 by the final sound of Hangul, Latin letters and digits', () => {
@@ -107,7 +107,7 @@ describe('summarizeToolOutput', () => {
 describe('getToolErrorMessage', () => {
   it('returns the relay message without the "Error executing tool" prefix', () => {
     expect(getToolErrorMessage(RELAY_OFFLINE_OUTPUT)).toBe(
-      'PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.',
+      'PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.',
     );
   });
 
@@ -128,7 +128,7 @@ describe('describeToolError', () => {
 
   it('keeps any other failure message as the app wrote it', () => {
     expect(describeToolError(RELAY_OFFLINE_OUTPUT, localizeKo)).toBe(
-      'PC 의 업무 에이전트 앱이 꺼져 있다. PC 에서 앱을 켠다.',
+      'PC 의 데스크톱 앱이 꺼져 있다. PC 에서 앱을 켠다.',
     );
     expect(describeToolError('3분기 예산 메모\n', localizeKo)).toBeNull();
   });
