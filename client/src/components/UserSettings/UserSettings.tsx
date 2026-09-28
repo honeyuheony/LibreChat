@@ -179,7 +179,7 @@ export default function UserSettings() {
       </header>
       <div className="px-4 pb-10 pt-6 md:pt-4">
         <div className="mx-auto w-full max-w-[710px]">
-          <h1 className="mb-2.5 text-2xl font-bold text-text-primary">
+          <h1 className="mb-2.5 text-[22px] font-bold text-text-primary">
             {localize('com_nav_settings')}
           </h1>
           {settingsContent}

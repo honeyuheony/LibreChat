@@ -183,7 +183,7 @@ export default function Library() {
         <span className="font-semibold text-text-primary">{localize('com_ui_library')}</span>
       </header>
       <div className="mx-auto w-full max-w-[900px] px-6 pb-10 pt-6">
-        <h1 className="text-2xl font-bold text-text-primary">{localize('com_ui_library')}</h1>
+        <h1 className="text-[22px] font-bold text-text-primary">{localize('com_ui_library')}</h1>
         {!isLoading && !isError && (
           <p className="mb-3 mt-1 text-[13px] text-text-muted">
             {localize('com_ui_library_intro', {
