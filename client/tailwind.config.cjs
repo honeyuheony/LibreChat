@@ -102,6 +102,8 @@ module.exports = {
         'reset-spin': 'reset-spin 500ms cubic-bezier(0.22, 1, 0.36, 1)',
       },
       colors: createTailwindColors(),
+      /** 입력창처럼 화면 위에 떠 있는 카드의 옅은 보랏빛 그림자. */
+      boxShadow: { raised: '0 2px 6px rgb(35 20 80 / 0.07), 0 10px 24px rgb(35 20 80 / 0.06)' },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
