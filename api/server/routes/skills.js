@@ -5,6 +5,7 @@ const express = require('express');
 const {
   createImportHandler,
   createForkSkillHandler,
+  createSkillExportHandler,
   blockFilteredSkillFile,
   generateCheckAccess,
   getStorageMetadata,
@@ -447,6 +448,16 @@ router.get(
   '/:id/files',
   canAccessSkillResource({ requiredPermission: PermissionBits.VIEW }),
   handlers.listFiles,
+);
+
+router.get(
+  '/:id/export',
+  canAccessSkillResource({ requiredPermission: PermissionBits.VIEW }),
+  createSkillExportHandler({
+    getSkillById: skillDbMethods.getSkillById,
+    listSkillFiles: skillDbMethods.listSkillFiles,
+    getStrategyFunctions: getSkillStrategyFunctions,
+  }),
 );
 
 // Per-file upload (live — replaces 501 stub)

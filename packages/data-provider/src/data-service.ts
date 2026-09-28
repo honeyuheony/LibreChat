@@ -1392,6 +1392,16 @@ export function deleteSkillPack(id: string): Promise<sk.TDeleteSkillPackResponse
   return request.delete(endpoints.skillPack(id));
 }
 
+/** 스킬 하나를 Claude 플러그인 폴더 zip 으로 받는다. */
+export function exportSkill(id: string): Promise<AxiosResponse<Blob>> {
+  return request.getResponse(endpoints.skillExport(id), { responseType: 'blob' });
+}
+
+/** 팩에서 볼 수 있는 스킬만 담은 플러그인 폴더 zip 을 받는다. */
+export function exportSkillPack(id: string): Promise<AxiosResponse<Blob>> {
+  return request.getResponse(endpoints.skillPackExport(id), { responseType: 'blob' });
+}
+
 export function forkSkill(
   id: string,
   payload: sk.TForkSkillRequest = {},

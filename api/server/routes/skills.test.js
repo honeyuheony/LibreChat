@@ -1218,6 +1218,95 @@ describe('Skill routes', () => {
     });
   });
 
+  describe('GET /api/skills/:id/export', () => {
+    function binaryParser(res, callback) {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => callback(null, Buffer.concat(chunks)));
+    }
+
+    async function readZip(buffer) {
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(buffer);
+      const entries = {};
+      for (const file of Object.values(zip.files).filter((entry) => !entry.dir)) {
+        entries[file.name] = await file.async('string');
+      }
+      return entries;
+    }
+
+    async function createViewableSkillWithFile() {
+      const created = await createSkillAsOwner({ body: '# Weekly report\n\nSummarize the week.' });
+      const upload = await request(app)
+        .post(`/api/skills/${created.body._id}/files`)
+        .field('relativePath', 'references/guide.md')
+        .attach('file', Buffer.from('guide'), {
+          filename: 'guide.md',
+          contentType: 'text/markdown',
+        });
+      expect(upload.status).toBe(200);
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: testUsers.editor._id,
+        resourceType: ResourceType.SKILL,
+        resourceId: created.body._id,
+        accessRoleId: AccessRoleIds.SKILL_VIEWER,
+        grantedBy: testUsers.owner._id,
+      });
+      return created.body;
+    }
+
+    it('sends a plugin zip with the manifest, SKILL.md, bundled files and README', async () => {
+      const skill = await createViewableSkillWithFile();
+
+      setTestUser(testUsers.editor);
+      const res = await request(app)
+        .get(`/api/skills/${skill._id}/export`)
+        .buffer(true)
+        .parse(binaryParser);
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toBe('application/zip');
+      expect(res.headers['content-disposition']).toContain('filename="demo-skill.zip"');
+      const entries = await readZip(res.body);
+      expect(Object.keys(entries)).toEqual([
+        '.claude-plugin/plugin.json',
+        'skills/demo-skill/SKILL.md',
+        'skills/demo-skill/references/guide.md',
+        'README.md',
+      ]);
+      expect(entries['skills/demo-skill/SKILL.md']).toBe(
+        [
+          '---',
+          'name: demo-skill',
+          `description: ${skill.description}`,
+          '---',
+          '',
+          '# Weekly report',
+          '',
+          'Summarize the week.',
+        ].join('\n'),
+      );
+      expect(entries['skills/demo-skill/references/guide.md']).toBe('test content');
+      const stored = await Skill.findById(skill._id).lean();
+      expect(stored.version).toBe(2);
+      expect(JSON.parse(entries['.claude-plugin/plugin.json'])).toMatchObject({
+        name: 'demo-skill',
+        version: '0.2.0',
+      });
+    });
+
+    it('returns 403 to a user who cannot view the skill', async () => {
+      const skill = await createViewableSkillWithFile();
+
+      setTestUser(testUsers.noAccess);
+      const res = await request(app).get(`/api/skills/${skill._id}/export`);
+
+      expect(res.status).toBe(403);
+      expect(res.headers['content-type']).not.toBe('application/zip');
+    });
+  });
+
   describe('Sharing via ACL (editor grant)', () => {
     it('allows an editor to patch a shared skill', async () => {
       const created = await createSkillAsOwner();

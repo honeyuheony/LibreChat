@@ -179,6 +179,28 @@ async function createPack(skillIds, author = testUsers.owner) {
   return response;
 }
 
+function binaryParser(res, callback) {
+  const chunks = [];
+  res.on('data', (chunk) => chunks.push(chunk));
+  res.on('end', () => callback(null, Buffer.concat(chunks)));
+}
+
+async function exportPackEntries(packId) {
+  const JSZip = require('jszip');
+  const response = await request(app)
+    .get(`/api/skill-packs/${packId}/export`)
+    .buffer(true)
+    .parse(binaryParser)
+    .expect(200);
+  expect(response.headers['content-type']).toBe('application/zip');
+  const zip = await JSZip.loadAsync(response.body);
+  const entries = {};
+  for (const file of Object.values(zip.files).filter((entry) => !entry.dir)) {
+    entries[file.name] = await file.async('string');
+  }
+  return entries;
+}
+
 describe('skill pack routes', () => {
   it('requires authentication', async () => {
     currentTestUser = null;
@@ -352,6 +374,58 @@ describe('skill pack routes', () => {
     expect(emailResponse.body.authorName).toBe('pack-fallback');
   });
 
+  it('exports a pack as a plugin zip holding only the skills the requester can view', async () => {
+    const first = await createSkill({
+      name: 'pack-first-skill',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const second = await createSkill({
+      name: 'pack-second-skill',
+      author: testUsers.owner,
+      publicViewer: true,
+    });
+    const created = await createPack([first, second]);
+    expect(created.status).toBe(201);
+    await AclEntry.deleteMany({ resourceId: second._id, principalType: PrincipalType.PUBLIC });
+
+    currentTestUser = testUsers.reader;
+    const entries = await exportPackEntries(created.body._id);
+
+    expect(Object.keys(entries)).toEqual([
+      '.claude-plugin/plugin.json',
+      'skills/pack-first-skill/SKILL.md',
+      'README.md',
+    ]);
+    expect(entries['skills/pack-first-skill/SKILL.md']).toBe(
+      [
+        '---',
+        'name: pack-first-skill',
+        'description: pack-first-skill skill description for pack tests.',
+        '---',
+        '',
+        '# Skill',
+      ].join('\n'),
+    );
+    expect(JSON.parse(entries['.claude-plugin/plugin.json'])).toEqual({
+      name: created.body.slug,
+      version: '0.1.0',
+      description: 'Skills for quarterly work.',
+      author: { name: 'Pack Owner' },
+    });
+  });
+
+  it('returns 404 when exporting a pack that does not exist', async () => {
+    currentTestUser = testUsers.reader;
+    const missing = await request(app).get(
+      `/api/skill-packs/${new mongoose.Types.ObjectId()}/export`,
+    );
+    const malformed = await request(app).get('/api/skill-packs/not-an-id/export');
+
+    expect(missing.status).toBe(404);
+    expect(malformed.status).toBe(404);
+  });
+
   it('prevents users other than the author from deleting a pack', async () => {
     const first = await createSkill({
       name: 'delete-skill-one',
@@ -403,6 +477,8 @@ describe('skill pack routes with a public ACL entry on a team deployment skill',
         '# center-rollup',
       ].join('\n'),
     );
+    await fs.promises.mkdir(path.join(skillDir, 'references'));
+    await fs.promises.writeFile(path.join(skillDir, 'references', 'rules.md'), '# 집계 규칙');
     await initializeDeploymentSkills({ projectRoot: root, env: {} });
     teamDeploymentId = getDeploymentSkillRegistry().list()[0]._id;
   });
@@ -488,5 +564,38 @@ describe('skill pack routes with a public ACL entry on a team deployment skill',
       publicSkill._id.toString(),
       teamDeploymentId.toString(),
     ]);
+  });
+
+  it('leaves the team deployment skill out of the pack zip for another department', async () => {
+    const { packId } = await insertPackWithTeamSkill();
+    currentTestUser = testUsers.reader;
+    currentUserOverrides = { department: '통일교육팀' };
+
+    const entries = await exportPackEntries(packId);
+
+    expect(Object.keys(entries)).toEqual([
+      '.claude-plugin/plugin.json',
+      'skills/pack-public-skill/SKILL.md',
+      'README.md',
+    ]);
+  });
+
+  it('puts the team deployment skill and its files in the zip for the authoring department', async () => {
+    const { packId } = await insertPackWithTeamSkill();
+    currentTestUser = testUsers.reader;
+    currentUserOverrides = { department: '교육센터' };
+
+    const entries = await exportPackEntries(packId);
+
+    expect(Object.keys(entries)).toEqual([
+      '.claude-plugin/plugin.json',
+      'skills/pack-public-skill/SKILL.md',
+      'skills/center-rollup/SKILL.md',
+      'skills/center-rollup/references/rules.md',
+      'README.md',
+    ]);
+    expect(entries['skills/center-rollup/references/rules.md']).toBe('# 집계 규칙');
+    expect(entries['skills/center-rollup/SKILL.md']).toContain('name: center-rollup\n');
+    expect(entries['skills/center-rollup/SKILL.md']).toContain('# center-rollup');
   });
 });
