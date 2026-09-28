@@ -364,6 +364,16 @@ describe('ChatForm attachments', () => {
     20000,
   );
 
+  /* 입력 줄과 모델 선택 줄 사이를 2px 로 두어 입력창 높이를 98px 로 맞춘다. 칩 줄도 같은 간격을 쓴다. */
+  test('keeps a 2px gap between the composer rows', async () => {
+    renderComposer({ landing: true });
+    await screen.findByTestId('text-input');
+
+    const surface = screen.getByTestId('composer-surface');
+    expect(surface).toHaveClass('gap-0.5');
+    expect(surface).not.toHaveClass('gap-1.5');
+  }, 20000);
+
   test('leaves a 64px band under the centred landing composer', async () => {
     const { container } = renderComposer({ landing: true });
     await screen.findByTestId('text-input');

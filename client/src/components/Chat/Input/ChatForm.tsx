@@ -808,7 +808,7 @@ const ChatForm = memo(function ChatForm({
                 'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
                 'shadow-raised',
-                'gap-1.5 px-3.5 pb-2.5 pt-3.5',
+                'gap-0.5 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
                    same categorical slot the purple tool badge uses, so the accent
