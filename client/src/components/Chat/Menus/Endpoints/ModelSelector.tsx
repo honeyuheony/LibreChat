@@ -76,7 +76,8 @@ function ModelSelectorContent() {
   );
 
   return (
-    <div className="relative flex min-w-0 max-w-[40%] items-center sm:max-w-[240px]">
+    /** 감싼 줄이 내용 폭만큼만 차지하므로 퍼센트 대신 뷰포트 기준으로 폭을 제한한다. */
+    <div className="relative flex min-w-0 max-w-[60vw] items-center sm:max-w-[240px]">
       <Menu
         placement="top-end"
         className="h-8 w-auto border-0 bg-transparent px-0 py-0 hover:bg-transparent"

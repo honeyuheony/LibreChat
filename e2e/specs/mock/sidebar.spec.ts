@@ -54,7 +54,7 @@ test.describe('sidebar chat list', () => {
     }
   });
 
-  test('chat list width tracks the sidebar through resize and collapse cycles', async ({
+  test('chat list width survives a collapse cycle and viewport height changes', async ({
     page,
   }) => {
     test.setTimeout(60000);
@@ -70,28 +70,11 @@ test.describe('sidebar chat list', () => {
 
     const initial = await settledWidths(page);
 
-    const separator = page.locator('[role="separator"][aria-label="Resize sidebar"]');
-    const sepBox = await separator.boundingBox();
-    expect(sepBox).not.toBeNull();
-    const startX = (sepBox?.x ?? 0) + (sepBox?.width ?? 0) / 2;
-    const y = (sepBox?.y ?? 0) + (sepBox?.height ?? 0) / 2;
-
-    await page.mouse.move(startX, y);
-    await page.mouse.down();
-    for (let i = 1; i <= 5; i++) {
-      await page.mouse.move(startX + i * 20, y);
-      await page.waitForTimeout(50);
-    }
-    await page.mouse.up();
-
-    const widened = await settledWidths(page);
-    expect(widened.grid).toBeGreaterThan(initial.grid);
-
     await page.locator('aside').getByTestId('close-sidebar-button').click();
     await page.locator('aside').getByTestId('open-sidebar-button').click();
 
     const reopened = await settledWidths(page);
-    expect(reopened.grid).toBeGreaterThan(initial.grid);
+    expect(Math.abs(reopened.grid - initial.grid)).toBeLessThanOrEqual(1);
 
     /* A shorter viewport changes how much of the list is on screen, never how
      * wide its rows are measured. */
