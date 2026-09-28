@@ -39,6 +39,9 @@ export default function FileChip({
   const showsPreview =
     !uploading && previewUrl != null && (file.type?.startsWith('image') ?? false);
   const previewTriggerRef = useRef<HTMLSpanElement>(null);
+  const uploadStatus = uploading ? localize('com_ui_loading') : undefined;
+  const filenameLabel =
+    uploadStatus != null ? `${ariaLabel ?? name} ${uploadStatus}` : (ariaLabel ?? name);
   const filenameAction = onClick ?? (showsPreview ? openPreview : undefined);
 
   function openPreview() {
@@ -78,13 +81,20 @@ export default function FileChip({
         <button
           type="button"
           onClick={filenameAction}
-          aria-label={ariaLabel ?? name}
+          aria-label={filenameLabel}
           className={cn('truncate', onClick != null && 'hover:underline', focusRing)}
         >
           {name}
         </button>
       ) : (
-        <span className="truncate">{name}</span>
+        <span className="truncate">
+          {name}
+          {uploadStatus != null && (
+            <span role="status" className="sr-only">
+              {uploadStatus}
+            </span>
+          )}
+        </span>
       )}
       {secondaryAction != null && (
         <button

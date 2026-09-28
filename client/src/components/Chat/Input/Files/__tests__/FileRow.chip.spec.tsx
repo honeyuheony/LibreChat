@@ -85,6 +85,17 @@ describe('FileRow chip variant', () => {
     expect(uploaded).not.toHaveAttribute('aria-busy');
   });
 
+  it('announces that an attachment is loading while it uploads', () => {
+    renderChips([textFile({ progress: 0.4 })]);
+
+    const status = screen.queryByRole('status');
+    expect(status).not.toBeNull();
+    if (status == null) {
+      return;
+    }
+    expect(status).toHaveTextContent('com_ui_loading');
+  });
+
   it('opens a full-size preview from the image filename', async () => {
     renderChips([imageFile()]);
 
