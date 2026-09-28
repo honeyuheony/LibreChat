@@ -73,4 +73,11 @@ describe('ExportAndShareMenu link status', () => {
     expect(screen.queryByTestId('header-shared-link-indicator')).not.toBeInTheDocument();
     expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'com_endpoint_export_share');
   });
+
+  it('sizes the share control to the 27px top bar pill in 13px text', () => {
+    render(<ExportAndShareMenu isSharedButtonEnabled={true} />);
+
+    expect(screen.getByRole('button')).toHaveClass('h-[27px]', 'text-[13px]');
+    expect(screen.getByRole('button')).not.toHaveClass('h-8', 'text-sm');
+  });
 });

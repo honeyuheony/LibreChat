@@ -39,7 +39,7 @@ export default function ExportAndShareMenu({
               <Ariakit.MenuButton
                 id="export-menu-button"
                 aria-label={description}
-                className="relative inline-flex h-8 flex-shrink-0 items-center justify-center rounded-full px-3 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:pointer-events-none disabled:opacity-50 radix-state-open:bg-surface-hover"
+                className="relative inline-flex h-[27px] flex-shrink-0 items-center justify-center rounded-full px-[11px] text-[13px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:pointer-events-none disabled:opacity-50 radix-state-open:bg-surface-hover"
               >
                 {localize('com_ui_share')}
                 {hasSharedLink && (

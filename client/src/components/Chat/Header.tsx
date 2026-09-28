@@ -27,6 +27,8 @@ import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
 
+const DOCUMENTS_GLYPH = '▸';
+
 /** 같은 파일을 여러 번 첨부해도 헤더에는 고유 파일 수를 표시한다. */
 const countAttachedFiles = (messages: TMessage[]) =>
   new Set(messages.flatMap((message) => (message.files ?? []).map((file) => file.file_id ?? '')))
@@ -112,7 +114,10 @@ function Header({
         {!isNewChat && documentCount > 0 && (
           <span className="hidden flex-shrink-0 items-center gap-2 md:flex">
             <span aria-hidden="true">·</span>
-            {localize('com_ui_header_documents', { 0: documentCount })}
+            <span>{localize('com_ui_header_documents', { 0: documentCount })}</span>
+            <span aria-hidden="true" className="-ml-1">
+              {DOCUMENTS_GLYPH}
+            </span>
           </span>
         )}
       </div>
@@ -129,9 +134,9 @@ function Header({
           </span>
         )}
         {!isNewChat && (
-          <span className="hidden items-center gap-1.5 text-text-tertiary md:flex">
+          <span className="hidden items-center gap-1.5 md:flex">
             <span aria-hidden="true" className={cn('size-[7px] rounded-full', statusDot)} />
-            {localize(statusLabel)}
+            <span className="text-[13px] text-text-muted">{localize(statusLabel)}</span>
           </span>
         )}
         <div className="hidden items-center gap-2 md:flex">

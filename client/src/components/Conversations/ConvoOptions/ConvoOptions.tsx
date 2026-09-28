@@ -11,7 +11,6 @@ import {
   useMediaQuery,
 } from '@librechat/client';
 import {
-  ChevronDown,
   Ellipsis,
   Share2,
   CopyPlus,
@@ -508,10 +507,7 @@ function ConvoOptions({
             }}
           >
             {triggerLabel != null ? (
-              <>
-                <span className="truncate">{triggerLabel}</span>
-                <ChevronDown className="size-4 flex-shrink-0" aria-hidden={true} />
-              </>
+              <span className="truncate">{triggerLabel}</span>
             ) : (
               <Ellipsis className="icon-md" aria-hidden={true} />
             )}
