@@ -42,6 +42,9 @@ const USER_FIELDS = [
 
 const AGENT_FIELDS = ['instructions', 'tools'];
 
+/** 기본 agent 를 만든 계정을 가리키는 필드. 내보낼 때 빼고, 초기 적재 때 관리자로 채운다. */
+const AGENT_VERSION_OWNER_FIELDS = ['author', 'updatedBy'];
+
 /** 내보낼 때 기준 데이터에 함께 담긴 mongoMeili 기록 필드. 그 시점의 색인 상태라 되돌리지 않는다. */
 const SEARCH_STATE_FIELDS = [
   '_meiliIndexAttempted',
@@ -50,6 +53,9 @@ const SEARCH_STATE_FIELDS = [
 ];
 
 const MANIFEST_FILE = 'manifest.json';
+
+/** 초기 적재가 만드는 관리자 계정의 프로필(이름·부서). 이메일·비밀번호는 실행할 때 받는다. */
+const BOOTSTRAP_FILE = 'bootstrap.json';
 
 function parseEmails(list) {
   return (list ?? '')
@@ -111,6 +117,17 @@ const asUnindexed = (doc) => ({
   _meiliIndex: false,
 });
 
+const omitFields = (doc, fields) =>
+  Object.fromEntries(Object.entries(doc).filter(([key]) => !fields.includes(key)));
+
+const withoutAgentOwner = (agent) => {
+  const doc = omitFields(agent, ['author']);
+  if (Array.isArray(doc.versions)) {
+    doc.versions = doc.versions.map((version) => omitFields(version, AGENT_VERSION_OWNER_FIELDS));
+  }
+  return doc;
+};
+
 /**
  * `createModels(mongoose)` 처럼 넘겨받은 mongoose 연결 위에 내보내기와 초기화를 만든다.
  * @param {typeof import('mongoose')} mongoose
@@ -122,6 +139,8 @@ function createDemoData(mongoose) {
   const users = collectionOf('User');
   const agents = collectionOf('Agent');
   const usage = collectionOf('DeploymentSkillUsage');
+  const aclEntries = collectionOf('AclEntry');
+  const accessRoles = collectionOf('AccessRole');
 
   /** 보호 계정과 없는 계정은 경고하고 빼며, 작업할 사용자를 돌려준다. */
   async function findTargetUsers({ emails, protectedEmails, warn }) {
@@ -140,6 +159,23 @@ function createDemoData(mongoose) {
       .filter((email) => !foundEmails.has(email))
       .forEach((email) => warn(`Skipping ${email}: no such user in the database.`));
     return found;
+  }
+
+  /**
+   * 기본 agent 의 전체 공개 권한. 접근 역할 `_id` 는 DB 마다 달라 `accessRoleId` 이름으로 바꿔 쓰고,
+   * 권한을 준 계정은 뺀다.
+   */
+  async function exportPublicGrants(resourceIds) {
+    const grants = await aclEntries
+      .find({ principalType: 'public', resourceId: { $in: resourceIds } })
+      .sort({ _id: 1 })
+      .toArray();
+    const roles = await accessRoles.find({ _id: { $in: grants.map((g) => g.roleId) } }).toArray();
+    const roleNames = new Map(roles.map((role) => [idKey(role._id), role.accessRoleId]));
+    return grants.map((grant) => ({
+      ...omitFields(grant, ['roleId', 'grantedBy']),
+      accessRoleId: roleNames.get(idKey(grant.roleId)),
+    }));
   }
 
   /**
@@ -181,15 +217,15 @@ function createDemoData(mongoose) {
     }
 
     if (includeShared) {
-      const agentProjection = Object.fromEntries(['id', ...AGENT_FIELDS].map((f) => [f, 1]));
-      const agentDocs = await agents
-        .find({ id: agentId }, { projection: agentProjection })
-        .toArray();
+      const agentDocs = (await agents.find({ id: agentId }).toArray()).map(withoutAgentOwner);
       if (agentDocs.length === 0) {
         warn(`Default agent ${agentId} not found; ${fileOf(agents)} is empty.`);
       }
       writeJson(dir, fileOf(agents), agentDocs);
       counts[fileOf(agents)] = agentDocs.length;
+      const publicGrants = await exportPublicGrants(agentDocs.map((doc) => doc._id));
+      writeJson(dir, fileOf(aclEntries), publicGrants);
+      counts[fileOf(aclEntries)] = publicGrants.length;
       const usageDocs = await usage.find({}).sort({ _id: 1 }).toArray();
       writeJson(dir, fileOf(usage), usageDocs);
       counts[fileOf(usage)] = usageDocs.length;
@@ -459,7 +495,184 @@ function createDemoData(mongoose) {
     return rows;
   }
 
-  return { exportBaseline, resetDemo };
+  /** 서버가 기동할 때 넣는 접근 역할의 `accessRoleId` → `_id`. 없으면 서버보다 먼저 실행한 것이다. */
+  async function findAccessRoleIds() {
+    const roles = await accessRoles.find({}, { projection: { accessRoleId: 1 } }).toArray();
+    if (roles.length === 0) {
+      throw new Error(
+        'No access roles in the database. Start the LibreChat server once so it creates them, then run this again.',
+      );
+    }
+    return new Map(roles.map((role) => [role.accessRoleId, role._id]));
+  }
+
+  /** 이미 있으면 그대로 두고, 없을 때만 `doc` 으로 만든다. */
+  async function insertIfMissing(collection, filter, doc) {
+    const { upsertedCount } = await collection.updateOne(
+      filter,
+      { $setOnInsert: doc },
+      { upsert: true },
+    );
+    return upsertedCount;
+  }
+
+  async function createAccount({ profile, role, passwordHash }) {
+    const account = await models.User.create({
+      ...profile,
+      username: profile.username ?? profile.email.split('@')[0],
+      role,
+      provider: 'local',
+      emailVerified: true,
+      termsAccepted: true,
+      password: passwordHash,
+    });
+    return account.toObject();
+  }
+
+  async function grantOwner({ ownerId, agentId, roleIds }) {
+    let created = 0;
+    for (const resourceType of ['agent', 'remoteAgent']) {
+      const now = new Date();
+      created += await insertIfMissing(
+        aclEntries,
+        { principalType: 'user', principalId: ownerId, resourceType, resourceId: agentId },
+        {
+          principalModel: 'User',
+          permBits: 15,
+          roleId: roleIds.get(`${resourceType}_owner`),
+          grantedBy: ownerId,
+          grantedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        },
+      );
+    }
+    return created;
+  }
+
+  async function grantPublic({ grants, ownerId, roleIds }) {
+    let created = 0;
+    for (const { principalType, resourceType, resourceId, permBits, accessRoleId } of grants) {
+      const now = new Date();
+      created += await insertIfMissing(
+        aclEntries,
+        { principalType, resourceType, resourceId },
+        {
+          permBits,
+          roleId: roleIds.get(accessRoleId),
+          grantedBy: ownerId,
+          grantedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        },
+      );
+    }
+    return created;
+  }
+
+  /**
+   * 빈 DB 에 시연 상태를 만든다: 관리자 계정, 기준 계정과 그 자료, 기본 agent 와 권한, 스킬 사용 수.
+   * 이미 있는 계정·agent·권한은 건드리지 않아 여러 번 실행해도 결과가 같다.
+   * @param {{ dir: string, adminEmail: string, password?: string,
+   *   hashPassword: (password: string) => string | Promise<string>,
+   *   deleteFiles: (user: object, files: object[]) => Promise<{ failedFileIds?: string[] }>,
+   *   searchIndex?: import('@librechat/api').DemoSearchIndex, warn: (message: string) => void }} params
+   * @returns {Promise<Array<{ collection: string, created: number }>>}
+   */
+  async function bootstrapDemo({
+    dir,
+    adminEmail,
+    password,
+    hashPassword,
+    deleteFiles,
+    searchIndex,
+    warn,
+  }) {
+    const manifest = readJson(dir, MANIFEST_FILE);
+    if (!manifest.includeShared) {
+      throw new Error(
+        'The baseline was exported without --include-shared; export it again with it.',
+      );
+    }
+    const { admin: adminProfile } = readJson(dir, BOOTSTRAP_FILE);
+    const baseline = (collection) => readJson(dir, fileOf(collection));
+    const roleIds = await findAccessRoleIds();
+
+    const email = adminEmail.trim().toLowerCase();
+    const baselineProfiles = baseline(users).filter((profile) => profile.email !== email);
+    const existing = new Set(
+      (
+        await users
+          .find({ email: { $in: [email, ...baselineProfiles.map((p) => p.email)] } })
+          .toArray()
+      ).map((user) => user.email),
+    );
+    const missing = [email, ...baselineProfiles.map((p) => p.email)].filter(
+      (address) => !existing.has(address),
+    );
+    if (missing.length > 0 && !password) {
+      throw new Error(`A password is needed to create ${missing.join(', ')}.`);
+    }
+    const passwordHash = missing.length > 0 ? await hashPassword(password) : undefined;
+
+    let admin = await users.findOne({ email });
+    if (!admin) {
+      admin = await createAccount({
+        profile: { ...adminProfile, email },
+        role: 'ADMIN',
+        passwordHash,
+      });
+    }
+    const createdEmails = [];
+    for (const profile of baselineProfiles) {
+      if (!existing.has(profile.email)) {
+        await createAccount({ profile, role: 'USER', passwordHash });
+        createdEmails.push(profile.email);
+      }
+    }
+    const rows = [{ collection: users.collectionName, created: missing.length }];
+    if (createdEmails.length > 0) {
+      const restored = await resetDemo({
+        dir,
+        emails: createdEmails,
+        deleteFiles,
+        searchIndex,
+        warn,
+      });
+      restored
+        .filter((row) => row.collection !== users.collectionName)
+        .forEach(({ collection, created }) => rows.push({ collection, created }));
+    }
+
+    const agentDoc = baseline(agents).find((doc) => doc.id === manifest.agentId);
+    if (!agentDoc) {
+      warn(`Default agent ${manifest.agentId} missing from the baseline; skipped.`);
+    } else {
+      const agentCreated = await insertIfMissing(
+        agents,
+        { id: agentDoc.id },
+        { ...agentDoc, author: admin._id },
+      );
+      const agent = await agents.findOne({ id: agentDoc.id });
+      rows.push({ collection: agents.collectionName, created: agentCreated });
+      const ownerGrants = await grantOwner({ ownerId: agent.author, agentId: agent._id, roleIds });
+      const publicGrants = await grantPublic({
+        grants: baseline(aclEntries),
+        ownerId: agent.author,
+        roleIds,
+      });
+      rows.push({ collection: aclEntries.collectionName, created: ownerGrants + publicGrants });
+    }
+
+    let usageCreated = 0;
+    for (const doc of baseline(usage)) {
+      usageCreated += await insertIfMissing(usage, { skillId: doc.skillId }, doc);
+    }
+    rows.push({ collection: usage.collectionName, created: usageCreated });
+    return rows;
+  }
+
+  return { exportBaseline, resetDemo, bootstrapDemo };
 }
 
 module.exports = {
