@@ -164,8 +164,12 @@ describe('account menu', () => {
     expect(menu).toHaveStyle({
       borderRadius: 'var(--theme-surface-radius)',
       padding: 'var(--theme-space-compact)',
-      boxShadow: '0 6px 16px rgba(35, 20, 80, 0.1)',
     });
+    expect(menu.style.boxShadow).toBe('');
+    expect(menu).toHaveClass(
+      'shadow-[0_6px_16px_rgba(35,20,80,0.1)]',
+      'dark:shadow-[0_10px_15px_-3px_rgba(0,0,0,0.25),0_4px_6px_-4px_rgba(0,0,0,0.1)]',
+    );
   });
 
   it('uses 13px supporting values in the account menu', () => {

@@ -9,6 +9,7 @@ import type {
 import { useAdminSkillMetricsQuery } from '~/data-provider/Admin';
 import { pageTopBarClassName } from '~/components/ui/topbar';
 import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 
 type Localize = ReturnType<typeof useLocalize>;
 const numericCellClassName = 'px-2 py-[7.5px] text-right align-middle tabular-nums';
@@ -36,7 +37,12 @@ function skillPath(skillId: string): string {
 
 function MetricCard({ label, value, detail }: MetricCardProps) {
   return (
-    <section className="min-h-[111px] min-w-0 rounded-2xl border border-border-light bg-surface-primary px-3.5 py-3 shadow-[0_1px_2px_rgba(35,20,80,0.06)] dark:border-chart-widget-stroke dark:bg-chart-widget-surface">
+    <section
+      className={cn(
+        'min-h-[111px] min-w-0 rounded-2xl border border-border-light bg-surface-primary px-3.5 py-3 shadow-[0_1px_2px_rgba(35,20,80,0.06)]',
+        'dark:border-chart-widget-stroke dark:bg-chart-widget-surface dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)]',
+      )}
+    >
       <h2 className="text-[12.5px] font-normal text-text-muted">{label}</h2>
       <p className="mt-0.5 text-[22px] font-semibold text-accent-primary">{value}</p>
       <p className="text-xs text-text-muted">{detail}</p>
