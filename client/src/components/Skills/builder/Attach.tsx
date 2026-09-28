@@ -35,11 +35,9 @@ function templateHint(files: BuilderFile[]): TranslationKeys | null {
     return null;
   }
   if (/\.hwpx$/i.test(template.name)) {
-    return 'com_skills_builder_template_fill_hint' as TranslationKeys;
+    return 'com_skills_builder_template_fill_hint';
   }
-  return /\.hwp$/i.test(template.name)
-    ? ('com_skills_builder_template_hwp_hint' as TranslationKeys)
-    : null;
+  return /\.hwp$/i.test(template.name) ? 'com_skills_builder_template_hwp_hint' : null;
 }
 
 /** 양식·예시 문서 붙이기 줄. 고른 문서는 저장할 때 스킬 폴더에 올라가 시험과 실행에서 읽힌다. */
