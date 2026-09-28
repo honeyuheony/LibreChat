@@ -43,7 +43,14 @@ export default function ConnectorsBlock({
       }
     >
       <ul className="ms-5 list-disc text-sm text-text-primary">
-        <li>{localize('com_skills_builder_data_chat')}</li>
+        {/* 초안은 채팅에 적은 글로 쓰고, 나머지 결과물은 실행할 때 올린 문서를 읽는다. */}
+        <li>
+          {localize(
+            values.output === 'draft'
+              ? 'com_skills_builder_data_chat'
+              : 'com_skills_builder_data_files',
+          )}
+        </li>
       </ul>
       {connectors.length > 0 && (
         <div className="mt-2 flex flex-col">

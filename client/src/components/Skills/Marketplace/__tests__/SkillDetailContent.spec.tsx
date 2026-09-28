@@ -237,6 +237,16 @@ describe('SkillDetailContent', () => {
     expect(screen.queryByRole('button', { name: /내보내기/ })).not.toBeInTheDocument();
   });
 
+  it('keeps the list toggle compact and the footer button at regular weight', () => {
+    renderDetail();
+
+    expect(screen.getByRole('switch')).toHaveClass('h-4', 'w-[30px]', '[&>span]:size-3');
+    expect(screen.getByRole('button', { name: 'com_skills_start_chat' })).toHaveClass(
+      'font-normal',
+    );
+    expect(screen.getByText('com_skills_how').parentElement).toHaveClass('rounded-[14px]');
+  });
+
   it('keeps the dialog fixed in the viewport', () => {
     renderDetail();
 

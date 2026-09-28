@@ -167,6 +167,19 @@ describe('Builder layout', () => {
     expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();
   });
 
+  it('writes the attach hint in 13px muted text and fills each publish step pill', () => {
+    render(<Harness />);
+    expect(screen.getByText('com_skills_builder_files_hint')).toHaveClass(
+      'text-[13px]',
+      'text-text-muted',
+    );
+    expect(screen.getByText('com_skills_builder_todo_text').closest('li')).toHaveClass(
+      'bg-surface-primary',
+      'py-[3px]',
+      'leading-normal',
+    );
+  });
+
   it('shows no 모두 지우기 while no document is attached', () => {
     render(<Harness />);
     expect(screen.queryByRole('button', { name: 'com_ui_clear_all' })).toBeNull();
@@ -268,12 +281,13 @@ describe('Builder layout', () => {
     ).toBeVisible();
   });
 
-  it('reads the chat text by default and reveals every internal system on request', async () => {
+  it('reads the documents uploaded at run time for a report and reveals every internal system on request', async () => {
     render(<Harness />);
     await typeText('해외 출장 메모를 출장보고 양식으로 만든다.');
 
     const data = block('com_skills_builder_data') as HTMLElement;
-    expect(within(data).getByText('com_skills_builder_data_chat')).toBeVisible();
+    expect(within(data).getByText('com_skills_builder_data_files')).toBeVisible();
+    expect(within(data).queryByText('com_skills_builder_data_chat')).toBeNull();
     expect(within(data).getAllByRole('switch')).toHaveLength(1);
 
     fireEvent.click(
@@ -308,7 +322,7 @@ describe('Builder layout', () => {
     const aiTag = within(block('com_skills_builder_when') as HTMLElement).getByText(
       'com_skills_builder_source_ai',
     );
-    expect(aiTag).toHaveClass('text-accent-primary');
+    expect(aiTag).toHaveClass('bg-surface-message-user', 'text-accent-primary-hover');
   });
 
   /**
@@ -647,6 +661,45 @@ describe('Share step', () => {
     );
   });
 
+  it('sizes the missing time badge like the other status chips', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('com_skills_builder_minutes_required')).toHaveClass(
+      'px-[9px]',
+      'py-0.5',
+      'text-[11px]',
+      'leading-normal',
+    );
+  });
+
+  it('writes the unselected time choices in the primary text color', () => {
+    render(<Harness />);
+    const group = screen.getByRole('group', { name: 'com_skills_builder_todo_minutes' });
+    within(group)
+      .getAllByRole('button')
+      .forEach((choice) => expect(choice).toHaveClass('text-text-primary'));
+  });
+
+  it('reads the chat text when the agent writes a draft', () => {
+    const chat = chatState('정책 설명자료 초안을 쓴다.', {
+      output: 'draft',
+      fields: [],
+      files: [],
+      connectors: [],
+    });
+    render(<Harness chat={chat} />);
+    const data = block('com_skills_builder_data') as HTMLElement;
+    expect(within(data).getByText('com_skills_builder_data_chat')).toBeVisible();
+    expect(within(data).queryByText('com_skills_builder_data_files')).toBeNull();
+  });
+
+  it('lays the field preview table on the secondary surface under a white heading row', () => {
+    render(<Harness />);
+    const table = within(block('com_skills_builder_output') as HTMLElement).getByRole('table');
+    expect(table).toHaveClass('bg-surface-secondary');
+    expect(table.querySelector('thead')).toHaveClass('bg-surface-primary');
+  });
+
   it('shows a generic field heading when the report has no specified fields', () => {
     const chat = chatState('출장 메모를 보고서로 정리한다.', {
       output: 'report',
@@ -675,6 +728,16 @@ describe('Others’ examples', () => {
       '팀원 주간보고를 취합한다. 금주 실적과 차주 계획을 나눈다.',
       '마감은 금요일이다.',
     ]);
+  });
+
+  it('shows about four lines of each example and scrolls the rest inside the card', () => {
+    render(<Harness peers={[peer]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek' }));
+    expect(peerItem().querySelector('ol')).toHaveClass(
+      'max-h-[calc(4*1.6em)]',
+      'overflow-y-auto',
+      'leading-[1.6]',
+    );
   });
 
   it('writes the author line as owner · department · runs, without By or adaptations', () => {
