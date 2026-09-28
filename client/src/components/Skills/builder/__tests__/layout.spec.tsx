@@ -194,7 +194,10 @@ describe('Builder layout', () => {
     const item = peerItem();
     expect(within(item).getByText('주간보고 작성')).toBeVisible();
     expect(item).toHaveTextContent('com_skills_meta_runs:{"value":"1,200"}');
-    expect(item.querySelector('ol')).toHaveTextContent('마감은 금요일이다.');
+    const example = item.querySelector('ol');
+    expect(example).toHaveAttribute('tabindex', '0');
+    expect(example).toHaveAttribute('aria-label', '주간보고 작성');
+    expect(example).toHaveTextContent('마감은 금요일이다.');
 
     fireEvent.click(screen.getByRole('button', { name: 'com_skills_builder_peek_close' }));
     expect(onPeek).toHaveBeenLastCalledWith(false);
