@@ -96,7 +96,7 @@ function stripTriggerSummary(summary: string, triggers: readonly string[] = []):
 
 function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border-[1.5px] border-border-light bg-surface-primary px-3.5 py-3 text-left">
+    <div className="rounded-[14px] border-[1.5px] border-border-light bg-surface-primary px-3.5 py-3 text-left">
       <h5 className="mb-1.5 text-xs font-bold tracking-[0.02em] text-text-muted">{title}</h5>
       {children}
     </div>
@@ -105,7 +105,10 @@ function InfoBlock({ title, children }: { title: string; children: React.ReactNo
 
 function StatCell({ value, label, title }: { value: string; label: string; title?: string }) {
   return (
-    <div title={title} className="border-l border-border-light first:border-l-0">
+    <div
+      title={title}
+      className="border-l border-border-light text-[14.5px] leading-normal first:border-l-0"
+    >
       <b className="block text-[21px] font-extrabold tabular-nums tracking-[-0.02em]">{value}</b>
       <small className="text-xs text-text-muted">{label}</small>
     </div>
@@ -244,7 +247,7 @@ export default function SkillDetailContent({
         <OGDialogTitle className="mb-1 mt-4 text-[25px] font-bold leading-tight">
           {title}
         </OGDialogTitle>
-        <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs text-text-muted">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs leading-normal text-text-muted">
           {authorLine(skill, localize, true)}
           <SkillTags skill={skill} userId={userId} />
         </div>
@@ -252,7 +255,7 @@ export default function SkillDetailContent({
           {summary}
         </p>
 
-        <h4 className="mt-5 text-[13px] font-semibold text-text-muted">
+        <h4 className="mt-5 text-[13px] font-semibold leading-[1.3] text-text-muted">
           {localize('com_skills_perf_heading')}
         </h4>
         <div className="mb-1 mt-1.5 grid grid-cols-4 border-y border-border-light py-3.5">
@@ -275,7 +278,9 @@ export default function SkillDetailContent({
         </div>
 
         <section className="mt-[18px] text-left">
-          <h4 className="mb-2 text-sm font-bold">{localize('com_skills_starters')}</h4>
+          <h4 className="mb-2 text-sm font-bold leading-[1.3]">
+            {localize('com_skills_starters')}
+          </h4>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {starters.map((starter) => (
               <button
@@ -324,7 +329,9 @@ export default function SkillDetailContent({
 
         {(origin || forks.length > 0) && (
           <section className="mt-[18px] text-left">
-            <h4 className="mb-2 text-sm font-bold">{localize('com_skills_lineage')}</h4>
+            <h4 className="mb-2 text-sm font-bold leading-[1.3]">
+              {localize('com_skills_lineage')}
+            </h4>
             {origin && (
               <LineageRow
                 skill={origin}
@@ -364,7 +371,7 @@ export default function SkillDetailContent({
           <Switch
             id={switchId}
             aria-labelledby={switchLabelId}
-            className="data-[state=checked]:bg-surface-submit"
+            className="h-4 w-[30px] data-[state=checked]:bg-surface-submit [&>span]:size-3 data-[state=checked]:[&>span]:translate-x-3.5"
             checked={isActive(skill)}
             disabled={statesLoading}
             onCheckedChange={() => toggle(skill)}
@@ -390,7 +397,7 @@ export default function SkillDetailContent({
         <button
           type="button"
           onClick={() => startChat()}
-          className="rounded-full bg-surface-submit px-[26px] py-[9px] text-[15px] font-medium text-white hover:bg-surface-submit-hover"
+          className="rounded-full bg-surface-submit px-[26px] py-[9px] text-[15px] font-normal text-white hover:bg-surface-submit-hover"
         >
           {localize('com_skills_start_chat')}
         </button>
