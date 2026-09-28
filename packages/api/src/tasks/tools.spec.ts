@@ -6,6 +6,7 @@ import type { ReportTemplate } from './template';
 import { documentName, fakeLLM, makeDoc, memoryCache } from './__tests__/fakes.helper';
 import { createTaskTool, TASK_RESULT_ARTIFACT } from './tools';
 import { RENDER_UNAVAILABLE_NOTICE } from './report';
+import { isTaskToolName } from './definitions';
 
 const docs = [
   makeDoc('f1', '담당 김 사무관. 금주 실적: 보고서 작성.', 'kim.hwp'),
@@ -77,7 +78,11 @@ function setup(render: (request: HwpRenderRequest) => HwpRenderOutcome, document
   return { deps, saved, progress, renders, files, prompts: model.prompts };
 }
 
-async function call(name: TaskTools, args: Record<string, unknown>, deps: TaskToolDeps) {
+async function call(
+  name: Exclude<TaskTools, TaskTools.fill_report_template>,
+  args: Record<string, unknown>,
+  deps: TaskToolDeps,
+) {
   const message = await createTaskTool(name, deps).invoke(
     { id: 'call_1', name, args, type: 'tool_call' },
     { configurable: { thread_id: 'convo-1' } },
@@ -87,6 +92,12 @@ async function call(name: TaskTools, args: Record<string, unknown>, deps: TaskTo
     artifact?: Record<string, TaskResultArtifact>;
   };
 }
+
+describe('static task tool names', () => {
+  it('keeps the per-turn template tool outside the static task factory', () => {
+    expect(isTaskToolName(TaskTools.fill_report_template)).toBe(false);
+  });
+});
 
 describe('write_report tool', () => {
   it('saves the HWPX and attaches its file to the result when rendering succeeds', async () => {

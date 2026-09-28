@@ -27,6 +27,11 @@ export const TASK_STAGES: Record<TaskToolName, readonly TaskStage[]> = {
     { id: 'render', label: 'com_ui_task_stage_render' },
     { id: 'save', label: 'com_ui_task_stage_save' },
   ],
+  [TaskTools.fill_report_template]: [
+    { id: 'prepare', label: 'com_ui_task_stage_prepare_template' as TranslationKeys },
+    { id: 'fill', label: 'com_ui_task_stage_fill_template' as TranslationKeys },
+    { id: 'save', label: 'com_ui_task_stage_save' },
+  ],
 };
 
 export function isTaskToolName(name: unknown): name is TaskToolName {

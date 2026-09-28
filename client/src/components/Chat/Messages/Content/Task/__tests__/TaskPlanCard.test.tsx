@@ -28,8 +28,18 @@ jest.mock('librechat-data-provider', () => {
 });
 jest.mock('../TaskResultCard', () => ({
   __esModule: true,
-  default: ({ result, autoOpen }: { result: { resultId: string }; autoOpen: boolean }) => (
-    <div data-testid="result-card" data-auto-open={String(autoOpen)}>
+  default: ({
+    result,
+    autoOpen,
+  }: {
+    result: { resultId: string; file?: { file_id: string } };
+    autoOpen: boolean;
+  }) => (
+    <div
+      data-testid="result-card"
+      data-auto-open={String(autoOpen)}
+      data-file-id={result.file?.file_id}
+    >
       {result.resultId}
     </div>
   ),
@@ -141,6 +151,38 @@ describe('TaskPlanCard', () => {
     ]);
     /** 라이브 결과 패널은 task panel이 직접 열므로 결과 카드에서는 자동으로 열지 않는다. */
     expect(screen.getByTestId('result-card')).toHaveAttribute('data-auto-open', 'undefined');
+  });
+
+  test('shows the saved fill-template result and its downloadable file', () => {
+    const attachments = [
+      {
+        type: 'task_result',
+        toolCallId: 'call-1',
+        messageId: 'm1',
+        conversationId: 'c1',
+        task_result: {
+          resultId: 'result-fill',
+          kind: 'report',
+          title: 'trip-report',
+          stats: {},
+          file: { file_id: 'file-fill', filename: 'filled-report.hwpx' },
+        },
+      },
+    ] as unknown as TAttachment[];
+    renderPlan({
+      toolName: TaskTools.fill_report_template,
+      args: { template: 'report-form.hwpx', values: { 제목: '분기 보고서' } },
+      output: '결과 카드에 표시했습니다.',
+      attachments,
+    });
+
+    expect(stepStates()).toEqual([
+      'done ✓1. com_ui_task_stage_prepare_template',
+      'done ✓2. com_ui_task_stage_fill_template',
+      'done ✓3. com_ui_task_stage_save',
+    ]);
+    expect(screen.getByTestId('result-card')).toHaveTextContent('result-fill');
+    expect(screen.getByTestId('result-card')).toHaveAttribute('data-file-id', 'file-fill');
   });
 
   test('stops on the confirmation step when the paused call was rejected', () => {

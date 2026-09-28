@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { logger } from '@librechat/data-schemas';
+import { TaskTools } from 'librechat-data-provider';
 import { tool } from '@librechat/agents/langchain/tools';
 import type { StructuredToolInterface } from '@librechat/agents/langchain/tools';
 import type { TaskDocResult, TaskResult } from 'librechat-data-provider';
@@ -11,7 +12,8 @@ import type { HwpService } from './hwpService';
 import { resolveDownloadPath } from '~/storage/path';
 import { TASK_RESULT_ARTIFACT } from './tools';
 
-export const FILL_REPORT_TEMPLATE_TOOL = 'fill_report_template';
+export const FILL_REPORT_TEMPLATE_TOOL: TaskTools.fill_report_template =
+  TaskTools.fill_report_template;
 
 const TEMPLATE_PATH = /^assets\/[^/]+\.hwpx$/i;
 const MAX_TEMPLATE_BYTES = 5_000_000;
@@ -376,7 +378,7 @@ async function fillTemplate(
     kind: 'report',
     resultId: (deps.createId ?? randomUUID)(),
     conversationId: context.conversationId,
-    title: template.name.replace(/\.hwpx$/i, ''),
+    title: template.skillName,
     body: fields.map((field) => `${field}: ${values[field] ?? ''}`).join('\n'),
     footnotes: [],
     file,
@@ -385,7 +387,7 @@ async function fillTemplate(
   };
   await deps.saveResult(result);
   return [
-    `양식 ${template.name} 을 채운 파일(${file.filename})을 만들어 화면에 열었습니다. 채운 내용을 다시 쓰지 말고 짧게 답하세요.`,
+    `양식 ${template.name}을 채운 파일(${file.filename})을 결과 카드에 표시했습니다. 파일은 카드에서 내려받을 수 있습니다. 채운 내용을 다시 쓰지 말고 짧게 답하세요.`,
     {
       [TASK_RESULT_ARTIFACT]: {
         resultId: result.resultId,

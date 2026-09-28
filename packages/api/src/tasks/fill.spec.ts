@@ -318,7 +318,7 @@ describe('fill_report_template tool', () => {
         kind: 'report',
         resultId: 'result-1',
         conversationId: 'convo-1',
-        title: '출장보고 양식',
+        title: 'trip-report',
         body: '출장 목적: 박람회 참관\n출장 기간: 3월 2일~6일',
         file: { file_id: 'file-1', filename: '출장보고 양식.hwpx' },
       }),
@@ -328,6 +328,9 @@ describe('fill_report_template tool', () => {
       kind: 'report',
       file: { file_id: 'file-1', filename: '출장보고 양식.hwpx' },
     });
+    expect(message.content).toContain('결과 카드에 표시했습니다');
+    expect(message.content).toContain('카드에서 내려받을 수 있습니다');
+    expect(message.content).not.toContain('화면에 열었습니다');
   });
 
   it('refuses a template that is not offered this turn without calling hwp-mcp', async () => {
