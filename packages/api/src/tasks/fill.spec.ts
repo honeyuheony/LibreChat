@@ -7,6 +7,7 @@ import type { TaskResultArtifact } from './tools';
 import {
   reportTemplatesFor,
   findReportTemplates,
+  buildReportTemplateDefinition,
   attachReportTemplateTool,
   FILL_REPORT_TEMPLATE_TOOL,
   createSkillTemplateSource,
@@ -75,6 +76,55 @@ describe('findReportTemplates', () => {
     ]);
   });
 
+  it('limits field names to safe names and the first 100 entries', async () => {
+    const overlong = '가'.repeat(201);
+    const newline = '줄\n바꿈';
+    const control = '제어\u0001문자';
+    const boundary = '가'.repeat(200);
+    const remaining = Array.from({ length: 100 }, (_, index) => `항목${index + 1}`);
+    const { hwp } = fakeHwp([overlong, newline, control, boundary, ...remaining]);
+    const [template] = await findReportTemplates([skill], { ...skillFiles(), hwp });
+    const definition = buildReportTemplateDefinition([template]);
+
+    expect(template.fields).toEqual([boundary, ...remaining.slice(0, 96)]);
+    expect(definition.description).not.toContain(overlong);
+    expect(definition.description).not.toContain(newline);
+    expect(definition.description).not.toContain(control);
+    expect(definition.parameters).toMatchObject({
+      properties: {
+        values: {
+          properties: expect.objectContaining({
+            [boundary]: { type: 'string' },
+            항목1: { type: 'string' },
+          }),
+          additionalProperties: false,
+        },
+      },
+    });
+    expect(JSON.stringify(definition.parameters)).not.toContain(overlong);
+    expect(JSON.stringify(definition.parameters)).not.toContain(newline);
+    expect(JSON.stringify(definition.parameters)).not.toContain(control);
+    expect(definition.description).not.toContain('항목97');
+    expect(JSON.stringify(definition.parameters)).not.toContain('항목97');
+  });
+
+  it('limits field lookup to five seconds', async () => {
+    const timeoutSignal = AbortSignal.abort();
+    const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValue(timeoutSignal);
+    const fields = jest.fn(async (_buffer: Buffer, _signal?: AbortSignal) => ({
+      ok: true as const,
+      fields: ['출장 목적'],
+    }));
+
+    try {
+      await findReportTemplates([skill], { ...skillFiles(), hwp: { fields } });
+      expect(timeout).toHaveBeenCalledWith(5_000);
+      expect(fields).toHaveBeenCalledWith(TEMPLATE, timeoutSignal);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
   it('leaves out a template that has no {{field}} marks', async () => {
     const { hwp } = fakeHwp([]);
     expect(await findReportTemplates([skill], { ...skillFiles(), hwp })).toEqual([]);
@@ -89,6 +139,57 @@ describe('findReportTemplates', () => {
 
     await findReportTemplates([{ ...skill, version: 4 }], { ...skillFiles(), hwp, fieldCache });
     expect(calls).toHaveLength(2);
+  });
+
+  it('caches a failed field lookup for 60 seconds', async () => {
+    const failingSkill = { ...skill, _id: 'field-failure-expiry' };
+    const outcomes = [
+      { ok: false as const, code: 'unavailable', message: 'timeout' },
+      { ok: true as const, fields: ['출장 목적'] },
+    ];
+    const fields = jest.fn(
+      async () =>
+        outcomes.shift() ?? { ok: false as const, code: 'unavailable', message: 'unexpected' },
+    );
+    const time = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    const deps = { ...skillFiles(), hwp: { fields } };
+
+    try {
+      expect(await findReportTemplates([failingSkill], deps)).toEqual([]);
+      time.mockReturnValue(60_999);
+      expect(await findReportTemplates([failingSkill], deps)).toEqual([]);
+      expect(fields).toHaveBeenCalledTimes(1);
+
+      time.mockReturnValue(61_000);
+      const [template] = await findReportTemplates([failingSkill], deps);
+      expect(template.fields).toEqual(['출장 목적']);
+      expect(fields).toHaveBeenCalledTimes(2);
+    } finally {
+      time.mockRestore();
+    }
+  });
+
+  it('keeps the failed field cache within the successful cache limit', async () => {
+    const fields = jest.fn(async () => ({
+      ok: false as const,
+      code: 'unavailable',
+      message: 'connection failed',
+    }));
+    const deps = { ...skillFiles(), hwp: { fields } };
+    const skills = Array.from({ length: 201 }, (_, index) => ({
+      _id: `field-failure-cap-${index}`,
+      name: 'trip-report',
+      version: 1,
+    }));
+
+    for (const candidate of skills) {
+      await findReportTemplates([candidate], deps);
+    }
+    await findReportTemplates([skills[200]], deps);
+    expect(fields).toHaveBeenCalledTimes(201);
+
+    await findReportTemplates([skills[0]], deps);
+    expect(fields).toHaveBeenCalledTimes(202);
   });
 });
 
@@ -275,7 +376,7 @@ describe('createSkillTemplateSource', () => {
     const getDownloadStream = jest.fn(async () => Readable.from([TEMPLATE]));
     const source = createSkillTemplateSource({
       listSkillFiles: async () => [stored],
-      getSkillFileByPath: async () => ({ ...stored, bytes: 11 * 1024 * 1024 }),
+      getSkillFileByPath: async () => ({ ...stored, bytes: 5_000_001 }),
       getDownloadStream,
     });
 

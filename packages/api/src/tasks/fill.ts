@@ -14,10 +14,15 @@ import { TASK_RESULT_ARTIFACT } from './tools';
 export const FILL_REPORT_TEMPLATE_TOOL = 'fill_report_template';
 
 const TEMPLATE_PATH = /^assets\/[^/]+\.hwpx$/i;
-/** 스킬 파일 업로드 상한(10MB)과 같다. 그보다 큰 기록은 올라올 수 없으므로 읽지 않는다. */
-const MAX_TEMPLATE_BYTES = 10 * 1024 * 1024;
+const MAX_TEMPLATE_BYTES = 5_000_000;
+const MAX_TEMPLATE_FIELDS = 100;
+const MAX_FIELD_NAME_CHARS = 200;
+const FIELD_LOOKUP_TIMEOUT_MS = 5_000;
+const FIELD_LOOKUP_FAILURE_TTL_MS = 60_000;
+
 /** 캐시 크기의 근거는 없다. 스킬 버전마다 한 줄이라 작게 둔다. */
 const MAX_CACHED_FIELD_LISTS = 200;
+const failedFieldCache = new Map<string, number>();
 
 /** 이번 turn 에 채울 수 있는 양식. 바이트는 turn 을 시작할 때 읽어 둔 것을 그대로 쓴다. */
 export interface ReportTemplateFile {
@@ -83,14 +88,66 @@ export function createFieldCache(): Map<string, string[]> {
   return new Map();
 }
 
-function remember(cache: Map<string, string[]> | undefined, key: string, fields: string[]) {
+function remember<T>(cache: Map<string, T> | undefined, key: string, value: T): void {
   if (!cache) {
     return;
   }
-  if (cache.size >= MAX_CACHED_FIELD_LISTS) {
-    cache.delete(cache.keys().next().value as string);
+  if (!cache.has(key) && cache.size >= MAX_CACHED_FIELD_LISTS) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) {
+      cache.delete(oldest);
+    }
   }
-  cache.set(key, fields);
+  cache.set(key, value);
+}
+
+function hasRecentFieldFailure(key: string): boolean {
+  const expiresAt = failedFieldCache.get(key);
+  if (expiresAt === undefined) {
+    return false;
+  }
+  if (expiresAt > Date.now()) {
+    return true;
+  }
+  failedFieldCache.delete(key);
+  return false;
+}
+
+function validFieldName(field: string): boolean {
+  let characters = 0;
+  for (const character of field) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint === undefined ||
+      codePoint <= 0x1f ||
+      (codePoint >= 0x7f && codePoint <= 0x9f) ||
+      codePoint === 0x2028 ||
+      codePoint === 0x2029
+    ) {
+      return false;
+    }
+    characters += 1;
+    if (characters > MAX_FIELD_NAME_CHARS) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function templateFieldNames(fields: string[]): string[] {
+  return fields.slice(0, MAX_TEMPLATE_FIELDS).filter(validFieldName);
+}
+
+function createFieldProperties(
+  templates: ReportTemplateFile[],
+): Record<string, { type: 'string' }> {
+  const fields = new Set<string>();
+  for (const template of templates) {
+    for (const field of templateFieldNames(template.fields)) {
+      fields.add(field);
+    }
+  }
+  return Object.fromEntries([...fields].map((field) => [field, { type: 'string' }] as const));
 }
 
 async function templateFields(
@@ -102,17 +159,22 @@ async function templateFields(
   const key = `${skill._id.toString()}:${skill.version ?? 0}:${relativePath}`;
   const cached = deps.fieldCache?.get(key);
   if (cached) {
-    return cached;
+    return templateFieldNames(cached);
   }
-  const outcome = await deps.hwp.fields(buffer);
+  if (hasRecentFieldFailure(key)) {
+    return [];
+  }
+  const outcome = await deps.hwp.fields(buffer, AbortSignal.timeout(FIELD_LOOKUP_TIMEOUT_MS));
   if (!outcome.ok) {
+    remember(failedFieldCache, key, Date.now() + FIELD_LOOKUP_FAILURE_TTL_MS);
     logger.warn(
       `[fill_report_template] Could not read the fields of ${skill.name}/${relativePath}: ${outcome.code}`,
     );
     return [];
   }
-  remember(deps.fieldCache, key, outcome.fields);
-  return outcome.fields;
+  const fields = templateFieldNames(outcome.fields);
+  remember(deps.fieldCache, key, fields);
+  return fields;
 }
 
 /** 스킬의 assets 에 있는 .hwpx 가운데 `{{항목}}` 표시가 있는 양식만 돌려준다. HWP 바이너리는 채울 수 없어 뺀다. */
@@ -161,7 +223,7 @@ export async function findReportTemplates(
 
 export function buildReportTemplateDefinition(templates: ReportTemplateFile[]): LCTool {
   const list = templates
-    .map((template) => `- ${template.name}: ${template.fields.join(', ')}`)
+    .map((template) => `- ${template.name}: ${templateFieldNames(template.fields).join(', ')}`)
     .join('\n');
   return {
     name: FILL_REPORT_TEMPLATE_TOOL,
@@ -181,7 +243,8 @@ export function buildReportTemplateDefinition(templates: ReportTemplateFile[]): 
         },
         values: {
           type: 'object',
-          additionalProperties: { type: 'string' },
+          properties: createFieldProperties(templates),
+          additionalProperties: false,
           description: '항목 이름마다 채울 글',
         },
       },
@@ -296,7 +359,8 @@ async function fillTemplate(
   }
   const now = deps.now ?? Date.now;
   const startedAt = now();
-  const values = pickValues(template.fields, args.values);
+  const fields = templateFieldNames(template.fields);
+  const values = pickValues(fields, args.values);
   const filled = await deps.hwp.fill(template.buffer, values, context.signal);
   if (!filled.ok) {
     return [
@@ -313,7 +377,7 @@ async function fillTemplate(
     resultId: (deps.createId ?? randomUUID)(),
     conversationId: context.conversationId,
     title: template.name.replace(/\.hwpx$/i, ''),
-    body: template.fields.map((field) => `${field}: ${values[field] ?? ''}`).join('\n'),
+    body: fields.map((field) => `${field}: ${values[field] ?? ''}`).join('\n'),
     footnotes: [],
     file,
     stats: { ...EMPTY_STATS, seconds: Math.round((now() - startedAt) / 1000) },
