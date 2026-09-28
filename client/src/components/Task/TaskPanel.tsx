@@ -82,7 +82,7 @@ export default function TaskPanel({ conversationId }: { conversationId: string }
   return (
     <aside
       aria-label={localize('com_ui_task_panel')}
-      className="flex h-full flex-col overflow-hidden border-l border-border-light bg-surface-secondary"
+      className="flex h-full flex-col overflow-hidden border-l border-border-medium bg-surface-secondary"
     >
       <header className="flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border-light px-[18px] py-2.5 text-[14.5px] font-semibold leading-[1.35]">
         <span className="min-w-0 flex-1 truncate text-text-primary">

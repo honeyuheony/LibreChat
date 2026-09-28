@@ -156,7 +156,9 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           <>
             <div className="flex min-w-0 grow flex-col text-sm text-text-tertiary">
               <span className="truncate">{displayName}</span>
-              {user?.department && <span className="truncate">{user.department}</span>}
+              {user?.department && (
+                <span className="truncate text-[13px] text-text-muted">{user.department}</span>
+              )}
               {user?.organization && (
                 <span className="truncate text-[11px] opacity-75">{user.organization}</span>
               )}

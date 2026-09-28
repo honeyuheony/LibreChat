@@ -53,7 +53,7 @@ function MetricCard({ label, value, detail }: MetricCardProps) {
 function PageHeader({ localize }: { localize: Localize }) {
   return (
     <header className="mb-5">
-      <h1 className="text-2xl font-bold text-text-primary">{localize('com_metrics_title')}</h1>
+      <h1 className="text-[22px] font-bold text-text-primary">{localize('com_metrics_title')}</h1>
       <p className="mt-2 text-[13px] text-text-muted">{localize('com_metrics_formula')}</p>
     </header>
   );

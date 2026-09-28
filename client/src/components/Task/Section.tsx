@@ -19,25 +19,27 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="border-b border-border-light px-[18px] pb-4 pt-3.5">
-      <div className="mb-2.5 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-bold text-text-primary"
-        >
-          <span aria-hidden="true" className="w-3 text-[11px] text-text-muted">
-            {open ? '▾' : '▸'}
-          </span>
-          {title}
-          {count != null && (
-            <span className="font-medium tracking-normal text-text-muted">{count}</span>
-          )}
-        </button>
-        {action}
+    <section className="border-b border-border-light px-4 py-3.5">
+      <div className="px-4 py-3">
+        <div className="mb-2.5 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-bold text-text-primary"
+          >
+            <span aria-hidden="true" className="w-3 text-[11px] text-text-muted">
+              {open ? '▾' : '▸'}
+            </span>
+            {title}
+            {count != null && (
+              <span className="font-medium tracking-normal text-text-muted">{count}</span>
+            )}
+          </button>
+          {action}
+        </div>
+        {open && children}
       </div>
-      {open && children}
     </section>
   );
 }

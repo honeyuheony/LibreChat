@@ -79,7 +79,7 @@ export default function PeekRow({ peers, onPeek, onCopy }: PeekRowProps) {
                     <Button
                       variant="outline"
                       size="pill"
-                      className="border-border-medium text-text-secondary"
+                      className="border-border-medium bg-surface-primary text-text-secondary"
                       onClick={() => {
                         toggle(false);
                         onCopy(peer);

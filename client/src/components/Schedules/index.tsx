@@ -122,10 +122,12 @@ export default function Schedules() {
           pageTitleTopClassName,
         )}
       >
-        <h1 className="text-[22px] font-bold text-text-primary">
+        <h1 className="text-[22px] font-bold leading-[1.25] text-text-primary">
           {localize('com_ui_schedules_title')}
         </h1>
-        <p className="text-sm text-text-secondary">{localize('com_ui_schedules_description')}</p>
+        <p className="text-[13px] leading-[1.5] text-text-muted">
+          {localize('com_ui_schedules_description')}
+        </p>
         {scheduleContent}
         {createOpen && (
           <ScheduleDialog open={createOpen} onOpenChange={setCreateOpen} isAtLimit={atLimit} />

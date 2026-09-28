@@ -236,6 +236,7 @@ describe('ConvoOptions title trigger', () => {
       name: 'A conversation, com_nav_convo_menu_options',
     });
     expect(trigger).toHaveTextContent('A conversation');
+    expect(trigger).toHaveClass('text-[14.5px]', 'pl-0', 'pr-2');
     expect(trigger.querySelector('svg')).toBeNull();
   });
 });

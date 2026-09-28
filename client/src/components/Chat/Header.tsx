@@ -127,7 +127,7 @@ function Header({
         {!isNewChat && <NewChat className="md:hidden" />}
         <HeaderMenu startupConfig={startupConfig} trace={trace} className="md:hidden" />
         {isNewChat && (
-          <span className="hidden text-text-tertiary md:inline">
+          <span className="hidden text-[13px] text-text-muted md:inline">
             {user?.organization
               ? `${user.organization} · ${localize('com_ui_home_notice')}`
               : localize('com_ui_home_notice')}
@@ -139,7 +139,8 @@ function Header({
             <span className="text-[13px] text-text-muted">{localize(statusLabel)}</span>
           </span>
         )}
-        <div className="hidden items-center gap-2 md:flex">
+        {/* 새 대화에서는 끝 메뉴가 비어 있어 앞쪽 간격을 없앤다. */}
+        <div className={cn('hidden items-center gap-2 md:flex', isNewChat && 'md:-ml-2')}>
           <ExportAndShareMenu isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false} />
         </div>
       </div>
