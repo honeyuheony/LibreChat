@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { pageTopBarClassName } from '~/components/ui/topbar';
+import { pageTopBarClassName, pageTitleTopClassName } from '~/components/ui/topbar';
 import Schedules from '../index';
 
 const mockRefetch = jest.fn();
@@ -75,6 +75,9 @@ test('shares the sticky page top bar and the 22px bold page title', () => {
   const title = screen.getByRole('heading', { level: 1, name: 'com_ui_schedules_title' });
   expect(title).toHaveClass('text-[22px]', 'font-bold');
   expect(title).not.toHaveClass('text-xl', 'font-semibold');
+  const content = screen.getByRole('region', { name: 'com_ui_schedules_title' });
+  expect(content).toHaveClass(pageTitleTopClassName);
+  expect(content).not.toHaveClass('py-4');
 });
 
 test('does not show a schedule tile when the list is empty', () => {

@@ -3,11 +3,11 @@ import { Plus } from 'lucide-react';
 import { Button } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
+import { pageTopBarClassName, pageTitleTopClassName } from '~/components/ui/topbar';
 import { useChatProjectNames } from '../SidePanel/Schedules/useScheduleProjects';
 import ScheduleCardSkeleton from '../SidePanel/Schedules/ScheduleCardSkeleton';
 import { useSkillsInfiniteQuery } from '~/data-provider/Skills';
 import { useSchedulesQuery } from '~/data-provider/Schedules';
-import { pageTopBarClassName } from '~/components/ui/topbar';
 import useRunSync from '../SidePanel/Schedules/useRunSync';
 import { useHasAccess, useLocalize } from '~/hooks';
 import ScheduleDialog from './ScheduleDialog';
@@ -116,7 +116,10 @@ export default function Schedules() {
       <main
         role="region"
         aria-label={localize('com_ui_schedules_title')}
-        className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col gap-3 overflow-y-auto px-6 py-4"
+        className={cn(
+          'mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col gap-3 overflow-y-auto px-6 pb-4',
+          pageTitleTopClassName,
+        )}
       >
         <h1 className="text-[22px] font-bold text-text-primary">
           {localize('com_ui_schedules_title')}

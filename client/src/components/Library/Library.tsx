@@ -14,12 +14,13 @@ import {
 import type { TTaskResultListItem } from 'librechat-data-provider';
 import type { MouseEvent } from 'react';
 import type { TranslationKeys } from '~/hooks';
+import { pageTopBarClassName, pageTitleTopClassName } from '~/components/ui/topbar';
 import { useTaskResultsInfiniteQuery } from '~/data-provider/Tasks';
 import { RESULT_QUERY_PARAM } from '~/components/Task/useTaskPanel';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
-import { pageTopBarClassName } from '~/components/ui/topbar';
 import { shortResultTitle } from '~/utils/results';
 import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HWP_FILE = /\.hwpx?$/i;
@@ -182,7 +183,7 @@ export default function Library() {
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_ui_library')}</span>
       </header>
-      <div className="mx-auto w-full max-w-[900px] px-6 pb-10 pt-6">
+      <div className={cn('mx-auto w-full max-w-[900px] px-6 pb-10', pageTitleTopClassName)}>
         <h1 className="text-[22px] font-bold text-text-primary">{localize('com_ui_library')}</h1>
         {!isLoading && !isError && (
           <p className="mb-3 mt-1 text-[13px] text-text-muted">

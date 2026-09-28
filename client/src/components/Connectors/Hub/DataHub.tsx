@@ -18,10 +18,10 @@ import {
   hubStatusView,
   toHubStatusProps,
 } from '../status';
+import { pageTopBarClassName, pageTitleTopClassName } from '~/components/ui/topbar';
 import { useDeskStatusQuery } from '~/data-provider/Connectors/queries';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
-import { pageTopBarClassName } from '~/components/ui/topbar';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
 import RecentActivity from './RecentActivity';
 import ConnectorDetail from './Detail';
@@ -241,7 +241,7 @@ export default function DataHub() {
           </span>
         )}
       </header>
-      <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-6 md:pt-8">
+      <div className={cn('mx-auto w-full max-w-5xl px-4 pb-10', pageTitleTopClassName)}>
         <h1 className="flex items-baseline gap-2 text-[22px] font-bold text-text-primary">
           {localize('com_ui_data_hub')}
           <span className="text-sm font-medium text-text-secondary">

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { TTaskResultListItem, TTaskResultsResponse } from 'librechat-data-provider';
+import { pageTitleTopClassName } from '~/components/ui/topbar';
 import Library from '../Library';
 
 jest.mock('librechat-data-provider', () => {
@@ -143,14 +144,14 @@ describe('Library', () => {
     expect(cells[4]).toHaveClass('whitespace-nowrap');
   });
 
-  it('sets the intro in the muted theme role under a heading 24px down', async () => {
+  it('sets the intro in the muted theme role under a heading at the shared page-title offset', async () => {
     getTaskResults.mockResolvedValue(page([item({})]));
     renderLibrary();
 
     const intro = await screen.findByText('com_ui_library_intro {"0":"1"}');
     expect(intro).toHaveClass('text-[13px]', 'text-text-muted');
-    expect(intro.parentElement).toHaveClass('pt-6');
-    expect(intro.parentElement).not.toHaveClass('md:pt-8');
+    expect(intro.parentElement).toHaveClass(pageTitleTopClassName);
+    expect(intro.parentElement).not.toHaveClass('pt-6', 'md:pt-8');
   });
 
   it('sizes the page heading like the other pages, 22px bold', async () => {

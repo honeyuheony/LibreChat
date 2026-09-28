@@ -9,6 +9,7 @@ import type {
 } from 'librechat-data-provider';
 import type { UseMutationOptions } from '@tanstack/react-query';
 import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
+import { pageTitleTopClassName } from '~/components/ui/topbar';
 import UserSettings from '../index';
 
 const mockShowToast = jest.fn();
@@ -142,7 +143,8 @@ describe('UserSettings', () => {
     const settingsHeading = screen.getByRole('heading', { name: 'com_nav_settings' });
     expect(settingsHeading).toHaveClass('mb-2.5', 'text-[22px]', 'font-bold');
     expect(settingsHeading).not.toHaveClass('text-2xl');
-    expect(settingsHeading.closest('div.px-4')).toHaveClass('md:pt-4');
+    expect(settingsHeading.closest('div.px-4')).toHaveClass(pageTitleTopClassName);
+    expect(settingsHeading.closest('div.px-4')).not.toHaveClass('pt-6', 'md:pt-4');
 
     const instructions = screen.getByRole('textbox', {
       name: 'com_ui_user_settings_global_instructions',

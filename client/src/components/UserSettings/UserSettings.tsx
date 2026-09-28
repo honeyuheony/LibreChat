@@ -14,10 +14,11 @@ import {
   useUpdateWorkspacePreferencesMutation,
   useWorkspacePreferencesQuery,
 } from '~/data-provider/User';
+import { pageTopBarClassName, pageTitleTopClassName } from '~/components/ui/topbar';
 import { settingsDialogTabAtom } from '~/components/Nav/Settings/state';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
-import { pageTopBarClassName } from '~/components/ui/topbar';
 import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 
 export default function UserSettings() {
   const localize = useLocalize();
@@ -177,7 +178,7 @@ export default function UserSettings() {
         {isSmallScreen && <OpenSidebar />}
         <span className="font-semibold text-text-primary">{localize('com_nav_settings')}</span>
       </header>
-      <div className="px-4 pb-10 pt-6 md:pt-4">
+      <div className={cn('px-4 pb-10', pageTitleTopClassName)}>
         <div className="mx-auto w-full max-w-[710px]">
           <h1 className="mb-2.5 text-[22px] font-bold text-text-primary">
             {localize('com_nav_settings')}
