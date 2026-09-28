@@ -176,6 +176,18 @@ describe('ToolsMenu', () => {
     expect(within(group).getByRole('menuitemcheckbox', { name: 'Shared files' })).toBeVisible();
   });
 
+  it('sets the group headings in regular weight and the muted text color', async () => {
+    const user = userEvent.setup();
+    render(<ToolsMenu showBuiltinTools={true} />);
+
+    await user.click(screen.getByTestId('tools-menu-button'));
+
+    const heading = screen.getByText('com_ui_tools_data_sources');
+    expect(heading).toHaveClass('text-xs', 'font-normal', 'text-text-muted');
+    expect(heading).not.toHaveClass('font-semibold');
+    expect(heading).not.toHaveClass('text-text-tertiary');
+  });
+
   it('toggles a connector without closing the menu', async () => {
     const user = userEvent.setup();
     render(<ToolsMenu showBuiltinTools={true} />);
@@ -287,7 +299,7 @@ describe('ToolsMenu', () => {
     ).not.toBeInTheDocument();
   });
 
-  describe('with less room above the composer than the menu is tall', () => {
+  describe('placed against a laid-out composer', () => {
     const TRIGGER_TOP = 402;
     const MENU_HEIGHT = 434;
     const restores: Array<() => void> = [];
@@ -326,7 +338,7 @@ describe('ToolsMenu', () => {
         .forEach((restore) => restore());
     });
 
-    it('still opens upward and scrolls inside instead of dropping below', async () => {
+    it('still opens upward and scrolls inside when there is less room above than the menu is tall', async () => {
       const user = userEvent.setup();
       render(<ToolsMenu showBuiltinTools={true} />);
       const trigger = screen.getByTestId('tools-menu-button');
@@ -356,6 +368,49 @@ describe('ToolsMenu', () => {
       const y = Number(/translate3d\([^,]+,\s*(-?[\d.]+)px/.exec(wrapper!.style.transform)?.[1]);
       expect(y).toBeLessThan(TRIGGER_TOP);
       expect(menu.className).toContain('w-[340px]');
+    });
+
+    /* ＋ 단추는 입력창 윗변보다 15px 아래에 있어, 단추를 기준으로 두면 메뉴가 입력창 테두리를 덮는다. */
+    it('ends 7px above the composer top edge and lines up with its left edge', async () => {
+      const SURFACE = { top: 776, left: 286, width: 760, height: 104 };
+      const user = userEvent.setup();
+      const surface = document.createElement('div');
+      jest.spyOn(surface, 'getBoundingClientRect').mockReturnValue({
+        ...SURFACE,
+        x: SURFACE.left,
+        y: SURFACE.top,
+        right: SURFACE.left + SURFACE.width,
+        bottom: SURFACE.top + SURFACE.height,
+        toJSON: () => ({}),
+      });
+      render(<ToolsMenu showBuiltinTools={true} anchorRef={{ current: surface }} />);
+      const trigger = screen.getByTestId('tools-menu-button');
+      jest.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+        x: 301,
+        y: 791,
+        top: 791,
+        left: 301,
+        right: 339,
+        bottom: 829,
+        width: 38,
+        height: 38,
+        toJSON: () => ({}),
+      });
+
+      await user.click(trigger);
+      const menu = screen.getByRole('menu', { name: 'com_ui_tools' });
+      let wrapper: HTMLElement | null = menu;
+      await waitFor(() => {
+        wrapper = menu;
+        while (wrapper && !wrapper.style.transform) {
+          wrapper = wrapper.parentElement;
+        }
+        expect(wrapper?.style.transform).toMatch(/translate3d/);
+      });
+
+      const [, x, y] = /translate3d\((-?[\d.]+)px,\s*(-?[\d.]+)px/.exec(wrapper!.style.transform)!;
+      expect(Number(y)).toBe(SURFACE.top - 7 - MENU_HEIGHT);
+      expect(Number(x)).toBe(SURFACE.left);
     });
   });
 

@@ -140,7 +140,8 @@ describe('UserSettings', () => {
     expect(note.parentElement).toHaveClass('space-y-3');
     expect(note.closest('div.mx-auto')).toHaveClass('max-w-[710px]');
     const settingsHeading = screen.getByRole('heading', { name: 'com_nav_settings' });
-    expect(settingsHeading).toHaveClass('mb-2.5');
+    expect(settingsHeading).toHaveClass('mb-2.5', 'text-[22px]', 'font-bold');
+    expect(settingsHeading).not.toHaveClass('text-2xl');
     expect(settingsHeading.closest('div.px-4')).toHaveClass('md:pt-4');
 
     const instructions = screen.getByRole('textbox', {

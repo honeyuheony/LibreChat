@@ -8,7 +8,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { QueryKeys, FileSources, EModelEndpoint } from 'librechat-data-provider';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import type { TFile, TFileUpload, TConversation } from 'librechat-data-provider';
 import type { ChatFormValues } from '~/common';
 import ChatForm, { toRestoredComposerFile } from '../ChatForm';
@@ -336,14 +336,33 @@ describe('ChatForm attachments', () => {
     }
   }, 20000);
 
-  test('raises the landing composer on the surface elevation shadow', async () => {
+  /* textarea 는 기본이 inline-block 이라 감싸는 줄의 글자 아래 여백만큼 입력 줄이 높아진다. */
+  test('lays the textarea out as a block so the input row stays at the button height', async () => {
     renderComposer({ landing: true });
-    await screen.findByTestId('text-input');
+    const textarea = await screen.findByTestId('text-input');
 
-    const surface = screen.getByTestId('composer-surface');
-    expect(surface).toHaveClass('shadow-theme-surface');
-    expect(surface).not.toHaveClass('shadow-sm');
+    expect(textarea).toHaveClass('block');
   }, 20000);
+
+  test.each([
+    ['landing', true],
+    ['conversation', false],
+  ])(
+    'raises the %s composer on the same shadow, focused or not',
+    async (_, landing) => {
+      renderComposer({ landing });
+      const textarea = await screen.findByTestId('text-input');
+      const surface = screen.getByTestId('composer-surface');
+
+      expect(surface).toHaveClass('shadow-raised');
+      act(() => textarea.focus());
+      expect(surface).toHaveClass('shadow-raised');
+      ['shadow-md', 'shadow-sm', 'shadow-theme-surface'].forEach((shadow) =>
+        expect(surface).not.toHaveClass(shadow),
+      );
+    },
+    20000,
+  );
 
   test('leaves a 64px band under the centred landing composer', async () => {
     const { container } = renderComposer({ landing: true });

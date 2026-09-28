@@ -179,6 +179,9 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                                puts it and slides sideways on the way in. */
                             'scrollbar-gutter-spacer flex-1 items-center justify-end sm:justify-center'
                           : 'h-full overflow-y-auto',
+                        /* 입력창 아래 여백은 안내 문구의 음수 여백과 상쇄되어 가운데 맞춤 높이를
+                           바꾸지 못한다. 묶음을 내리는 것은 위쪽 여백이다. */
+                        isLandingPage && centerFormOnLanding && 'sm:pt-8',
                       )}
                       style={isLandingPage ? landingGlow : undefined}
                     >

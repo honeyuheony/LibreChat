@@ -21,7 +21,9 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
     <div
       className={cn(
         'flex h-full transform-gpu flex-col items-center justify-center pb-8 transition-all duration-200',
-        centerFormOnLanding ? 'max-h-full sm:max-h-0' : 'max-h-full',
+        /* 가운데 맞춤에서는 높이가 아래 여백뿐이라, 그 여백이 곧 인사말 가운데와
+           입력창 윗변 사이 거리가 된다. */
+        centerFormOnLanding ? 'max-h-full sm:max-h-0 sm:pb-11' : 'max-h-full',
       )}
     >
       <div className="flex flex-col items-center gap-3 px-4">

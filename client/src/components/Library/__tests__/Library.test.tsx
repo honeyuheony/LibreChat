@@ -153,6 +153,15 @@ describe('Library', () => {
     expect(intro.parentElement).not.toHaveClass('md:pt-8');
   });
 
+  it('sizes the page heading like the other pages, 22px bold', async () => {
+    getTaskResults.mockResolvedValue(page([]));
+    renderLibrary();
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'com_ui_library' });
+    expect(heading).toHaveClass('text-[22px]', 'font-bold');
+    expect(heading).not.toHaveClass('text-2xl');
+  });
+
   it('shows the empty line when there are no results', async () => {
     getTaskResults.mockResolvedValue(page([]));
     renderLibrary();

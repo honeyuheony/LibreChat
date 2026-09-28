@@ -175,13 +175,13 @@ const ChatForm = memo(function ChatForm({
 }: ChatFormProps) {
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
   useFocusChatEffect(textAreaRef);
   const localize = useLocalize();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [, setIsScrollable] = useState(false);
   const [visualRowCount, setVisualRowCount] = useState(1);
-  const [isTextAreaFocused, setIsTextAreaFocused] = useState(false);
   const [backupBadges, setBackupBadges] = useState<Pick<BadgeItem, 'id'>[]>([]);
 
   const SpeechToText = useRecoilValue(store.speechToText);
@@ -288,15 +288,6 @@ const ChatForm = memo(function ChatForm({
       setIsCollapsed(false);
     }
   }, [isCollapsed]);
-
-  const handleTextareaFocus = useCallback(() => {
-    handleFocusOrClick();
-    setIsTextAreaFocused(true);
-  }, [handleFocusOrClick]);
-
-  const handleTextareaBlur = useCallback(() => {
-    setIsTextAreaFocused(false);
-  }, []);
 
   const answerMode = useAskAnswerMode(conversationId);
   const answerPlaceholder = answerMode.batchMode
@@ -628,7 +619,8 @@ const ChatForm = memo(function ChatForm({
   const baseClasses = useMemo(
     () =>
       cn(
-        'm-0 w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
+        /* inline-block 기본값이면 감싸는 줄의 글자 아래 여백이 입력 줄 높이에 더해진다. */
+        'm-0 block w-full resize-none bg-transparent py-1 leading-relaxed placeholder:text-text-tertiary',
         /* 빈 대화 화면의 유일한 입력창을 더 크게 표시한다. */
         isLandingPage ? 'text-[17px]' : 'text-base',
         isCollapsed ? 'max-h-[52px]' : 'max-h-[45vh] md:max-h-[55vh]',
@@ -805,6 +797,7 @@ const ChatForm = memo(function ChatForm({
               agentId={conversation?.agent_id}
             />
             <div
+              ref={surfaceRef}
               data-testid="composer-surface"
               onClick={handleContainerClick}
               className={cn(
@@ -814,9 +807,7 @@ const ChatForm = memo(function ChatForm({
                    band of padding under the buttons. */
                 'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-theme-surface-lg sm:rounded-theme-surface-lg',
                 composerSurfaceClasses(),
-                /* 가운데 놓인 홈 입력창만 떠 보이도록 surface elevation을 준다. */
-                isLandingPage && 'shadow-theme-surface',
-                !isLandingPage && (isTextAreaFocused ? 'shadow-md' : 'shadow-sm'),
+                'shadow-raised',
                 'gap-1.5 px-3.5 pb-2.5 pt-3.5',
                 /* Temporary-chat accent is a ChatForm-only override, not part of
                    the shared composer-surface decision. Semantic `series-6`, the
@@ -901,6 +892,7 @@ const ChatForm = memo(function ChatForm({
                           showConnectors={showToolsMenu}
                           agentId={toolsAgentId}
                           uploadItems={uploadItems}
+                          anchorRef={surfaceRef}
                         />
                       )}
                     />
@@ -946,8 +938,7 @@ const ChatForm = memo(function ChatForm({
                           data-testid="text-input"
                           rows={1}
                           minRows={1}
-                          onFocus={handleTextareaFocus}
-                          onBlur={handleTextareaBlur}
+                          onFocus={handleFocusOrClick}
                           aria-label={localize('com_ui_message_input')}
                           onClick={handleFocusOrClick}
                           style={{ overflowY: 'auto' }}
