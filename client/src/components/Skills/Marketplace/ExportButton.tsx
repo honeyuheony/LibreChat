@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { dataService } from 'librechat-data-provider';
 import { Button, useToastContext } from '@librechat/client';
-import type { TranslationKeys } from '~/hooks';
 import { useLocalize } from '~/hooks';
 
 type ExportButtonProps = {
@@ -42,7 +41,7 @@ export default function ExportButton({ kind, id, fileName, className }: ExportBu
       saveBlob(response.data, fileName);
       showToast({
         status: 'success',
-        message: localize('com_skills_export_done' as TranslationKeys, { file: fileName }),
+        message: localize('com_skills_export_done', { file: fileName }),
       });
     } catch {
       showToast({ status: 'error', message: localize('com_ui_error') });
@@ -61,7 +60,7 @@ export default function ExportButton({ kind, id, fileName, className }: ExportBu
       onClick={() => void exportZip()}
       className={[BASE_CLASS, className].filter(Boolean).join(' ')}
     >
-      {localize('com_skills_export' as TranslationKeys)}
+      {localize('com_skills_export')}
     </Button>
   );
 }
