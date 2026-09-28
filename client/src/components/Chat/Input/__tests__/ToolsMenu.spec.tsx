@@ -189,6 +189,24 @@ describe('ToolsMenu', () => {
     expect(heading).not.toHaveClass('text-text-tertiary');
   });
 
+  it('sets every row title in regular 14.5px secondary text', async () => {
+    const user = userEvent.setup();
+    render(<ToolsMenu showBuiltinTools={true} />);
+
+    await user.click(screen.getByTestId('tools-menu-button'));
+
+    for (const title of ['Shared files', 'com_ui_web_search']) {
+      const text = within(screen.getByRole('menu', { name: 'com_ui_tools' })).getByText(title);
+      expect(text).toHaveClass(
+        'text-[14.5px]',
+        'font-normal',
+        'leading-normal',
+        'text-text-secondary',
+      );
+      expect(text).not.toHaveClass('text-sm', 'font-medium', 'text-text-primary');
+    }
+  });
+
   it('opens the data hub from the link beside the data sources heading and closes the menu', async () => {
     const user = userEvent.setup();
     render(<ToolsMenu showBuiltinTools={true} />);
@@ -318,6 +336,25 @@ describe('ToolsMenu', () => {
       await user.click(within(row).getByRole('menuitem', { name: 'com_ui_upload_pick_folder' }));
       expect(actions.onPickFolder).toHaveBeenCalledTimes(1);
       expect(actions.onPickFiles).not.toHaveBeenCalled();
+    });
+
+    it('draws the file and folder pickers as white 13px pills', async () => {
+      const user = userEvent.setup();
+      render(<ToolsMenu showBuiltinTools={false} upload={upload()} />);
+
+      await user.click(screen.getByTestId('tools-menu-button'));
+      for (const name of ['com_ui_upload_pick_files', 'com_ui_upload_pick_folder']) {
+        const picker = screen.getByRole('menuitem', { name });
+        expect(picker).toHaveClass(
+          'rounded-full',
+          'border-border-medium',
+          'bg-surface-primary',
+          'text-[13px]',
+          'font-normal',
+          'text-text-secondary',
+        );
+        expect(picker).not.toHaveClass('rounded-theme-control', 'text-xs', 'font-medium');
+      }
     });
 
     it('opens the file picker from the files button', async () => {
