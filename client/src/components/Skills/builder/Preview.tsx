@@ -279,7 +279,7 @@ export default function Preview({
               onClick={() => setEditing('fields')}
               className="mt-2 w-full overflow-hidden rounded-lg border border-border-light hover:border-border-medium"
             >
-              <table className="w-full">
+              <table className="w-full bg-surface-secondary">
                 <thead className="bg-surface-primary">
                   <tr>
                     {displayFields.slice(0, 5).map((field) => (

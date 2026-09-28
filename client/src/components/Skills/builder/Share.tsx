@@ -30,7 +30,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
         <>
           {localize('com_skills_builder_share')}
           {manualMinutes > 0 ? null : (
-            <span className="ms-1 rounded-full bg-status-error-subtle px-2 text-[10.5px] text-status-error">
+            <span className="ms-1 rounded-full bg-status-error-subtle px-[9px] py-0.5 text-[11px] leading-normal text-status-error">
               {localize('com_skills_builder_minutes_required')}
             </span>
           )}
@@ -54,7 +54,7 @@ export default function Share({ manualMinutes, scope, onMinutes, onScope }: Shar
                 'h-[30px] rounded-full border px-3 py-1 text-[13px]',
                 manualMinutes === minutes
                   ? 'border-surface-submit bg-surface-brand-subtle font-semibold text-text-primary'
-                  : 'border-border-light bg-surface-primary text-text-secondary hover:border-border-medium',
+                  : 'border-border-light bg-surface-primary text-text-primary hover:border-border-medium',
               )}
             >
               {localize(labelKey)}

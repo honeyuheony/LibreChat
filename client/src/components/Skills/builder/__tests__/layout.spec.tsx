@@ -321,7 +321,7 @@ describe('Builder layout', () => {
     const aiTag = within(block('com_skills_builder_when') as HTMLElement).getByText(
       'com_skills_builder_source_ai',
     );
-    expect(aiTag).toHaveClass('text-accent-primary');
+    expect(aiTag).toHaveClass('text-accent-primary-hover');
   });
 
   /**
@@ -658,6 +658,32 @@ describe('Share step', () => {
       'bg-status-error-subtle',
       'text-status-error',
     );
+  });
+
+  it('sizes the missing time badge like the other status chips', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('com_skills_builder_minutes_required')).toHaveClass(
+      'px-[9px]',
+      'py-0.5',
+      'text-[11px]',
+      'leading-normal',
+    );
+  });
+
+  it('writes the unselected time choices in the primary text color', () => {
+    render(<Harness />);
+    const group = screen.getByRole('group', { name: 'com_skills_builder_todo_minutes' });
+    within(group)
+      .getAllByRole('button')
+      .forEach((choice) => expect(choice).toHaveClass('text-text-primary'));
+  });
+
+  it('lays the field preview table on the secondary surface under a white heading row', () => {
+    render(<Harness />);
+    const table = within(block('com_skills_builder_output') as HTMLElement).getByRole('table');
+    expect(table).toHaveClass('bg-surface-secondary');
+    expect(table.querySelector('thead')).toHaveClass('bg-surface-primary');
   });
 
   it('shows a generic field heading when the report has no specified fields', () => {
