@@ -175,6 +175,7 @@ const ChatForm = memo(function ChatForm({
 }: ChatFormProps) {
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
   useFocusChatEffect(textAreaRef);
   const localize = useLocalize();
 
@@ -796,6 +797,7 @@ const ChatForm = memo(function ChatForm({
               agentId={conversation?.agent_id}
             />
             <div
+              ref={surfaceRef}
               data-testid="composer-surface"
               onClick={handleContainerClick}
               className={cn(
@@ -890,6 +892,7 @@ const ChatForm = memo(function ChatForm({
                           showConnectors={showToolsMenu}
                           agentId={toolsAgentId}
                           uploadItems={uploadItems}
+                          anchorRef={surfaceRef}
                         />
                       )}
                     />

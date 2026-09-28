@@ -25,12 +25,15 @@ function ToolsMenu({
   agentId,
   uploadItems = [],
   disabled = false,
+  anchorRef,
 }: {
   showBuiltinTools: boolean;
   showConnectors?: boolean;
   agentId?: string | null;
   uploadItems?: MenuItemProps[];
   disabled?: boolean;
+  /** 메뉴를 붙일 입력창 표면. 없으면 ＋ 단추에 붙는다. */
+  anchorRef?: React.RefObject<HTMLElement>;
 }) {
   const localize = useLocalize();
   const context = useBadgeRowContext();
@@ -116,7 +119,8 @@ function ToolsMenu({
         <Ariakit.Menu
           portal={true}
           portalElement={getMainLandmark}
-          gutter={8}
+          getAnchorRect={() => anchorRef?.current?.getBoundingClientRect() ?? null}
+          gutter={7}
           flip={false}
           modal={false}
           unmountOnHide={true}
